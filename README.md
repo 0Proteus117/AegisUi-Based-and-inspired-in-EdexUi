@@ -123,9 +123,14 @@ Thanks! If you feel like it, you can [follow me on Twitter](https://gaby.dev/twi
 **IMPORTANT NOTE:** the following instructions are meant for running eDEX from the latest unoptimized, unreleased, development version. If you'd like to get stable software instead, refer to [these](#how-do-i-get-it) instructions.
 
 #### Starting from source:
-on *nix systems (You'll need the Xcode command line tools on macOS):
+on Linux:
 - clone the repository
 - `npm run install-linux`
+- `npm run start`
+
+on macOS (Apple Silicon — M1/M2/M3 — requires the Xcode command line tools):
+- clone the repository
+- `npm run install-darwin`
 - `npm run start`
 
 on Windows:
@@ -137,10 +142,23 @@ on Windows:
 #### Building
 Note: Due to native modules, you can only build targets for the host OS you are using.
 
-- `npm install` (NOT `install-linux` or `install-windows`)
+- `npm install` (NOT `install-linux`, `install-darwin`, or `install-windows`)
 - `npm run build-linux` or `build-windows` or `build-darwin`
 
 The script will minify the source code, recompile native dependencies and create distributable assets in the `dist` folder.
+
+##### Apple Silicon notes
+This fork targets **arm64 macOS natively** (no x64 / Rosetta build is produced).
+The resulting `.dmg` is **unsigned**; macOS Gatekeeper will refuse to launch it
+out of the box. After dragging `eDEX-UI.app` to `/Applications`, clear the
+quarantine attribute once with:
+
+```
+xattr -cr /Applications/eDEX-UI.app
+```
+
+Then the app launches normally. If you need an Intel build, run the build on
+an x64 host or revert `build.mac.target[0].arch` in `package.json` to `"x64"`.
 
 #### Getting the bleeding edge
 If you're interested in running the latest in-development version but don't want to compile source code yourself, you can can get pre-built nightly binaries on [GitHub Actions](https://github.com/GitSquared/edex-ui/actions): click the latest commits, and download the artifacts bundle for your OS.
