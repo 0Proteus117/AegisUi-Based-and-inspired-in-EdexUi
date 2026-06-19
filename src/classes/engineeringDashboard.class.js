@@ -26,7 +26,7 @@ class EngineeringDashboard {
                 <div id="eng_calendar_content"></div>
             </section>
             <section id="eng_projects_panel" class="eng-panel" augmented-ui="tl-clip br-clip exe">
-                <h3 class="title"><p>PROJECT TIMELINES</p><p>PROJECTS.JSON</p></h3>
+                <h3 class="title"><p>PROJECT TIMELINES</p><p>CONTROL CENTER</p></h3>
                 <div id="eng_projects_content"></div>
             </section>
             <section id="eng_music_panel" class="eng-panel" augmented-ui="tl-clip br-clip exe">
@@ -312,42 +312,72 @@ class EngineeringProjectsPanel {
     constructor() {
         this.ipc = require("electron").ipcRenderer;
         this.content = document.getElementById("eng_projects_content");
+        this.projects = [];
+        this.selectedProject = 0;
+        this.dirty = false;
+        this.closeArmed = false;
+        this.deleteArmed = false;
         this.load();
     }
 
     async load() {
-        this.content.innerHTML = `<div class="eng-loading"><span class="eng-scanline"></span>READING PROJECTS.JSON</div>`;
+        this.content.innerHTML = `<div class="eng-loading"><span class="eng-scanline"></span>READING PROJECT DATA</div>`;
         const response = await this.ipc.invoke("engineering-projects");
         if (!response.ok) {
             this.content.innerHTML = `
                 <div class="eng-empty-state">
                     <strong>PROJECT DATA ERROR</strong>
-                    ${window._escapeHtml(response.error || "Cannot read projects.json")}
-                    <button id="eng_projects_edit">OPEN FILE</button>
+                    ${window._escapeHtml(response.error || "Cannot read project data")}
+                    <button id="eng_projects_retry">RETRY</button>
                 </div>`;
-            document.getElementById("eng_projects_edit").addEventListener("click", () => {
-                this.ipc.invoke("engineering-open-projects");
-            });
+            document.getElementById("eng_projects_retry").addEventListener("click", () => this.load());
             return;
         }
-        this.render(response.data.projects || []);
+        this.projects = this.cloneProjects(response.data.projects || []);
+        this.render();
     }
 
-    render(projects) {
+    cloneProjects(projects) {
+        return (Array.isArray(projects) ? projects : []).map((project, projectIndex) => {
+            const source = project && typeof project === "object" ? project : {};
+            return {
+                id: String(source.id || ""),
+                name: String(source.name || `PROJECT ${projectIndex + 1}`),
+                description: String(source.description || ""),
+                milestones: (Array.isArray(source.milestones) ? source.milestones : []).map((milestone, milestoneIndex) => {
+                    const item = milestone && typeof milestone === "object" ? milestone : {};
+                    return {
+                        name: String(item.name || `Milestone ${milestoneIndex + 1}`),
+                        status: ["pending", "active", "complete", "blocked"].includes(item.status)
+                            ? item.status
+                            : "pending"
+                    };
+                })
+            };
+        });
+    }
+
+    render() {
         this.content.innerHTML = `
             <div class="eng-project-toolbar">
-                <span>${projects.length} PROJECTS LOADED</span>
+                <span>${this.projects.length} PROJECTS LOADED</span>
                 <button id="eng_projects_reload">RELOAD</button>
-                <button id="eng_projects_edit">EDIT JSON</button>
+                <button id="eng_projects_manage" class="primary">PROJECT CONTROL</button>
             </div>
             <div class="eng-project-list"></div>`;
         document.getElementById("eng_projects_reload").addEventListener("click", () => this.load());
-        document.getElementById("eng_projects_edit").addEventListener("click", () => {
-            this.ipc.invoke("engineering-open-projects");
-        });
+        document.getElementById("eng_projects_manage").addEventListener("click", () => this.openEditor());
 
         const list = this.content.querySelector(".eng-project-list");
-        projects.forEach((project, projectIndex) => {
+        if (!this.projects.length) {
+            list.innerHTML = `
+                <div class="eng-empty-state">
+                    <strong>NO ACTIVE PROJECTS</strong>
+                    OPEN PROJECT CONTROL TO CREATE ONE
+                </div>`;
+            return;
+        }
+        this.projects.forEach((project, projectIndex) => {
             const milestones = Array.isArray(project.milestones) ? project.milestones : [];
             const completed = milestones.filter(item => item.status === "complete").length;
             const active = milestones.filter(item => item.status === "active").length;
@@ -358,7 +388,7 @@ class EngineeringProjectsPanel {
             article.className = "eng-project";
             article.innerHTML = `
                 <header>
-                    <span>0${projectIndex + 1}</span>
+                    <span>${String(projectIndex + 1).padStart(2, "0")}</span>
                     <div>
                         <h2>${window._escapeHtml(String(project.name || "PROJECT"))}</h2>
                         <p>${window._escapeHtml(String(project.description || ""))}</p>
@@ -381,8 +411,354 @@ class EngineeringProjectsPanel {
                     <em>${status.toUpperCase()}</em>`;
                 milestonesContainer.appendChild(item);
             });
+            article.title = "Open project in Project Control";
+            article.addEventListener("click", () => this.openEditor(projectIndex));
             list.appendChild(article);
         });
+    }
+
+    openEditor(projectIndex = 0) {
+        this.removeEditor();
+        this.editorProjects = this.cloneProjects(this.projects);
+        this.selectedProject = Math.max(0, Math.min(projectIndex, this.editorProjects.length - 1));
+        this.dirty = false;
+        this.closeArmed = false;
+        this.deleteArmed = false;
+
+        const overlay = document.createElement("div");
+        overlay.id = "eng_project_editor_overlay";
+        overlay.innerHTML = `
+            <section id="eng_project_editor" augmented-ui="tl-clip tr-clip br-clip bl-clip exe">
+                <header class="eng-project-editor-header">
+                    <div>
+                        <small>ENGINEERING DASHBOARD / LOCAL DATA</small>
+                        <h1>PROJECT CONTROL</h1>
+                    </div>
+                    <div class="eng-project-editor-header-actions">
+                        <span id="eng_project_editor_state">ALL CHANGES SAVED</span>
+                        <button id="eng_project_editor_close" aria-label="Close project editor">CLOSE ×</button>
+                    </div>
+                </header>
+                <div class="eng-project-editor-body">
+                    <aside class="eng-project-navigator">
+                        <div class="eng-project-navigator-title">
+                            <span>PROJECT INDEX</span>
+                            <strong id="eng_project_editor_count">00</strong>
+                        </div>
+                        <div id="eng_project_editor_projects"></div>
+                        <button id="eng_project_add" class="primary">＋ NEW PROJECT</button>
+                    </aside>
+                    <main class="eng-project-workspace">
+                        <div id="eng_project_editor_empty">
+                            <strong>NO PROJECT SELECTED</strong>
+                            <p>Create a project to begin defining its engineering timeline.</p>
+                            <button id="eng_project_empty_add" class="primary">CREATE FIRST PROJECT</button>
+                        </div>
+                        <form id="eng_project_form">
+                            <div class="eng-project-fields">
+                                <label>
+                                    <span>PROJECT NAME</span>
+                                    <input id="eng_project_name" maxlength="80" autocomplete="off">
+                                </label>
+                                <label>
+                                    <span>DESCRIPTION</span>
+                                    <input id="eng_project_description" maxlength="240" autocomplete="off">
+                                </label>
+                            </div>
+                            <div class="eng-milestone-editor-title">
+                                <div>
+                                    <small>SEQUENCE / STATUS / PROGRESS</small>
+                                    <h2>PROJECT MILESTONES</h2>
+                                </div>
+                                <button id="eng_milestone_add" type="button">＋ ADD MILESTONE</button>
+                            </div>
+                            <div id="eng_milestone_editor_list"></div>
+                        </form>
+                    </main>
+                </div>
+                <footer class="eng-project-editor-footer">
+                    <button id="eng_project_delete" class="danger">DELETE PROJECT</button>
+                    <span>Data stays locally on this Mac · an automatic backup is kept</span>
+                    <button id="eng_project_discard">DISCARD CHANGES</button>
+                    <button id="eng_project_save" class="primary">SAVE CHANGES</button>
+                </footer>
+            </section>`;
+        document.body.appendChild(overlay);
+        this.overlay = overlay;
+
+        document.getElementById("eng_project_editor_close").addEventListener("click", () => this.closeEditor());
+        document.getElementById("eng_project_add").addEventListener("click", () => this.addProject());
+        document.getElementById("eng_project_empty_add").addEventListener("click", () => this.addProject());
+        document.getElementById("eng_project_delete").addEventListener("click", () => this.deleteProject());
+        document.getElementById("eng_project_discard").addEventListener("click", () => this.discardChanges());
+        document.getElementById("eng_project_save").addEventListener("click", () => this.saveChanges());
+        document.getElementById("eng_milestone_add").addEventListener("click", () => this.addMilestone());
+        document.getElementById("eng_project_form").addEventListener("submit", event => event.preventDefault());
+        document.getElementById("eng_project_name").addEventListener("input", event => {
+            const project = this.currentProject();
+            if (!project) return;
+            project.name = event.target.value;
+            this.markDirty();
+            this.renderNavigator();
+        });
+        document.getElementById("eng_project_description").addEventListener("input", event => {
+            const project = this.currentProject();
+            if (!project) return;
+            project.description = event.target.value;
+            this.markDirty();
+        });
+        overlay.addEventListener("mousedown", event => {
+            if (event.target === overlay) this.closeEditor();
+        });
+        this.escapeHandler = event => {
+            if (event.key === "Escape") this.closeEditor();
+        };
+        window.addEventListener("keydown", this.escapeHandler);
+
+        this.renderEditor();
+        window.audioManager.expand.play();
+    }
+
+    currentProject() {
+        return this.editorProjects[this.selectedProject] || null;
+    }
+
+    renderEditor() {
+        const project = this.currentProject();
+        document.getElementById("eng_project_form").hidden = !project;
+        document.getElementById("eng_project_editor_empty").hidden = Boolean(project);
+        document.getElementById("eng_project_delete").disabled = !project;
+        this.renderNavigator();
+        if (!project) return;
+
+        document.getElementById("eng_project_name").value = project.name || "";
+        document.getElementById("eng_project_description").value = project.description || "";
+        this.renderMilestones();
+    }
+
+    renderNavigator() {
+        const container = document.getElementById("eng_project_editor_projects");
+        if (!container) return;
+        container.innerHTML = "";
+        document.getElementById("eng_project_editor_count").innerText =
+            String(this.editorProjects.length).padStart(2, "0");
+
+        this.editorProjects.forEach((project, index) => {
+            const milestones = Array.isArray(project.milestones) ? project.milestones : [];
+            const completed = milestones.filter(item => item.status === "complete").length;
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = `eng-project-nav-item${index === this.selectedProject ? " active" : ""}`;
+            button.innerHTML = `
+                <span>${String(index + 1).padStart(2, "0")}</span>
+                <div>
+                    <strong>${window._escapeHtml(String(project.name || "UNTITLED PROJECT"))}</strong>
+                    <small>${completed}/${milestones.length} MILESTONES COMPLETE</small>
+                </div>`;
+            button.addEventListener("click", () => {
+                this.selectedProject = index;
+                this.deleteArmed = false;
+                this.renderEditor();
+            });
+            container.appendChild(button);
+        });
+    }
+
+    renderMilestones() {
+        const project = this.currentProject();
+        const container = document.getElementById("eng_milestone_editor_list");
+        container.innerHTML = "";
+        if (!project.milestones.length) {
+            container.innerHTML = `
+                <div class="eng-milestone-editor-empty">
+                    NO MILESTONES YET · ADD THE FIRST STEP IN THIS PROJECT
+                </div>`;
+            return;
+        }
+
+        project.milestones.forEach((milestone, index) => {
+            const row = document.createElement("div");
+            row.className = `eng-milestone-editor-row ${milestone.status || "pending"}`;
+            row.innerHTML = `
+                <span class="eng-milestone-editor-index">${String(index + 1).padStart(2, "0")}</span>
+                <input maxlength="120" aria-label="Milestone name">
+                <select aria-label="Milestone status">
+                    <option value="pending">PENDING</option>
+                    <option value="active">ACTIVE</option>
+                    <option value="complete">COMPLETE</option>
+                    <option value="blocked">BLOCKED</option>
+                </select>
+                <div class="eng-milestone-editor-actions">
+                    <button type="button" data-action="up" title="Move up">↑</button>
+                    <button type="button" data-action="down" title="Move down">↓</button>
+                    <button type="button" data-action="remove" class="danger" title="Delete milestone">×</button>
+                </div>`;
+            const input = row.querySelector("input");
+            const select = row.querySelector("select");
+            input.value = milestone.name || "";
+            select.value = ["pending", "active", "complete", "blocked"].includes(milestone.status)
+                ? milestone.status
+                : "pending";
+            input.addEventListener("input", event => {
+                milestone.name = event.target.value;
+                this.markDirty();
+            });
+            select.addEventListener("change", event => {
+                milestone.status = event.target.value;
+                this.markDirty();
+                this.renderMilestones();
+                this.renderNavigator();
+            });
+            row.querySelectorAll("button").forEach(button => {
+                button.addEventListener("click", () => this.milestoneAction(index, button.dataset.action));
+            });
+            container.appendChild(row);
+        });
+    }
+
+    addProject() {
+        this.editorProjects.push({
+            id: "",
+            name: `NEW PROJECT ${this.editorProjects.length + 1}`,
+            description: "",
+            milestones: []
+        });
+        this.selectedProject = this.editorProjects.length - 1;
+        this.markDirty();
+        this.renderEditor();
+        setTimeout(() => {
+            const input = document.getElementById("eng_project_name");
+            input.focus();
+            input.select();
+        }, 0);
+    }
+
+    deleteProject() {
+        if (!this.currentProject()) return;
+        const button = document.getElementById("eng_project_delete");
+        if (!this.deleteArmed) {
+            this.deleteArmed = true;
+            button.innerText = "CONFIRM DELETE";
+            setTimeout(() => {
+                this.deleteArmed = false;
+                if (button.isConnected) button.innerText = "DELETE PROJECT";
+            }, 3000);
+            return;
+        }
+        this.editorProjects.splice(this.selectedProject, 1);
+        this.selectedProject = Math.min(this.selectedProject, this.editorProjects.length - 1);
+        this.deleteArmed = false;
+        this.markDirty();
+        this.renderEditor();
+    }
+
+    addMilestone() {
+        const project = this.currentProject();
+        if (!project) return;
+        project.milestones.push({name: `New milestone ${project.milestones.length + 1}`, status: "pending"});
+        this.markDirty();
+        this.renderMilestones();
+        this.renderNavigator();
+        const inputs = document.querySelectorAll("#eng_milestone_editor_list input");
+        const input = inputs[inputs.length - 1];
+        if (input) {
+            input.focus();
+            input.select();
+        }
+    }
+
+    milestoneAction(index, action) {
+        const project = this.currentProject();
+        if (!project || !project.milestones[index]) return;
+        if (action === "remove") project.milestones.splice(index, 1);
+        if (action === "up" && index > 0) {
+            [project.milestones[index - 1], project.milestones[index]] =
+                [project.milestones[index], project.milestones[index - 1]];
+        }
+        if (action === "down" && index < project.milestones.length - 1) {
+            [project.milestones[index + 1], project.milestones[index]] =
+                [project.milestones[index], project.milestones[index + 1]];
+        }
+        this.markDirty();
+        this.renderMilestones();
+        this.renderNavigator();
+    }
+
+    markDirty() {
+        this.dirty = true;
+        this.closeArmed = false;
+        const state = document.getElementById("eng_project_editor_state");
+        if (state) {
+            state.innerText = "UNSAVED CHANGES";
+            state.className = "dirty";
+        }
+    }
+
+    discardChanges() {
+        this.editorProjects = this.cloneProjects(this.projects);
+        this.selectedProject = Math.min(this.selectedProject, this.editorProjects.length - 1);
+        this.dirty = false;
+        const state = document.getElementById("eng_project_editor_state");
+        state.innerText = "CHANGES DISCARDED";
+        state.className = "";
+        this.renderEditor();
+    }
+
+    async saveChanges() {
+        const saveButton = document.getElementById("eng_project_save");
+        const state = document.getElementById("eng_project_editor_state");
+        saveButton.disabled = true;
+        saveButton.innerText = "SAVING...";
+        state.innerText = "VALIDATING PROJECT DATA";
+        state.className = "";
+        const response = await this.ipc.invoke("engineering-save-projects", {
+            projects: this.editorProjects
+        });
+        saveButton.disabled = false;
+        saveButton.innerText = "SAVE CHANGES";
+        if (!response.ok) {
+            state.innerText = `SAVE FAILED · ${response.error || "UNKNOWN ERROR"}`;
+            state.className = "error";
+            window.audioManager.denied.play();
+            return;
+        }
+
+        this.projects = this.cloneProjects(response.data.projects || []);
+        this.editorProjects = this.cloneProjects(this.projects);
+        this.selectedProject = Math.min(this.selectedProject, this.editorProjects.length - 1);
+        this.dirty = false;
+        state.innerText = "SAVED LOCALLY";
+        state.className = "saved";
+        this.render();
+        this.renderEditor();
+        window.audioManager.scan.play();
+    }
+
+    closeEditor() {
+        if (this.dirty && !this.closeArmed) {
+            this.closeArmed = true;
+            const state = document.getElementById("eng_project_editor_state");
+            state.innerText = "UNSAVED · CLOSE AGAIN TO DISCARD";
+            state.className = "error";
+            setTimeout(() => {
+                this.closeArmed = false;
+                if (state.isConnected && this.dirty) {
+                    state.innerText = "UNSAVED CHANGES";
+                    state.className = "dirty";
+                }
+            }, 3000);
+            return;
+        }
+        this.removeEditor();
+        window.audioManager.denied.play();
+    }
+
+    removeEditor() {
+        if (this.escapeHandler) window.removeEventListener("keydown", this.escapeHandler);
+        this.escapeHandler = null;
+        const overlay = document.getElementById("eng_project_editor_overlay");
+        if (overlay) overlay.remove();
+        this.overlay = null;
     }
 }
 

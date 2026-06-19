@@ -308,6 +308,71 @@ ipc.handle("engineering-projects", () => {
         return {ok: false, error: error.message};
     }
 });
+ipc.handle("engineering-save-projects", (event, payload) => {
+    try {
+        if (!payload || !Array.isArray(payload.projects)) {
+            throw new Error("Project data is not valid.");
+        }
+        if (payload.projects.length > 100) {
+            throw new Error("A maximum of 100 projects is supported.");
+        }
+
+        const usedIds = new Set();
+        const cleanText = (value, fallback, maximum) => {
+            const text = String(value || "").trim().slice(0, maximum);
+            return text || fallback;
+        };
+        const makeId = (value, index) => {
+            const base = String(value || "")
+                .toLowerCase()
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .replace(/[^a-z0-9]+/g, "-")
+                .replace(/^-+|-+$/g, "")
+                .slice(0, 48) || `project-${index + 1}`;
+            let id = base;
+            let suffix = 2;
+            while (usedIds.has(id)) id = `${base}-${suffix++}`;
+            usedIds.add(id);
+            return id;
+        };
+
+        const projects = payload.projects.map((project, projectIndex) => {
+            if (!project || typeof project !== "object") {
+                throw new Error(`Project ${projectIndex + 1} is not valid.`);
+            }
+            const milestones = Array.isArray(project.milestones) ? project.milestones : [];
+            if (milestones.length > 200) {
+                throw new Error(`Project ${projectIndex + 1} has too many milestones.`);
+            }
+            const name = cleanText(project.name, `PROJECT ${projectIndex + 1}`, 80);
+            return {
+                id: makeId(project.id || name, projectIndex),
+                name,
+                description: cleanText(project.description, "", 240),
+                milestones: milestones.map((milestone, milestoneIndex) => {
+                    const item = milestone && typeof milestone === "object" ? milestone : {};
+                    const status = ["pending", "active", "complete", "blocked"].includes(item.status)
+                        ? item.status
+                        : "pending";
+                    return {
+                        name: cleanText(item.name, `Milestone ${milestoneIndex + 1}`, 120),
+                        status
+                    };
+                })
+            };
+        });
+
+        const temporaryFile = `${projectsFile}.tmp`;
+        const backupFile = path.join(path.dirname(projectsFile), "projects.backup.json");
+        if (fs.existsSync(projectsFile)) fs.copyFileSync(projectsFile, backupFile);
+        fs.writeFileSync(temporaryFile, JSON.stringify({projects}, null, 4), {encoding: "utf8"});
+        fs.renameSync(temporaryFile, projectsFile);
+        return {ok: true, data: {projects}};
+    } catch (error) {
+        return {ok: false, error: error.message};
+    }
+});
 ipc.handle("engineering-open-projects", async () => {
     const error = await shell.openPath(projectsFile);
     return error ? {ok: false, error} : {ok: true};

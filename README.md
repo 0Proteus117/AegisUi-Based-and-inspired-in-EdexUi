@@ -32,7 +32,9 @@ keyboard and large terminal with:
   Calendar, including iCloud, Outlook and Exchange;
 - Apple Music metadata, controls, progress, a playback-driven visualizer and
   a local playlist launcher;
-- editable project timelines for engineering work;
+- editable project timelines for engineering work, with a visual Project
+  Control popup for creating projects, managing milestones, changing status,
+  reordering steps and saving without manually editing JSON;
 - a launch grid containing the applications installed on the Mac.
 
 Calendar and Apple Music remain disconnected until their panel button is
@@ -44,7 +46,8 @@ The dashboard creates two private configuration files inside the EdexUi-Eng
 application-data folder. They are never committed to GitHub:
 
 - `projects.json` contains the project timelines and supports the states
-  `pending`, `active`, `complete` and `blocked`.
+  `pending`, `active`, `complete` and `blocked`. Project Control manages this
+  file automatically and keeps a local `projects.backup.json` safety copy.
 - `music-playlists.json` contains Apple Music playlist names. Clicking a name
   starts that playlist without bringing Music to the foreground.
 
