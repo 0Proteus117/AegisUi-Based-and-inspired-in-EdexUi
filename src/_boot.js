@@ -1,5 +1,7 @@
 const signale = require("signale");
-const {app, BrowserWindow, dialog, shell} = require("electron");
+const {app, BrowserWindow, dialog, shell, nativeImage} = require("electron");
+const {execFile, execFileSync} = require("child_process");
+const {promisify} = require("util");
 
 process.on("uncaughtException", e => {
     signale.fatal(e);
@@ -17,13 +19,13 @@ process.on("uncaughtException", e => {
     process.exit(1);
 });
 
-signale.start(`Starting eDEX-UI v${app.getVersion()}`);
+signale.start(`Starting EdexUi-Eng v${app.getVersion()}`);
 signale.info(`With Node ${process.versions.node} and Electron ${process.versions.electron}`);
 signale.info(`Renderer is Chrome ${process.versions.chrome}`);
 
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
-    signale.fatal("Error: Another instance of eDEX is already running. Cannot proceed.");
+    signale.fatal("Error: Another instance of EdexUi-Eng is already running. Cannot proceed.");
     app.exit(1);
 }
 
@@ -36,6 +38,7 @@ const ipc = electron.ipcMain;
 const path = require("path");
 const url = require("url");
 const fs = require("fs");
+const crypto = require("crypto");
 const which = require("which");
 const Terminal = require("./classes/terminal.class.js").Terminal;
 
@@ -55,6 +58,9 @@ const fontsDir = path.join(electron.app.getPath("userData"), "fonts");
 const innerFontsDir = path.join(__dirname, "assets/fonts");
 let geoLookup = null;
 let geoLookupReady = false;
+let applicationsCache = null;
+let knownApplications = new Set();
+const execFileAsync = promisify(execFile);
 
 async function initGeoIP() {
     try {
@@ -77,6 +83,217 @@ async function initGeoIP() {
 
 ipc.handle("geoip-ready", () => geoLookupReady);
 ipc.handle("geoip-lookup", (e, ip) => geoLookup ? geoLookup.get(ip) : null);
+
+function getJSON(remoteUrl) {
+    return new Promise((resolve, reject) => {
+        require("https").get(remoteUrl, response => {
+            let body = "";
+            response.on("data", chunk => body += chunk);
+            response.on("end", () => {
+                if (response.statusCode < 200 || response.statusCode >= 300) {
+                    reject(new Error(`Remote service returned ${response.statusCode}`));
+                    return;
+                }
+                try {
+                    resolve(JSON.parse(body));
+                } catch (error) {
+                    reject(error);
+                }
+            });
+        }).on("error", reject);
+    });
+}
+
+ipc.handle("rainviewer-metadata", async () => {
+    try {
+        return {
+            ok: true,
+            data: await getJSON("https://api.rainviewer.com/public/weather-maps.json")
+        };
+    } catch (error) {
+        return {ok: false, error: error.message};
+    }
+});
+
+function collectApplications(root, depth = 0) {
+    if (!fs.existsSync(root) || depth > 2) return [];
+
+    let entries = [];
+    try {
+        entries = fs.readdirSync(root, {withFileTypes: true});
+    } catch (error) {
+        return [];
+    }
+
+    return entries.flatMap(entry => {
+        const entryPath = path.join(root, entry.name);
+        if (entry.isDirectory() && entry.name.endsWith(".app")) {
+            return [{name: entry.name.replace(/\.app$/i, ""), path: entryPath}];
+        }
+        if (entry.isDirectory() && depth < 2) {
+            return collectApplications(entryPath, depth + 1);
+        }
+        return [];
+    });
+}
+
+async function listApplications() {
+    if (applicationsCache) return applicationsCache;
+
+    const roots = [
+        "/Applications",
+        "/System/Applications",
+        path.join(app.getPath("home"), "Applications")
+    ];
+    const byPath = new Map();
+    roots.flatMap(root => collectApplications(root)).forEach(application => {
+        byPath.set(application.path, application);
+    });
+
+    const applications = Array.from(byPath.values())
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .slice(0, 100);
+
+    applicationsCache = await Promise.all(applications.map(async application => {
+        try {
+            const plistPath = path.join(application.path, "Contents", "Info.plist");
+            const resourcesPath = path.join(application.path, "Contents", "Resources");
+            const iconCachePath = path.join(app.getPath("userData"), "application-icons");
+            let iconName = "";
+            try {
+                iconName = execFileSync("/usr/bin/plutil", [
+                    "-extract", "CFBundleIconFile", "raw", "-o", "-", plistPath
+                ], {encoding: "utf8", stdio: ["ignore", "pipe", "ignore"]}).trim();
+            } catch (error) {}
+
+            if (iconName && !path.extname(iconName)) iconName += ".icns";
+            let sourceIconPath = iconName ? path.join(resourcesPath, iconName) : "";
+            if (!sourceIconPath || !fs.existsSync(sourceIconPath)) {
+                const candidates = fs.existsSync(resourcesPath)
+                    ? fs.readdirSync(resourcesPath).filter(file => file.endsWith(".icns"))
+                    : [];
+                if (candidates.length) sourceIconPath = path.join(resourcesPath, candidates[0]);
+            }
+
+            let icon = nativeImage.createEmpty();
+            if (sourceIconPath && fs.existsSync(sourceIconPath)) {
+                fs.mkdirSync(iconCachePath, {recursive: true});
+                const modified = fs.statSync(sourceIconPath).mtimeMs;
+                const cacheName = crypto.createHash("sha1")
+                    .update(`${sourceIconPath}:${modified}`)
+                    .digest("hex") + ".png";
+                const cachedIconPath = path.join(iconCachePath, cacheName);
+                if (!fs.existsSync(cachedIconPath)) {
+                    execFileSync("/usr/bin/sips", [
+                        "-z", "128", "128",
+                        "-s", "format", "png",
+                        sourceIconPath,
+                        "--out", cachedIconPath
+                    ], {stdio: "ignore"});
+                }
+                icon = nativeImage.createFromPath(cachedIconPath);
+            }
+            if (icon.isEmpty()) icon = await app.getFileIcon(application.path, {size: "normal"});
+            return {
+                ...application,
+                icon: icon.resize({width: 64, height: 64}).toDataURL()
+            };
+        } catch (error) {
+            return {...application, icon: null};
+        }
+    }));
+    knownApplications = new Set(applicationsCache.map(application => application.path));
+    return applicationsCache;
+}
+
+ipc.handle("applications-list", () => listApplications());
+ipc.handle("launch-application", async (e, applicationPath) => {
+    if (!knownApplications.has(applicationPath)) {
+        return {ok: false, error: "Unknown application"};
+    }
+    const error = await shell.openPath(applicationPath);
+    return error ? {ok: false, error} : {ok: true};
+});
+
+const calendarScript = `
+const Calendar = Application("Calendar");
+const now = new Date();
+const horizon = new Date(now.getTime() + (7 * 24 * 60 * 60 * 1000));
+const result = [];
+Calendar.calendars().forEach(calendar => {
+    const calendarName = calendar.name();
+    calendar.events().forEach(event => {
+        try {
+            const properties = event.properties();
+            const start = new Date(properties.startDate);
+            if (start >= now && start <= horizon) {
+                result.push({
+                    title: properties.summary || "Untitled event",
+                    start: start.toISOString(),
+                    end: new Date(properties.endDate).toISOString(),
+                    location: properties.location || "",
+                    calendar: calendarName,
+                    allDay: Boolean(properties.alldayEvent)
+                });
+            }
+        } catch (error) {}
+    });
+});
+result.sort((a, b) => a.start.localeCompare(b.start));
+JSON.stringify(result.slice(0, 24));
+`;
+
+const musicStatusScript = `
+const Music = Application("Music");
+if (!Music.running()) {
+    JSON.stringify({running: false, state: "stopped"});
+} else {
+    let result = {running: true, state: String(Music.playerState())};
+    try {
+        const track = Music.currentTrack();
+        const properties = track.properties();
+        result = Object.assign(result, {
+            title: properties.name || "Unknown track",
+            artist: properties.artist || "Unknown artist",
+            album: properties.album || "",
+            duration: Number(properties.duration || 0),
+            position: Number(Music.playerPosition() || 0)
+        });
+    } catch (error) {}
+    JSON.stringify(result);
+}
+`;
+
+async function runAutomation(script, timeout = 20000) {
+    if (process.platform !== "darwin") {
+        return {ok: false, error: "This integration is available on macOS only."};
+    }
+    try {
+        const {stdout} = await execFileAsync("/usr/bin/osascript", [
+            "-l", "JavaScript", "-e", script
+        ], {timeout, maxBuffer: 1024 * 1024});
+        return {ok: true, data: JSON.parse(stdout.trim() || "null")};
+    } catch (error) {
+        const message = (error.stderr || error.message || "").trim();
+        return {
+            ok: false,
+            permissionDenied: message.includes("-1743"),
+            error: message || "Automation request failed."
+        };
+    }
+}
+
+ipc.handle("calendar-events", () => runAutomation(calendarScript));
+ipc.handle("music-status", () => runAutomation(musicStatusScript, 8000));
+ipc.handle("music-control", async (e, command) => {
+    const commands = {
+        previous: "Application('Music').previousTrack(); JSON.stringify({ok:true});",
+        toggle: "Application('Music').playpause(); JSON.stringify({ok:true});",
+        next: "Application('Music').nextTrack(); JSON.stringify({ok:true});"
+    };
+    if (!commands[command]) return {ok: false, error: "Unknown music command"};
+    return runAutomation(commands[command], 8000);
+});
 
 // Unset proxy env variables to avoid connection problems on the internal websockets
 // See #222
@@ -118,7 +335,8 @@ if (!fs.existsSync(settingsFile)) {
         hideDotfiles: false,
         fsListView: false,
         experimentalGlobeFeatures: false,
-        experimentalFeatures: false
+        experimentalFeatures: false,
+        tomtomApiKey: ""
     }, "", 4));
     signale.info(`Default settings written to ${settingsFile}`);
 }
@@ -203,7 +421,7 @@ function createWindow(settings) {
     let {x, y, width, height} = display.bounds;
     width++; height++;
     win = new BrowserWindow({
-        title: "eDEX-UI",
+        title: "EdexUi-Eng",
         x,
         y,
         width,
@@ -263,7 +481,7 @@ app.on('ready', async () => {
     Object.assign(cleanEnv, {
         TERM: "xterm-256color",
         COLORTERM: "truecolor",
-        TERM_PROGRAM: "eDEX-UI",
+        TERM_PROGRAM: "EdexUi-Eng",
         TERM_PROGRAM_VERSION: app.getVersion()
     }, settings.env);
 

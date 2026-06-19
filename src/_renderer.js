@@ -341,85 +341,29 @@ async function getDisplayName() {
     return user;
 }
 
-// Create the UI's html structure and initialize the terminal client and the keyboard
+// Create the engineering dashboard and its compact terminal.
 async function initUI() {
+    document.body.classList.add("engineering-mode");
     document.body.innerHTML += `<section class="mod_column" id="mod_column_left">
-        <h3 class="title"><p>PANEL</p><p>SYSTEM</p></h3>
+        <h3 class="title"><p>EDEXUI-ENG</p><p>SYSTEM</p></h3>
     </section>
-    <section id="main_shell" style="height:0%;width:0%;opacity:0;margin-bottom:30vh;" augmented-ui="bl-clip tr-clip exe">
-        <h3 class="title" style="opacity:0;"><p>TERMINAL</p><p>MAIN SHELL</p></h3>
-        <h1 id="main_shell_greeting"></h1>
+    <section id="main_shell" style="opacity:0;" augmented-ui="bl-clip tr-clip exe">
+        <h3 class="title"><p>COMMAND LINE</p><p>READY</p></h3>
     </section>
-    <section class="mod_column" id="mod_column_right">
-        <h3 class="title"><p>PANEL</p><p>NETWORK</p></h3>
-    </section>`;
+    <section id="engineering_services" aria-hidden="true"></section>
+    <main id="engineering_dashboard"></main>
+    <section id="keyboard" aria-hidden="true"></section>`;
 
-    await _delay(10);
-
-    window.audioManager.expand.play();
-    document.getElementById("main_shell").setAttribute("style", "height:0%;margin-bottom:30vh;");
-
-    await _delay(500);
-
-    document.getElementById("main_shell").setAttribute("style", "margin-bottom: 30vh;");
-    document.querySelector("#main_shell > h3.title").setAttribute("style", "");
-
-    await _delay(700);
-
-    document.getElementById("main_shell").setAttribute("style", "opacity: 0;");
-    document.body.innerHTML += `
-    <section id="filesystem" style="width: 0px;" class="${window.settings.hideDotfiles ? "hideDotfiles" : ""} ${window.settings.fsListView ? "list-view" : ""}">
-    </section>
-    <section id="keyboard" style="opacity:0;">
-    </section>`;
+    // Keep the keyboard engine hidden for backwards compatibility with
+    // shortcuts and settings, while removing the on-screen keyboard itself.
     window.keyboard = new Keyboard({
         layout: path.join(keyboardsDir, settings.keyboard+".json"),
         container: "keyboard"
     });
 
-    await _delay(10);
-
-    document.getElementById("main_shell").setAttribute("style", "");
-
-    await _delay(270);
-
-    let greeter = document.getElementById("main_shell_greeting");
-
-    getDisplayName().then(user => {
-        if (user) {
-            greeter.innerHTML += `Welcome back, <em>${user}</em>`;
-        } else {
-            greeter.innerHTML += "Welcome back";
-        }
-    });
-
-    greeter.setAttribute("style", "opacity: 1;");
-
-    document.getElementById("filesystem").setAttribute("style", "");
-    document.getElementById("keyboard").setAttribute("style", "");
-    document.getElementById("keyboard").setAttribute("class", "animation_state_1");
-    window.audioManager.keyboard.play();
-
-    await _delay(100);
-
-    document.getElementById("keyboard").setAttribute("class", "animation_state_1 animation_state_2");
-
-    await _delay(1000);
-
-    greeter.setAttribute("style", "opacity: 0;");
-
-    await _delay(100);
-
-    document.getElementById("keyboard").setAttribute("class", "");
-
-    await _delay(400);
-
-    greeter.remove();
-
     // Initialize modules
     window.mods = {};
 
-    // Left column
     window.mods.clock = new Clock("mod_column_left");
     window.mods.sysinfo = new Sysinfo("mod_column_left");
     window.mods.hardwareInspector = new HardwareInspector("mod_column_left");
@@ -427,40 +371,27 @@ async function initUI() {
     window.mods.ramwatcher = new RAMwatcher("mod_column_left");
     window.mods.toplist = new Toplist("mod_column_left");
 
-    // Right column
-    window.mods.netstat = new Netstat("mod_column_right");
-    window.mods.globe = new LocationGlobe("mod_column_right");
-    window.mods.conninfo = new Conninfo("mod_column_right");
+    // The network monitor remains active as a hidden data service. It supplies
+    // the approximate location used by the traffic and weather map.
+    window.mods.netstat = new Netstat("engineering_services");
 
-    // Fade-in animations
-    document.querySelectorAll(".mod_column").forEach(e => {
-        e.setAttribute("class", "mod_column activated");
-    });
+    document.getElementById("mod_column_left").classList.add("activated");
     let i = 0;
     let left = document.querySelectorAll("#mod_column_left > div");
-    let right = document.querySelectorAll("#mod_column_right > div");
     let x = setInterval(() => {
-        if (!left[i] && !right[i]) {
+        if (!left[i]) {
             clearInterval(x);
         } else {
             window.audioManager.panels.play();
-            if (left[i]) {
-                left[i].setAttribute("style", "animation-play-state: running;");
-            }
-            if (right[i]) {
-                right[i].setAttribute("style", "animation-play-state: running;");
-            }
+            left[i].setAttribute("style", "animation-play-state: running;");
             i++;
         }
-    }, 500);
+    }, 220);
 
-    await _delay(100);
-
-    // Initialize the terminal
     let shellContainer = document.getElementById("main_shell");
     shellContainer.innerHTML += `
         <ul id="main_shell_tabs">
-            <li id="shell_tab0" onclick="window.focusShellTab(0);" class="active"><p>MAIN SHELL</p></li>
+            <li id="shell_tab0" onclick="window.focusShellTab(0);" class="active"><p>ENGINEERING SHELL</p></li>
             <li id="shell_tab1" onclick="window.focusShellTab(1);"><p>EMPTY</p></li>
             <li id="shell_tab2" onclick="window.focusShellTab(2);"><p>EMPTY</p></li>
             <li id="shell_tab3" onclick="window.focusShellTab(3);"><p>EMPTY</p></li>
@@ -482,31 +413,22 @@ async function initUI() {
     };
     window.currentTerm = 0;
     window.term[0].onprocesschange = p => {
-        document.getElementById("shell_tab0").innerHTML = `<p>MAIN - ${p}</p>`;
+        document.getElementById("shell_tab0").innerHTML = `<p>ENG - ${p}</p>`;
     };
-    // Prevent losing hardware keyboard focus on the terminal when using touch keyboard
-    window.onmouseup = e => {
+
+    shellContainer.addEventListener("mouseup", () => {
         if (window.keyboard.linkedToTerm) window.term[window.currentTerm].term.focus();
-    };
-    window.term[0].term.writeln("\033[1m"+`Welcome to eDEX-UI v${remote.app.getVersion()} - Electron v${process.versions.electron}`+"\033[0m");
-
-    await _delay(100);
-
-    window.fsDisp = new FilesystemDisplay({
-        parentId: "filesystem"
     });
 
-    await _delay(200);
+    window.fsDisp = {
+        toggleHidedotfiles: () => {},
+        toggleListview: () => {}
+    };
+    window.engineeringDashboard = new EngineeringDashboard("engineering_dashboard");
 
-    document.getElementById("filesystem").setAttribute("style", "opacity: 1;");
-
-    // Resend terminal CWD to fsDisp if we're hot reloading
-    if (window.performance.navigation.type === 1) {
-        window.term[window.currentTerm].resendCWD();
-    }
-
-    await _delay(200);
-
+    window.audioManager.expand.play();
+    shellContainer.setAttribute("style", "opacity:1;");
+    await _delay(300);
     window.updateCheck = new UpdateChecker();
 }
 

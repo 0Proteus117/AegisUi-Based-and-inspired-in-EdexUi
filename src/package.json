@@ -1,8 +1,8 @@
 {
-  "name": "edex-ui",
-  "productName": "eDEX-UI",
+  "name": "edex-ui-eng",
+  "productName": "EdexUi-Eng",
   "version": "2.2.8",
-  "description": "eDEX-UI sci-fi interface",
+  "description": "Engineering-focused eDEX-UI sci-fi interface",
   "keywords": [
     "desktop",
     "sci-fi",

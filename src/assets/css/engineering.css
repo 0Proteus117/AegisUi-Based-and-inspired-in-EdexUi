@@ -1,0 +1,633 @@
+body.engineering-mode {
+    padding: 0;
+    display: block;
+    position: relative;
+}
+
+.engineering-mode section#keyboard,
+.engineering-mode section#engineering_services {
+    display: none !important;
+}
+
+.engineering-mode section#mod_column_left {
+    width: 17%;
+    top: 1.5vh;
+    left: -0.4vh;
+    max-height: 97vh;
+}
+
+.engineering-mode section#mod_column_left > h3.title {
+    top: 0.35vh;
+}
+
+.engineering-mode section#main_shell {
+    position: absolute;
+    left: 17.5vw;
+    top: 2.35vh;
+    width: 81.6vw;
+    height: 5.8vh;
+    padding: 0.42vh;
+    margin: 0;
+    box-sizing: border-box;
+    z-index: 20;
+    transition: opacity .5s ease;
+}
+
+.engineering-mode section#main_shell > h3.title {
+    position: fixed;
+    top: 0.45vh;
+    left: 17.7vw;
+    width: 80.7vw;
+    opacity: 0.75;
+}
+
+.engineering-mode section#main_shell > h3.title > p {
+    width: 49.5%;
+}
+
+.engineering-mode ul#main_shell_tabs {
+    margin-top: -0.35vh;
+    margin-left: -0.42vh;
+    width: calc(100% + 0.84vh);
+    min-height: 2.25vh;
+}
+
+.engineering-mode ul#main_shell_tabs > li:not(:first-child) {
+    display: none;
+}
+
+.engineering-mode ul#main_shell_tabs > li {
+    padding-top: 0.42vh;
+    padding-bottom: 0.25vh;
+    font-size: 1.05vh;
+}
+
+.engineering-mode ul#main_shell_tabs > li.active {
+    transform: none;
+    z-index: 1;
+}
+
+.engineering-mode div#main_shell_innercontainer {
+    height: 2.95vh;
+}
+
+.engineering-mode div#main_shell_innercontainer pre {
+    height: 2.95vh;
+}
+
+.engineering-mode main#engineering_dashboard {
+    position: absolute;
+    left: 17.5vw;
+    right: 0.9vw;
+    top: 9.35vh;
+    bottom: 1.2vh;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.32fr);
+    grid-template-rows: minmax(0, 1fr) minmax(0, .62fr);
+    grid-template-areas:
+        "map calendar music"
+        "apps apps apps";
+    gap: 1.15vh;
+}
+
+.engineering-mode .eng-panel {
+    position: relative;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    background: rgba(0, 0, 0, 0.58);
+    --aug-border: 0.16vh;
+    --aug-border-bg: rgba(var(--color_r), var(--color_g), var(--color_b), 0.72);
+    --aug-inlay: 0.3vh;
+    --aug-inlay-bg: rgba(var(--color_r), var(--color_g), var(--color_b), 0.08);
+    animation: engPanelIn .55s cubic-bezier(.25, .8, .25, 1) both;
+}
+
+.engineering-mode .eng-panel:nth-child(2) {
+    animation-delay: .12s;
+}
+
+.engineering-mode .eng-panel:nth-child(3) {
+    animation-delay: .24s;
+}
+
+.engineering-mode .eng-panel:nth-child(4) {
+    animation-delay: .36s;
+}
+
+@keyframes engPanelIn {
+    from {
+        opacity: 0;
+        transform: translateY(1.2vh);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.engineering-mode .eng-panel > h3.title {
+    position: absolute !important;
+    z-index: 500;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 2.05vh;
+    box-sizing: border-box;
+    background: rgba(0, 0, 0, 0.84);
+    backdrop-filter: blur(4px);
+}
+
+.engineering-mode .eng-panel > h3.title > p {
+    width: 49%;
+}
+
+.engineering-mode #eng_map_panel {
+    grid-area: map;
+}
+
+.engineering-mode #eng_calendar_panel {
+    grid-area: calendar;
+}
+
+.engineering-mode #eng_music_panel {
+    grid-area: music;
+}
+
+.engineering-mode #eng_apps_panel {
+    grid-area: apps;
+}
+
+/* Local map */
+
+.engineering-mode #eng_map_canvas {
+    position: absolute;
+    inset: 2.05vh 0 0;
+    background: var(--color_light_black);
+}
+
+.engineering-mode .eng-base-map {
+    filter: grayscale(1) invert(.92) brightness(.62) contrast(1.28);
+    opacity: .82;
+}
+
+.engineering-mode .eng-radar-map {
+    mix-blend-mode: screen;
+    filter: saturate(.8) contrast(1.15);
+}
+
+.engineering-mode .leaflet-container {
+    font-family: var(--font_main);
+    color: rgb(var(--color_r), var(--color_g), var(--color_b));
+}
+
+.engineering-mode .leaflet-control-zoom a {
+    color: rgb(var(--color_r), var(--color_g), var(--color_b));
+    background: rgba(0, 0, 0, .9);
+    border-color: rgba(var(--color_r), var(--color_g), var(--color_b), .5);
+}
+
+.engineering-mode .leaflet-control-attribution {
+    color: rgba(var(--color_r), var(--color_g), var(--color_b), .65);
+    background: rgba(0, 0, 0, .74);
+    font-size: .82vh;
+}
+
+.engineering-mode .eng-map-controls {
+    position: absolute;
+    z-index: 550;
+    left: .7vh;
+    bottom: .7vh;
+    display: flex;
+    gap: .4vh;
+}
+
+.engineering-mode button {
+    border: .1vh solid rgba(var(--color_r), var(--color_g), var(--color_b), .62);
+    color: rgb(var(--color_r), var(--color_g), var(--color_b));
+    background: rgba(0, 0, 0, .88);
+    font-family: var(--font_main);
+    font-size: .95vh;
+    letter-spacing: .08vh;
+    padding: .52vh .72vh;
+    cursor: pointer;
+}
+
+.engineering-mode button:hover,
+.engineering-mode button.active,
+.engineering-mode button.primary {
+    color: var(--color_light_black);
+    background: rgb(var(--color_r), var(--color_g), var(--color_b));
+}
+
+.engineering-mode #eng_traffic_form {
+    display: none;
+    position: absolute;
+    z-index: 700;
+    inset: 2.05vh 0 0;
+    padding: 4vh 2.2vh;
+    box-sizing: border-box;
+    background: rgba(0, 0, 0, .96);
+}
+
+.engineering-mode #eng_traffic_form.visible {
+    display: block;
+}
+
+.engineering-mode #eng_traffic_form label {
+    display: block;
+    font: 1.2vh var(--font_main);
+    letter-spacing: .15vh;
+    margin-bottom: 1.2vh;
+}
+
+.engineering-mode #eng_traffic_form input {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 1.3vh;
+    padding: .8vh;
+    border: .1vh solid rgb(var(--color_r), var(--color_g), var(--color_b));
+    color: rgb(var(--color_r), var(--color_g), var(--color_b));
+    background: var(--color_light_black);
+    font: 1.15vh var(--font_mono);
+    outline: none;
+}
+
+/* Calendar */
+
+.engineering-mode #eng_calendar_content {
+    position: absolute;
+    inset: 2.05vh 0 0;
+    overflow: hidden;
+}
+
+.engineering-mode .eng-connect-state,
+.engineering-mode .eng-loading,
+.engineering-mode .eng-empty-state {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    padding: 2vh;
+    text-align: center;
+    font: 1.12vh var(--font_main);
+    letter-spacing: .1vh;
+}
+
+.engineering-mode .eng-connect-state p,
+.engineering-mode .eng-music-connect p {
+    margin: 1.4vh 0 .9vh;
+}
+
+.engineering-mode .eng-connect-state small,
+.engineering-mode .eng-music-connect small {
+    margin-top: .9vh;
+    font: .78vh var(--font_main_light);
+    opacity: .55;
+}
+
+.engineering-mode .eng-calendar-glyph {
+    width: 8vh;
+    height: 7.2vh;
+    border: .15vh solid rgb(var(--color_r), var(--color_g), var(--color_b));
+    display: grid;
+    place-items: center;
+    box-shadow: 0 0 2.2vh rgba(var(--color_r), var(--color_g), var(--color_b), .14);
+}
+
+.engineering-mode .eng-calendar-glyph span {
+    display: block;
+    width: 100%;
+    height: 1.3vh;
+    align-self: start;
+    background: rgba(var(--color_r), var(--color_g), var(--color_b), .32);
+}
+
+.engineering-mode .eng-calendar-glyph strong {
+    font: 3.5vh var(--font_main_light);
+    margin-top: -1.1vh;
+}
+
+.engineering-mode .eng-event-list {
+    height: 100%;
+    overflow-y: auto;
+    padding: .7vh;
+    box-sizing: border-box;
+}
+
+.engineering-mode .eng-event {
+    min-height: 5.1vh;
+    display: grid;
+    grid-template-columns: 3.2vh 7.2vh minmax(0, 1fr);
+    align-items: stretch;
+    margin-bottom: .55vh;
+    border-bottom: .08vh solid rgba(var(--color_r), var(--color_g), var(--color_b), .28);
+    background: linear-gradient(90deg, rgba(var(--color_r), var(--color_g), var(--color_b), .09), transparent 70%);
+}
+
+.engineering-mode .eng-event-index {
+    display: grid;
+    place-items: center;
+    font: 1.15vh var(--font_mono);
+    background: rgba(var(--color_r), var(--color_g), var(--color_b), .16);
+}
+
+.engineering-mode .eng-event-time,
+.engineering-mode .eng-event-main {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: .45vh .55vh;
+    box-sizing: border-box;
+}
+
+.engineering-mode .eng-event-time strong,
+.engineering-mode .eng-event-main strong {
+    font: 1.05vh var(--font_main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.engineering-mode .eng-event-time span,
+.engineering-mode .eng-event-main span {
+    margin-top: .24vh;
+    font: .9vh var(--font_main_light);
+    opacity: .58;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Apple Music */
+
+.engineering-mode #eng_music_content {
+    position: absolute;
+    inset: 2.05vh 0 0;
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) 11.5vh;
+}
+
+.engineering-mode .eng-music-connect {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.8vh;
+    padding: 1.5vh;
+    text-align: left;
+}
+
+.engineering-mode .eng-record,
+.engineering-mode .eng-album-visual {
+    position: relative;
+    flex: 0 0 auto;
+    width: 9.4vh;
+    height: 9.4vh;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    border: .12vh solid rgba(var(--color_r), var(--color_g), var(--color_b), .8);
+    background:
+        repeating-radial-gradient(circle, transparent 0 .6vh, rgba(var(--color_r), var(--color_g), var(--color_b), .14) .7vh .75vh),
+        var(--color_light_black);
+    box-shadow: 0 0 2vh rgba(var(--color_r), var(--color_g), var(--color_b), .12);
+}
+
+.engineering-mode .eng-record span {
+    width: 2.2vh;
+    height: 2.2vh;
+    border-radius: 50%;
+    background: rgb(var(--color_r), var(--color_g), var(--color_b));
+}
+
+.engineering-mode .eng-now-playing {
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    gap: 1.8vh;
+    padding: 1.6vh;
+    box-sizing: border-box;
+}
+
+.engineering-mode .eng-album-visual {
+    width: 13vh;
+    height: 13vh;
+    border-radius: .4vh;
+    overflow: hidden;
+    background:
+        linear-gradient(145deg, rgba(var(--color_r), var(--color_g), var(--color_b), .5), transparent 65%),
+        repeating-linear-gradient(45deg, rgba(var(--color_r), var(--color_g), var(--color_b), .14) 0 .5vh, transparent .5vh 1vh),
+        var(--color_light_black);
+}
+
+.engineering-mode .eng-album-visual span {
+    font: 6.5vh var(--font_main_light);
+    opacity: .76;
+}
+
+.engineering-mode .eng-album-visual i {
+    position: absolute;
+    inset: 1vh;
+    border: .08vh solid rgba(var(--color_r), var(--color_g), var(--color_b), .5);
+}
+
+.engineering-mode .eng-track-data {
+    min-width: 0;
+    flex: 1;
+}
+
+.engineering-mode .eng-track-data small {
+    font: .85vh var(--font_main);
+    opacity: .5;
+    letter-spacing: .2vh;
+}
+
+.engineering-mode .eng-track-data h2,
+.engineering-mode .eng-track-data h3,
+.engineering-mode .eng-track-data p {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.engineering-mode .eng-track-data h2 {
+    margin: .55vh 0 .25vh;
+    font: 2.2vh var(--font_main);
+}
+
+.engineering-mode .eng-track-data h3 {
+    margin: 0;
+    font: 1.2vh var(--font_main_light);
+    opacity: .72;
+}
+
+.engineering-mode .eng-track-data p {
+    min-height: 1.2vh;
+    margin: .45vh 0;
+    font: .95vh var(--font_main_light);
+    opacity: .48;
+}
+
+.engineering-mode .eng-progress {
+    height: .34vh;
+    margin: 1.1vh 0;
+    background: rgba(var(--color_r), var(--color_g), var(--color_b), .18);
+}
+
+.engineering-mode .eng-progress span {
+    display: block;
+    width: 0;
+    height: 100%;
+    background: rgb(var(--color_r), var(--color_g), var(--color_b));
+    box-shadow: 0 0 .8vh rgb(var(--color_r), var(--color_g), var(--color_b));
+    transition: width .5s linear;
+}
+
+.engineering-mode .eng-music-controls {
+    display: flex;
+    gap: .5vh;
+}
+
+.engineering-mode .eng-music-controls button {
+    min-width: 3.8vh;
+}
+
+.engineering-mode #eng_equalizer {
+    min-height: 0;
+    display: flex;
+    align-items: flex-end;
+    gap: .19vh;
+    padding: 1vh 1.4vh 1.2vh;
+    border-top: .08vh solid rgba(var(--color_r), var(--color_g), var(--color_b), .2);
+    box-sizing: border-box;
+    overflow: hidden;
+    background: linear-gradient(0deg, rgba(var(--color_r), var(--color_g), var(--color_b), .07), transparent);
+}
+
+.engineering-mode #eng_equalizer i {
+    flex: 1;
+    min-width: .18vh;
+    max-height: 100%;
+    background: rgb(var(--color_r), var(--color_g), var(--color_b));
+    box-shadow: 0 0 .5vh rgba(var(--color_r), var(--color_g), var(--color_b), .45);
+    transition: height .1s linear, opacity .3s;
+}
+
+.engineering-mode #eng_equalizer.idle i {
+    opacity: .48;
+}
+
+/* Applications */
+
+.engineering-mode #eng_apps_content {
+    position: absolute;
+    inset: 2.05vh .4vh .3vh;
+    display: grid;
+    grid-auto-flow: column;
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+    grid-auto-columns: 9.3vh;
+    gap: .65vh;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: .7vh;
+    box-sizing: border-box;
+}
+
+.engineering-mode .eng-app-tile {
+    width: 9.3vh;
+    height: 100%;
+    min-height: 0;
+    padding: .6vh .4vh;
+    border-color: rgba(var(--color_r), var(--color_g), var(--color_b), .22);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: .45vh;
+    background: rgba(var(--color_r), var(--color_g), var(--color_b), .035);
+}
+
+.engineering-mode .eng-app-tile:hover,
+.engineering-mode .eng-app-tile.launching {
+    color: rgb(var(--color_r), var(--color_g), var(--color_b));
+    border-color: rgb(var(--color_r), var(--color_g), var(--color_b));
+    background: rgba(var(--color_r), var(--color_g), var(--color_b), .13);
+    box-shadow: inset 0 0 1.4vh rgba(var(--color_r), var(--color_g), var(--color_b), .1);
+}
+
+.engineering-mode .eng-app-tile.failed {
+    border-color: var(--color_red);
+}
+
+.engineering-mode .eng-app-tile img,
+.engineering-mode .eng-app-fallback {
+    width: 4.6vh;
+    height: 4.6vh;
+    object-fit: contain;
+    filter: saturate(.72);
+}
+
+.engineering-mode .eng-app-fallback {
+    display: grid;
+    place-items: center;
+    border: .1vh solid currentColor;
+    font: 1.35vh var(--font_main);
+}
+
+.engineering-mode .eng-app-tile > span:last-child {
+    width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font: .88vh var(--font_main);
+    text-align: center;
+}
+
+.engineering-mode .eng-apps-loading {
+    position: fixed;
+    left: 50%;
+    align-self: center;
+    font: 1vh var(--font_main);
+    letter-spacing: .12vh;
+}
+
+.engineering-mode .eng-scanline {
+    display: block;
+    width: 10vh;
+    height: .16vh;
+    margin: 0 auto 1vh;
+    background: rgb(var(--color_r), var(--color_g), var(--color_b));
+    box-shadow: 0 0 1vh rgb(var(--color_r), var(--color_g), var(--color_b));
+    animation: engScan 1.1s ease-in-out infinite alternate;
+}
+
+@keyframes engScan {
+    from {
+        transform: translateX(-3vh) scaleX(.35);
+        opacity: .35;
+    }
+    to {
+        transform: translateX(3vh) scaleX(1);
+        opacity: 1;
+    }
+}
+
+@media (max-aspect-ratio: 8/5) {
+    .engineering-mode main#engineering_dashboard {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        grid-template-rows: minmax(0, 1fr) minmax(0, .72fr) minmax(0, .58fr);
+        grid-template-areas:
+            "map calendar"
+            "music music"
+            "apps apps";
+    }
+
+    .engineering-mode #eng_music_content {
+        grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+        grid-template-rows: 1fr;
+    }
+}

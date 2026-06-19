@@ -1,8 +1,8 @@
 {
-  "name": "edex-ui",
-  "productName": "eDEX-UI",
+  "name": "edex-ui-eng",
+  "productName": "EdexUi-Eng",
   "version": "2.2.8",
-  "description": "A science fiction desktop running everywhere. Awesome.",
+  "description": "An engineering-focused eDEX-UI dashboard for Apple Silicon.",
   "keywords": [
     "desktop",
     "sci-fi",
@@ -42,11 +42,12 @@
   },
   "homepage": "https://github.com/0Proteus117/edex-ui-fan-update-Apple-Silicon-#readme",
   "build": {
-    "appId": "com.edex.ui",
-    "productName": "eDEX-UI",
+    "appId": "com.edex.ui.eng",
+    "productName": "EdexUi-Eng",
     "publish": "github",
     "asar": true,
     "compression": "normal",
+    "afterPack": "build/after-pack.js",
     "copyright": "Copyright © 2017-2021 Gabriel 'Squared' SAILLARD <gabriel@saillard.dev> (https://gaby.dev)",
     "directories": {
       "output": "dist",
@@ -54,7 +55,7 @@
     },
     "forceCodeSigning": false,
     "npmRebuild": true,
-    "artifactName": "eDEX-UI-${os}-${arch}.${ext}",
+    "artifactName": "EdexUi-Eng-${os}-${arch}.${ext}",
     "linux": {
       "target": [
         "AppImage"
@@ -86,10 +87,13 @@
       "gatekeeperAssess": false,
       "identity": "-",
       "entitlements": "build/entitlements.mac.plist",
-      "entitlementsInherit": "build/entitlements.mac.plist"
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "extendInfo": {
+        "NSAppleEventsUsageDescription": "EdexUi-Eng uses Automation only when you connect Calendar or Apple Music to show your events and current playback."
+      }
     },
     "dmg": {
-      "artifactName": "eDEX-UI-macOS-${arch}.dmg"
+      "artifactName": "EdexUi-Eng-macOS-${arch}.dmg"
     },
     "win": {
       "target": [
@@ -104,7 +108,7 @@
       "icon": "media/icon.ico"
     },
     "nsis": {
-      "artifactName": "eDEX-UI-Windows-${arch}.exe",
+      "artifactName": "EdexUi-Eng-Windows-${arch}.exe",
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "deleteAppDataOnUninstall": true
