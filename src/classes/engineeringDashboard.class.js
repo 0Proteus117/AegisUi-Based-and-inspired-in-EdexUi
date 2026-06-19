@@ -199,112 +199,326 @@ class EngineeringCalendarPanel {
         this.ipc = require("electron").ipcRenderer;
         this.content = document.getElementById("eng_calendar_content");
         this.status = document.getElementById("eng_calendar_status");
+        this.viewMode = localStorage.getItem("edexui-eng-calendar-view") === "month" ? "month" : "week";
+        this.cursor = new Date();
+        this.cursor.setHours(12, 0, 0, 0);
         this.activeCalendars = new Set();
+        this.selectionLoaded = false;
         this.renderConnect();
-        if (localStorage.getItem("edexui-eng-calendar-connected") === "true") this.load();
+        if (localStorage.getItem("edexui-eng-calendar-native-connected") === "true") this.load();
     }
 
     renderConnect(message = "LOCAL CALENDAR ACCESS IS OFF") {
+        const permissionRequired = message.includes("FULL ACCESS");
         this.content.innerHTML = `
             <div class="eng-connect-state">
                 <div class="eng-calendar-glyph"><span></span><strong>${new Date().getDate()}</strong></div>
                 <p>${message}</p>
                 <div class="eng-connect-actions">
                     <button id="eng_calendar_connect">CONNECT CALENDARS</button>
-                    <button id="eng_calendar_accounts">MANAGE ACCOUNTS</button>
+                    <button id="eng_calendar_settings">${permissionRequired ? "CALENDAR PRIVACY" : "MANAGE ACCOUNTS"}</button>
                 </div>
-                <small>Reads every account enabled in macOS Calendar: iCloud, Outlook and Exchange.</small>
+                <small>Native read-only access for iCloud, Outlook, Exchange and recurring events.</small>
             </div>`;
         document.getElementById("eng_calendar_connect").addEventListener("click", () => this.load(true));
-        document.getElementById("eng_calendar_accounts").addEventListener("click", () => {
-            this.ipc.invoke("calendar-open-accounts");
+        document.getElementById("eng_calendar_settings").addEventListener("click", () => {
+            this.ipc.invoke(permissionRequired ? "calendar-open-privacy" : "calendar-open-accounts");
         });
     }
 
+    startOfWeek(date) {
+        const result = new Date(date);
+        const day = (result.getDay() + 6) % 7;
+        result.setDate(result.getDate() - day);
+        result.setHours(0, 0, 0, 0);
+        return result;
+    }
+
+    getRange() {
+        if (this.viewMode === "week") {
+            const start = this.startOfWeek(this.cursor);
+            const end = new Date(start);
+            end.setDate(end.getDate() + 7);
+            return {start, end};
+        }
+
+        const first = new Date(this.cursor.getFullYear(), this.cursor.getMonth(), 1);
+        const start = this.startOfWeek(first);
+        const last = new Date(this.cursor.getFullYear(), this.cursor.getMonth() + 1, 0);
+        const end = this.startOfWeek(last);
+        end.setDate(end.getDate() + 7);
+        return {start, end};
+    }
+
     async load(userInitiated = false) {
-        this.content.innerHTML = `<div class="eng-loading"><span class="eng-scanline"></span>QUERYING THE NEXT 7 DAYS</div>`;
-        const response = await this.ipc.invoke("calendar-events");
+        const range = this.getRange();
+        this.content.innerHTML = `<div class="eng-loading"><span class="eng-scanline"></span>LOADING NATIVE CALENDAR</div>`;
+        const response = await this.ipc.invoke("calendar-events", {
+            start: range.start.getTime(),
+            end: range.end.getTime()
+        });
         if (!response.ok) {
-            localStorage.removeItem("edexui-eng-calendar-connected");
+            localStorage.removeItem("edexui-eng-calendar-native-connected");
             const message = response.permissionDenied
-                ? "CALENDAR PERMISSION DENIED"
+                ? "CALENDAR FULL ACCESS REQUIRED"
                 : "CALENDAR LINK UNAVAILABLE";
             this.renderConnect(message);
             return;
         }
 
-        localStorage.setItem("edexui-eng-calendar-connected", "true");
+        localStorage.setItem("edexui-eng-calendar-native-connected", "true");
         this.calendarData = response.data || {calendars: [], events: []};
-        this.activeCalendars = new Set(this.calendarData.calendars.map(calendar => calendar.name));
-        this.status.innerText = `${this.calendarData.calendars.length} CALENDARS · 7 DAYS`;
-        this.renderEvents();
+        this.range = range;
+        const availableIds = new Set(this.calendarData.calendars.map(calendar => calendar.id));
+        const savedValue = localStorage.getItem("edexui-eng-calendar-selection");
+        let savedSelection = [];
+        try {
+            savedSelection = JSON.parse(savedValue || "[]");
+        } catch (error) {}
+        const validSelection = savedSelection.filter(id => availableIds.has(id));
+        if (!this.selectionLoaded) {
+            this.activeCalendars = new Set(
+                savedValue === null ? Array.from(availableIds) : validSelection
+            );
+            this.selectionLoaded = true;
+        } else {
+            this.activeCalendars = new Set(
+                Array.from(this.activeCalendars).filter(id => availableIds.has(id))
+            );
+        }
+        this.status.innerText = `${this.calendarData.events.length} EVENTS · ${this.viewMode.toUpperCase()}`;
+        this.renderCalendar();
         clearTimeout(this.refreshTimer);
         this.refreshTimer = setTimeout(() => this.load(), 5 * 60 * 1000);
         if (userInitiated) window.audioManager.scan.play();
     }
 
-    renderEvents() {
+    saveSelection() {
+        localStorage.setItem(
+            "edexui-eng-calendar-selection",
+            JSON.stringify(Array.from(this.activeCalendars))
+        );
+    }
+
+    dateKey(date) {
+        return [
+            date.getFullYear(),
+            String(date.getMonth() + 1).padStart(2, "0"),
+            String(date.getDate()).padStart(2, "0")
+        ].join("-");
+    }
+
+    isToday(date) {
+        const today = new Date();
+        return this.dateKey(date) === this.dateKey(today);
+    }
+
+    filteredEvents() {
         const data = this.calendarData || {calendars: [], events: []};
-        const events = data.events.filter(event => this.activeCalendars.has(event.calendar));
-        const dayFormatter = new Intl.DateTimeFormat(undefined, {
-            weekday: "short",
+        return data.events.filter(event => this.activeCalendars.has(event.calendarId));
+    }
+
+    periodLabel() {
+        if (this.viewMode === "month") {
+            return new Intl.DateTimeFormat(undefined, {
+                month: "long",
+                year: "numeric"
+            }).format(this.cursor).toUpperCase();
+        }
+        const end = new Date(this.range.end);
+        end.setDate(end.getDate() - 1);
+        const formatter = new Intl.DateTimeFormat(undefined, {
             day: "2-digit",
             month: "short"
         });
-        const timeFormatter = new Intl.DateTimeFormat(undefined, {
-            hour: "2-digit",
-            minute: "2-digit"
-        });
+        return `${formatter.format(this.range.start)} — ${formatter.format(end)}`.toUpperCase();
+    }
 
+    renderCalendar() {
+        this.status.innerText = `${this.filteredEvents().length} EVENTS · ${this.viewMode.toUpperCase()}`;
         this.content.innerHTML = `
-            <div class="eng-calendar-sources"></div>
-            <div class="eng-event-list"></div>`;
-        const sources = this.content.querySelector(".eng-calendar-sources");
-        const list = this.content.querySelector(".eng-event-list");
-
-        data.calendars.forEach(calendar => {
-            const button = document.createElement("button");
-            button.className = this.activeCalendars.has(calendar.name) ? "active" : "";
-            button.innerText = `${calendar.name} · ${calendar.eventCount}`;
-            button.title = calendar.name;
-            button.addEventListener("click", () => {
-                if (this.activeCalendars.has(calendar.name)) this.activeCalendars.delete(calendar.name);
-                else this.activeCalendars.add(calendar.name);
-                this.renderEvents();
-            });
-            sources.appendChild(button);
-        });
-
-        const manage = document.createElement("button");
-        manage.innerText = "ACCOUNTS";
-        manage.addEventListener("click", () => this.ipc.invoke("calendar-open-accounts"));
-        sources.appendChild(manage);
-
-        if (!events.length) {
-            list.innerHTML = `
-                <div class="eng-empty-state">
-                    <strong>AGENDA CLEAR</strong>
-                    NO EVENTS FOR THE SELECTED CALENDARS
-                </div>`;
-            return;
-        }
-
-        events.forEach((event, index) => {
-            const start = new Date(event.start);
-            const row = document.createElement("article");
-            row.className = "eng-event";
-            row.innerHTML = `
-                <div class="eng-event-index">${String(index + 1).padStart(2, "0")}</div>
-                <div class="eng-event-time">
-                    <strong>${dayFormatter.format(start).toUpperCase()}</strong>
-                    <span>${event.allDay ? "ALL DAY" : timeFormatter.format(start)}</span>
+            <div class="eng-calendar-toolbar">
+                <div class="eng-calendar-nav">
+                    <button id="eng_calendar_previous" aria-label="Previous period">‹</button>
+                    <button id="eng_calendar_today">TODAY</button>
+                    <button id="eng_calendar_next" aria-label="Next period">›</button>
                 </div>
-                <div class="eng-event-main">
-                    <strong>${window._escapeHtml(String(event.title))}</strong>
-                    <span>${window._escapeHtml(String(event.calendar))}${event.location ? " · "+window._escapeHtml(String(event.location)) : ""}</span>
-                </div>`;
-            list.appendChild(row);
+                <strong>${window._escapeHtml(this.periodLabel())}</strong>
+                <div class="eng-calendar-actions">
+                    <button id="eng_calendar_week" class="${this.viewMode === "week" ? "active" : ""}">WEEK</button>
+                    <button id="eng_calendar_month" class="${this.viewMode === "month" ? "active" : ""}">MONTH</button>
+                    <button id="eng_calendar_picker_button">CALENDARS ${this.activeCalendars.size}/${this.calendarData.calendars.length}</button>
+                </div>
+            </div>
+            <div id="eng_calendar_picker" class="eng-calendar-picker hidden"></div>
+            <div id="eng_calendar_grid" class="eng-calendar-${this.viewMode}"></div>`;
+
+        document.getElementById("eng_calendar_previous").addEventListener("click", () => this.navigate(-1));
+        document.getElementById("eng_calendar_today").addEventListener("click", () => {
+            this.cursor = new Date();
+            this.cursor.setHours(12, 0, 0, 0);
+            this.load();
         });
+        document.getElementById("eng_calendar_next").addEventListener("click", () => this.navigate(1));
+        document.getElementById("eng_calendar_week").addEventListener("click", () => this.changeView("week"));
+        document.getElementById("eng_calendar_month").addEventListener("click", () => this.changeView("month"));
+        document.getElementById("eng_calendar_picker_button").addEventListener("click", () => {
+            document.getElementById("eng_calendar_picker").classList.toggle("hidden");
+        });
+
+        this.renderPicker();
+        if (this.viewMode === "month") this.renderMonth();
+        else this.renderWeek();
+    }
+
+    navigate(direction) {
+        if (this.viewMode === "month") this.cursor.setMonth(this.cursor.getMonth() + direction);
+        else this.cursor.setDate(this.cursor.getDate() + (direction * 7));
+        this.load();
+    }
+
+    changeView(mode) {
+        if (mode === this.viewMode) return;
+        this.viewMode = mode;
+        localStorage.setItem("edexui-eng-calendar-view", mode);
+        this.load();
+    }
+
+    renderPicker() {
+        const picker = document.getElementById("eng_calendar_picker");
+        const eventCounts = new Map();
+        this.calendarData.events.forEach(event => {
+            eventCounts.set(event.calendarId, (eventCounts.get(event.calendarId) || 0) + 1);
+        });
+        picker.innerHTML = `
+            <header>
+                <strong>VISIBLE CALENDARS</strong>
+                <button id="eng_calendar_select_all">ALL</button>
+                <button id="eng_calendar_select_none">NONE</button>
+                <button id="eng_calendar_manage_accounts">ACCOUNTS</button>
+            </header>
+            <div class="eng-calendar-picker-list"></div>`;
+        const list = picker.querySelector(".eng-calendar-picker-list");
+        this.calendarData.calendars.forEach(calendar => {
+            const button = document.createElement("button");
+            const active = this.activeCalendars.has(calendar.id);
+            button.className = `eng-calendar-choice${active ? " active" : ""}`;
+            button.innerHTML = `
+                <i style="--calendar-color:${window._escapeHtml(calendar.color || "#3BA7FF")}"></i>
+                <span>
+                    <strong>${window._escapeHtml(calendar.name)}</strong>
+                    <small>${window._escapeHtml(calendar.account || "Local")} · ${eventCounts.get(calendar.id) || 0} EVENTS</small>
+                </span>
+                <em>${active ? "ON" : "OFF"}</em>`;
+            button.addEventListener("click", () => {
+                if (this.activeCalendars.has(calendar.id)) this.activeCalendars.delete(calendar.id);
+                else this.activeCalendars.add(calendar.id);
+                this.saveSelection();
+                this.renderCalendar();
+                document.getElementById("eng_calendar_picker").classList.remove("hidden");
+            });
+            list.appendChild(button);
+        });
+        document.getElementById("eng_calendar_select_all").addEventListener("click", () => {
+            this.activeCalendars = new Set(this.calendarData.calendars.map(calendar => calendar.id));
+            this.saveSelection();
+            this.renderCalendar();
+            document.getElementById("eng_calendar_picker").classList.remove("hidden");
+        });
+        document.getElementById("eng_calendar_select_none").addEventListener("click", () => {
+            this.activeCalendars.clear();
+            this.saveSelection();
+            this.renderCalendar();
+            document.getElementById("eng_calendar_picker").classList.remove("hidden");
+        });
+        document.getElementById("eng_calendar_manage_accounts").addEventListener("click", () => {
+            this.ipc.invoke("calendar-open-accounts");
+        });
+    }
+
+    eventsByDay() {
+        const grouped = new Map();
+        this.filteredEvents().forEach(event => {
+            const key = this.dateKey(new Date(event.start));
+            if (!grouped.has(key)) grouped.set(key, []);
+            grouped.get(key).push(event);
+        });
+        return grouped;
+    }
+
+    eventChip(event, compact = false) {
+        const calendar = this.calendarData.calendars.find(item => item.id === event.calendarId) || {};
+        const start = new Date(event.start);
+        const time = event.allDay
+            ? "ALL DAY"
+            : new Intl.DateTimeFormat(undefined, {hour: "2-digit", minute: "2-digit"}).format(start);
+        const chip = document.createElement("div");
+        chip.className = `eng-calendar-event-chip${compact ? " compact" : ""}`;
+        chip.style.setProperty("--calendar-color", calendar.color || "#3BA7FF");
+        chip.title = `${event.title} · ${event.calendar}${event.location ? " · " + event.location : ""}`;
+        chip.innerHTML = `
+            <time>${time}</time>
+            <strong>${window._escapeHtml(event.title)}</strong>`;
+        return chip;
+    }
+
+    renderWeek() {
+        const grid = document.getElementById("eng_calendar_grid");
+        const grouped = this.eventsByDay();
+        const dayName = new Intl.DateTimeFormat(undefined, {weekday: "short"});
+        for (let index = 0; index < 7; index++) {
+            const date = new Date(this.range.start);
+            date.setDate(date.getDate() + index);
+            const column = document.createElement("section");
+            column.className = `eng-calendar-day${this.isToday(date) ? " today" : ""}`;
+            column.innerHTML = `
+                <header>
+                    <span>${dayName.format(date).toUpperCase()}</span>
+                    <strong>${date.getDate()}</strong>
+                </header>
+                <div class="eng-calendar-day-events"></div>`;
+            const events = grouped.get(this.dateKey(date)) || [];
+            const container = column.querySelector(".eng-calendar-day-events");
+            events.forEach(event => container.appendChild(this.eventChip(event)));
+            if (!events.length) container.innerHTML = `<span class="eng-calendar-day-empty">—</span>`;
+            grid.appendChild(column);
+        }
+    }
+
+    renderMonth() {
+        const grid = document.getElementById("eng_calendar_grid");
+        const grouped = this.eventsByDay();
+        const dayName = new Intl.DateTimeFormat(undefined, {weekday: "narrow"});
+        for (let index = 0; index < 7; index++) {
+            const date = new Date(this.range.start);
+            date.setDate(date.getDate() + index);
+            const heading = document.createElement("span");
+            heading.className = "eng-calendar-month-heading";
+            heading.innerText = dayName.format(date).toUpperCase();
+            grid.appendChild(heading);
+        }
+        const days = Math.round((this.range.end - this.range.start) / (24 * 60 * 60 * 1000));
+        for (let index = 0; index < days; index++) {
+            const date = new Date(this.range.start);
+            date.setDate(date.getDate() + index);
+            const events = grouped.get(this.dateKey(date)) || [];
+            const cell = document.createElement("section");
+            cell.className = [
+                "eng-calendar-month-day",
+                date.getMonth() !== this.cursor.getMonth() ? "outside" : "",
+                this.isToday(date) ? "today" : ""
+            ].filter(Boolean).join(" ");
+            cell.innerHTML = `<strong>${date.getDate()}</strong><div></div>`;
+            const eventContainer = cell.querySelector("div");
+            events.slice(0, 3).forEach(event => eventContainer.appendChild(this.eventChip(event, true)));
+            if (events.length > 3) {
+                const more = document.createElement("span");
+                more.className = "eng-calendar-more";
+                more.innerText = `+${events.length - 3}`;
+                eventContainer.appendChild(more);
+            }
+            grid.appendChild(cell);
+        }
     }
 }
 

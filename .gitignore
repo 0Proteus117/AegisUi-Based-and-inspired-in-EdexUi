@@ -45,3 +45,5 @@ jspm_packages
 dist
 prebuild-src
 src/node_modules
+src/native/calendar-helper
+src/native/EdexUiEngCalendar.app

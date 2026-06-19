@@ -217,42 +217,6 @@ ipc.handle("launch-application", async (e, applicationPath) => {
     return error ? {ok: false, error} : {ok: true};
 });
 
-const calendarScript = `
-const Calendar = Application("Calendar");
-const now = new Date();
-const horizon = new Date(now.getTime() + (7 * 24 * 60 * 60 * 1000));
-const events = [];
-const calendars = [];
-Calendar.calendars().forEach(calendar => {
-    const calendarName = calendar.name();
-    let matches = [];
-    try {
-        matches = calendar.events.whose({
-            startDate: {_greaterThan: now, _lessThan: horizon}
-        })();
-    } catch (error) {}
-    calendars.push({name: calendarName, eventCount: matches.length});
-    matches.forEach(event => {
-        try {
-            const start = new Date(event.startDate());
-            events.push({
-                title: event.summary() || "Untitled event",
-                start: start.toISOString(),
-                end: new Date(event.endDate()).toISOString(),
-                location: String(event.location() || ""),
-                calendar: calendarName,
-                allDay: Boolean(event.alldayEvent())
-            });
-        } catch (error) {}
-    });
-});
-events.sort((a, b) => a.start.localeCompare(b.start));
-JSON.stringify({
-    calendars,
-    events: events.slice(0, 32)
-});
-`;
-
 const musicStatusScript = `
 const Music = Application("Music");
 if (!Music.running()) {
@@ -293,10 +257,87 @@ async function runAutomation(script, timeout = 20000) {
     }
 }
 
-ipc.handle("calendar-events", () => runAutomation(calendarScript));
+ipc.handle("calendar-events", async (event, requestedRange = {}) => {
+    if (process.platform !== "darwin") {
+        return {ok: false, error: "Calendar integration is available on macOS only."};
+    }
+
+    const start = Number(requestedRange.start);
+    const end = Number(requestedRange.end);
+    const maximumRange = 370 * 24 * 60 * 60 * 1000;
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start || end - start > maximumRange) {
+        return {ok: false, error: "Invalid calendar date range."};
+    }
+
+    const packagedHelperBundle = app.isPackaged
+        ? path.join(process.resourcesPath, "EdexUiEngCalendar.app")
+        : path.join(__dirname, "native", "EdexUiEngCalendar.app");
+    const helperBundle = path.join(app.getPath("userData"), "EdexUiEngCalendar.app");
+    const outputFile = path.join(app.getPath("temp"), `edex-calendar-${process.pid}-${Date.now()}.json`);
+    try {
+        if (!fs.existsSync(packagedHelperBundle)) {
+            throw new Error("The native Calendar helper is missing.");
+        }
+        const sourceExecutable = path.join(
+            packagedHelperBundle,
+            "Contents", "MacOS", "calendar-helper"
+        );
+        const installedExecutable = path.join(
+            helperBundle,
+            "Contents", "MacOS", "calendar-helper"
+        );
+        const sourceHash = crypto.createHash("sha256")
+            .update(fs.readFileSync(sourceExecutable))
+            .digest("hex");
+        const installedHash = fs.existsSync(installedExecutable)
+            ? crypto.createHash("sha256").update(fs.readFileSync(installedExecutable)).digest("hex")
+            : "";
+        if (sourceHash !== installedHash) {
+            fs.rmSync(helperBundle, {recursive: true, force: true});
+            fs.cpSync(packagedHelperBundle, helperBundle, {recursive: true});
+            fs.chmodSync(installedExecutable, 0o755);
+        }
+        await execFileAsync("/usr/bin/open", [
+            "-W",
+            "-n",
+            "-a", helperBundle,
+            "--args",
+            String(start),
+            String(end),
+            outputFile
+        ], {timeout: 60000, maxBuffer: 1024 * 1024});
+        if (!fs.existsSync(outputFile)) {
+            throw new Error("Calendar did not return any data.");
+        }
+        const data = JSON.parse(fs.readFileSync(outputFile, "utf8"));
+        if (!data.authorized) {
+            return {
+                ok: false,
+                permissionDenied: true,
+                error: data.error || "Calendar access was not granted."
+            };
+        }
+        return {ok: true, data};
+    } catch (error) {
+        return {
+            ok: false,
+            permissionDenied: /not granted|denied|authorization/i.test(error.message || ""),
+            error: error.message || "Calendar request failed."
+        };
+    } finally {
+        try {
+            if (fs.existsSync(outputFile)) fs.unlinkSync(outputFile);
+        } catch (error) {}
+    }
+});
 ipc.handle("music-status", () => runAutomation(musicStatusScript, 8000));
 ipc.handle("calendar-open-accounts", () => {
     return shell.openExternal("x-apple.systempreferences:com.apple.Internet-Accounts-Settings.extension");
+});
+ipc.handle("calendar-open-privacy", () => {
+    return shell.openExternal(
+        "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_Calendars"
+    );
 });
 ipc.handle("traffic-open-key-page", () => {
     return shell.openExternal("https://developer.tomtom.com/platform/documentation/my-tomtom/how-to-get-a-tomtom-api-key");

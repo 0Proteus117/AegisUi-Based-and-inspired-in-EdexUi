@@ -28,8 +28,9 @@ keyboard and large terminal with:
 
 - a one-line engineering shell;
 - a local map with live RainViewer weather radar and optional TomTom traffic;
-- a seven-day macOS Calendar panel that aggregates every account enabled in
-  Calendar, including iCloud, Outlook and Exchange;
+- a native macOS Calendar panel with week and month views, recurring events
+  and a single calendar selector for every enabled iCloud, Outlook and
+  Exchange account;
 - Apple Music metadata, controls, progress, a playback-driven visualizer and
   a local playlist launcher;
 - editable project timelines for engineering work, with a visual Project
@@ -38,8 +39,8 @@ keyboard and large terminal with:
 - a launch grid containing the applications installed on the Mac.
 
 Calendar and Apple Music remain disconnected until their panel button is
-pressed, so macOS asks for Automation permission only when the user requests
-the integration. Weather radar needs no key. Real-time road traffic can be
+pressed. Calendar requests local read-only EventKit access; Music requests
+Automation access. Weather radar needs no key. Real-time road traffic can be
 enabled from the map's `API KEY` button with a TomTom Traffic API key.
 
 The dashboard creates two private configuration files inside the EdexUi-Eng
