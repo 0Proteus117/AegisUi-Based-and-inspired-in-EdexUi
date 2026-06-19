@@ -28,14 +28,28 @@ keyboard and large terminal with:
 
 - a one-line engineering shell;
 - a local map with live RainViewer weather radar and optional TomTom traffic;
-- a seven-day macOS Calendar panel;
-- Apple Music metadata, controls, progress and a playback-driven visualizer;
+- a seven-day macOS Calendar panel that aggregates every account enabled in
+  Calendar, including iCloud, Outlook and Exchange;
+- Apple Music metadata, controls, progress, a playback-driven visualizer and
+  a local playlist launcher;
+- editable project timelines for engineering work;
 - a launch grid containing the applications installed on the Mac.
 
 Calendar and Apple Music remain disconnected until their panel button is
 pressed, so macOS asks for Automation permission only when the user requests
 the integration. Weather radar needs no key. Real-time road traffic can be
 enabled from the map's `API KEY` button with a TomTom Traffic API key.
+
+The dashboard creates two private configuration files inside the EdexUi-Eng
+application-data folder. They are never committed to GitHub:
+
+- `projects.json` contains the project timelines and supports the states
+  `pending`, `active`, `complete` and `blocked`.
+- `music-playlists.json` contains Apple Music playlist names. Clicking a name
+  starts that playlist without bringing Music to the foreground.
+
+The Engineering Dashboard uses a restrained blue cockpit palette:
+`#3BA7FF`, `#7CCBFF`, `#13263A`, `#070B10`, `#101820` and `#24445F`.
 
 ---
 

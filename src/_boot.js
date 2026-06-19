@@ -50,6 +50,8 @@ var win, tty, extraTtys;
 const settingsFile = path.join(electron.app.getPath("userData"), "settings.json");
 const shortcutsFile = path.join(electron.app.getPath("userData"), "shortcuts.json");
 const lastWindowStateFile = path.join(electron.app.getPath("userData"), "lastWindowState.json");
+const projectsFile = path.join(electron.app.getPath("userData"), "projects.json");
+const musicPlaylistsFile = path.join(electron.app.getPath("userData"), "music-playlists.json");
 const themesDir = path.join(electron.app.getPath("userData"), "themes");
 const innerThemesDir = path.join(__dirname, "assets/themes");
 const kblayoutsDir = path.join(electron.app.getPath("userData"), "keyboards");
@@ -219,28 +221,36 @@ const calendarScript = `
 const Calendar = Application("Calendar");
 const now = new Date();
 const horizon = new Date(now.getTime() + (7 * 24 * 60 * 60 * 1000));
-const result = [];
+const events = [];
+const calendars = [];
 Calendar.calendars().forEach(calendar => {
     const calendarName = calendar.name();
-    calendar.events().forEach(event => {
+    let matches = [];
+    try {
+        matches = calendar.events.whose({
+            startDate: {_greaterThan: now, _lessThan: horizon}
+        })();
+    } catch (error) {}
+    calendars.push({name: calendarName, eventCount: matches.length});
+    matches.forEach(event => {
         try {
-            const properties = event.properties();
-            const start = new Date(properties.startDate);
-            if (start >= now && start <= horizon) {
-                result.push({
-                    title: properties.summary || "Untitled event",
-                    start: start.toISOString(),
-                    end: new Date(properties.endDate).toISOString(),
-                    location: properties.location || "",
-                    calendar: calendarName,
-                    allDay: Boolean(properties.alldayEvent)
-                });
-            }
+            const start = new Date(event.startDate());
+            events.push({
+                title: event.summary() || "Untitled event",
+                start: start.toISOString(),
+                end: new Date(event.endDate()).toISOString(),
+                location: String(event.location() || ""),
+                calendar: calendarName,
+                allDay: Boolean(event.alldayEvent())
+            });
         } catch (error) {}
     });
 });
-result.sort((a, b) => a.start.localeCompare(b.start));
-JSON.stringify(result.slice(0, 24));
+events.sort((a, b) => a.start.localeCompare(b.start));
+JSON.stringify({
+    calendars,
+    events: events.slice(0, 32)
+});
 `;
 
 const musicStatusScript = `
@@ -285,6 +295,58 @@ async function runAutomation(script, timeout = 20000) {
 
 ipc.handle("calendar-events", () => runAutomation(calendarScript));
 ipc.handle("music-status", () => runAutomation(musicStatusScript, 8000));
+ipc.handle("calendar-open-accounts", () => {
+    return shell.openExternal("x-apple.systempreferences:com.apple.Internet-Accounts-Settings.extension");
+});
+ipc.handle("traffic-open-key-page", () => {
+    return shell.openExternal("https://developer.tomtom.com/platform/documentation/my-tomtom/how-to-get-a-tomtom-api-key");
+});
+ipc.handle("engineering-projects", () => {
+    try {
+        return {ok: true, data: JSON.parse(fs.readFileSync(projectsFile, "utf8"))};
+    } catch (error) {
+        return {ok: false, error: error.message};
+    }
+});
+ipc.handle("engineering-open-projects", async () => {
+    const error = await shell.openPath(projectsFile);
+    return error ? {ok: false, error} : {ok: true};
+});
+ipc.handle("music-playlists", () => {
+    try {
+        const playlists = JSON.parse(fs.readFileSync(musicPlaylistsFile, "utf8"));
+        return {ok: true, data: Array.isArray(playlists) ? playlists : []};
+    } catch (error) {
+        return {ok: false, error: error.message};
+    }
+});
+ipc.handle("music-open-playlists", async () => {
+    const error = await shell.openPath(musicPlaylistsFile);
+    return error ? {ok: false, error} : {ok: true};
+});
+ipc.handle("music-play-playlist", async (e, playlistName) => {
+    let playlists = [];
+    try {
+        playlists = JSON.parse(fs.readFileSync(musicPlaylistsFile, "utf8"));
+    } catch (error) {}
+    const allowedNames = new Set(playlists.map(playlist => {
+        return typeof playlist === "string" ? playlist : playlist.name;
+    }));
+    if (typeof playlistName !== "string" || !allowedNames.has(playlistName)) {
+        return {ok: false, error: "Unknown playlist"};
+    }
+    const safeName = JSON.stringify(playlistName);
+    const script = `
+const Music = Application("Music");
+const playlist = Music.userPlaylists.byName(${safeName});
+if (!playlist.exists()) {
+    JSON.stringify({played: false, error: "Playlist not found"});
+} else {
+    Music.play(playlist);
+    JSON.stringify({played: true});
+}`;
+    return runAutomation(script, 12000);
+});
 ipc.handle("music-control", async (e, command) => {
     const commands = {
         previous: "Application('Music').previousTrack(); JSON.stringify({ok:true});",
@@ -311,6 +373,39 @@ try {
     signale.info(`Created config dir at ${electron.app.getPath("userData")}`);
 } catch(e) {
     signale.info(`Base config dir is ${electron.app.getPath("userData")}`);
+}
+if (!fs.existsSync(projectsFile)) {
+    fs.writeFileSync(projectsFile, JSON.stringify({
+        projects: [
+            {
+                id: "car",
+                name: "COCHE",
+                description: "Proyecto de ingeniería y puesta a punto",
+                milestones: [
+                    {name: "Definir alcance", status: "complete"},
+                    {name: "Diagnóstico y piezas", status: "active"},
+                    {name: "Compra de componentes", status: "pending"},
+                    {name: "Montaje y pruebas", status: "pending"}
+                ]
+            },
+            {
+                id: "tfg",
+                name: "TFG",
+                description: "Trabajo de Fin de Grado",
+                milestones: [
+                    {name: "Tema y alcance", status: "active"},
+                    {name: "Investigación", status: "pending"},
+                    {name: "Desarrollo", status: "pending"},
+                    {name: "Redacción y defensa", status: "pending"}
+                ]
+            }
+        ]
+    }, null, 4));
+    signale.info(`Default project timelines written to ${projectsFile}`);
+}
+if (!fs.existsSync(musicPlaylistsFile)) {
+    fs.writeFileSync(musicPlaylistsFile, JSON.stringify([], null, 4));
+    signale.info(`Default music playlist index written to ${musicPlaylistsFile}`);
 }
 // Create default settings file
 if (!fs.existsSync(settingsFile)) {
@@ -476,7 +571,24 @@ app.on('ready', async () => {
     if (!require("fs").existsSync(settings.cwd)) throw new Error("Configured cwd path does not exist.");
 
     // See #366
-    let cleanEnv = await require("shell-env")(settings.shell).catch(e => { throw e; });
+    let cleanEnv = Object.assign({}, process.env);
+    if (process.platform === "darwin") {
+        cleanEnv.PATH = Array.from(new Set([
+            ...(cleanEnv.PATH || "").split(":"),
+            "/opt/homebrew/bin",
+            "/usr/local/bin",
+            "/usr/bin",
+            "/bin",
+            "/usr/sbin",
+            "/sbin"
+        ].filter(Boolean))).join(":");
+    } else {
+        try {
+            cleanEnv = await require("shell-env")(settings.shell);
+        } catch (error) {
+            signale.warn(`${error.message}; using the current process environment`);
+        }
+    }
 
     Object.assign(cleanEnv, {
         TERM: "xterm-256color",

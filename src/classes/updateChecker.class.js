@@ -1,71 +1,74 @@
 class UpdateChecker {
     constructor() {
-        let https = require("https");
-        let electron = require("electron");
-        let remote = require("@electron/remote");
-        let current = remote.app.getVersion();
+        const https = require("https");
+        const electron = require("electron");
+        const remote = require("@electron/remote");
+        const current = remote.app.getVersion();
+        const tagPrefix = "edexui-eng-v";
 
-        this._failed = false;
-        this._willfail = false;
-        this._fail = e => {
-            this._failed = true;
-            electron.ipcRenderer.send("log", "note", "UpdateChecker: Could not fetch latest release from GitHub's API.");
-            electron.ipcRenderer.send("log", "debug", `Error: ${e}`);
+        const versionParts = version => {
+            return String(version)
+                .replace(tagPrefix, "")
+                .split(".")
+                .map(part => Number.parseInt(part, 10) || 0);
+        };
+        const compareVersions = (left, right) => {
+            const a = versionParts(left);
+            const b = versionParts(right);
+            for (let i = 0; i < Math.max(a.length, b.length); i++) {
+                if ((a[i] || 0) > (b[i] || 0)) return 1;
+                if ((a[i] || 0) < (b[i] || 0)) return -1;
+            }
+            return 0;
+        };
+        const fail = error => {
+            electron.ipcRenderer.send("log", "note", "UpdateChecker: Could not fetch EdexUi-Eng releases.");
+            electron.ipcRenderer.send("log", "debug", `Error: ${error}`);
         };
 
         https.get({
             protocol: "https:",
             host: "api.github.com",
-            path: "/repos/GitSquared/edex-ui/releases/latest",
+            path: "/repos/0Proteus117/edex-ui-fan-update-Apple-Silicon-/releases?per_page=10",
             headers: {
-                "User-Agent": "eDEX-UI UpdateChecker"
+                "User-Agent": "EdexUi-Eng UpdateChecker"
             }
-        }, res => {
-            switch(res.statusCode) {
-                case 200:
-                    break;
-                case 404:
-                    this._fail("Got 404 (Not Found) response from server");
-                    break;
-                default:
-                    this._willfail = true;
-            }
-
+        }, response => {
             let rawData = "";
-
-            res.on('data', chunk => {
-                rawData += chunk;
-            });
-
-            res.on('end', () => {
-                let d = rawData;
-                if (this._failed === true) {
-                    // Do nothing, it already failed
-                } else if (this._willfail) {
-                    this._fail(d.toString());
-                } else {
-                    try {
-                        let release = JSON.parse(d.toString());
-                        if (release.tag_name.slice(1) === current) {
-                            electron.ipcRenderer.send("log", "info", "UpdateChecker: Running latest version.");
-                        } else if (Number(release.tag_name.slice(1).replace(/\./g, "")) < Number(current.replace("-pre", "").replace(/\./g, ""))) {
-                            electron.ipcRenderer.send("log", "info", "UpdateChecker: Running an unreleased, development version.");
-                        } else {
-                            new Modal({
-                                type: "info",
-                                title: "New version available",
-                                message: `eDEX-UI <strong>${release.tag_name}</strong> is now available.<br/>Head over to <a href="#" onclick="require('electron').shell.openExternal('${release.html_url}')">github.com</a> to download the latest version.`
-                            });
-                            electron.ipcRenderer.send("log", "info", `UpdateChecker: New version ${release.tag_name} available.`);
-                        }
-                    } catch(e) {
-                        this._fail(e);
+            response.on("data", chunk => rawData += chunk);
+            response.on("end", () => {
+                if (response.statusCode !== 200) {
+                    fail(`GitHub returned ${response.statusCode}`);
+                    return;
+                }
+                try {
+                    const releases = JSON.parse(rawData);
+                    const release = releases.find(item => {
+                        return !item.draft && String(item.tag_name).startsWith(tagPrefix);
+                    });
+                    if (!release) {
+                        electron.ipcRenderer.send("log", "info", "UpdateChecker: No EdexUi-Eng release found.");
+                        return;
                     }
+
+                    const comparison = compareVersions(current, release.tag_name);
+                    if (comparison === 0) {
+                        electron.ipcRenderer.send("log", "info", "UpdateChecker: Running latest EdexUi-Eng version.");
+                    } else if (comparison > 0) {
+                        electron.ipcRenderer.send("log", "info", "UpdateChecker: Running an EdexUi-Eng development version.");
+                    } else {
+                        new Modal({
+                            type: "info",
+                            title: "New EdexUi-Eng version available",
+                            message: `EdexUi-Eng <strong>${release.tag_name.replace(tagPrefix, "")}</strong> is available.<br/>Open the <a href="#" onclick="require('electron').shell.openExternal('${release.html_url}')">GitHub release</a> to download it.`
+                        });
+                        electron.ipcRenderer.send("log", "info", `UpdateChecker: New EdexUi-Eng version ${release.tag_name} available.`);
+                    }
+                } catch (error) {
+                    fail(error);
                 }
             });
-        }).on('error', e => {
-            this._fail(e);
-        });
+        }).on("error", fail);
     }
 }
 

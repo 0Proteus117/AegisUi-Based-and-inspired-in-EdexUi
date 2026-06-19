@@ -1,7 +1,19 @@
 body.engineering-mode {
+    --color_r: 59;
+    --color_g: 167;
+    --color_b: 255;
+    --color_black: #02060a;
+    --color_light_black: #070B10;
+    --color_grey: #101820;
+    --eng-blue: #3BA7FF;
+    --eng-blue-soft: #7CCBFF;
+    --eng-blue-deep: #13263A;
+    --eng-panel: #101820;
+    --eng-border: #24445F;
     padding: 0;
     display: block;
     position: relative;
+    background-color: #070B10;
 }
 
 .engineering-mode section#keyboard,
@@ -82,10 +94,11 @@ body.engineering-mode {
     top: 9.35vh;
     bottom: 1.2vh;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.32fr);
-    grid-template-rows: minmax(0, 1fr) minmax(0, .62fr);
+    grid-template-columns: minmax(0, .92fr) minmax(0, .92fr) minmax(0, 1.16fr);
+    grid-template-rows: minmax(0, 1fr) minmax(0, .72fr) minmax(0, .54fr);
     grid-template-areas:
-        "map calendar music"
+        "map calendar projects"
+        "music music music"
         "apps apps apps";
     gap: 1.15vh;
 }
@@ -95,7 +108,9 @@ body.engineering-mode {
     min-width: 0;
     min-height: 0;
     overflow: hidden;
-    background: rgba(0, 0, 0, 0.58);
+    background:
+        linear-gradient(145deg, rgba(59, 167, 255, .035), transparent 42%),
+        rgba(16, 24, 32, .84);
     --aug-border: 0.16vh;
     --aug-border-bg: rgba(var(--color_r), var(--color_g), var(--color_b), 0.72);
     --aug-inlay: 0.3vh;
@@ -113,6 +128,10 @@ body.engineering-mode {
 
 .engineering-mode .eng-panel:nth-child(4) {
     animation-delay: .36s;
+}
+
+.engineering-mode .eng-panel:nth-child(5) {
+    animation-delay: .48s;
 }
 
 @keyframes engPanelIn {
@@ -134,7 +153,7 @@ body.engineering-mode {
     width: 100%;
     height: 2.05vh;
     box-sizing: border-box;
-    background: rgba(0, 0, 0, 0.84);
+    background: rgba(7, 11, 16, 0.92);
     backdrop-filter: blur(4px);
 }
 
@@ -148,6 +167,10 @@ body.engineering-mode {
 
 .engineering-mode #eng_calendar_panel {
     grid-area: calendar;
+}
+
+.engineering-mode #eng_projects_panel {
+    grid-area: projects;
 }
 
 .engineering-mode #eng_music_panel {
@@ -254,12 +277,24 @@ body.engineering-mode {
     outline: none;
 }
 
+.engineering-mode #eng_traffic_form small {
+    display: block;
+    margin-top: 1.2vh;
+    font: .82vh var(--font_main_light);
+    opacity: .55;
+}
+
 /* Calendar */
 
 .engineering-mode #eng_calendar_content {
     position: absolute;
     inset: 2.05vh 0 0;
     overflow: hidden;
+}
+
+.engineering-mode .eng-connect-actions {
+    display: flex;
+    gap: .55vh;
 }
 
 .engineering-mode .eng-connect-state,
@@ -312,10 +347,33 @@ body.engineering-mode {
 }
 
 .engineering-mode .eng-event-list {
-    height: 100%;
+    position: absolute;
+    inset: 4.85vh 0 0;
     overflow-y: auto;
     padding: .7vh;
     box-sizing: border-box;
+}
+
+.engineering-mode .eng-calendar-sources {
+    position: absolute;
+    inset: .55vh .55vh auto;
+    height: 3.55vh;
+    display: flex;
+    gap: .38vh;
+    align-items: center;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: .25vh;
+}
+
+.engineering-mode .eng-calendar-sources button {
+    flex: 0 0 auto;
+    max-width: 12vh;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: .38vh .55vh;
+    font-size: .78vh;
 }
 
 .engineering-mode .eng-event {
@@ -363,13 +421,188 @@ body.engineering-mode {
     text-overflow: ellipsis;
 }
 
+/* Project timelines */
+
+.engineering-mode #eng_projects_content {
+    position: absolute;
+    inset: 2.05vh 0 0;
+    overflow: hidden;
+}
+
+.engineering-mode .eng-project-toolbar {
+    height: 3.25vh;
+    display: flex;
+    align-items: center;
+    gap: .45vh;
+    padding: .45vh .65vh;
+    box-sizing: border-box;
+    border-bottom: .08vh solid rgba(var(--color_r), var(--color_g), var(--color_b), .2);
+}
+
+.engineering-mode .eng-project-toolbar span {
+    margin-right: auto;
+    font: .8vh var(--font_main_light);
+    letter-spacing: .08vh;
+    opacity: .55;
+}
+
+.engineering-mode .eng-project-toolbar button {
+    padding: .3vh .5vh;
+    font-size: .75vh;
+}
+
+.engineering-mode .eng-project-list {
+    position: absolute;
+    inset: 3.25vh 0 0;
+    overflow-y: auto;
+    padding: .7vh;
+    box-sizing: border-box;
+}
+
+.engineering-mode .eng-project {
+    margin-bottom: .75vh;
+    padding: .65vh;
+    border: .08vh solid rgba(var(--color_r), var(--color_g), var(--color_b), .22);
+    background: rgba(7, 11, 16, .62);
+}
+
+.engineering-mode .eng-project header {
+    display: grid;
+    grid-template-columns: 3.2vh minmax(0, 1fr) 4.2vh;
+    gap: .55vh;
+    align-items: center;
+}
+
+.engineering-mode .eng-project header > span {
+    display: grid;
+    place-items: center;
+    height: 3.2vh;
+    color: var(--eng-blue-soft);
+    border: .08vh solid var(--eng-border);
+    background: var(--eng-blue-deep);
+    font: 1.05vh var(--font_mono);
+}
+
+.engineering-mode .eng-project header h2,
+.engineering-mode .eng-project header p {
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.engineering-mode .eng-project header h2 {
+    color: var(--eng-blue-soft);
+    font: 1.12vh var(--font_main);
+}
+
+.engineering-mode .eng-project header p {
+    margin-top: .22vh;
+    font: .78vh var(--font_main_light);
+    opacity: .5;
+}
+
+.engineering-mode .eng-project header > strong {
+    color: var(--eng-blue);
+    font: 1.35vh var(--font_mono);
+    text-align: right;
+}
+
+.engineering-mode .eng-project-progress {
+    height: .28vh;
+    margin: .65vh 0 .72vh;
+    background: rgba(36, 68, 95, .6);
+}
+
+.engineering-mode .eng-project-progress span {
+    display: block;
+    height: 100%;
+    background: var(--eng-blue);
+    box-shadow: 0 0 .8vh rgba(59, 167, 255, .65);
+}
+
+.engineering-mode .eng-milestones {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .35vh .65vh;
+}
+
+.engineering-mode .eng-milestone {
+    min-width: 0;
+    display: grid;
+    grid-template-columns: .65vh 2.2vh minmax(0, 1fr) auto;
+    gap: .35vh;
+    align-items: center;
+    padding: .3vh .35vh;
+    color: rgba(124, 203, 255, .48);
+    border-left: .08vh solid var(--eng-border);
+}
+
+.engineering-mode .eng-milestone i {
+    width: .55vh;
+    height: .55vh;
+    border-radius: 50%;
+    border: .08vh solid currentColor;
+}
+
+.engineering-mode .eng-milestone span,
+.engineering-mode .eng-milestone strong,
+.engineering-mode .eng-milestone em {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.engineering-mode .eng-milestone span {
+    font: .72vh var(--font_mono);
+    opacity: .55;
+}
+
+.engineering-mode .eng-milestone strong {
+    font: .8vh var(--font_main_light);
+}
+
+.engineering-mode .eng-milestone em {
+    font: .62vh var(--font_main);
+    font-style: normal;
+}
+
+.engineering-mode .eng-milestone.active {
+    color: var(--eng-blue);
+    background: rgba(59, 167, 255, .08);
+}
+
+.engineering-mode .eng-milestone.active i {
+    background: var(--eng-blue);
+    box-shadow: 0 0 .7vh var(--eng-blue);
+}
+
+.engineering-mode .eng-milestone.complete {
+    color: var(--eng-blue-soft);
+}
+
+.engineering-mode .eng-milestone.complete i {
+    background: var(--eng-blue-soft);
+}
+
+.engineering-mode .eng-milestone.blocked {
+    color: var(--color_red);
+}
+
 /* Apple Music */
 
 .engineering-mode #eng_music_content {
     position: absolute;
     inset: 2.05vh 0 0;
     display: grid;
-    grid-template-rows: minmax(0, 1fr) 11.5vh;
+    grid-template-columns: minmax(0, 1fr) 18.5vh;
+}
+
+.engineering-mode .eng-music-main {
+    min-width: 0;
+    min-height: 0;
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) 7.2vh;
 }
 
 .engineering-mode .eng-music-connect {
@@ -508,6 +741,88 @@ body.engineering-mode {
     background: linear-gradient(0deg, rgba(var(--color_r), var(--color_g), var(--color_b), .07), transparent);
 }
 
+.engineering-mode #eng_playlists {
+    min-width: 0;
+    min-height: 0;
+    display: grid;
+    grid-template-rows: 2.55vh minmax(0, 1fr) 3.25vh;
+    border-left: .08vh solid var(--eng-border);
+    background: rgba(7, 11, 16, .62);
+}
+
+.engineering-mode #eng_playlists > h3 {
+    margin: 0;
+    padding: .72vh .7vh 0;
+    color: var(--eng-blue-soft);
+    font: .9vh var(--font_main);
+    letter-spacing: .1vh;
+    box-sizing: border-box;
+}
+
+.engineering-mode .eng-playlist-list {
+    min-height: 0;
+    overflow-y: auto;
+    padding: .4vh;
+}
+
+.engineering-mode .eng-playlist {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 2.1vh minmax(0, 1fr);
+    gap: .4vh;
+    align-items: center;
+    margin-bottom: .35vh;
+    padding: .45vh;
+    text-align: left;
+    border-color: rgba(36, 68, 95, .75);
+}
+
+.engineering-mode .eng-playlist span {
+    color: var(--eng-blue);
+    font: .72vh var(--font_mono);
+    opacity: .55;
+}
+
+.engineering-mode .eng-playlist strong {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font: .78vh var(--font_main_light);
+}
+
+.engineering-mode .eng-playlist.active,
+.engineering-mode .eng-playlist.loading {
+    color: var(--eng-blue-soft);
+    background: rgba(59, 167, 255, .14);
+    border-color: var(--eng-blue);
+}
+
+.engineering-mode .eng-playlist.failed {
+    border-color: var(--color_red);
+}
+
+.engineering-mode .eng-playlist-empty,
+.engineering-mode .eng-playlist-loading {
+    padding: 2vh .55vh;
+    text-align: center;
+    font: .75vh var(--font_main_light);
+    line-height: 1.5;
+    opacity: .45;
+}
+
+.engineering-mode #eng_playlists footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: .35vh;
+    padding: .4vh;
+    border-top: .08vh solid rgba(36, 68, 95, .7);
+}
+
+.engineering-mode #eng_playlists footer button {
+    padding: .35vh .55vh;
+    font-size: .75vh;
+}
+
 .engineering-mode #eng_equalizer i {
     flex: 1;
     min-width: .18vh;
@@ -616,18 +931,14 @@ body.engineering-mode {
     }
 }
 
-@media (max-aspect-ratio: 8/5) {
+@media (max-aspect-ratio: 4/3) {
     .engineering-mode main#engineering_dashboard {
         grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-        grid-template-rows: minmax(0, 1fr) minmax(0, .72fr) minmax(0, .58fr);
+        grid-template-rows: minmax(0, 1fr) minmax(0, .8fr) minmax(0, .8fr) minmax(0, .58fr);
         grid-template-areas:
             "map calendar"
+            "projects projects"
             "music music"
             "apps apps";
-    }
-
-    .engineering-mode #eng_music_content {
-        grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
-        grid-template-rows: 1fr;
     }
 }
