@@ -166,7 +166,7 @@ jobs:
         if-no-files-found: error
 
   build-darwin:
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
     - uses: actions/checkout@v4
     - name: Cache node modules
@@ -189,11 +189,9 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: 20
+        node-version-file: .nvmrc
     - name: npm install
-      run: npm install
-    - name: Run prebuild script
-      run: npm run prebuild-darwin
+      run: npm ci
     - name: npm build
       run: npm run build-darwin
       env:
@@ -201,5 +199,7 @@ jobs:
     - uses: actions/upload-artifact@v4
       with:
         name: MacOS-arm64-Image
-        path: dist/*.dmg
+        path: |
+          dist/*.dmg
+          dist/*.zip
         if-no-files-found: error

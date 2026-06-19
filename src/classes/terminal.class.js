@@ -317,7 +317,7 @@ class Terminal {
             this._disableCWDtracking = false;
             this._getTtyCWD = tty => {
                 return new Promise((resolve, reject) => {
-                    let pid = tty._pid;
+                    let pid = tty.pid || tty._pid;
                     switch(require("os").type()) {
                         case "Linux":
                             require("fs").readlink(`/proc/${pid}/cwd`, (e, cwd) => {
@@ -344,11 +344,19 @@ class Terminal {
             };
             this._getTtyProcess = tty => {
                 return new Promise((resolve, reject) => {
-                    let pid = tty._pid;
+                    let pid = tty.pid || tty._pid;
                     switch(require("os").type()) {
                         case "Linux":
-                        case "Darwin":
                             require("child_process").exec(`ps -o comm --no-headers --sort=+pid -g ${pid} | tail -1`, (e, proc) => {
+                                if (e !== null) {
+                                    reject(e);
+                                } else {
+                                    resolve(proc.trim());
+                                }
+                            });
+                            break;
+                        case "Darwin":
+                            require("child_process").exec(`ps -o comm= -p ${pid}`, (e, proc) => {
                                 if (e !== null) {
                                     reject(e);
                                 } else {
@@ -456,7 +464,7 @@ class Terminal {
                 }
             });
             this.wss.on("connection", ws => {
-                this.onopened(this.tty._pid);
+                this.onopened(this.tty.pid || this.tty._pid);
                 ws.on("close", (code, reason) => {
                     this.ondisconnected(code, reason);
                 });

@@ -81,10 +81,10 @@ class LocationGlobe {
 
             // Connections
             this.conns = [];
-            this.addConn = ip => {
+            this.addConn = async ip => {
                 let data = null;
                 try {
-                    data = window.mods.netstat.geoLookup.get(ip);
+                    data = await window.mods.netstat.geoLookup.get(ip);
                 } catch {
                     // do nothing
                 }
@@ -139,8 +139,8 @@ class LocationGlobe {
         this.globe.addMarker(randomLat, randomLong, '');
         this.globe.addMarker(randomLat - 20, randomLong + 150, '', true);
     }
-    addTemporaryConnectedMarker(ip) {
-        let data = window.mods.netstat.geoLookup.get(ip);
+    async addTemporaryConnectedMarker(ip) {
+        let data = await window.mods.netstat.geoLookup.get(ip);
         let geo = (data !== null ? data.location : {});
         if (geo.latitude && geo.longitude) {
             const lat = Number(geo.latitude);
@@ -170,9 +170,10 @@ class LocationGlobe {
         return (Math.random() * (to - from) + from).toFixed(fixed) * 1;
     }
     updateLoc() {
-        if (window.mods.netstat.offline) {
+        if (window.mods.netstat.offline || !window.mods.netstat.ipinfo || !window.mods.netstat.ipinfo.geo) {
             document.querySelector("div#mod_globe").setAttribute("class", "offline");
-            document.querySelector("i.mod_globe_headerInfo").innerText = "(OFFLINE)";
+            document.querySelector("i.mod_globe_headerInfo").innerText =
+                window.mods.netstat.offline ? "(OFFLINE)" : "UNKNOWN";
 
             this.removePins();
             this.removeMarkers();

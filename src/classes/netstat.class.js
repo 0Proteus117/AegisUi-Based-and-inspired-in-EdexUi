@@ -25,7 +25,7 @@ class Netstat {
         </div>`;
 
         this.offline = false;
-        this.lastconn = {finished: false}; // Prevent geoip lookup attempt until maxminddb is loaded
+        this.lastconn = {finished: true};
         this.iface = null;
         this.failedAttempts = {};
         this.runsBeforeGeoIPUpdate = 0;
@@ -43,18 +43,8 @@ class Netstat {
 
         // Init GeoIP integrated backend
         this.geoLookup = {
-            get: () => null
+            get: ip => require("electron").ipcRenderer.invoke("geoip-lookup", ip)
         };
-        let geolite2 = require("geolite2-redist");
-        let maxmind = require("maxmind");
-        geolite2.downloadDbs(require("path").join(require("@electron/remote").app.getPath("userData"), "geoIPcache")).then(() => {
-           geolite2.open('GeoLite2-City', path => {
-                return maxmind.open(path);
-            }).catch(e => {throw e}).then(lookup => {
-                this.geoLookup = lookup;
-                this.lastconn.finished = true;
-            });
-        });
     }
     updateInfo() {
         window.si.networkInterfaces().then(async data => {
@@ -110,12 +100,13 @@ class Netstat {
                         res.on("data", chunk => {
                             rawData += chunk;
                         });
-                        res.on("end", () => {
+                        res.on("end", async () => {
                             try {
                                 let data = JSON.parse(rawData);
+                                let geoData = await this.geoLookup.get(data.ip);
                                 this.ipinfo = {
                                     ip: data.ip,
-                                    geo: this.geoLookup.get(data.ip).location
+                                    geo: geoData ? geoData.location : null
                                 };
 
                                 let ip = this.ipinfo.ip;

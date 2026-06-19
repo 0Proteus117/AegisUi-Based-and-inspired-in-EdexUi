@@ -53,6 +53,30 @@ const kblayoutsDir = path.join(electron.app.getPath("userData"), "keyboards");
 const innerKblayoutsDir = path.join(__dirname, "assets/kb_layouts");
 const fontsDir = path.join(electron.app.getPath("userData"), "fonts");
 const innerFontsDir = path.join(__dirname, "assets/fonts");
+let geoLookup = null;
+let geoLookupReady = false;
+
+async function initGeoIP() {
+    try {
+        const geolite2 = await import("geolite2-redist");
+        const maxmind = require("maxmind");
+        const cacheDir = path.join(electron.app.getPath("userData"), "geoIPcache");
+
+        await geolite2.downloadDbs({
+            dbList: ["GeoLite2-City"],
+            path: cacheDir
+        });
+        geoLookup = await geolite2.open("GeoLite2-City", dbPath => maxmind.open(dbPath), cacheDir);
+        signale.success("GeoIP database ready");
+    } catch (e) {
+        signale.warn(`GeoIP database unavailable: ${e.message}`);
+    } finally {
+        geoLookupReady = true;
+    }
+}
+
+ipc.handle("geoip-ready", () => geoLookupReady);
+ipc.handle("geoip-lookup", (e, ip) => geoLookup ? geoLookup.get(ip) : null);
 
 // Unset proxy env variables to avoid connection problems on the internal websockets
 // See #222
@@ -74,7 +98,7 @@ try {
 // Create default settings file
 if (!fs.existsSync(settingsFile)) {
     fs.writeFileSync(settingsFile, JSON.stringify({
-        shell: (process.platform === "win32") ? "powershell.exe" : "bash",
+        shell: (process.platform === "win32") ? "powershell.exe" : (process.env.SHELL || "/bin/zsh"),
         shellArgs: '',
         cwd: electron.app.getPath("userData"),
         keyboard: "en-US",
@@ -229,6 +253,7 @@ app.on('ready', async () => {
     settings.shell = await which(settings.shell).catch(e => { throw(e) });
     signale.info(`Shell found at ${settings.shell}`);
     signale.success(`Settings loaded!`);
+    initGeoIP();
 
     if (!require("fs").existsSync(settings.cwd)) throw new Error("Configured cwd path does not exist.");
 
@@ -367,11 +392,13 @@ app.on('window-all-closed', () => {
 });
 
 app.on('before-quit', () => {
-    tty.close();
-    Object.keys(extraTtys).forEach(key => {
-        if (extraTtys[key] !== null) {
-            extraTtys[key].close();
-        }
-    });
+    if (tty) tty.close();
+    if (extraTtys) {
+        Object.keys(extraTtys).forEach(key => {
+            if (extraTtys[key] !== null) {
+                extraTtys[key].close();
+            }
+        });
+    }
     signale.complete("Shutting down...");
 });

@@ -14,12 +14,12 @@
   "main": "src/_boot.js",
   "scripts": {
     "start": "electron src --nointro",
-    "install-linux": "npm install && cd src && npm install && ./../node_modules/.bin/electron-rebuild -f -w node-pty && cd ..",
-    "install-darwin": "npm install && cd src && npm install && ./../node_modules/.bin/electron-rebuild -f -w node-pty --arch=arm64 && cd ..",
+    "install-linux": "npm ci && cd src && npm ci && ./../node_modules/.bin/electron-rebuild -f -w node-pty && cd ..",
+    "install-darwin": "npm ci && cd src && npm ci && ./../node_modules/.bin/electron-rebuild -f -w node-pty --arch=arm64 --module-dir . && cd ..",
     "preinstall-windows": "npm install --global --production windows-build-tools && npm install --global node-gyp && setx PYTHON \"%USERPROFILE%\\.windows-build-tools\\python27\\python.exe\"",
     "install-windows": "npm install && cd src && npm install && ..\\node_modules\\.bin\\electron-rebuild -f -w node-pty && cd ..",
     "prebuild-linux": "rsync -a --info=progress2 src/ prebuild-src --exclude node_modules && node prebuild-minify.js && cd prebuild-src && npm install",
-    "prebuild-darwin": "rsync -a src/ prebuild-src --exclude node_modules && node prebuild-minify.js && cd prebuild-src && npm install",
+    "prebuild-darwin": "rsync -a src/ prebuild-src --exclude node_modules && node prebuild-minify.js && cd prebuild-src && npm ci",
     "prebuild-windows": "mkdir prebuild-src && xcopy src\\* prebuild-src\\ /E /C /Q /Y && node prebuild-minify.js && cd prebuild-src && npm install",
     "build-linux": "./node_modules/.bin/electron-builder build -l --x64 --ia32 --arm64 --armv7l",
     "build-darwin": "./node_modules/.bin/electron-builder build -m --arm64",
@@ -33,14 +33,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/GitSquared/edex-ui.git"
+    "url": "git+https://github.com/0Proteus117/edex-ui-fan-update-Apple-Silicon-.git"
   },
   "author": "Gabriel 'Squared' SAILLARD <gabriel@saillard.dev> (https://gaby.dev)",
   "license": "GPL-3.0",
   "bugs": {
-    "url": "https://github.com/GitSquared/edex-ui/issues"
+    "url": "https://github.com/0Proteus117/edex-ui-fan-update-Apple-Silicon-/issues"
   },
-  "homepage": "https://github.com/GitSquared/edex-ui#readme",
+  "homepage": "https://github.com/0Proteus117/edex-ui-fan-update-Apple-Silicon-#readme",
   "build": {
     "appId": "com.edex.ui",
     "productName": "eDEX-UI",
@@ -72,13 +72,19 @@
           "arch": [
             "arm64"
           ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "arm64"
+          ]
         }
       ],
       "category": "public.app-category.utilities",
       "icon": "media/icon.icns",
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
-      "identity": null,
+      "identity": "-",
       "entitlements": "build/entitlements.mac.plist",
       "entitlementsInherit": "build/entitlements.mac.plist"
     },
@@ -105,12 +111,11 @@
     }
   },
   "dependencies": {
-    "@electron/rebuild": "^3.6.0",
+    "@electron/rebuild": "4.0.4",
     "clean-css": "5.2.1",
-    "electron": "^30.0.0",
-    "electron-builder": "^24.13.3",
+    "electron": "42.4.1",
+    "electron-builder": "26.15.3",
     "mime-types": "^2.1.33",
-    "node-abi": "^3.65.0",
     "node-json-minify": "1.0.0",
     "terser": "^5.9.0"
   },

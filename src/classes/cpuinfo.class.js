@@ -152,7 +152,9 @@ class Cpuinfo {
     updateCPUtemp() {
         window.si.cpuTemperature().then(data => {
             try {
-                document.getElementById("mod_cpuinfo_temp").innerText = `${data.max}°C`;
+                let temperature = Number(data.max);
+                document.getElementById("mod_cpuinfo_temp").innerText =
+                    Number.isFinite(temperature) && temperature > 0 ? `${temperature}°C` : "N/A";
             } catch(e) {
                 // See above notice
             }

@@ -128,7 +128,7 @@ on Linux:
 - `npm run install-linux`
 - `npm run start`
 
-on macOS (Apple Silicon — M1/M2/M3 — requires the Xcode command line tools):
+on macOS (Apple Silicon — M1 or newer — requires Node.js 24 and the Xcode command line tools):
 - clone the repository
 - `npm run install-darwin`
 - `npm run start`
@@ -142,26 +142,27 @@ on Windows:
 #### Building
 Note: Due to native modules, you can only build targets for the host OS you are using.
 
-- `npm install` (NOT `install-linux`, `install-darwin`, or `install-windows`)
+- `npm ci` (NOT `install-linux`, `install-darwin`, or `install-windows`)
 - `npm run build-linux` or `build-windows` or `build-darwin`
 
 The script will minify the source code, recompile native dependencies and create distributable assets in the `dist` folder.
 
 ##### Apple Silicon notes
-This fork targets **arm64 macOS natively** (no x64 / Rosetta build is produced).
-The resulting `.dmg` is **unsigned**; macOS Gatekeeper will refuse to launch it
-out of the box. After dragging `eDEX-UI.app` to `/Applications`, clear the
-quarantine attribute once with:
+This fork targets **arm64 macOS natively** (no x64 / Rosetta build is produced)
+and generates both `.dmg` and `.zip` artifacts. Builds use an ad-hoc local
+signature, but are not notarized by Apple. If Gatekeeper blocks the first
+launch, right-click the application and choose **Open**, or clear the quarantine
+attribute once after dragging `eDEX-UI.app` to `/Applications`:
 
 ```
 xattr -cr /Applications/eDEX-UI.app
 ```
 
-Then the app launches normally. If you need an Intel build, run the build on
+If you need an Intel build, run the build on
 an x64 host or revert `build.mac.target[0].arch` in `package.json` to `"x64"`.
 
 #### Getting the bleeding edge
-If you're interested in running the latest in-development version but don't want to compile source code yourself, you can can get pre-built nightly binaries on [GitHub Actions](https://github.com/GitSquared/edex-ui/actions): click the latest commits, and download the artifacts bundle for your OS.
+If you're interested in running the latest in-development version but don't want to compile source code yourself, get the pre-built artifacts from [this fork's GitHub Actions](https://github.com/0Proteus117/edex-ui-fan-update-Apple-Silicon-/actions): click the latest successful run and download the macOS ARM64 artifact.
 
 ## Credits
 eDEX-UI's source code was primarily written by me, [Squared](https://github.com/GitSquared). If you want to get in touch with me or find other projects I'm involved in, check out [my website](https://gaby.dev).

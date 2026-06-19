@@ -39,11 +39,14 @@ class RAMwatcher {
         if (this.currentlyUpdating) return;
         this.currentlyUpdating = true;
         window.si.mem().then(data => {
-            if (data.free+data.used !== data.total) throw("RAM Watcher Error: Bad memory values");
+            if (!data || !Number.isFinite(data.total) || data.total <= 0) {
+                this.currentlyUpdating = false;
+                return;
+            }
 
             // Convert the data for the 440-points grid
-            let active = Math.round((440*data.active)/data.total);
-            let available = Math.round((440*(data.available-data.free))/data.total);
+            let active = Math.max(0, Math.min(440, Math.round((440*data.active)/data.total)));
+            let available = Math.max(0, Math.min(440-active, Math.round((440*Math.max(0, data.available-data.free))/data.total)));
 
             // Update grid
             this.points.slice(0, active).forEach(domPoint => {
@@ -74,6 +77,8 @@ class RAMwatcher {
             let usedSwapGiB = Math.round((data.swapused/1073742000)*10)/10;
             document.getElementById("mod_ramwatcher_swaptext").innerText = `${usedSwapGiB} GiB`;
 
+            this.currentlyUpdating = false;
+        }).catch(() => {
             this.currentlyUpdating = false;
         });
     }
