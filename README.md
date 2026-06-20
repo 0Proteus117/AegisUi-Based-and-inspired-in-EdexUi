@@ -32,11 +32,32 @@ keyboard and large terminal with:
   and a single calendar selector for every enabled iCloud, Outlook and
   Exchange account;
 - Apple Music metadata, controls, progress, a playback-driven visualizer and
-  a local playlist launcher;
+  a local playlist launcher. The player also displays the current track
+  artwork directly from Music, with the existing cockpit animation as fallback;
 - editable project timelines for engineering work, with a visual Project
   Control popup for creating projects, managing milestones, changing status,
   reordering steps and saving without manually editing JSON;
 - a launch grid containing the applications installed on the Mac.
+
+Version 1.4 adds a modular Command Deck with six navigable workspaces:
+
+- `HUB` preserves this complete original dashboard;
+- `ENGINEER` adds project status, CAD/CAE/simulation launchers, research,
+  standards, technical sources and a future-tools roadmap;
+- `OSINT / ANALYST`, `STUDENT`, `ARTIST` and `BUSINESS` provide structured
+  foundations ready for profile-specific widgets and integrations.
+
+The workspace bar supports mouse navigation and `Command + Option + 1…6`.
+Changing workspace never recreates the HUB: its map, Calendar, Music and
+project state remain alive in the background. Non-HUB views are rendered only
+when first opened.
+
+Workspace content is defined in
+`src/config/workspaces.config.js`, while rendering and navigation live in
+`src/classes/workspaceManager.class.js`. This keeps profile configuration out
+of the existing HUB components and makes future widgets incremental. The
+professional-profile research, priorities and safety boundaries are documented
+in [WORKSPACE_RESEARCH.md](WORKSPACE_RESEARCH.md).
 
 Calendar and Apple Music remain disconnected until their panel button is
 pressed. Calendar requests local read-only EventKit access; Music requests

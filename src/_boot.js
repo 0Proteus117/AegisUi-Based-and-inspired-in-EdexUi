@@ -63,18 +63,24 @@ let geoLookupReady = false;
 let applicationsCache = null;
 let knownApplications = new Set();
 const execFileAsync = promisify(execFile);
+const musicArtworkCache = new Map();
 
 async function initGeoIP() {
     try {
-        const geolite2 = await import("geolite2-redist");
         const maxmind = require("maxmind");
         const cacheDir = path.join(electron.app.getPath("userData"), "geoIPcache");
+        const databasePath = path.join(cacheDir, "GeoLite2-City.mmdb");
 
-        await geolite2.downloadDbs({
-            dbList: ["GeoLite2-City"],
-            path: cacheDir
-        });
-        geoLookup = await geolite2.open("GeoLite2-City", dbPath => maxmind.open(dbPath), cacheDir);
+        if (fs.existsSync(databasePath)) {
+            geoLookup = await maxmind.open(databasePath);
+        } else {
+            const geolite2 = await import("geolite2-redist");
+            await geolite2.downloadDbs({
+                dbList: ["GeoLite2-City"],
+                path: cacheDir
+            });
+            geoLookup = await geolite2.open("GeoLite2-City", dbPath => maxmind.open(dbPath), cacheDir);
+        }
         signale.success("GeoIP database ready");
     } catch (e) {
         signale.warn(`GeoIP database unavailable: ${e.message}`);
@@ -231,21 +237,47 @@ if (!Music.running()) {
             artist: properties.artist || "Unknown artist",
             album: properties.album || "",
             duration: Number(properties.duration || 0),
-            position: Number(Music.playerPosition() || 0)
+            position: Number(Music.playerPosition() || 0),
+            artworkId: String(properties.persistentID || properties.databaseID || [
+                properties.name || "",
+                properties.artist || "",
+                properties.album || ""
+            ].join("|"))
         });
     } catch (error) {}
     JSON.stringify(result);
 }
 `;
 
-async function runAutomation(script, timeout = 20000) {
+const musicArtworkScript = `
+const Music = Application("Music");
+if (!Music.running()) {
+    JSON.stringify({running: false});
+} else {
+    let result = {running: true, artworkId: "", rawData: ""};
+    try {
+        const track = Music.currentTrack();
+        const properties = track.properties();
+        result.artworkId = String(properties.persistentID || properties.databaseID || [
+            properties.name || "",
+            properties.artist || "",
+            properties.album || ""
+        ].join("|"));
+        const artworks = track.artworks();
+        if (artworks.length) result.rawData = String(artworks[0].rawData());
+    } catch (error) {}
+    JSON.stringify(result);
+}
+`;
+
+async function runAutomation(script, timeout = 20000, maxBuffer = 1024 * 1024) {
     if (process.platform !== "darwin") {
         return {ok: false, error: "This integration is available on macOS only."};
     }
     try {
         const {stdout} = await execFileAsync("/usr/bin/osascript", [
             "-l", "JavaScript", "-e", script
-        ], {timeout, maxBuffer: 1024 * 1024});
+        ], {timeout, maxBuffer});
         return {ok: true, data: JSON.parse(stdout.trim() || "null")};
     } catch (error) {
         const message = (error.stderr || error.message || "").trim();
@@ -331,6 +363,53 @@ ipc.handle("calendar-events", async (event, requestedRange = {}) => {
     }
 });
 ipc.handle("music-status", () => runAutomation(musicStatusScript, 8000));
+ipc.handle("music-artwork", async (event, requestedArtworkId) => {
+    const artworkId = typeof requestedArtworkId === "string"
+        ? requestedArtworkId.slice(0, 256)
+        : "";
+    if (artworkId && musicArtworkCache.has(artworkId)) {
+        return {ok: true, data: {artworkId, image: musicArtworkCache.get(artworkId)}};
+    }
+
+    const response = await runAutomation(musicArtworkScript, 12000, 12 * 1024 * 1024);
+    if (!response.ok) return response;
+
+    const data = response.data || {};
+    const rawData = typeof data.rawData === "string" ? data.rawData : "";
+    const match = rawData.match(/\$([0-9a-f]+)\$/i);
+    if (!match || !data.artworkId) {
+        return {ok: true, data: {artworkId: data.artworkId || artworkId, image: null}};
+    }
+
+    try {
+        const buffer = Buffer.from(match[1], "hex");
+        if (!buffer.length || buffer.length > 10 * 1024 * 1024) {
+            throw new Error("Artwork size is not supported.");
+        }
+        let mime = "image/jpeg";
+        if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47) {
+            mime = "image/png";
+        }
+        const image = `data:${mime};base64,${buffer.toString("base64")}`;
+        musicArtworkCache.set(data.artworkId, image);
+        if (musicArtworkCache.size > 12) {
+            musicArtworkCache.delete(musicArtworkCache.keys().next().value);
+        }
+        return {ok: true, data: {artworkId: data.artworkId, image}};
+    } catch (error) {
+        return {ok: false, error: error.message};
+    }
+});
+ipc.handle("workspace-open-link", async (event, target) => {
+    try {
+        const parsed = new URL(String(target || ""));
+        if (parsed.protocol !== "https:") throw new Error("Only secure HTTPS links are allowed.");
+        await shell.openExternal(parsed.toString());
+        return {ok: true};
+    } catch (error) {
+        return {ok: false, error: error.message || "Cannot open this link."};
+    }
+});
 ipc.handle("calendar-open-accounts", () => {
     return shell.openExternal("x-apple.systempreferences:com.apple.Internet-Accounts-Settings.extension");
 });
@@ -571,30 +650,18 @@ if(!fs.existsSync(lastWindowStateFile)) {
 
 // Copy default themes & keyboard layouts & fonts
 signale.pending("Mirroring internal assets...");
-try {
-    fs.mkdirSync(themesDir);
-} catch(e) {
-    // Folder already exists
-}
-fs.readdirSync(innerThemesDir).forEach(e => {
-    fs.writeFileSync(path.join(themesDir, e), fs.readFileSync(path.join(innerThemesDir, e), {encoding:"utf-8"}));
-});
-try {
-    fs.mkdirSync(kblayoutsDir);
-} catch(e) {
-    // Folder already exists
-}
-fs.readdirSync(innerKblayoutsDir).forEach(e => {
-    fs.writeFileSync(path.join(kblayoutsDir, e), fs.readFileSync(path.join(innerKblayoutsDir, e), {encoding:"utf-8"}));
-});
-try {
-    fs.mkdirSync(fontsDir);
-} catch(e) {
-    // Folder already exists
-}
-fs.readdirSync(innerFontsDir).forEach(e => {
-    fs.writeFileSync(path.join(fontsDir, e), fs.readFileSync(path.join(innerFontsDir, e)));
-});
+const installDefaultAssets = (sourceDirectory, destinationDirectory) => {
+    fs.mkdirSync(destinationDirectory, {recursive: true});
+    fs.readdirSync(sourceDirectory).forEach(fileName => {
+        const destination = path.join(destinationDirectory, fileName);
+        if (!fs.existsSync(destination)) {
+            fs.copyFileSync(path.join(sourceDirectory, fileName), destination);
+        }
+    });
+};
+installDefaultAssets(innerThemesDir, themesDir);
+installDefaultAssets(innerKblayoutsDir, kblayoutsDir);
+installDefaultAssets(innerFontsDir, fontsDir);
 
 // Version history logging
 const versionHistoryPath = path.join(electron.app.getPath("userData"), "versions_log.json");

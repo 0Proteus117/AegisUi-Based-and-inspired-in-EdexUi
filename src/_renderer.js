@@ -348,10 +348,12 @@ async function initUI() {
         <h3 class="title"><p>EDEXUI-ENG</p><p>SYSTEM</p></h3>
     </section>
     <section id="main_shell" style="opacity:0;" augmented-ui="bl-clip tr-clip exe">
-        <h3 class="title"><p>COMMAND LINE</p><p>READY</p></h3>
+        <h3 class="title"><p>COMMAND LINE</p><p><span id="workspace_active_label">HUB</span> / READY</p></h3>
     </section>
+    <nav id="workspace_navigation"></nav>
     <section id="engineering_services" aria-hidden="true"></section>
     <main id="engineering_dashboard"></main>
+    <section id="workspace_views"></section>
     <section id="keyboard" aria-hidden="true"></section>`;
 
     // Keep the keyboard engine hidden for backwards compatibility with
@@ -425,6 +427,12 @@ async function initUI() {
         toggleListview: () => {}
     };
     window.engineeringDashboard = new EngineeringDashboard("engineering_dashboard");
+    window.workspaceManager = new WorkspaceManager({
+        definitions: window.workspaceDefinitions,
+        hubElementId: "engineering_dashboard",
+        navigationElementId: "workspace_navigation",
+        viewsElementId: "workspace_views"
+    });
 
     window.audioManager.expand.play();
     shellContainer.setAttribute("style", "opacity:1;");

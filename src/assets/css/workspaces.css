@@ -1,0 +1,531 @@
+.engineering-mode #workspace_navigation {
+    position: fixed;
+    z-index: 1200;
+    top: .28vh;
+    left: 42vw;
+    right: .9vw;
+    height: 1.9vh;
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    align-items: stretch;
+    gap: .28vh;
+}
+
+.engineering-mode .workspace-nav-button {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: .18vh .55vh;
+    border: .08vh solid rgba(36, 68, 95, .82);
+    color: rgba(124, 203, 255, .68);
+    background: rgba(7, 11, 16, .96);
+    font: .72vh var(--font_main);
+    letter-spacing: .05vh;
+    text-align: center;
+    transition: color .18s ease, border-color .18s ease, background .18s ease, box-shadow .18s ease;
+}
+
+.engineering-mode .workspace-nav-button span {
+    display: none;
+}
+
+.engineering-mode .workspace-nav-button strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: normal;
+}
+
+.engineering-mode .workspace-nav-button:hover,
+.engineering-mode .workspace-nav-button.active {
+    color: #d8f1ff;
+    border-color: #3BA7FF;
+    background: rgba(19, 38, 58, .94);
+    box-shadow: inset 0 -.16vh 0 #3BA7FF, 0 0 .9vh rgba(59, 167, 255, .18);
+}
+
+.engineering-mode .workspace-nav-button.active span {
+    color: #7CCBFF;
+}
+
+.engineering-mode .workspace-is-hidden {
+    display: none !important;
+}
+
+.engineering-mode #workspace_views {
+    position: static;
+}
+
+.engineering-mode .workspace-view {
+    position: absolute;
+    left: 17.5vw;
+    right: .9vw;
+    top: 9.35vh;
+    bottom: 1.2vh;
+    min-width: 0;
+    min-height: 0;
+    display: grid;
+    grid-template-rows: 8.8vh 5.1vh minmax(0, 1fr);
+    gap: 1.05vh;
+    color: #7CCBFF;
+    animation: workspaceIn .32s ease-out both;
+}
+
+@keyframes workspaceIn {
+    from {
+        opacity: 0;
+        transform: translateY(.55vh);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.engineering-mode .workspace-header {
+    min-width: 0;
+    display: flex;
+    align-items: stretch;
+    justify-content: space-between;
+    gap: 2vh;
+    padding: 1.05vh 1.35vh;
+    box-sizing: border-box;
+    border: .08vh solid rgba(36, 68, 95, .86);
+    border-left: .3vh solid #3BA7FF;
+    background:
+        linear-gradient(100deg, rgba(59, 167, 255, .11), transparent 46%),
+        rgba(16, 24, 32, .86);
+}
+
+.engineering-mode .workspace-header > div:first-child {
+    min-width: 0;
+}
+
+.engineering-mode .workspace-eyebrow {
+    display: block;
+    margin-bottom: .35vh;
+    color: rgba(124, 203, 255, .58);
+    font: .72vh var(--font_mono);
+    letter-spacing: .22vh;
+}
+
+.engineering-mode .workspace-header h1 {
+    margin: 0;
+    color: #d8f1ff;
+    font: 2.05vh var(--font_main);
+    letter-spacing: .08vh;
+}
+
+.engineering-mode .workspace-header p {
+    margin: .42vh 0 0;
+    max-width: 65vw;
+    color: rgba(216, 241, 255, .62);
+    font: .9vh var(--font_main_light);
+    line-height: 1.35;
+}
+
+.engineering-mode .workspace-header-status {
+    flex: 0 0 23vw;
+    display: grid;
+    align-content: center;
+    justify-items: end;
+    gap: .2vh;
+    text-align: right;
+}
+
+.engineering-mode .workspace-header-status small {
+    color: rgba(124, 203, 255, .4);
+    font: .62vh var(--font_mono);
+    letter-spacing: .16vh;
+}
+
+.engineering-mode .workspace-header-status strong {
+    color: #3BA7FF;
+    font: 1.15vh var(--font_main);
+    text-transform: uppercase;
+}
+
+.engineering-mode .workspace-header-status span {
+    max-width: 23vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: rgba(124, 203, 255, .5);
+    font: .64vh var(--font_main_light);
+    text-transform: uppercase;
+}
+
+.engineering-mode .workspace-quickbar {
+    min-width: 0;
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(8vw, 1fr);
+    gap: .55vh;
+}
+
+.engineering-mode .workspace-quickbar.empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: .08vh dashed rgba(36, 68, 95, .8);
+    color: rgba(124, 203, 255, .4);
+    font: .72vh var(--font_mono);
+}
+
+.engineering-mode .workspace-action {
+    position: relative;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    gap: .22vh;
+    padding: .62vh .75vh;
+    box-sizing: border-box;
+    border: .08vh solid rgba(36, 68, 95, .86);
+    color: rgba(216, 241, 255, .76);
+    background: rgba(7, 11, 16, .56);
+    text-align: left;
+    transition: border-color .18s ease, color .18s ease, background .18s ease;
+}
+
+.engineering-mode .workspace-action strong {
+    width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font: .78vh var(--font_main);
+    font-weight: normal;
+}
+
+.engineering-mode .workspace-action small {
+    width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: rgba(124, 203, 255, .42);
+    font: .62vh var(--font_main_light);
+}
+
+.engineering-mode .workspace-action:hover,
+.engineering-mode .workspace-action.loading {
+    color: #d8f1ff;
+    border-color: #3BA7FF;
+    background: rgba(19, 38, 58, .8);
+}
+
+.engineering-mode .workspace-action[data-action="application"]::before {
+    content: "APP";
+    align-self: flex-end;
+    position: absolute;
+    color: rgba(59, 167, 255, .36);
+    font: .54vh var(--font_mono);
+}
+
+.engineering-mode .workspace-grid {
+    min-width: 0;
+    min-height: 0;
+    display: grid;
+    gap: 1.05vh;
+}
+
+.engineering-mode .engineer-workspace-grid {
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.12fr) minmax(0, .88fr);
+    grid-template-rows: minmax(0, 1fr) minmax(0, .83fr);
+    grid-template-areas:
+        "projects tools sources"
+        "research standards roadmap";
+}
+
+.engineering-mode .engineer-workspace-grid > :nth-child(1) { grid-area: projects; }
+.engineering-mode .engineer-workspace-grid > :nth-child(2) { grid-area: tools; }
+.engineering-mode .engineer-workspace-grid > :nth-child(3) { grid-area: sources; }
+.engineering-mode .engineer-workspace-grid > :nth-child(4) { grid-area: research; }
+.engineering-mode .engineer-workspace-grid > :nth-child(5) { grid-area: standards; }
+.engineering-mode .engineer-workspace-grid > :nth-child(6) { grid-area: roadmap; }
+
+.engineering-mode .foundation-workspace-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+}
+
+.engineering-mode .workspace-panel {
+    position: relative;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    border: .08vh solid rgba(36, 68, 95, .85);
+    background:
+        linear-gradient(145deg, rgba(59, 167, 255, .04), transparent 48%),
+        rgba(16, 24, 32, .82);
+}
+
+.engineering-mode .workspace-panel > header {
+    height: 2.25vh;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1vh;
+    padding: 0 .8vh;
+    box-sizing: border-box;
+    border-bottom: .08vh solid rgba(36, 68, 95, .75);
+    background: rgba(7, 11, 16, .9);
+}
+
+.engineering-mode .workspace-panel > header h2 {
+    min-width: 0;
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #7CCBFF;
+    font: .83vh var(--font_main);
+    letter-spacing: .07vh;
+    text-transform: uppercase;
+}
+
+.engineering-mode .workspace-panel > header span {
+    color: rgba(124, 203, 255, .45);
+    font: .58vh var(--font_mono);
+    letter-spacing: .08vh;
+    text-transform: uppercase;
+}
+
+.engineering-mode .workspace-panel > header span.active {
+    color: #7CCBFF;
+}
+
+.engineering-mode .workspace-panel > header span.placeholder {
+    color: #d8b65c;
+}
+
+.engineering-mode .workspace-panel-content {
+    position: absolute;
+    inset: 2.25vh 0 0;
+    min-width: 0;
+    min-height: 0;
+    padding: .75vh;
+    box-sizing: border-box;
+    overflow: auto;
+}
+
+.engineering-mode .workspace-tool-group + .workspace-tool-group {
+    margin-top: .8vh;
+}
+
+.engineering-mode .workspace-tool-group h3 {
+    margin: 0 0 .45vh;
+    color: rgba(124, 203, 255, .5);
+    font: .63vh var(--font_mono);
+    letter-spacing: .14vh;
+}
+
+.engineering-mode .workspace-tool-group > div {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .4vh;
+}
+
+.engineering-mode .workspace-tool-group .workspace-action,
+.engineering-mode .workspace-link-list .workspace-action {
+    min-height: 3.15vh;
+}
+
+.engineering-mode .workspace-panel-description {
+    margin: 0 0 .65vh;
+    color: rgba(216, 241, 255, .48);
+    font: .68vh var(--font_main_light);
+    line-height: 1.35;
+}
+
+.engineering-mode .workspace-link-list {
+    display: grid;
+    gap: .38vh;
+}
+
+.engineering-mode .workspace-project-list {
+    display: grid;
+    gap: .65vh;
+}
+
+.engineering-mode .workspace-project-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 3.4vh;
+    gap: .25vh .7vh;
+    padding: .45vh .55vh;
+    border-left: .14vh solid rgba(59, 167, 255, .7);
+    background: rgba(7, 11, 16, .52);
+}
+
+.engineering-mode .workspace-project-row > div {
+    min-width: 0;
+}
+
+.engineering-mode .workspace-project-row strong,
+.engineering-mode .workspace-project-row small {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.engineering-mode .workspace-project-row strong {
+    color: rgba(216, 241, 255, .82);
+    font: .8vh var(--font_main);
+}
+
+.engineering-mode .workspace-project-row small {
+    margin-top: .15vh;
+    color: rgba(124, 203, 255, .42);
+    font: .58vh var(--font_mono);
+}
+
+.engineering-mode .workspace-project-row > span {
+    align-self: center;
+    color: #3BA7FF;
+    font: .82vh var(--font_mono);
+    text-align: right;
+}
+
+.engineering-mode .workspace-project-row > i {
+    grid-column: 1 / -1;
+    height: .18vh;
+    background: rgba(59, 167, 255, .13);
+}
+
+.engineering-mode .workspace-project-row > i b {
+    display: block;
+    height: 100%;
+    background: #3BA7FF;
+    box-shadow: 0 0 .5vh rgba(59, 167, 255, .7);
+}
+
+.engineering-mode .workspace-manage-projects {
+    width: 100%;
+    margin-top: .7vh;
+    padding: .55vh;
+    border: .08vh solid #3BA7FF;
+    color: #7CCBFF;
+    background: rgba(19, 38, 58, .7);
+    font: .68vh var(--font_main);
+}
+
+.engineering-mode .workspace-roadmap {
+    display: grid;
+    align-content: start;
+    gap: .52vh;
+}
+
+.engineering-mode .workspace-roadmap > div {
+    display: grid;
+    grid-template-columns: 2.1vh minmax(0, 1fr) auto;
+    gap: .55vh;
+    align-items: center;
+    padding: .55vh;
+    border-bottom: .08vh solid rgba(36, 68, 95, .55);
+}
+
+.engineering-mode .workspace-roadmap span,
+.engineering-mode .workspace-roadmap em {
+    color: rgba(59, 167, 255, .48);
+    font: .58vh var(--font_mono);
+    font-style: normal;
+    text-transform: uppercase;
+}
+
+.engineering-mode .workspace-roadmap strong {
+    color: rgba(216, 241, 255, .7);
+    font: .7vh var(--font_main_light);
+    font-weight: normal;
+}
+
+.engineering-mode .workspace-placeholder {
+    height: 100%;
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    gap: .7vh;
+    padding: 1.2vh;
+    box-sizing: border-box;
+    text-align: center;
+    background:
+        linear-gradient(rgba(59, 167, 255, .025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(59, 167, 255, .025) 1px, transparent 1px);
+    background-size: 1.5vh 1.5vh;
+}
+
+.engineering-mode .workspace-placeholder span {
+    padding: .25vh .55vh;
+    border: .08vh solid rgba(59, 167, 255, .45);
+    color: #3BA7FF;
+    font: .56vh var(--font_mono);
+    text-transform: uppercase;
+}
+
+.engineering-mode .workspace-placeholder strong {
+    color: rgba(216, 241, 255, .76);
+    font: 1.1vh var(--font_main);
+    font-weight: normal;
+}
+
+.engineering-mode .workspace-placeholder p {
+    max-width: 18vw;
+    margin: 0;
+    color: rgba(216, 241, 255, .4);
+    font: .68vh var(--font_main_light);
+    line-height: 1.4;
+}
+
+.engineering-mode .workspace-tools-overview .workspace-panel-content {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1vh;
+}
+
+.engineering-mode .workspace-loading,
+.engineering-mode .workspace-empty {
+    display: grid;
+    min-height: 8vh;
+    place-items: center;
+    color: rgba(124, 203, 255, .45);
+    font: .66vh var(--font_mono);
+}
+
+.engineering-mode .workspace-toast {
+    position: fixed;
+    z-index: 2000;
+    right: 1.3vw;
+    bottom: 1.4vh;
+    max-width: 34vw;
+    padding: .7vh 1vh;
+    border: .08vh solid #3BA7FF;
+    color: #d8f1ff;
+    background: rgba(7, 11, 16, .96);
+    box-shadow: 0 0 1.2vh rgba(59, 167, 255, .2);
+    font: .7vh var(--font_mono);
+    opacity: 0;
+    transform: translateY(.8vh);
+    pointer-events: none;
+    transition: opacity .2s ease, transform .2s ease;
+}
+
+.engineering-mode .workspace-toast.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+@media (max-aspect-ratio: 16/10) {
+    .engineering-mode #workspace_navigation {
+        left: 39vw;
+    }
+
+    .engineering-mode .engineer-workspace-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-rows: repeat(3, minmax(0, 1fr));
+        grid-template-areas:
+            "projects tools"
+            "sources research"
+            "standards roadmap";
+    }
+}

@@ -982,6 +982,9 @@ class EngineeringMusicPanel {
         this.content = document.getElementById("eng_music_content");
         this.stateLabel = document.getElementById("eng_music_state");
         this.playing = false;
+        this.artworkTrackId = "";
+        this.artworkRequestId = "";
+        this.failedArtworkId = "";
         this.renderConnect();
         this.startVisualizer();
         if (localStorage.getItem("edexui-eng-music-connected") === "true") this.connect();
@@ -1029,6 +1032,7 @@ class EngineeringMusicPanel {
             <div class="eng-music-main">
                 <div class="eng-now-playing">
                     <div class="eng-album-visual">
+                        <img id="eng_album_artwork" alt="">
                         <span id="eng_album_initial">M</span>
                         <i></i>
                     </div>
@@ -1150,11 +1154,53 @@ class EngineeringMusicPanel {
         document.getElementById("eng_track_album").innerText = status.album || "";
         document.getElementById("eng_album_initial").innerText =
             (status.album || status.title || "M").slice(0, 1).toUpperCase();
+        const artworkId = String(status.artworkId || "");
+        if (artworkId
+            && artworkId !== this.artworkTrackId
+            && artworkId !== this.artworkRequestId
+            && artworkId !== this.failedArtworkId) {
+            this.loadArtwork(artworkId);
+        } else if (!artworkId) {
+            this.failedArtworkId = "";
+            this.clearArtwork();
+        }
         document.getElementById("eng_music_toggle").innerText = this.playing ? "Ⅱ" : "▶";
         const duration = Number(status.duration || 0);
         const position = Number(status.position || 0);
         document.getElementById("eng_music_progress").style.width =
             duration > 0 ? `${Math.min(100, position / duration * 100)}%` : "0%";
+    }
+
+    async loadArtwork(artworkId) {
+        this.artworkRequestId = artworkId;
+        const response = await this.ipc.invoke("music-artwork", artworkId);
+        if (this.artworkRequestId !== artworkId) return;
+        this.artworkRequestId = "";
+        if (!response.ok || !response.data || response.data.artworkId !== artworkId || !response.data.image) {
+            this.clearArtwork();
+            this.failedArtworkId = artworkId;
+            return;
+        }
+
+        const image = document.getElementById("eng_album_artwork");
+        const initial = document.getElementById("eng_album_initial");
+        if (!image || !initial) return;
+        image.src = response.data.image;
+        image.classList.add("visible");
+        initial.classList.add("hidden");
+        this.artworkTrackId = artworkId;
+        this.failedArtworkId = "";
+    }
+
+    clearArtwork() {
+        const image = document.getElementById("eng_album_artwork");
+        const initial = document.getElementById("eng_album_initial");
+        if (image) {
+            image.removeAttribute("src");
+            image.classList.remove("visible");
+        }
+        if (initial) initial.classList.remove("hidden");
+        this.artworkTrackId = "";
     }
 }
 
