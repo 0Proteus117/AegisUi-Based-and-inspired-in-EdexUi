@@ -1,7 +1,7 @@
 {
   "name": "edex-ui-eng",
   "productName": "EdexUi-Eng",
-  "version": "1.4.0",
+  "version": "1.4.2",
   "description": "An engineering-focused eDEX-UI dashboard for Apple Silicon.",
   "keywords": [
     "desktop",
@@ -30,7 +30,11 @@
     "postbuild-windows": "rmdir /S /Q prebuild-src",
     "test": "rsync -a --info=progress2 src/ prebuild-src --exclude node_modules && node prebuild-minify.js && cd prebuild-src && npm install && snyk test && cd .. && rm -R prebuild-src",
     "init-file-icons": "git submodule update --init",
-    "update-file-icons": "git submodule foreach git pull origin master && node file-icons-generator.js"
+    "update-file-icons": "git submodule foreach git pull origin master && node file-icons-generator.js",
+    "config:where": "node tools/where-user-data.js",
+    "config:export": "node tools/export-user-config.js",
+    "config:import": "node tools/import-user-config.js",
+    "security:audit": "node tools/security-audit.js"
   },
   "repository": {
     "type": "git",

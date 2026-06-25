@@ -1,0 +1,98 @@
+# AegisUi configuration
+
+AegisUi is designed to keep personal data out of the repository.
+
+The current application bundle is still named `EdexUi-Eng`; therefore macOS
+stores app data in:
+
+```text
+~/Library/Application Support/EdexUi-Eng
+```
+
+You can confirm the folder with:
+
+```sh
+npm run config:where
+```
+
+## Repository files
+
+Safe files to commit:
+
+- source code in `src/`;
+- default examples such as `.env.example` and `config.example.json`;
+- documentation;
+- package manifests and lockfiles.
+
+Private files that must not be committed:
+
+- `.env`;
+- `.env.local`;
+- `user-config.local.json`;
+- `api-keys.local.json`;
+- `secrets.local.json`;
+- exported local data;
+- build artifacts such as `.dmg`, `.zip` and `dist/`.
+
+## Local app data
+
+The app currently uses JSON files in the macOS application-data folder:
+
+- `settings.json`: UI/app preferences and optional TomTom traffic key.
+- `shortcuts.json`: keyboard shortcuts.
+- `lastWindowState.json`: fullscreen/window state.
+- `projects.json`: Project Timelines and Project Control data.
+- `projects.backup.json`: automatic project backup.
+- `music-playlists.json`: local Apple Music playlist launcher list.
+
+Generated caches and helpers can also exist there, for example GeoIP data,
+application icons and the native Calendar helper. Do not share those by
+default.
+
+## API keys
+
+Traffic is optional and uses TomTom.
+
+For local development, copy:
+
+```sh
+cp .env.example .env
+```
+
+Then add your own key:
+
+```text
+AEGISUI_TOMTOM_API_KEY=
+```
+
+Never commit `.env`. It is ignored by Git.
+
+Weather radar currently uses RainViewer public metadata and does not require a
+key. Calendar and Apple Music use local macOS permissions rather than storing
+account passwords in the project.
+
+## Export and import
+
+Export a portable configuration bundle:
+
+```sh
+npm run config:export -- --out ./aegisui-config-export.json
+```
+
+Import on another Mac:
+
+```sh
+npm run config:import -- --from ./aegisui-config-export.json
+```
+
+The exporter removes known sensitive fields such as API keys, tokens, secrets,
+passwords, cookies and sessions. Add API keys separately on the destination
+Mac.
+
+## Configuration examples
+
+`config.example.json` is a human-readable template for a private
+`user-config.local.json`. It is intentionally conservative and contains no
+secrets. The current app does not require that file to run; it is a safe place
+to document local preferences while the code continues to use the macOS
+application-data folder.

@@ -1,0 +1,31 @@
+{
+  "name": "AegisUi local profile",
+  "description": "Copy to user-config.local.json for private local notes. Do not put API keys here.",
+  "settings": {
+    "offlineMode": false,
+    "disableUpdateCheck": false,
+    "activeWorkspace": "hub"
+  },
+  "map": {
+    "baseTiles": {
+      "provider": "OpenStreetMap",
+      "onlineRequired": true
+    },
+    "traffic": {
+      "provider": "TomTom",
+      "enabled": false,
+      "apiKeyEnv": "AEGISUI_TOMTOM_API_KEY"
+    },
+    "radar": {
+      "provider": "RainViewer",
+      "enabled": true,
+      "apiKeyRequired": false
+    }
+  },
+  "localData": {
+    "projects": "projects.json",
+    "musicPlaylists": "music-playlists.json",
+    "settings": "settings.json",
+    "shortcuts": "shortcuts.json"
+  }
+}

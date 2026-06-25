@@ -117,7 +117,6 @@ class Netstat {
                                 this.failedAttempts[e] = (this.failedAttempts[e] || 0) + 1;
                                 if (this.failedAttempts[e] > 2) return false;
                                 console.warn(e);
-                                console.info(rawData.toString());
                                 let electron = require("electron");
                                 electron.ipcRenderer.send("log", "note", "NetStat: Error parsing data from myexternalip.com");
                                 electron.ipcRenderer.send("log", "debug", `Error: ${e}`);
@@ -125,6 +124,9 @@ class Netstat {
                         });
                     }).on("error", e => {
                         // Drop it
+                    });
+                    this.lastconn.setTimeout(2500, () => {
+                        this.lastconn.destroy(new Error("External IP lookup timeout"));
                     });
                 } else if (this.runsBeforeGeoIPUpdate !== 0) {
                     this.runsBeforeGeoIPUpdate = this.runsBeforeGeoIPUpdate - 1;

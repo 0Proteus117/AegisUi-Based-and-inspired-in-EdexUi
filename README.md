@@ -76,6 +76,72 @@ application-data folder. They are never committed to GitHub:
 The Engineering Dashboard uses a restrained blue cockpit palette:
 `#3BA7FF`, `#7CCBFF`, `#13263A`, `#070B10`, `#101820` and `#24445F`.
 
+## AegisUi status
+
+This fork is now being prepared as **AegisUi**, a local-first Engineering
+Cockpit based on eDEX-UI. The current package and bundle name is still
+`EdexUi-Eng` to avoid a risky rename during the security/offline hardening
+phase.
+
+Current stable foundation:
+
+- HUB dashboard with map, traffic, radar, Calendar, Music, projects and apps;
+- workspaces for HUB, ENGINEER, OSINT / ANALYST, STUDENT, ARTIST and BUSINESS;
+- Apple Silicon macOS build path;
+- local JSON project timelines and playlists;
+- optional online services with graceful fallback where configured.
+
+Security/offline documentation:
+
+- [CONFIGURATION.md](CONFIGURATION.md) explains local data, API keys, export
+  and import.
+- [OFFLINE_MODE.md](OFFLINE_MODE.md) classifies each module as offline or
+  online and describes expected fallback behavior.
+- [SECURITY.md](SECURITY.md) documents the current security posture and known
+  Electron hardening work.
+- [CHANGELOG.md](CHANGELOG.md) tracks the AegisUi/EdexUi-Eng fork changes.
+
+## Running on another Mac
+
+The intended portable flow is:
+
+1. Install the Xcode command line tools and Node.js matching `.nvmrc`.
+2. Clone this repository.
+3. Run `npm ci`.
+4. Run `cd src && npm ci && cd ..`.
+5. Copy `.env.example` to `.env` only if you want private local API keys.
+6. Add your own `AEGISUI_TOMTOM_API_KEY` if you want live TomTom traffic.
+7. Run `npm run start`.
+
+The app should still open without any API key. In that case:
+
+- projects, Project Control, workspaces, terminal, system telemetry,
+  applications, Calendar and Apple Music integrations remain local;
+- radar, live map tiles, traffic and update checks degrade when the network or
+  a service is unavailable;
+- traffic clearly reports that the API key is missing instead of crashing.
+
+To locate local data:
+
+```sh
+npm run config:where
+```
+
+To export user configuration without API keys, tokens or secrets:
+
+```sh
+npm run config:export -- --out ./aegisui-config-export.json
+```
+
+To import that export on another Mac:
+
+```sh
+npm run config:import -- --from ./aegisui-config-export.json
+```
+
+API keys are intentionally not exported. Configure them separately with a
+private `.env` file or through the in-app traffic key control.
+
 ---
 
 <a href="https://youtu.be/BGeY1rK19zA">

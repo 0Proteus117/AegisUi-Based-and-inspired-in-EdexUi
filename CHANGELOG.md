@@ -1,5 +1,45 @@
 # Changelog
 
+## 1.4.2 - 2026-06-25
+
+### Added
+
+- Local configuration helper scripts:
+  - `npm run config:where`
+  - `npm run config:export`
+  - `npm run config:import`
+- Safe user configuration export format that excludes API keys, tokens,
+  passwords, cookies, sessions and other known secret fields.
+- `.env.example` for private local API keys and offline/update-check flags.
+- `config.example.json` as a safe, non-secret local profile template.
+- `OFFLINE_MODE.md` with module-by-module offline/online classification.
+- `CONFIGURATION.md` with local data, API key and export/import guidance.
+
+### Changed
+
+- Map, radar and traffic panels now expose clearer unavailable/offline states.
+- RainViewer metadata, GitHub update checks and public-IP lookup now use
+  explicit timeouts.
+- GitHub update checks can be disabled with local settings or
+  `AEGISUI_DISABLE_UPDATE_CHECK=1`.
+- GeoIP download is skipped when offline mode is enabled and no local database
+  exists.
+- Public-IP parsing failures no longer log raw response bodies.
+
+## 1.4.1 - 2026-06-25
+
+### Security / portability audit
+
+- Audited the repository for hardcoded API keys, tokens, cookies, sessions,
+  personal paths, local logs and committed `.env` files.
+- Confirmed no real secrets or personal local paths were found in versioned
+  source during this pass.
+- Expanded `.gitignore` to protect local secrets, private configuration,
+  exports/imports, caches and generated build artifacts.
+- Documented the inherited Electron security risks that should be addressed in
+  a future hardening phase.
+- Classified cloud dependencies and local/offline modules.
+
 ## 1.4.0 - 2026-06-20
 
 ### Added

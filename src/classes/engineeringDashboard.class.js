@@ -53,7 +53,9 @@ class EngineeringMapPanel {
         this.trafficLayer = null;
         this.radarLayer = null;
         this.locationApplied = false;
-        this.trafficVisible = Boolean(window.settings.tomtomApiKey);
+        this.trafficKey = window.settings.tomtomApiKey || "";
+        this.offlineMode = Boolean(window.settings.offlineMode);
+        this.trafficVisible = Boolean(this.trafficKey);
         this.radarVisible = true;
 
         this.map = L.map("eng_map_canvas", {
@@ -63,11 +65,16 @@ class EngineeringMapPanel {
         }).setView([40.4168, -3.7038], 10);
         this.map.attributionControl.setPrefix(false);
 
-        L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        this.baseLayer = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
             maxZoom: 19,
             attribution: "© OpenStreetMap",
             className: "eng-base-map"
         }).addTo(this.map);
+        this.baseLayer.on("tileerror", () => {
+            this.status.innerText = this.offlineMode
+                ? "OFFLINE MODE · LOCAL DATA"
+                : "BASE MAP SERVICE UNAVAILABLE";
+        });
         L.control.zoom({position: "bottomright"}).addTo(this.map);
 
         document.getElementById("eng_radar_toggle").addEventListener("click", () => {
@@ -79,7 +86,7 @@ class EngineeringMapPanel {
         });
 
         document.getElementById("eng_traffic_toggle").addEventListener("click", () => {
-            if (!window.settings.tomtomApiKey) {
+            if (!this.getTrafficKey()) {
                 this.showTrafficForm();
                 return;
             }
@@ -100,14 +107,44 @@ class EngineeringMapPanel {
             this.saveTrafficKey();
         });
 
-        this.loadRadar();
-        this.enableTraffic();
+        this.loadRuntimeConfig();
+        if (this.offlineMode) {
+            this.status.innerText = "OFFLINE MODE · LOCAL DATA";
+            document.getElementById("eng_radar_toggle").classList.remove("active");
+            document.getElementById("eng_traffic_toggle").classList.remove("active");
+        } else {
+            this.loadRadar();
+            this.enableTraffic();
+        }
         this.updateLocation();
         this.locationTimer = setInterval(() => this.updateLocation(), 3000);
         setTimeout(() => this.map.invalidateSize(), 400);
     }
 
+    async loadRuntimeConfig() {
+        try {
+            const config = await this.ipc.invoke("runtime-config");
+            if (config && config.tomtomApiKey && !this.trafficKey) {
+                this.trafficKey = config.tomtomApiKey;
+                this.trafficVisible = true;
+                this.enableTraffic();
+            }
+            if (config && config.offlineMode && !this.offlineMode) {
+                this.offlineMode = true;
+                this.status.innerText = "OFFLINE MODE · LOCAL DATA";
+            }
+        } catch (error) {}
+    }
+
+    getTrafficKey() {
+        return this.trafficKey || window.settings.tomtomApiKey || "";
+    }
+
     async loadRadar() {
+        if (this.offlineMode) {
+            this.status.innerText = "OFFLINE MODE · RADAR OFF";
+            return;
+        }
         const response = await this.ipc.invoke("rainviewer-metadata");
         if (!response.ok || !response.data.radar || !response.data.radar.past.length) {
             this.status.innerText = "MAP ONLINE · RADAR UNAVAILABLE";
@@ -125,8 +162,11 @@ class EngineeringMapPanel {
                 className: "eng-radar-map"
             }
         );
+        this.radarLayer.on("tileerror", () => {
+            this.status.innerText = "RADAR SERVICE UNAVAILABLE";
+        });
         if (this.radarVisible) this.radarLayer.addTo(this.map);
-        this.status.innerText = window.settings.tomtomApiKey
+        this.status.innerText = this.getTrafficKey()
             ? "RADAR + TRAFFIC LIVE"
             : "RADAR LIVE · ADD TRAFFIC KEY";
     }
@@ -134,16 +174,27 @@ class EngineeringMapPanel {
     enableTraffic() {
         if (this.trafficLayer) this.map.removeLayer(this.trafficLayer);
         this.trafficLayer = null;
-        if (!window.settings.tomtomApiKey) {
+        if (this.offlineMode) {
             document.getElementById("eng_traffic_toggle").classList.remove("active");
+            this.status.innerText = "OFFLINE MODE · TRAFFIC OFF";
             return;
         }
 
-        const key = encodeURIComponent(window.settings.tomtomApiKey);
+        const trafficKey = this.getTrafficKey();
+        if (!trafficKey) {
+            document.getElementById("eng_traffic_toggle").classList.remove("active");
+            this.status.innerText = this.radarLayer ? "RADAR LIVE · TRAFFIC KEY MISSING" : "TRAFFIC KEY MISSING";
+            return;
+        }
+
+        const key = encodeURIComponent(trafficKey);
         this.trafficLayer = L.tileLayer(
             `https://api.tomtom.com/traffic/map/4/tile/flow/relative0-dark/{z}/{x}/{y}.png?tileSize=256&key=${key}`,
             {opacity: 0.9, maxZoom: 22, zIndex: 30, className: "eng-traffic-map"}
         );
+        this.trafficLayer.on("tileerror", () => {
+            this.status.innerText = "TRAFFIC SERVICE UNAVAILABLE";
+        });
         this.trafficVisible = true;
         document.getElementById("eng_traffic_toggle").classList.add("active");
         this.trafficLayer.addTo(this.map);
@@ -173,7 +224,7 @@ class EngineeringMapPanel {
     }
 
     showTrafficForm() {
-        document.getElementById("eng_traffic_key").value = window.settings.tomtomApiKey || "";
+        document.getElementById("eng_traffic_key").value = this.getTrafficKey();
         document.getElementById("eng_traffic_form").classList.add("visible");
         document.getElementById("eng_traffic_key").focus();
     }
@@ -183,7 +234,8 @@ class EngineeringMapPanel {
     }
 
     saveTrafficKey() {
-        window.settings.tomtomApiKey = document.getElementById("eng_traffic_key").value.trim();
+        this.trafficKey = document.getElementById("eng_traffic_key").value.trim();
+        window.settings.tomtomApiKey = this.trafficKey;
         const settingsPath = require("path").join(
             require("@electron/remote").app.getPath("userData"),
             "settings.json"

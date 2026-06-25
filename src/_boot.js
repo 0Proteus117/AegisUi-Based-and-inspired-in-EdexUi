@@ -65,7 +65,55 @@ let knownApplications = new Set();
 const execFileAsync = promisify(execFile);
 const musicArtworkCache = new Map();
 
-async function initGeoIP() {
+function envFlag(name) {
+    return /^(1|true|yes|on)$/i.test(String(process.env[name] || ""));
+}
+
+function loadLocalEnvFile() {
+    const candidates = [
+        process.env.AEGISUI_ENV_FILE,
+        path.join(process.cwd(), ".env"),
+        path.join(__dirname, "..", ".env")
+    ];
+    try {
+        candidates.push(path.join(app.getPath("userData"), ".env"));
+    } catch (error) {}
+
+    const seen = new Set();
+    candidates.filter(Boolean).forEach(filePath => {
+        const normalized = path.resolve(filePath);
+        if (seen.has(normalized) || !fs.existsSync(normalized)) return;
+        seen.add(normalized);
+
+        try {
+            fs.readFileSync(normalized, "utf8").split(/\r?\n/).forEach(line => {
+                const trimmed = line.trim();
+                if (!trimmed || trimmed.startsWith("#")) return;
+                const match = trimmed.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/);
+                if (!match || Object.prototype.hasOwnProperty.call(process.env, match[1])) return;
+                let value = match[2].trim();
+                if ((value.startsWith('"') && value.endsWith('"'))
+                    || (value.startsWith("'") && value.endsWith("'"))) {
+                    value = value.slice(1, -1);
+                }
+                process.env[match[1]] = value;
+            });
+            signale.info(`Loaded local environment from ${normalized}`);
+        } catch (error) {
+            signale.warn(`Could not load local environment from ${normalized}: ${error.message}`);
+        }
+    });
+}
+
+loadLocalEnvFile();
+
+ipc.handle("runtime-config", () => ({
+    tomtomApiKey: process.env.AEGISUI_TOMTOM_API_KEY || "",
+    offlineMode: envFlag("AEGISUI_OFFLINE_MODE"),
+    disableUpdateCheck: envFlag("AEGISUI_DISABLE_UPDATE_CHECK")
+}));
+
+async function initGeoIP(settings = {}) {
     try {
         const maxmind = require("maxmind");
         const cacheDir = path.join(electron.app.getPath("userData"), "geoIPcache");
@@ -73,6 +121,8 @@ async function initGeoIP() {
 
         if (fs.existsSync(databasePath)) {
             geoLookup = await maxmind.open(databasePath);
+        } else if (settings.offlineMode || envFlag("AEGISUI_OFFLINE_MODE")) {
+            signale.warn("GeoIP database missing and offline mode is enabled; location lookup disabled.");
         } else {
             const geolite2 = await import("geolite2-redist");
             await geolite2.downloadDbs({
@@ -94,7 +144,7 @@ ipc.handle("geoip-lookup", (e, ip) => geoLookup ? geoLookup.get(ip) : null);
 
 function getJSON(remoteUrl) {
     return new Promise((resolve, reject) => {
-        require("https").get(remoteUrl, response => {
+        const request = require("https").get(remoteUrl, response => {
             let body = "";
             response.on("data", chunk => body += chunk);
             response.on("end", () => {
@@ -108,7 +158,11 @@ function getJSON(remoteUrl) {
                     reject(error);
                 }
             });
-        }).on("error", reject);
+        });
+        request.setTimeout(8000, () => {
+            request.destroy(new Error("Remote service timeout"));
+        });
+        request.on("error", reject);
     });
 }
 
@@ -616,7 +670,9 @@ if (!fs.existsSync(settingsFile)) {
         fsListView: false,
         experimentalGlobeFeatures: false,
         experimentalFeatures: false,
-        tomtomApiKey: ""
+        offlineMode: envFlag("AEGISUI_OFFLINE_MODE"),
+        disableUpdateCheck: envFlag("AEGISUI_DISABLE_UPDATE_CHECK"),
+        tomtomApiKey: process.env.AEGISUI_TOMTOM_API_KEY || ""
     }, "", 4));
     signale.info(`Default settings written to ${settingsFile}`);
 }
@@ -735,11 +791,13 @@ function createWindow(settings) {
 app.on('ready', async () => {
     signale.pending(`Loading settings file...`);
     let settings = require(settingsFile);
+    settings.offlineMode = Boolean(settings.offlineMode || envFlag("AEGISUI_OFFLINE_MODE"));
+    settings.disableUpdateCheck = Boolean(settings.disableUpdateCheck || envFlag("AEGISUI_DISABLE_UPDATE_CHECK"));
     signale.pending(`Resolving shell path...`);
     settings.shell = await which(settings.shell).catch(e => { throw(e) });
     signale.info(`Shell found at ${settings.shell}`);
     signale.success(`Settings loaded!`);
-    initGeoIP();
+    initGeoIP(settings);
 
     if (!require("fs").existsSync(settings.cwd)) throw new Error("Configured cwd path does not exist.");
 
@@ -879,7 +937,12 @@ app.on('ready', async () => {
 app.on('web-contents-created', (e, contents) => {
     // Prevent creating more than one window; open external URLs in default browser
     contents.setWindowOpenHandler(({ url }) => {
-        shell.openExternal(url);
+        try {
+            const parsed = new URL(url);
+            if (["https:", "mailto:"].includes(parsed.protocol)) {
+                shell.openExternal(parsed.toString());
+            }
+        } catch (error) {}
         return { action: 'deny' };
     });
 

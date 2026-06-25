@@ -6,6 +6,11 @@ class UpdateChecker {
         const current = remote.app.getVersion();
         const tagPrefix = "edexui-eng-v";
 
+        if (window.settings && (window.settings.disableUpdateCheck || window.settings.offlineMode)) {
+            electron.ipcRenderer.send("log", "info", "UpdateChecker: Disabled by local settings.");
+            return;
+        }
+
         const versionParts = version => {
             return String(version)
                 .replace(tagPrefix, "")
@@ -26,7 +31,7 @@ class UpdateChecker {
             electron.ipcRenderer.send("log", "debug", `Error: ${error}`);
         };
 
-        https.get({
+        const request = https.get({
             protocol: "https:",
             host: "api.github.com",
             path: "/repos/0Proteus117/edex-ui-fan-update-Apple-Silicon-/releases?per_page=10",
@@ -69,6 +74,9 @@ class UpdateChecker {
                 }
             });
         }).on("error", fail);
+        request.setTimeout(5000, () => {
+            request.destroy(new Error("GitHub update check timeout"));
+        });
     }
 }
 
