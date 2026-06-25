@@ -13,6 +13,8 @@
 - Updated README, configuration and offline-mode documentation for the new map
   layer system and `map-layers.json` local preferences.
 - Updated package metadata to point to the current AegisUi GitHub repository.
+- Updated the optional update checker to query the current AegisUi GitHub
+  repository instead of the previous fork URL.
 - Marked the map layer documentation milestone as complete in the
   `SITUATIONAL AWARENESS` project timeline.
 

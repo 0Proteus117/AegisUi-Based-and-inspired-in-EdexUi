@@ -34,7 +34,7 @@ class UpdateChecker {
         const request = https.get({
             protocol: "https:",
             host: "api.github.com",
-            path: "/repos/0Proteus117/edex-ui-fan-update-Apple-Silicon-/releases?per_page=10",
+            path: "/repos/0Proteus117/AegisUi-Based-and-inspired-in-EdexUi/releases?per_page=10",
             headers: {
                 "User-Agent": "EdexUi-Eng UpdateChecker"
             }
