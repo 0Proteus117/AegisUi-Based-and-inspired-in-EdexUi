@@ -683,13 +683,17 @@ class EngineeringProjectsPanel {
         });
     }
 
-    openEditor(projectIndex = 0) {
+    openEditor(projectIndex = 0, options = {}) {
         this.removeEditor();
         this.editorProjects = this.cloneProjects(this.projects);
         this.selectedProject = Math.max(0, Math.min(projectIndex, this.editorProjects.length - 1));
         this.dirty = false;
         this.closeArmed = false;
         this.deleteArmed = false;
+        this.returnWorkspaceId = options.returnWorkspaceId
+            || (window.workspaceManager && window.workspaceManager.getActiveWorkspace
+                ? window.workspaceManager.getActiveWorkspace()
+                : document.body.dataset.workspace || "hub");
 
         const overlay = document.createElement("div");
         overlay.id = "eng_project_editor_overlay";
@@ -1015,7 +1019,9 @@ class EngineeringProjectsPanel {
             }, 3000);
             return;
         }
+        const returnWorkspaceId = this.returnWorkspaceId;
         this.removeEditor();
+        this.restoreWorkspaceContext(returnWorkspaceId);
         window.audioManager.denied.play();
     }
 
@@ -1025,6 +1031,12 @@ class EngineeringProjectsPanel {
         const overlay = document.getElementById("eng_project_editor_overlay");
         if (overlay) overlay.remove();
         this.overlay = null;
+        this.returnWorkspaceId = null;
+    }
+
+    restoreWorkspaceContext(workspaceId) {
+        if (!workspaceId || !window.workspaceManager || !window.workspaceManager.restoreWorkspace) return;
+        window.workspaceManager.restoreWorkspace(workspaceId);
     }
 }
 

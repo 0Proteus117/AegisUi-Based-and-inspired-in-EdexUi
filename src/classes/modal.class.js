@@ -12,6 +12,10 @@ class Modal {
         this.title = options.title || options.type || "Modal window";
         this.message = options.message || "Lorem ipsum dolor sit amet.";
         this.onclose = onclose;
+        this.workspaceId = options.workspaceId
+            || (window.workspaceManager && window.workspaceManager.getActiveWorkspace
+                ? window.workspaceManager.getActiveWorkspace()
+                : document.body.dataset.workspace || null);
         this.classes = "modal_popup";
         let buttons = [];
         let augs = [];
@@ -69,6 +73,9 @@ class Modal {
 
             if (typeof this.onclose === "function") {
                 this.onclose();
+            }
+            if (window.workspaceManager && window.workspaceManager.restoreWorkspace) {
+                window.workspaceManager.restoreWorkspace(this.workspaceId);
             }
         };
 

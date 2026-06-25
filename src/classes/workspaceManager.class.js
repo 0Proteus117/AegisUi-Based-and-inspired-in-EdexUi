@@ -108,6 +108,15 @@ class WorkspaceManager {
         if (playSound && window.audioManager) window.audioManager.folder.play();
     }
 
+    getActiveWorkspace() {
+        return this.activeId;
+    }
+
+    restoreWorkspace(workspaceId) {
+        if (!workspaceId || !this.byId.has(workspaceId) || this.activeId === workspaceId) return;
+        this.activate(workspaceId, false);
+    }
+
     renderWorkspace(definition) {
         const view = document.getElementById(`workspace_${definition.id}`);
         if (!view) return;
@@ -314,12 +323,11 @@ class WorkspaceManager {
         manage.className = "workspace-manage-projects";
         manage.innerText = "OPEN PROJECT CONTROL";
         manage.addEventListener("click", () => {
-            this.activate("hub");
-            setTimeout(() => {
-                if (window.engineeringDashboard && window.engineeringDashboard.projectsPanel) {
-                    window.engineeringDashboard.projectsPanel.openEditor();
-                }
-            }, 100);
+            if (window.engineeringDashboard && window.engineeringDashboard.projectsPanel) {
+                window.engineeringDashboard.projectsPanel.openEditor(0, {
+                    returnWorkspaceId: this.getActiveWorkspace()
+                });
+            }
         });
         container.appendChild(manage);
     }

@@ -637,11 +637,61 @@ if (!fs.existsSync(projectsFile)) {
                     {name: "Desarrollo", status: "pending"},
                     {name: "Redacción y defensa", status: "pending"}
                 ]
+            },
+            {
+                id: "ux-polish",
+                name: "UX POLISH",
+                description: "Usability refinements for the AegisUi cockpit",
+                milestones: [
+                    {name: "Preserve workspace context after modal close", status: "complete"}
+                ]
             }
         ]
     }, null, 4));
     signale.info(`Default project timelines written to ${projectsFile}`);
 }
+function ensureUxPolishTimelineTask() {
+    const uxProjectId = "ux-polish";
+    const milestoneName = "Preserve workspace context after modal close";
+    try {
+        const data = JSON.parse(fs.readFileSync(projectsFile, "utf8"));
+        const projects = Array.isArray(data.projects) ? data.projects : [];
+        let changed = false;
+        let uxProject = projects.find(project => {
+            return project && (project.id === uxProjectId || String(project.name || "").toLowerCase() === "ux polish");
+        });
+
+        if (!uxProject) {
+            uxProject = {
+                id: uxProjectId,
+                name: "UX POLISH",
+                description: "Usability refinements for the AegisUi cockpit",
+                milestones: []
+            };
+            projects.push(uxProject);
+            changed = true;
+        }
+
+        uxProject.milestones = Array.isArray(uxProject.milestones) ? uxProject.milestones : [];
+        const hasMilestone = uxProject.milestones.some(milestone => {
+            return String(milestone && milestone.name || "") === milestoneName;
+        });
+        if (!hasMilestone) {
+            uxProject.milestones.push({name: milestoneName, status: "complete"});
+            changed = true;
+        }
+
+        if (changed) {
+            const backupFile = path.join(path.dirname(projectsFile), "projects.backup.json");
+            if (fs.existsSync(projectsFile)) fs.copyFileSync(projectsFile, backupFile);
+            fs.writeFileSync(projectsFile, JSON.stringify({projects}, null, 4), {encoding: "utf8"});
+            signale.info("UX polish timeline task added to local project data");
+        }
+    } catch (error) {
+        signale.warn(`Could not update UX polish timeline task: ${error.message}`);
+    }
+}
+ensureUxPolishTimelineTask();
 if (!fs.existsSync(musicPlaylistsFile)) {
     fs.writeFileSync(musicPlaylistsFile, JSON.stringify([], null, 4));
     signale.info(`Default music playlist index written to ${musicPlaylistsFile}`);

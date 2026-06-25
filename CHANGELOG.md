@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.4.3 - 2026-06-26
+
+### Fixed
+
+- Project Control and generic modals now preserve the workspace context they
+  were opened from.
+- Opening Project Control from ENGINEER no longer switches the app to HUB
+  behind the modal.
+- Closing Project Control restores the captured workspace if any internal
+  refresh or legacy action changed it unexpectedly.
+
+### Added
+
+- Added the timeline task `UX Polish — Preserve workspace context after modal
+  close` to local project data.
+
 ## 1.4.2 - 2026-06-25
 
 ### Added
