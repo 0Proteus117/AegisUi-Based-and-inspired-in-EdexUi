@@ -17,8 +17,10 @@ label unavailable services.
 | Calendar | Offline with local system data | Reads macOS EventKit calendars. iCloud/Outlook/Exchange must already be synced into macOS Calendar/Internet Accounts. |
 | Workspaces | Offline with local/default data | External links only open when clicked. |
 | OpenStreetMap base map | Online optional | Tiles require network; the panel remains visible if tiles fail. |
+| Local Situation layer toggles | Offline with local data | Preferences are stored in `map-layers.json` and mirrored in renderer local storage. |
 | RainViewer radar | Online optional | No key required; unavailable service shows a radar-unavailable state. |
 | TomTom traffic | Online optional | Requires the user's own key; missing key is a normal state. |
+| Future air/maritime/satellite/ocean layers | Offline with placeholder data | Registered as `FUTURE`/`PLACEHOLDER`; no provider calls are made in v1.5.x. |
 | GeoIP lookup | Offline after local database exists | First setup can download GeoLite2; offline mode skips download if missing. |
 | Update checker | Online optional | Can be disabled with settings or `AEGISUI_DISABLE_UPDATE_CHECK=1`. |
 
@@ -44,6 +46,8 @@ providers.
   `RADAR SERVICE UNAVAILABLE`.
 - Base map tile failures: the map panel reports `BASE MAP SERVICE UNAVAILABLE`
   while the rest of the HUB remains alive.
+- Future map layers: disabled layers show `FUTURE`; enabled mock layers show
+  `PLACEHOLDER` and do not contact external providers.
 - Calendar permission denied: Calendar shows a local permissions/account
   prompt instead of crashing.
 - Apple Music permission denied: Music shows a disconnected/permission state
@@ -55,4 +59,5 @@ providers.
 - Music polls local playback state every two seconds while connected.
 - Network status checks local interface state every two seconds.
 - RainViewer metadata and update checks now have explicit timeouts.
+- Situational Awareness future layers do not poll while they are placeholders.
 - External IP lookup has a short timeout and does not log raw response bodies.

@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.5.3 - 2026-06-26
+
+### Added
+
+- Added `MAP_LAYERS.md` with the Situational Awareness layer objective,
+  current/future layers, states, possible providers, API-key rules, privacy
+  considerations, performance boundaries, offline behavior and extension guide.
+
+### Changed
+
+- Updated README, configuration and offline-mode documentation for the new map
+  layer system and `map-layers.json` local preferences.
+- Updated package metadata to point to the current AegisUi GitHub repository.
+- Marked the map layer documentation milestone as complete in the
+  `SITUATIONAL AWARENESS` project timeline.
+
 ## 1.5.2 - 2026-06-26
 
 ### Added

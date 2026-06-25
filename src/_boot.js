@@ -782,7 +782,7 @@ if (!fs.existsSync(projectsFile)) {
                     {name: "Map layer architecture", status: "complete"},
                     {name: "Situational awareness toggles", status: "complete"},
                     {name: "Future layer placeholders", status: "complete"},
-                    {name: "Map layers documentation", status: "pending"}
+                    {name: "Map layers documentation", status: "complete"}
                 ]
             }
         ]
@@ -813,14 +813,17 @@ function ensureTimelineMilestone(options) {
         }
 
         timelineProject.milestones = Array.isArray(timelineProject.milestones) ? timelineProject.milestones : [];
-        const hasMilestone = timelineProject.milestones.some(milestone => {
+        const existingMilestone = timelineProject.milestones.find(milestone => {
             return String(milestone && milestone.name || "") === options.milestoneName;
         });
-        if (!hasMilestone) {
+        if (!existingMilestone) {
             timelineProject.milestones.push({
                 name: options.milestoneName,
                 status: options.status || "complete"
             });
+            changed = true;
+        } else if (options.status && existingMilestone.status !== options.status) {
+            existingMilestone.status = options.status;
             changed = true;
         }
 
@@ -850,7 +853,7 @@ ensureTimelineMilestone({
     {name: "Map layer architecture", status: "complete"},
     {name: "Situational awareness toggles", status: "complete"},
     {name: "Future layer placeholders", status: "complete"},
-    {name: "Map layers documentation", status: "pending"}
+    {name: "Map layers documentation", status: "complete"}
 ].forEach(milestone => {
     ensureTimelineMilestone({
         projectId: "situational-awareness",

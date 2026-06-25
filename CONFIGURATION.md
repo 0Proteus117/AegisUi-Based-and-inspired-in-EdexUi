@@ -44,6 +44,9 @@ The app currently uses JSON files in the macOS application-data folder:
 - `projects.json`: Project Timelines and Project Control data.
 - `projects.backup.json`: automatic project backup.
 - `music-playlists.json`: local Apple Music playlist launcher list.
+- `map-layers.json`: Local Situation layer preferences for traffic, radar and
+  future air/maritime/satellite/ocean placeholders. It does not contain API
+  keys.
 
 Generated caches and helpers can also exist there, for example GeoIP data,
 application icons and the native Calendar helper. Do not share those by
@@ -68,8 +71,9 @@ AEGISUI_TOMTOM_API_KEY=
 Never commit `.env`. It is ignored by Git.
 
 Weather radar currently uses RainViewer public metadata and does not require a
-key. Calendar and Apple Music use local macOS permissions rather than storing
-account passwords in the project.
+key. Air, maritime, satellite and ocean layers are placeholders in v1.5.x and
+do not require keys yet. Calendar and Apple Music use local macOS permissions
+rather than storing account passwords in the project.
 
 ## Export and import
 
@@ -92,7 +96,8 @@ Mac.
 ## Configuration examples
 
 `config.example.json` is a human-readable template for a private
-`user-config.local.json`. It is intentionally conservative and contains no
-secrets. The current app does not require that file to run; it is a safe place
-to document local preferences while the code continues to use the macOS
+`user-config.local.json`. `map-layers.example.json` shows the safe map layer
+preference structure. Both are intentionally conservative and contain no
+secrets. The current app does not require those files to run; they are safe
+places to document local preferences while the code continues to use the macOS
 application-data folder.

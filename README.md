@@ -27,7 +27,9 @@ original system telemetry and visual language while replacing the touch
 keyboard and large terminal with:
 
 - a one-line engineering shell;
-- a local map with live RainViewer weather radar and optional TomTom traffic;
+- a local Situational Awareness map with live RainViewer weather radar,
+  optional TomTom traffic and a modular layer foundation for future air,
+  maritime, satellite and ocean-alert overlays;
 - a native macOS Calendar panel with week and month views, recurring events
   and a single calendar selector for every enabled iCloud, Outlook and
   Exchange account;
@@ -72,6 +74,8 @@ application-data folder. They are never committed to GitHub:
   file automatically and keeps a local `projects.backup.json` safety copy.
 - `music-playlists.json` contains Apple Music playlist names. Clicking a name
   starts that playlist without bringing Music to the foreground.
+- `map-layers.json` contains Local Situation layer preferences such as enabled
+  map overlays and placeholder/future layer choices. It never stores API keys.
 
 The Engineering Dashboard uses a restrained blue cockpit palette:
 `#3BA7FF`, `#7CCBFF`, `#13263A`, `#070B10`, `#101820` and `#24445F`.
@@ -97,6 +101,8 @@ Security/offline documentation:
   and import.
 - [OFFLINE_MODE.md](OFFLINE_MODE.md) classifies each module as offline or
   online and describes expected fallback behavior.
+- [MAP_LAYERS.md](MAP_LAYERS.md) documents the Situational Awareness map layer
+  architecture, states, providers, privacy and performance rules.
 - [SECURITY.md](SECURITY.md) documents the current security posture and known
   Electron hardening work.
 - [CHANGELOG.md](CHANGELOG.md) tracks the AegisUi/EdexUi-Eng fork changes.
@@ -111,6 +117,8 @@ The intended portable flow is:
 4. Run `cd src && npm ci && cd ..`.
 5. Copy `.env.example` to `.env` only if you want private local API keys.
 6. Add your own `AEGISUI_TOMTOM_API_KEY` if you want live TomTom traffic.
+   Future air, sea, satellite and ocean layers do not require keys yet because
+   they are placeholders only.
 7. Run `npm run start`.
 
 The app should still open without any API key. In that case:
