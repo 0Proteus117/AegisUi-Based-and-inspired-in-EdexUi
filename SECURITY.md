@@ -1,11 +1,67 @@
-# Security Policy
+# Security policy
 
-## Supported Versions
+This repository is a personal AegisUi / EdexUi-Eng fork of eDEX-UI. It is
+being prepared for safer local sharing, not for handling high-risk secrets.
 
-We support the [latest released version](https://github.com/GitSquared/edex-ui/releases/latest), and the current development version (`master` branch).
+## What must never be committed
 
-## Reporting a Vulnerability
+- `.env` or `.env.local`;
+- API keys;
+- access tokens;
+- cookies or sessions;
+- Apple, Outlook or university account credentials;
+- private certificates or signing keys;
+- local exports that contain personal data;
+- build caches or generated app-data folders.
 
-If you're concerned about a potential or proven security vulnerability in this software, please get in touch by sending an email at [`gabriel@saillard.dev`](mailto:%22Gabriel%20SAILLARD%22%20%3Cgabriel%40saillard.dev%3E?subject=%5BSECURITY%5D%20eDEX-UI%20vulnerability%20concern&body=(Please%20describe%20what%20code%20you%20think%20is%20vulnerable%2C%20and%20provide%20a%20way%20to%20reproduce%20the%20issue%20if%20possible)).
+The repository includes `.env.example` and `config.example.json` as safe
+templates only.
 
-If your email subject contains the `[SECURITY]` tag, you will be surfaced to the front of my inbox and should expect a response in 24 hours or less. The link above will set you up with a subject template.
+## Current security posture
+
+The app loads its own local `file://` UI and blocks normal navigation away from
+that UI. Workspace links are restricted to HTTPS and open in the default
+browser.
+
+Known inherited Electron risks remain:
+
+- `nodeIntegration` is enabled in the renderer.
+- `contextIsolation` is disabled.
+- `@electron/remote` is still used.
+- Inline HTML/CSS patterns remain from the original eDEX-UI architecture.
+
+Those choices are part of the legacy architecture and should not be expanded
+to remote content. Do not add webviews, remote iframes, arbitrary HTML feeds or
+untrusted plugin content before a dedicated Electron hardening phase.
+
+## Local permissions
+
+- Calendar uses a small native macOS EventKit helper with read-only calendar
+  access.
+- Apple Music uses macOS Automation to read playback metadata and control
+  playback.
+- The app can launch local applications selected from the discovered
+  application index.
+
+## Network services
+
+Optional online services include OpenStreetMap tiles, RainViewer radar, TomTom
+traffic, GitHub release checks, public IP lookup and first-run GeoIP database
+download. These services should fail gracefully without crashing the HUB.
+
+## Dependency audit
+
+Run:
+
+```sh
+npm run security:audit
+```
+
+At the time of the v1.4.2 hardening pass, `npm audit` reported zero known
+vulnerabilities for both the root package and the `src` package.
+
+## Reporting issues
+
+Open a GitHub issue without including secrets or personal data. If a report
+requires sensitive detail, describe the class of issue first and arrange a
+private channel before sharing logs or exports.

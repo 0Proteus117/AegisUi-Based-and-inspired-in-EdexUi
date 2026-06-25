@@ -2,9 +2,36 @@
 logs
 *.log
 npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
 # macOS metadata
 .DS_Store
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p8
+*.p12
+*.cer
+*.crt
+*.mobileprovision
+*token*
+*secret*
+*credentials*
+
+# Private local AegisUi / EdexUi-Eng configuration
+user-config.local.json
+api-keys.local.json
+secrets.local.json
+local-data/
+user-data/
+exports/
+imports/
 
 # Runtime data
 pids
@@ -35,15 +62,26 @@ jspm_packages
 
 # Optional npm cache directory
 .npm
+.pnpm-store
+.yarn
 
 # Optional REPL history
 .node_repl_history
 
 # JetBrains IDE project folder (e.g. WebStorm)
 .idea
+.vscode
 
 dist
 prebuild-src
 src/node_modules
 src/native/calendar-helper
 src/native/EdexUiEngCalendar.app
+
+# Temporary packaging and generated artifacts
+*.dmg
+*.zip
+*.AppImage
+*.exe
+*.tmp
+*.bak
