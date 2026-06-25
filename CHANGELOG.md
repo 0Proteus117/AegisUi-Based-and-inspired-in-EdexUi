@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.5.2 - 2026-06-26
+
+### Added
+
+- Added lightweight visual placeholders for future air, maritime, satellite and
+  ocean alert layers.
+- Added the `SITUATIONAL AWARENESS` project timeline with milestones for the map
+  layer architecture, toggles, placeholders and documentation.
+
+### Changed
+
+- Future map layers now use distinct placeholder geometry instead of generic
+  markers: aircraft vector, vessel track, orbital arc and ocean alert ring.
+
 ## 1.5.1 - 2026-06-26
 
 ### Added

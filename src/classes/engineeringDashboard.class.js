@@ -146,6 +146,7 @@ class EngineeringMapPanel {
                 updateIntervalMs: 30 * 1000,
                 zIndex: 45,
                 fallbackVisual: "Placeholder aircraft vectors and provider note.",
+                placeholderShape: "aircraft-vector",
                 placeholder: true
             },
             {
@@ -161,6 +162,7 @@ class EngineeringMapPanel {
                 updateIntervalMs: 60 * 1000,
                 zIndex: 42,
                 fallbackVisual: "Placeholder vessel tracks and provider note.",
+                placeholderShape: "vessel-track",
                 placeholder: true
             },
             {
@@ -176,6 +178,7 @@ class EngineeringMapPanel {
                 updateIntervalMs: 15 * 60 * 1000,
                 zIndex: 40,
                 fallbackVisual: "Placeholder orbital arcs and provider note.",
+                placeholderShape: "orbital-arc",
                 placeholder: true
             },
             {
@@ -191,6 +194,7 @@ class EngineeringMapPanel {
                 updateIntervalMs: 10 * 60 * 1000,
                 zIndex: 38,
                 fallbackVisual: "Placeholder ocean alert pulses and provider note.",
+                placeholderShape: "alert-ring",
                 placeholder: true
             }
         ];
@@ -492,20 +496,69 @@ class EngineeringMapPanel {
 
         activePlaceholders.forEach((layer, index) => {
             const offset = offsets[index % offsets.length];
-            const marker = L.circleMarker([center.lat + offset[0], center.lng + offset[1]], {
-                radius: 5 + index,
+            const point = [center.lat + offset[0], center.lng + offset[1]];
+            const tooltip = `${layer.definition.label} · ${layer.status} · Provider integration pending`;
+            const markerStyle = {
                 color: "#7CCBFF",
                 fillColor: "#3BA7FF",
                 fillOpacity: 0.14,
                 opacity: 0.72,
                 weight: 1,
                 pane: "overlayPane"
-            }).bindTooltip(`${layer.definition.label} · ${layer.status}`, {
+            };
+            const tooltipOptions = {
                 permanent: false,
                 direction: "top",
                 className: "eng-map-placeholder-tooltip"
-            });
-            this.placeholderLayer.addLayer(marker);
+            };
+
+            if (layer.definition.placeholderShape === "aircraft-vector") {
+                this.placeholderLayer.addLayer(L.polyline([
+                    [point[0] - 0.08, point[1] - 0.18],
+                    point,
+                    [point[0] + 0.1, point[1] + 0.2]
+                ], markerStyle).bindTooltip(tooltip, tooltipOptions));
+                this.placeholderLayer.addLayer(L.circleMarker(point, {
+                    ...markerStyle,
+                    radius: 4.5
+                }));
+            } else if (layer.definition.placeholderShape === "vessel-track") {
+                this.placeholderLayer.addLayer(L.polyline([
+                    [point[0] - 0.05, point[1] - 0.2],
+                    [point[0] - 0.01, point[1] - 0.05],
+                    point,
+                    [point[0] + 0.04, point[1] + 0.19]
+                ], {
+                    ...markerStyle,
+                    dashArray: "4 4"
+                }).bindTooltip(tooltip, tooltipOptions));
+                this.placeholderLayer.addLayer(L.circleMarker(point, {
+                    ...markerStyle,
+                    radius: 5
+                }));
+            } else if (layer.definition.placeholderShape === "orbital-arc") {
+                this.placeholderLayer.addLayer(L.polyline([
+                    [center.lat - 0.48, center.lng - 0.78],
+                    [center.lat - 0.14, center.lng - 0.18],
+                    [center.lat + 0.18, center.lng + 0.42],
+                    [center.lat + 0.44, center.lng + 0.88]
+                ], {
+                    ...markerStyle,
+                    opacity: 0.52,
+                    dashArray: "2 6"
+                }).bindTooltip(tooltip, tooltipOptions));
+            } else if (layer.definition.placeholderShape === "alert-ring") {
+                this.placeholderLayer.addLayer(L.circle(point, {
+                    ...markerStyle,
+                    radius: 18000,
+                    fillOpacity: 0.04
+                }).bindTooltip(tooltip, tooltipOptions));
+            } else {
+                this.placeholderLayer.addLayer(L.circleMarker(point, {
+                    ...markerStyle,
+                    radius: 5 + index
+                }).bindTooltip(tooltip, tooltipOptions));
+            }
         });
         this.placeholderLayer.addTo(this.map);
     }

@@ -773,6 +773,17 @@ if (!fs.existsSync(projectsFile)) {
                 milestones: [
                     {name: "Add shuffle/repeat controls", status: "complete"}
                 ]
+            },
+            {
+                id: "situational-awareness",
+                name: "SITUATIONAL AWARENESS",
+                description: "Modular Local Situation map layers for global awareness",
+                milestones: [
+                    {name: "Map layer architecture", status: "complete"},
+                    {name: "Situational awareness toggles", status: "complete"},
+                    {name: "Future layer placeholders", status: "complete"},
+                    {name: "Map layers documentation", status: "pending"}
+                ]
             }
         ]
     }, null, 4));
@@ -834,6 +845,20 @@ ensureTimelineMilestone({
     projectName: "MEDIA PLAYER",
     description: "Playback controls and Apple Music integration",
     milestoneName: "Add shuffle/repeat controls"
+});
+[
+    {name: "Map layer architecture", status: "complete"},
+    {name: "Situational awareness toggles", status: "complete"},
+    {name: "Future layer placeholders", status: "complete"},
+    {name: "Map layers documentation", status: "pending"}
+].forEach(milestone => {
+    ensureTimelineMilestone({
+        projectId: "situational-awareness",
+        projectName: "SITUATIONAL AWARENESS",
+        description: "Modular Local Situation map layers for global awareness",
+        milestoneName: milestone.name,
+        status: milestone.status
+    });
 });
 if (!fs.existsSync(mapLayersFile)) {
     fs.writeFileSync(mapLayersFile, JSON.stringify(defaultMapLayersConfig(), null, 4));
