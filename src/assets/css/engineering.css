@@ -1367,11 +1367,39 @@ body.engineering-mode {
 
 .engineering-mode .eng-music-controls {
     display: flex;
+    align-items: center;
+    flex-wrap: wrap;
     gap: .5vh;
 }
 
 .engineering-mode .eng-music-controls button {
     min-width: 3.8vh;
+}
+
+.engineering-mode .eng-music-controls .eng-music-toggle {
+    min-width: 5.4vh;
+    padding-inline: .65vh;
+    color: rgba(124, 203, 255, .62);
+    border-color: rgba(36, 68, 95, .86);
+    background: rgba(16, 24, 32, .68);
+    letter-spacing: .08vh;
+    font-size: .72vh;
+}
+
+.engineering-mode .eng-music-controls .eng-music-toggle.active {
+    color: var(--eng-blue-soft);
+    border-color: var(--eng-blue);
+    background: rgba(59, 167, 255, .16);
+    box-shadow: 0 0 .75vh rgba(59, 167, 255, .34), inset 0 0 .55vh rgba(59, 167, 255, .12);
+}
+
+.engineering-mode .eng-music-controls-fallback {
+    margin: .7vh 0 .25vh;
+    opacity: .52;
+}
+
+.engineering-mode .eng-music-controls-fallback button {
+    cursor: not-allowed;
 }
 
 .engineering-mode #eng_equalizer {

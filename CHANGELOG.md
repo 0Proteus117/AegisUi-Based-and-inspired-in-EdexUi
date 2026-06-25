@@ -1,5 +1,24 @@
 # Changelog
 
+## 1.4.4 - 2026-06-26
+
+### Added
+
+- Apple Music / Media Player now includes Shuffle and Repeat controls next to
+  previous, play-pause and next.
+- Repeat cycles through `OFF`, `REPEAT ALL` and `REPEAT ONE`.
+- Shuffle and Repeat keep a local visual state in `localStorage` so the UI
+  remains coherent if Apple Music Automation cannot report the state.
+- Added the timeline task `Media Player — Add shuffle/repeat controls` to
+  local project data.
+
+### Changed
+
+- Music status now attempts to read Apple Music shuffle and repeat state through
+  macOS Automation.
+- Music control backend now attempts to send shuffle/repeat commands to Apple
+  Music, with local UI fallback when the system integration is unavailable.
+
 ## 1.4.3 - 2026-06-26
 
 ### Fixed

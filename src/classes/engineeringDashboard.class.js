@@ -1046,6 +1046,8 @@ class EngineeringMusicPanel {
         this.content = document.getElementById("eng_music_content");
         this.stateLabel = document.getElementById("eng_music_state");
         this.playing = false;
+        this.shuffleEnabled = localStorage.getItem("edexui-eng-music-shuffle") === "true";
+        this.repeatMode = this.normalizeRepeatMode(localStorage.getItem("edexui-eng-music-repeat"));
         this.artworkTrackId = "";
         this.artworkRequestId = "";
         this.failedArtworkId = "";
@@ -1062,6 +1064,10 @@ class EngineeringMusicPanel {
                     <div>
                         <p>${message}</p>
                         <button id="eng_music_connect">CONNECT APPLE MUSIC</button>
+                        <div class="eng-music-controls eng-music-controls-fallback">
+                            <button class="eng-music-toggle ${this.shuffleEnabled ? "active" : ""}" disabled>SHUF</button>
+                            <button class="eng-music-toggle ${this.repeatMode !== "off" ? "active" : ""}" disabled>${this.repeatButtonLabel()}</button>
+                        </div>
                         <small>TRACK DATA + PLAYBACK CONTROLS · NO AUDIO IS CAPTURED</small>
                     </div>
                 </div>
@@ -1107,9 +1113,11 @@ class EngineeringMusicPanel {
                         <p id="eng_track_album"></p>
                         <div class="eng-progress"><span id="eng_music_progress"></span></div>
                         <div class="eng-music-controls">
+                            <button data-command="shuffle" class="eng-music-toggle" id="eng_music_shuffle">SHUF</button>
                             <button data-command="previous">◀◀</button>
                             <button data-command="toggle" class="primary" id="eng_music_toggle">▶</button>
                             <button data-command="next">▶▶</button>
+                            <button data-command="repeat" class="eng-music-toggle" id="eng_music_repeat">${this.repeatButtonLabel()}</button>
                         </div>
                     </div>
                 </div>
@@ -1120,10 +1128,78 @@ class EngineeringMusicPanel {
         this.loadPlaylists();
         this.content.querySelectorAll("[data-command]").forEach(button => {
             button.addEventListener("click", async () => {
-                await this.ipc.invoke("music-control", button.dataset.command);
-                setTimeout(() => this.updateStatus(), 300);
+                if (button.dataset.command === "shuffle") {
+                    await this.toggleShuffle();
+                } else if (button.dataset.command === "repeat") {
+                    await this.cycleRepeat();
+                } else {
+                    await this.ipc.invoke("music-control", button.dataset.command);
+                    setTimeout(() => this.updateStatus(), 300);
+                }
             });
         });
+        this.updateAdvancedControls();
+    }
+
+    normalizeRepeatMode(mode) {
+        return ["off", "all", "one"].includes(mode) ? mode : "off";
+    }
+
+    repeatButtonLabel() {
+        if (this.repeatMode === "all") return "REPEAT ALL";
+        if (this.repeatMode === "one") return "REPEAT ONE";
+        return "REPEAT OFF";
+    }
+
+    saveAdvancedControls() {
+        localStorage.setItem("edexui-eng-music-shuffle", String(Boolean(this.shuffleEnabled)));
+        localStorage.setItem("edexui-eng-music-repeat", this.repeatMode);
+    }
+
+    applyAdvancedControls(state = {}) {
+        if (typeof state.shuffle === "boolean") this.shuffleEnabled = state.shuffle;
+        if (typeof state.repeat === "string") this.repeatMode = this.normalizeRepeatMode(state.repeat);
+        this.saveAdvancedControls();
+        this.updateAdvancedControls();
+    }
+
+    updateAdvancedControls() {
+        const shuffle = document.getElementById("eng_music_shuffle");
+        const repeat = document.getElementById("eng_music_repeat");
+        if (shuffle) {
+            shuffle.classList.toggle("active", this.shuffleEnabled);
+            shuffle.setAttribute("aria-pressed", String(this.shuffleEnabled));
+            shuffle.title = this.shuffleEnabled ? "Shuffle ON" : "Shuffle OFF";
+        }
+        if (repeat) {
+            repeat.innerText = this.repeatButtonLabel();
+            repeat.classList.toggle("active", this.repeatMode !== "off");
+            repeat.dataset.mode = this.repeatMode;
+            repeat.setAttribute("aria-pressed", String(this.repeatMode !== "off"));
+            repeat.title = this.repeatMode === "off"
+                ? "Repeat OFF"
+                : (this.repeatMode === "all" ? "Repeat all" : "Repeat one");
+        }
+    }
+
+    async toggleShuffle() {
+        const nextShuffle = !this.shuffleEnabled;
+        this.applyAdvancedControls({shuffle: nextShuffle});
+        const response = await this.ipc.invoke("music-control", "shuffle", {shuffle: nextShuffle});
+        if (response.ok && response.data) this.applyAdvancedControls(response.data);
+        else this.stateLabel.innerText = "SHUFFLE LOCAL";
+        setTimeout(() => this.updateStatus(), 300);
+    }
+
+    async cycleRepeat() {
+        const nextMode = this.repeatMode === "off"
+            ? "all"
+            : (this.repeatMode === "all" ? "one" : "off");
+        this.applyAdvancedControls({repeat: nextMode});
+        const response = await this.ipc.invoke("music-control", "repeat", {repeat: nextMode});
+        if (response.ok && response.data) this.applyAdvancedControls(response.data);
+        else this.stateLabel.innerText = "REPEAT LOCAL";
+        setTimeout(() => this.updateStatus(), 300);
     }
 
     async loadPlaylists() {
@@ -1207,6 +1283,7 @@ class EngineeringMusicPanel {
     applyStatus(status) {
         this.playing = status.state === "playing";
         this.stateLabel.innerText = status.running ? status.state.toUpperCase() : "MUSIC APP IDLE";
+        this.applyAdvancedControls(status);
         const equalizer = document.getElementById("eng_equalizer");
         if (equalizer) equalizer.classList.toggle("idle", !this.playing);
 

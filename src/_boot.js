@@ -279,10 +279,22 @@ ipc.handle("launch-application", async (e, applicationPath) => {
 
 const musicStatusScript = `
 const Music = Application("Music");
+function normalizeRepeat(value) {
+    const text = String(value || "").toLowerCase();
+    if (text.includes("one")) return "one";
+    if (text.includes("all")) return "all";
+    return "off";
+}
 if (!Music.running()) {
     JSON.stringify({running: false, state: "stopped"});
 } else {
     let result = {running: true, state: String(Music.playerState())};
+    try {
+        result.shuffle = Boolean(Music.shuffleEnabled());
+    } catch (error) {}
+    try {
+        result.repeat = normalizeRepeat(Music.songRepeat());
+    } catch (error) {}
     try {
         const track = Music.currentTrack();
         const properties = track.properties();
@@ -586,14 +598,46 @@ if (!playlist.exists()) {
 }`;
     return runAutomation(script, 12000);
 });
-ipc.handle("music-control", async (e, command) => {
-    const commands = {
+ipc.handle("music-control", async (e, command, options = {}) => {
+    const simpleCommands = {
         previous: "Application('Music').previousTrack(); JSON.stringify({ok:true});",
         toggle: "Application('Music').playpause(); JSON.stringify({ok:true});",
         next: "Application('Music').nextTrack(); JSON.stringify({ok:true});"
     };
-    if (!commands[command]) return {ok: false, error: "Unknown music command"};
-    return runAutomation(commands[command], 8000);
+    if (simpleCommands[command]) return runAutomation(simpleCommands[command], 8000);
+
+    if (command === "shuffle") {
+        const enabled = Boolean(options && options.shuffle);
+        return runAutomation(`
+const Music = Application("Music");
+Music.shuffleEnabled = ${enabled ? "true" : "false"};
+let shuffle = ${enabled ? "true" : "false"};
+try { shuffle = Boolean(Music.shuffleEnabled()); } catch (error) {}
+JSON.stringify({ok: true, shuffle});
+`, 8000);
+    }
+
+    if (command === "repeat") {
+        const repeat = ["off", "all", "one"].includes(options && options.repeat)
+            ? options.repeat
+            : "off";
+        const safeRepeat = JSON.stringify(repeat);
+        return runAutomation(`
+const Music = Application("Music");
+function normalizeRepeat(value) {
+    const text = String(value || "").toLowerCase();
+    if (text.includes("one")) return "one";
+    if (text.includes("all")) return "all";
+    return "off";
+}
+Music.songRepeat = ${safeRepeat};
+let repeat = ${safeRepeat};
+try { repeat = normalizeRepeat(Music.songRepeat()); } catch (error) {}
+JSON.stringify({ok: true, repeat});
+`, 8000);
+    }
+
+    return {ok: false, error: "Unknown music command"};
 });
 
 // Unset proxy env variables to avoid connection problems on the internal websockets
@@ -645,39 +689,51 @@ if (!fs.existsSync(projectsFile)) {
                 milestones: [
                     {name: "Preserve workspace context after modal close", status: "complete"}
                 ]
+            },
+            {
+                id: "media-player",
+                name: "MEDIA PLAYER",
+                description: "Playback controls and Apple Music integration",
+                milestones: [
+                    {name: "Add shuffle/repeat controls", status: "complete"}
+                ]
             }
         ]
     }, null, 4));
     signale.info(`Default project timelines written to ${projectsFile}`);
 }
-function ensureUxPolishTimelineTask() {
-    const uxProjectId = "ux-polish";
-    const milestoneName = "Preserve workspace context after modal close";
+function ensureTimelineMilestone(options) {
     try {
         const data = JSON.parse(fs.readFileSync(projectsFile, "utf8"));
         const projects = Array.isArray(data.projects) ? data.projects : [];
         let changed = false;
-        let uxProject = projects.find(project => {
-            return project && (project.id === uxProjectId || String(project.name || "").toLowerCase() === "ux polish");
+        let timelineProject = projects.find(project => {
+            return project && (
+                project.id === options.projectId
+                || String(project.name || "").toLowerCase() === options.projectName.toLowerCase()
+            );
         });
 
-        if (!uxProject) {
-            uxProject = {
-                id: uxProjectId,
-                name: "UX POLISH",
-                description: "Usability refinements for the AegisUi cockpit",
+        if (!timelineProject) {
+            timelineProject = {
+                id: options.projectId,
+                name: options.projectName,
+                description: options.description,
                 milestones: []
             };
-            projects.push(uxProject);
+            projects.push(timelineProject);
             changed = true;
         }
 
-        uxProject.milestones = Array.isArray(uxProject.milestones) ? uxProject.milestones : [];
-        const hasMilestone = uxProject.milestones.some(milestone => {
-            return String(milestone && milestone.name || "") === milestoneName;
+        timelineProject.milestones = Array.isArray(timelineProject.milestones) ? timelineProject.milestones : [];
+        const hasMilestone = timelineProject.milestones.some(milestone => {
+            return String(milestone && milestone.name || "") === options.milestoneName;
         });
         if (!hasMilestone) {
-            uxProject.milestones.push({name: milestoneName, status: "complete"});
+            timelineProject.milestones.push({
+                name: options.milestoneName,
+                status: options.status || "complete"
+            });
             changed = true;
         }
 
@@ -685,13 +741,24 @@ function ensureUxPolishTimelineTask() {
             const backupFile = path.join(path.dirname(projectsFile), "projects.backup.json");
             if (fs.existsSync(projectsFile)) fs.copyFileSync(projectsFile, backupFile);
             fs.writeFileSync(projectsFile, JSON.stringify({projects}, null, 4), {encoding: "utf8"});
-            signale.info("UX polish timeline task added to local project data");
+            signale.info(`${options.projectName} timeline task added to local project data`);
         }
     } catch (error) {
-        signale.warn(`Could not update UX polish timeline task: ${error.message}`);
+        signale.warn(`Could not update ${options.projectName} timeline task: ${error.message}`);
     }
 }
-ensureUxPolishTimelineTask();
+ensureTimelineMilestone({
+    projectId: "ux-polish",
+    projectName: "UX POLISH",
+    description: "Usability refinements for the AegisUi cockpit",
+    milestoneName: "Preserve workspace context after modal close"
+});
+ensureTimelineMilestone({
+    projectId: "media-player",
+    projectName: "MEDIA PLAYER",
+    description: "Playback controls and Apple Music integration",
+    milestoneName: "Add shuffle/repeat controls"
+});
 if (!fs.existsSync(musicPlaylistsFile)) {
     fs.writeFileSync(musicPlaylistsFile, JSON.stringify([], null, 4));
     signale.info(`Default music playlist index written to ${musicPlaylistsFile}`);
