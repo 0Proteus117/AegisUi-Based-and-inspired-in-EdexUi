@@ -221,8 +221,115 @@ body.engineering-mode {
     z-index: 550;
     left: .7vh;
     bottom: .7vh;
-    display: flex;
-    gap: .4vh;
+    right: 5.8vh;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, max-content));
+    gap: .34vh;
+    align-items: end;
+}
+
+.engineering-mode .eng-map-config-actions {
+    position: absolute;
+    z-index: 560;
+    right: .7vh;
+    bottom: .7vh;
+}
+
+.engineering-mode .eng-map-layer-toggle {
+    min-width: 5.4vh;
+    padding: .35vh .45vh .3vh;
+    display: grid;
+    gap: .12vh;
+    border-color: rgba(36, 68, 95, .88);
+    background: rgba(7, 11, 16, .88);
+}
+
+.engineering-mode .eng-map-layer-toggle strong {
+    font: .78vh var(--font_main);
+    letter-spacing: .08vh;
+}
+
+.engineering-mode .eng-map-layer-toggle small {
+    font: .52vh var(--font_mono);
+    letter-spacing: .04vh;
+    opacity: .58;
+}
+
+.engineering-mode .eng-map-layer-toggle.placeholder {
+    border-style: dashed;
+}
+
+.engineering-mode .eng-map-layer-toggle.active {
+    color: var(--eng-blue-soft);
+    border-color: var(--eng-blue);
+    background: rgba(59, 167, 255, .16);
+    box-shadow: 0 0 .7vh rgba(59, 167, 255, .28), inset 0 0 .45vh rgba(59, 167, 255, .12);
+}
+
+.engineering-mode .eng-map-layer-toggle.error {
+    border-color: rgba(255, 90, 90, .8);
+    color: var(--color_red);
+}
+
+.engineering-mode .eng-map-layer-readout {
+    position: absolute;
+    z-index: 540;
+    top: 2.65vh;
+    left: .7vh;
+    max-width: min(26vh, calc(100% - 1.4vh));
+    display: grid;
+    gap: .35vh;
+    pointer-events: none;
+}
+
+.engineering-mode .eng-map-layer-readout > strong,
+.engineering-mode .eng-map-layer-readout > span,
+.engineering-mode .eng-map-layer-readout article {
+    padding: .45vh .55vh;
+    border: .08vh solid rgba(36, 68, 95, .72);
+    background: rgba(7, 11, 16, .74);
+    backdrop-filter: blur(3px);
+}
+
+.engineering-mode .eng-map-layer-readout > strong {
+    color: var(--eng-blue-soft);
+    font: .7vh var(--font_main);
+    letter-spacing: .08vh;
+}
+
+.engineering-mode .eng-map-layer-readout > span {
+    margin-top: -.35vh;
+    font: .62vh var(--font_main_light);
+    opacity: .55;
+}
+
+.engineering-mode .eng-map-layer-readout article {
+    display: grid;
+    grid-template-columns: 4.8vh minmax(0, 1fr);
+    gap: .18vh .55vh;
+}
+
+.engineering-mode .eng-map-layer-readout article strong {
+    color: var(--eng-blue-soft);
+    font: .76vh var(--font_main);
+}
+
+.engineering-mode .eng-map-layer-readout article span {
+    font: .62vh var(--font_mono);
+    opacity: .7;
+}
+
+.engineering-mode .eng-map-layer-readout article em {
+    grid-column: 1 / -1;
+    font: .62vh var(--font_main_light);
+    opacity: .52;
+}
+
+.engineering-mode .eng-map-placeholder-tooltip {
+    color: var(--eng-blue-soft);
+    background: rgba(7, 11, 16, .92);
+    border: .08vh solid var(--eng-border);
+    font: .72vh var(--font_main);
 }
 
 .engineering-mode button {

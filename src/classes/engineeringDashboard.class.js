@@ -7,9 +7,9 @@ class EngineeringDashboard {
             <section id="eng_map_panel" class="eng-panel" augmented-ui="tl-clip br-clip exe">
                 <h3 class="title"><p>LOCAL SITUATION</p><p id="eng_map_status">INITIALIZING</p></h3>
                 <div id="eng_map_canvas"></div>
-                <div class="eng-map-controls">
-                    <button id="eng_radar_toggle" class="active">RADAR</button>
-                    <button id="eng_traffic_toggle">TRAFFIC</button>
+                <div class="eng-map-controls" id="eng_map_layer_controls"></div>
+                <div class="eng-map-layer-readout" id="eng_map_layer_readout"></div>
+                <div class="eng-map-config-actions">
                     <button id="eng_traffic_config">API KEY</button>
                 </div>
                 <form id="eng_traffic_form">
@@ -50,13 +50,16 @@ class EngineeringMapPanel {
     constructor() {
         this.ipc = require("electron").ipcRenderer;
         this.status = document.getElementById("eng_map_status");
-        this.trafficLayer = null;
-        this.radarLayer = null;
+        this.controls = document.getElementById("eng_map_layer_controls");
+        this.readout = document.getElementById("eng_map_layer_readout");
         this.locationApplied = false;
         this.trafficKey = window.settings.tomtomApiKey || "";
         this.offlineMode = Boolean(window.settings.offlineMode);
-        this.trafficVisible = Boolean(this.trafficKey);
-        this.radarVisible = true;
+        this.layerStorageKey = "aegisui-map-layers-v1";
+        this.layerPreferences = this.loadLayerPreferences();
+        this.layers = new Map();
+        this.placeholderLayer = L.layerGroup();
+        this.layerDefinitions = this.createLayerDefinitions();
 
         this.map = L.map("eng_map_canvas", {
             zoomControl: false,
@@ -77,26 +80,6 @@ class EngineeringMapPanel {
         });
         L.control.zoom({position: "bottomright"}).addTo(this.map);
 
-        document.getElementById("eng_radar_toggle").addEventListener("click", () => {
-            this.radarVisible = !this.radarVisible;
-            document.getElementById("eng_radar_toggle").classList.toggle("active", this.radarVisible);
-            if (!this.radarLayer) return;
-            if (this.radarVisible) this.radarLayer.addTo(this.map);
-            else this.map.removeLayer(this.radarLayer);
-        });
-
-        document.getElementById("eng_traffic_toggle").addEventListener("click", () => {
-            if (!this.getTrafficKey()) {
-                this.showTrafficForm();
-                return;
-            }
-            this.trafficVisible = !this.trafficVisible;
-            document.getElementById("eng_traffic_toggle").classList.toggle("active", this.trafficVisible);
-            if (!this.trafficLayer) return;
-            if (this.trafficVisible) this.trafficLayer.addTo(this.map);
-            else this.map.removeLayer(this.trafficLayer);
-        });
-
         document.getElementById("eng_traffic_config").addEventListener("click", () => this.showTrafficForm());
         document.getElementById("eng_traffic_get_key").addEventListener("click", () => {
             this.ipc.invoke("traffic-open-key-page");
@@ -107,18 +90,239 @@ class EngineeringMapPanel {
             this.saveTrafficKey();
         });
 
+        this.initializeLayers();
+        this.renderLayerControls();
+        this.applyInitialLayerState();
         this.loadRuntimeConfig();
-        if (this.offlineMode) {
-            this.status.innerText = "OFFLINE MODE · LOCAL DATA";
-            document.getElementById("eng_radar_toggle").classList.remove("active");
-            document.getElementById("eng_traffic_toggle").classList.remove("active");
-        } else {
-            this.loadRadar();
-            this.enableTraffic();
-        }
         this.updateLocation();
         this.locationTimer = setInterval(() => this.updateLocation(), 3000);
         setTimeout(() => this.map.invalidateSize(), 400);
+    }
+
+    createLayerDefinitions() {
+        return [
+            {
+                id: "ROAD_TRAFFIC",
+                label: "TRAFFIC",
+                name: "Road traffic",
+                description: "Live road traffic flow overlay.",
+                providerType: "TomTom traffic tiles",
+                providerCandidates: ["TomTom Traffic API"],
+                requiresApiKey: true,
+                defaultActive: Boolean(this.getTrafficKey()),
+                available: true,
+                updateIntervalMs: 0,
+                zIndex: 30,
+                fallbackVisual: "Traffic unavailable state in the Local Situation status bar.",
+                placeholder: false
+            },
+            {
+                id: "WEATHER_RADAR",
+                label: "RADAR",
+                name: "Weather radar",
+                description: "RainViewer weather radar overlay.",
+                providerType: "RainViewer public weather maps",
+                providerCandidates: ["RainViewer public weather maps"],
+                requiresApiKey: false,
+                defaultActive: !this.offlineMode,
+                available: true,
+                updateIntervalMs: 5 * 60 * 1000,
+                zIndex: 20,
+                fallbackVisual: "Radar unavailable state in the Local Situation status bar.",
+                placeholder: false
+            },
+            {
+                id: "AIR_TRAFFIC",
+                label: "AIR",
+                name: "Air traffic",
+                description: "Future ADS-B aircraft situation layer.",
+                providerType: "ADS-B",
+                providerCandidates: ["OpenSky Network", "ADS-B Exchange", "compatible public or commercial ADS-B feeds"],
+                requiresApiKey: true,
+                defaultActive: false,
+                available: false,
+                updateIntervalMs: 30 * 1000,
+                zIndex: 45,
+                fallbackVisual: "Placeholder aircraft vectors and provider note.",
+                placeholder: true
+            },
+            {
+                id: "MARITIME_AIS",
+                label: "SEA",
+                name: "Maritime AIS",
+                description: "Future maritime vessel tracking layer.",
+                providerType: "AIS",
+                providerCandidates: ["AISStream", "AISHub", "MarineTraffic", "Kpler"],
+                requiresApiKey: true,
+                defaultActive: false,
+                available: false,
+                updateIntervalMs: 60 * 1000,
+                zIndex: 42,
+                fallbackVisual: "Placeholder vessel tracks and provider note.",
+                placeholder: true
+            },
+            {
+                id: "SATELLITES",
+                label: "SAT",
+                name: "Satellites",
+                description: "Future orbital objects and TLE/GP layer.",
+                providerType: "TLE / GP orbital data",
+                providerCandidates: ["CelesTrak GP/TLE", "compatible TLE/GP datasets", "ISS / Starlink / debris subsets"],
+                requiresApiKey: false,
+                defaultActive: false,
+                available: false,
+                updateIntervalMs: 15 * 60 * 1000,
+                zIndex: 40,
+                fallbackVisual: "Placeholder orbital arcs and provider note.",
+                placeholder: true
+            },
+            {
+                id: "OCEAN_ALERTS",
+                label: "OCEAN",
+                name: "Ocean alerts",
+                description: "Future ocean buoy, tide, current and tsunami alert layer.",
+                providerType: "Ocean observation feeds",
+                providerCandidates: ["NOAA NDBC / DART", "NOAA CO-OPS"],
+                requiresApiKey: false,
+                defaultActive: false,
+                available: false,
+                updateIntervalMs: 10 * 60 * 1000,
+                zIndex: 38,
+                fallbackVisual: "Placeholder ocean alert pulses and provider note.",
+                placeholder: true
+            }
+        ];
+    }
+
+    initializeLayers() {
+        this.layerDefinitions.forEach(definition => {
+            const savedLayer = this.layerPreferences[definition.id] || {};
+            const active = typeof savedLayer.active === "boolean"
+                ? savedLayer.active
+                : definition.defaultActive;
+            this.layers.set(definition.id, {
+                definition,
+                active,
+                available: definition.available,
+                status: active ? "LOADING" : (definition.placeholder ? "FUTURE" : "OFF"),
+                leafletLayer: null,
+                timer: null,
+                error: "",
+                opacity: Number.isFinite(Number(savedLayer.opacity)) ? Number(savedLayer.opacity) : 1,
+                mockMode: Boolean(definition.placeholder)
+            });
+        });
+    }
+
+    loadLayerPreferences() {
+        try {
+            const parsed = JSON.parse(localStorage.getItem(this.layerStorageKey) || "{}");
+            return parsed && typeof parsed === "object" ? parsed : {};
+        } catch (error) {
+            return {};
+        }
+    }
+
+    saveLayerPreferences() {
+        const data = {};
+        this.layers.forEach((layer, id) => {
+            data[id] = {
+                active: Boolean(layer.active),
+                opacity: layer.opacity
+            };
+        });
+        try {
+            localStorage.setItem(this.layerStorageKey, JSON.stringify(data));
+        } catch (error) {}
+    }
+
+    renderLayerControls() {
+        this.controls.innerHTML = "";
+        this.layers.forEach(layer => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "eng-map-layer-toggle";
+            button.dataset.layer = layer.definition.id;
+            button.title = `${layer.definition.name} · ${layer.definition.description}`;
+            button.innerHTML = `
+                <strong>${window._escapeHtml(layer.definition.label)}</strong>
+                <small>${layer.status}</small>`;
+            button.addEventListener("click", () => this.toggleLayer(layer.definition.id, true));
+            this.controls.appendChild(button);
+        });
+        this.renderLayerState();
+    }
+
+    applyInitialLayerState() {
+        this.layers.forEach(layer => {
+            if (this.offlineMode && !layer.definition.placeholder) {
+                layer.active = false;
+                layer.status = "OFFLINE";
+            }
+            if (layer.active) this.activateLayer(layer.definition.id, {persist: false, userInitiated: false});
+            else this.deactivateLayer(layer.definition.id, {persist: false});
+        });
+        this.renderLayerState();
+    }
+
+    toggleLayer(id, userInitiated = false) {
+        const layer = this.layers.get(id);
+        if (!layer) return;
+        if (layer.active) {
+            this.deactivateLayer(id, {persist: true});
+        } else {
+            this.activateLayer(id, {persist: true, userInitiated});
+        }
+    }
+
+    activateLayer(id, options = {}) {
+        const layer = this.layers.get(id);
+        if (!layer) return;
+        layer.active = true;
+        layer.status = "LOADING";
+        layer.error = "";
+        this.renderLayerState();
+
+        if (layer.definition.placeholder) {
+            this.activatePlaceholderLayer(layer, options);
+            return;
+        }
+
+        if (id === "ROAD_TRAFFIC") {
+            this.activateTrafficLayer(layer, Boolean(options.userInitiated));
+        } else if (id === "WEATHER_RADAR") {
+            this.activateRadarLayer(layer).catch(error => {
+                layer.status = "ERROR";
+                layer.error = error && error.message ? error.message : "Radar layer failed";
+                this.status.innerText = "RADAR SERVICE UNAVAILABLE";
+                this.renderLayerState();
+            });
+        }
+
+        if (options.persist !== false) this.saveLayerPreferences();
+    }
+
+    deactivateLayer(id, options = {}) {
+        const layer = this.layers.get(id);
+        if (!layer) return;
+        layer.active = false;
+        this.cleanupLayer(layer);
+        if (layer.definition.placeholder) layer.status = "FUTURE";
+        else layer.status = this.offlineMode ? "OFFLINE" : "OFF";
+        if (options.persist !== false) this.saveLayerPreferences();
+        this.renderLayerState();
+    }
+
+    cleanupLayer(layer) {
+        if (layer.timer) {
+            clearInterval(layer.timer);
+            layer.timer = null;
+        }
+        if (layer.leafletLayer && this.map.hasLayer(layer.leafletLayer)) {
+            this.map.removeLayer(layer.leafletLayer);
+        }
+        layer.leafletLayer = null;
+        this.renderPlaceholderLayer();
     }
 
     async loadRuntimeConfig() {
@@ -126,12 +330,24 @@ class EngineeringMapPanel {
             const config = await this.ipc.invoke("runtime-config");
             if (config && config.tomtomApiKey && !this.trafficKey) {
                 this.trafficKey = config.tomtomApiKey;
-                this.trafficVisible = true;
-                this.enableTraffic();
+                const layer = this.layers.get("ROAD_TRAFFIC");
+                const hasSavedTrafficPreference = Object.prototype.hasOwnProperty.call(
+                    this.layerPreferences,
+                    "ROAD_TRAFFIC"
+                );
+                if (layer && (layer.active || !hasSavedTrafficPreference)) {
+                    layer.active = true;
+                    this.activateTrafficLayer(layer, false);
+                    this.saveLayerPreferences();
+                }
             }
             if (config && config.offlineMode && !this.offlineMode) {
                 this.offlineMode = true;
                 this.status.innerText = "OFFLINE MODE · LOCAL DATA";
+                this.layers.forEach(layer => {
+                    if (layer.definition.placeholder) return;
+                    this.deactivateLayer(layer.definition.id, {persist: true});
+                });
             }
         } catch (error) {}
     }
@@ -140,65 +356,169 @@ class EngineeringMapPanel {
         return this.trafficKey || window.settings.tomtomApiKey || "";
     }
 
-    async loadRadar() {
+    async activateRadarLayer(layer) {
         if (this.offlineMode) {
+            layer.status = "OFFLINE";
             this.status.innerText = "OFFLINE MODE · RADAR OFF";
+            this.renderLayerState();
             return;
         }
+        this.cleanupLayer(layer);
         const response = await this.ipc.invoke("rainviewer-metadata");
         if (!response.ok || !response.data.radar || !response.data.radar.past.length) {
+            layer.status = response.ok ? "OFFLINE" : "ERROR";
+            layer.error = response.error || "Radar metadata unavailable";
             this.status.innerText = "MAP ONLINE · RADAR UNAVAILABLE";
+            this.renderLayerState();
             return;
         }
 
         const frame = response.data.radar.past[response.data.radar.past.length - 1];
-        this.radarLayer = L.tileLayer(
+        layer.leafletLayer = L.tileLayer(
             `${response.data.host}${frame.path}/256/{z}/{x}/{y}/2/1_1.png`,
             {
                 opacity: 0.55,
                 maxNativeZoom: 7,
                 maxZoom: 18,
-                zIndex: 20,
+                zIndex: layer.definition.zIndex,
                 className: "eng-radar-map"
             }
         );
-        this.radarLayer.on("tileerror", () => {
+        layer.leafletLayer.on("tileerror", () => {
+            layer.status = "ERROR";
+            layer.error = "Radar tile service unavailable";
             this.status.innerText = "RADAR SERVICE UNAVAILABLE";
+            this.renderLayerState();
         });
-        if (this.radarVisible) this.radarLayer.addTo(this.map);
-        this.status.innerText = this.getTrafficKey()
-            ? "RADAR + TRAFFIC LIVE"
-            : "RADAR LIVE · ADD TRAFFIC KEY";
+        layer.leafletLayer.addTo(this.map);
+        layer.status = "ONLINE";
+        this.renderLayerState();
     }
 
-    enableTraffic() {
-        if (this.trafficLayer) this.map.removeLayer(this.trafficLayer);
-        this.trafficLayer = null;
+    activateTrafficLayer(layer, userInitiated = false) {
         if (this.offlineMode) {
-            document.getElementById("eng_traffic_toggle").classList.remove("active");
+            layer.status = "OFFLINE";
             this.status.innerText = "OFFLINE MODE · TRAFFIC OFF";
+            this.renderLayerState();
             return;
         }
 
         const trafficKey = this.getTrafficKey();
         if (!trafficKey) {
-            document.getElementById("eng_traffic_toggle").classList.remove("active");
-            this.status.innerText = this.radarLayer ? "RADAR LIVE · TRAFFIC KEY MISSING" : "TRAFFIC KEY MISSING";
+            layer.status = "API_KEY_MISSING";
+            this.status.innerText = "TRAFFIC KEY MISSING";
+            if (userInitiated) this.showTrafficForm();
+            this.renderLayerState();
             return;
         }
 
+        this.cleanupLayer(layer);
         const key = encodeURIComponent(trafficKey);
-        this.trafficLayer = L.tileLayer(
+        layer.leafletLayer = L.tileLayer(
             `https://api.tomtom.com/traffic/map/4/tile/flow/relative0-dark/{z}/{x}/{y}.png?tileSize=256&key=${key}`,
-            {opacity: 0.9, maxZoom: 22, zIndex: 30, className: "eng-traffic-map"}
+            {opacity: 0.9, maxZoom: 22, zIndex: layer.definition.zIndex, className: "eng-traffic-map"}
         );
-        this.trafficLayer.on("tileerror", () => {
+        layer.leafletLayer.on("tileerror", () => {
+            layer.status = "ERROR";
+            layer.error = "Traffic tile service unavailable";
             this.status.innerText = "TRAFFIC SERVICE UNAVAILABLE";
+            this.renderLayerState();
         });
-        this.trafficVisible = true;
-        document.getElementById("eng_traffic_toggle").classList.add("active");
-        this.trafficLayer.addTo(this.map);
-        this.status.innerText = "RADAR + TRAFFIC LIVE";
+        layer.leafletLayer.addTo(this.map);
+        layer.status = "ONLINE";
+        this.renderLayerState();
+    }
+
+    activatePlaceholderLayer(layer, options = {}) {
+        layer.status = "PLACEHOLDER";
+        layer.available = false;
+        layer.error = "";
+        this.renderPlaceholderLayer();
+        this.renderLayerState();
+        if (options.persist !== false) this.saveLayerPreferences();
+    }
+
+    renderPlaceholderLayer() {
+        this.placeholderLayer.clearLayers();
+        if (this.map.hasLayer(this.placeholderLayer)) this.map.removeLayer(this.placeholderLayer);
+
+        const activePlaceholders = Array.from(this.layers.values())
+            .filter(layer => layer.active && layer.definition.placeholder);
+        if (!activePlaceholders.length) return;
+
+        const center = this.map.getCenter();
+        const offsets = [
+            [0.32, -0.42],
+            [-0.28, 0.38],
+            [0.46, 0.28],
+            [-0.4, -0.26]
+        ];
+
+        activePlaceholders.forEach((layer, index) => {
+            const offset = offsets[index % offsets.length];
+            const marker = L.circleMarker([center.lat + offset[0], center.lng + offset[1]], {
+                radius: 5 + index,
+                color: "#7CCBFF",
+                fillColor: "#3BA7FF",
+                fillOpacity: 0.14,
+                opacity: 0.72,
+                weight: 1,
+                pane: "overlayPane"
+            }).bindTooltip(`${layer.definition.label} · ${layer.status}`, {
+                permanent: false,
+                direction: "top",
+                className: "eng-map-placeholder-tooltip"
+            });
+            this.placeholderLayer.addLayer(marker);
+        });
+        this.placeholderLayer.addTo(this.map);
+    }
+
+    renderLayerState() {
+        this.layers.forEach(layer => {
+            const button = this.controls.querySelector(`[data-layer="${layer.definition.id}"]`);
+            if (!button) return;
+            button.classList.toggle("active", layer.active);
+            button.classList.toggle("placeholder", layer.definition.placeholder);
+            button.classList.toggle("error", ["ERROR", "API_KEY_MISSING"].includes(layer.status));
+            button.dataset.state = layer.status;
+            const state = button.querySelector("small");
+            if (state) state.innerText = layer.status;
+        });
+
+        const active = Array.from(this.layers.values()).filter(layer => layer.active);
+        const online = active.filter(layer => layer.status === "ONLINE").map(layer => layer.definition.label);
+        const placeholders = active.filter(layer => layer.status === "PLACEHOLDER").map(layer => layer.definition.label);
+        const warnings = active.filter(layer => ["ERROR", "API_KEY_MISSING", "OFFLINE"].includes(layer.status));
+
+        if (this.readout) {
+            if (!active.length) {
+                this.readout.innerHTML = `<strong>NO ACTIVE OPTIONAL LAYERS</strong><span>No data loaded while disabled</span>`;
+            } else {
+                this.readout.innerHTML = active.map(layer => `
+                    <article data-state="${layer.status}">
+                        <strong>${window._escapeHtml(layer.definition.label)}</strong>
+                        <span>${window._escapeHtml(layer.status)}</span>
+                        <em>${window._escapeHtml(layer.definition.placeholder
+                            ? "Layer architecture ready · Provider integration pending"
+                            : layer.definition.providerType)}</em>
+                    </article>`).join("");
+            }
+        }
+
+        if (warnings.length) {
+            this.status.innerText = warnings.map(layer => `${layer.definition.label} ${layer.status}`).join(" · ");
+        } else if (online.length && placeholders.length) {
+            this.status.innerText = `${online.join("+")} ONLINE · ${placeholders.join("+")} PLACEHOLDER`;
+        } else if (online.length) {
+            this.status.innerText = `${online.join(" + ")} ONLINE`;
+        } else if (placeholders.length) {
+            this.status.innerText = `${placeholders.join(" + ")} PLACEHOLDER`;
+        } else if (this.offlineMode) {
+            this.status.innerText = "OFFLINE MODE · LOCAL DATA";
+        } else {
+            this.status.innerText = "MAP ONLINE · OPTIONAL LAYERS OFF";
+        }
     }
 
     updateLocation() {
@@ -242,7 +562,13 @@ class EngineeringMapPanel {
         );
         require("fs").writeFileSync(settingsPath, JSON.stringify(window.settings, null, 4));
         this.hideTrafficForm();
-        this.enableTraffic();
+        const layer = this.layers.get("ROAD_TRAFFIC");
+        if (layer) {
+            layer.active = Boolean(this.trafficKey);
+            if (layer.active) this.activateTrafficLayer(layer, false);
+            else this.deactivateLayer("ROAD_TRAFFIC", {persist: true});
+            this.saveLayerPreferences();
+        }
     }
 }
 

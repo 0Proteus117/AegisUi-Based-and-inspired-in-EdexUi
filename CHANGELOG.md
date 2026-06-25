@@ -1,5 +1,24 @@
 # Changelog
 
+## 1.5.0 - 2026-06-26
+
+### Added
+
+- Introduced the Situational Awareness map-layer architecture for Local
+  Situation.
+- Added canonical layer states: `OFF`, `LOADING`, `ONLINE`, `OFFLINE`,
+  `API_KEY_MISSING`, `ERROR`, `PLACEHOLDER` and `FUTURE`.
+- Registered initial layers for road traffic, weather radar, air traffic,
+  maritime AIS, satellites and ocean alerts.
+- Added local map-layer preferences through `localStorage` without storing API
+  keys in versioned files.
+
+### Changed
+
+- Existing road traffic and weather radar now run through the modular layer
+  controller while preserving their existing behavior.
+- Disabled map layers do not create overlays, timers or polling loops.
+
 ## 1.4.4 - 2026-06-26
 
 ### Added
