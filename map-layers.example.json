@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "storageKey": "aegisui-map-layers-v1",
+  "description": "Copy this structure into the local app data file named map-layers.json if you want to seed map layer preferences. Do not store API keys here.",
+  "layers": {
+    "ROAD_TRAFFIC": {
+      "active": false,
+      "opacity": 1,
+      "mode": "live"
+    },
+    "WEATHER_RADAR": {
+      "active": true,
+      "opacity": 0.55,
+      "mode": "live"
+    },
+    "AIR_TRAFFIC": {
+      "active": false,
+      "opacity": 1,
+      "mode": "placeholder"
+    },
+    "MARITIME_AIS": {
+      "active": false,
+      "opacity": 1,
+      "mode": "placeholder"
+    },
+    "SATELLITES": {
+      "active": false,
+      "opacity": 1,
+      "mode": "placeholder"
+    },
+    "OCEAN_ALERTS": {
+      "active": false,
+      "opacity": 1,
+      "mode": "placeholder"
+    }
+  }
+}

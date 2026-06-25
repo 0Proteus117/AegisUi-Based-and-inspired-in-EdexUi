@@ -15,7 +15,8 @@ const EXPORTABLE_JSON_FILES = [
     "shortcuts.json",
     "lastWindowState.json",
     "projects.json",
-    "music-playlists.json"
+    "music-playlists.json",
+    "map-layers.json"
 ];
 
 const SENSITIVE_KEYS = new Set([

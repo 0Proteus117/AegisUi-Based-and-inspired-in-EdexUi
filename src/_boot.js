@@ -52,6 +52,7 @@ const shortcutsFile = path.join(electron.app.getPath("userData"), "shortcuts.jso
 const lastWindowStateFile = path.join(electron.app.getPath("userData"), "lastWindowState.json");
 const projectsFile = path.join(electron.app.getPath("userData"), "projects.json");
 const musicPlaylistsFile = path.join(electron.app.getPath("userData"), "music-playlists.json");
+const mapLayersFile = path.join(electron.app.getPath("userData"), "map-layers.json");
 const themesDir = path.join(electron.app.getPath("userData"), "themes");
 const innerThemesDir = path.join(__dirname, "assets/themes");
 const kblayoutsDir = path.join(electron.app.getPath("userData"), "keyboards");
@@ -67,6 +68,67 @@ const musicArtworkCache = new Map();
 
 function envFlag(name) {
     return /^(1|true|yes|on)$/i.test(String(process.env[name] || ""));
+}
+
+function defaultMapLayersConfig() {
+    return {
+        version: 1,
+        storageKey: "aegisui-map-layers-v1",
+        layers: {
+            ROAD_TRAFFIC: {active: false, opacity: 1, mode: "live"},
+            WEATHER_RADAR: {active: true, opacity: 0.55, mode: "live"},
+            AIR_TRAFFIC: {active: false, opacity: 1, mode: "placeholder"},
+            MARITIME_AIS: {active: false, opacity: 1, mode: "placeholder"},
+            SATELLITES: {active: false, opacity: 1, mode: "placeholder"},
+            OCEAN_ALERTS: {active: false, opacity: 1, mode: "placeholder"}
+        }
+    };
+}
+
+function sanitizeMapLayersConfig(input = {}) {
+    const allowedLayers = Object.keys(defaultMapLayersConfig().layers);
+    const sourceLayers = input && typeof input === "object" && input.layers && typeof input.layers === "object"
+        ? input.layers
+        : input;
+    const defaults = defaultMapLayersConfig();
+    const layers = {};
+
+    allowedLayers.forEach(id => {
+        const source = sourceLayers && sourceLayers[id] && typeof sourceLayers[id] === "object"
+            ? sourceLayers[id]
+            : {};
+        const fallback = defaults.layers[id];
+        const opacity = Number(source.opacity);
+        layers[id] = {
+            active: typeof source.active === "boolean" ? source.active : fallback.active,
+            opacity: Number.isFinite(opacity) ? Math.max(0, Math.min(1, opacity)) : fallback.opacity,
+            mode: typeof source.mode === "string" ? source.mode.slice(0, 32) : fallback.mode
+        };
+    });
+
+    return {
+        version: 1,
+        storageKey: defaults.storageKey,
+        updatedAt: new Date().toISOString(),
+        layers
+    };
+}
+
+function readMapLayersConfig() {
+    try {
+        if (!fs.existsSync(mapLayersFile)) return defaultMapLayersConfig();
+        return sanitizeMapLayersConfig(JSON.parse(fs.readFileSync(mapLayersFile, "utf8")));
+    } catch (error) {
+        return defaultMapLayersConfig();
+    }
+}
+
+function writeMapLayersConfig(input) {
+    const cleanConfig = sanitizeMapLayersConfig(input);
+    const temporaryFile = `${mapLayersFile}.tmp`;
+    fs.writeFileSync(temporaryFile, JSON.stringify(cleanConfig, null, 4), {encoding: "utf8"});
+    fs.renameSync(temporaryFile, mapLayersFile);
+    return cleanConfig;
 }
 
 function loadLocalEnvFile() {
@@ -487,6 +549,20 @@ ipc.handle("calendar-open-privacy", () => {
 ipc.handle("traffic-open-key-page", () => {
     return shell.openExternal("https://developer.tomtom.com/platform/documentation/my-tomtom/how-to-get-a-tomtom-api-key");
 });
+ipc.handle("map-layers-read", () => {
+    try {
+        return {ok: true, data: readMapLayersConfig()};
+    } catch (error) {
+        return {ok: false, error: error.message};
+    }
+});
+ipc.handle("map-layers-save", (event, payload) => {
+    try {
+        return {ok: true, data: writeMapLayersConfig(payload)};
+    } catch (error) {
+        return {ok: false, error: error.message};
+    }
+});
 ipc.handle("engineering-projects", () => {
     try {
         return {ok: true, data: JSON.parse(fs.readFileSync(projectsFile, "utf8"))};
@@ -759,6 +835,10 @@ ensureTimelineMilestone({
     description: "Playback controls and Apple Music integration",
     milestoneName: "Add shuffle/repeat controls"
 });
+if (!fs.existsSync(mapLayersFile)) {
+    fs.writeFileSync(mapLayersFile, JSON.stringify(defaultMapLayersConfig(), null, 4));
+    signale.info(`Default map layer preferences written to ${mapLayersFile}`);
+}
 if (!fs.existsSync(musicPlaylistsFile)) {
     fs.writeFileSync(musicPlaylistsFile, JSON.stringify([], null, 4));
     signale.info(`Default music playlist index written to ${musicPlaylistsFile}`);

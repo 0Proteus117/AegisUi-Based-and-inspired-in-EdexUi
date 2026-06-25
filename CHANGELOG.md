@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.5.1 - 2026-06-26
+
+### Added
+
+- Added compact Situational Awareness toggles for traffic, radar, air, sea,
+  satellite and ocean layers inside Local Situation.
+- Added `map-layers.json` as an exportable local user-data file for map layer
+  preferences.
+- Added `map-layers.example.json` and expanded `config.example.json` with safe
+  non-secret map layer configuration examples.
+
+### Changed
+
+- Map layer preferences are mirrored between renderer `localStorage` and the
+  local app-data configuration file so they can be exported or imported on
+  another Mac without carrying API keys.
+
 ## 1.5.0 - 2026-06-26
 
 ### Added

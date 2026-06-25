@@ -57,6 +57,7 @@ class EngineeringMapPanel {
         this.offlineMode = Boolean(window.settings.offlineMode);
         this.layerStorageKey = "aegisui-map-layers-v1";
         this.layerPreferences = this.loadLayerPreferences();
+        this.hasLocalLayerPreferences = Object.keys(this.layerPreferences).length > 0;
         this.layers = new Map();
         this.placeholderLayer = L.layerGroup();
         this.layerDefinitions = this.createLayerDefinitions();
@@ -93,6 +94,7 @@ class EngineeringMapPanel {
         this.initializeLayers();
         this.renderLayerControls();
         this.applyInitialLayerState();
+        this.syncLayerPreferencesFile();
         this.loadRuntimeConfig();
         this.updateLocation();
         this.locationTimer = setInterval(() => this.updateLocation(), 3000);
@@ -228,11 +230,45 @@ class EngineeringMapPanel {
         this.layers.forEach((layer, id) => {
             data[id] = {
                 active: Boolean(layer.active),
-                opacity: layer.opacity
+                opacity: layer.opacity,
+                mode: layer.definition.placeholder ? "placeholder" : "live"
             };
         });
         try {
             localStorage.setItem(this.layerStorageKey, JSON.stringify(data));
+        } catch (error) {}
+        if (this.ipc && this.ipc.invoke) {
+            this.ipc.invoke("map-layers-save", {
+                version: 1,
+                storageKey: this.layerStorageKey,
+                layers: data
+            }).catch(() => {});
+        }
+    }
+
+    async syncLayerPreferencesFile() {
+        if (this.hasLocalLayerPreferences) {
+            this.saveLayerPreferences();
+            return;
+        }
+
+        try {
+            const response = await this.ipc.invoke("map-layers-read");
+            const fileLayers = response && response.ok && response.data && response.data.layers;
+            if (!fileLayers || typeof fileLayers !== "object") return;
+
+            Object.entries(fileLayers).forEach(([id, preferences]) => {
+                const layer = this.layers.get(id);
+                if (!layer || !preferences || typeof preferences !== "object") return;
+
+                const opacity = Number(preferences.opacity);
+                if (Number.isFinite(opacity)) layer.opacity = Math.max(0, Math.min(1, opacity));
+
+                if (typeof preferences.active !== "boolean" || preferences.active === layer.active) return;
+                if (preferences.active) this.activateLayer(id, {persist: false, userInitiated: false});
+                else this.deactivateLayer(id, {persist: false});
+            });
+            this.saveLayerPreferences();
         } catch (error) {}
     }
 

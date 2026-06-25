@@ -20,11 +20,39 @@
       "provider": "RainViewer",
       "enabled": true,
       "apiKeyRequired": false
+    },
+    "layers": {
+      "storage": "map-layers.json",
+      "ROAD_TRAFFIC": {
+        "enabled": false,
+        "requiresApiKey": true
+      },
+      "WEATHER_RADAR": {
+        "enabled": true,
+        "requiresApiKey": false
+      },
+      "AIR_TRAFFIC": {
+        "enabled": false,
+        "mode": "placeholder"
+      },
+      "MARITIME_AIS": {
+        "enabled": false,
+        "mode": "placeholder"
+      },
+      "SATELLITES": {
+        "enabled": false,
+        "mode": "placeholder"
+      },
+      "OCEAN_ALERTS": {
+        "enabled": false,
+        "mode": "placeholder"
+      }
     }
   },
   "localData": {
     "projects": "projects.json",
     "musicPlaylists": "music-playlists.json",
+    "mapLayers": "map-layers.json",
     "settings": "settings.json",
     "shortcuts": "shortcuts.json"
   }
