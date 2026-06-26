@@ -415,6 +415,7 @@ async function initUI() {
     };
     window.currentTerm = 0;
     window.term[0].onprocesschange = p => {
+        window.term[0].process = p;
         document.getElementById("shell_tab0").innerHTML = `<p>ENG - ${p}</p>`;
     };
 
@@ -504,6 +505,7 @@ window.focusShellTab = number => {
                 };
 
                 window.term[number].onprocesschange = p => {
+                    window.term[number].process = p;
                     document.getElementById("shell_tab"+number).innerHTML = `<p>#${number+1} - ${p}</p>`;
                 };
 

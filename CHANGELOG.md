@@ -1,5 +1,33 @@
 # Changelog
 
+## 1.7.0 - 2026-06-26
+
+### Added
+
+- Added the `DEVELOPER` workspace after `LAUNCH BAY`.
+- Added Developer Classic Deck panels for terminal focus, read-only Git status,
+  detected npm scripts, local logs, curated project structure and dependency /
+  runtime health.
+- Added `developer-deck.json` as a private local preference file in app data.
+- Added `developer-deck.example.json` as a safe configuration template.
+- Added `DEVELOPER_DECK.md` documenting modules, safety limits, local
+  configuration and future script/terminal integration work.
+
+### Changed
+
+- Workspace navigation now supports nine tabs and `Command + Option + 1…9`.
+- Configuration/export/offline documentation now includes Developer Deck local
+  data and no-cloud behavior.
+
+### Security
+
+- Developer Deck uses read-only Git/package/runtime checks in this foundation
+  version.
+- Quick scripts are detected but not executed automatically; command execution
+  remains a safe placeholder until an explicit confirmation model exists.
+- Sensitive files such as `.env`, tokens, keys, cookies and sessions are
+  blocked from the Developer project-structure opener.
+
 ## 1.6.0 - 2026-06-26
 
 ### Added

@@ -50,6 +50,9 @@ The app currently uses JSON files in the macOS application-data folder:
 - `launch-bay-games.json`: manual Launch Bay game library with titles,
   platforms, safe launch URLs and local cover/hero image paths. It does not
   contain tokens or account sessions.
+- `developer-deck.json`: Developer workspace preferences, including the active
+  project path, favorite scripts and display limits. It should not contain
+  secrets.
 
 Generated caches and helpers can also exist there, for example GeoIP data,
 application icons and the native Calendar helper. Do not share those by
@@ -77,7 +80,10 @@ Weather radar currently uses RainViewer public metadata and does not require a
 key. Air, maritime, satellite and ocean layers are placeholders in v1.5.x and
 do not require keys yet. Launch Bay uses local manual configuration and safe
 launcher URLs; SteamGridDB is documented only as a future optional artwork API.
-Calendar and Apple Music use local macOS permissions rather than storing
+Developer Deck uses local read-only Git/package/runtime metadata and does not
+need API keys. You can set its initial project with
+`AEGISUI_DEVELOPER_PROJECT` or later through the local `developer-deck.json`
+file. Calendar and Apple Music use local macOS permissions rather than storing
 account passwords in the project.
 
 ## Export and import
@@ -103,7 +109,8 @@ Mac.
 `config.example.json` is a human-readable template for a private
 `user-config.local.json`. `map-layers.example.json` shows the safe map layer
 preference structure. `launch-bay-games.example.json` shows the manual game
-library structure. These examples are intentionally conservative and contain no
-secrets. The current app does not require those files to run; they are safe
-places to document local preferences while the code continues to use the macOS
-application-data folder.
+library structure. `developer-deck.example.json` shows the Developer workspace
+configuration structure. These examples are intentionally conservative and
+contain no secrets. The current app does not require those files to run; they
+are safe places to document local preferences while the code continues to use
+the macOS application-data folder.

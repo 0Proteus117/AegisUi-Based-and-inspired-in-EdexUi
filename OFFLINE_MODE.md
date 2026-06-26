@@ -17,6 +17,7 @@ label unavailable services.
 | Calendar | Offline with local system data | Reads macOS EventKit calendars. iCloud/Outlook/Exchange must already be synced into macOS Calendar/Internet Accounts. |
 | Workspaces | Offline with local/default data | External links only open when clicked. |
 | Launch Bay | Offline with local data | Uses `launch-bay-games.json`; cloud artwork and auto-detection are not enabled. |
+| Developer Deck | Offline with local data | Uses `developer-deck.json`, local Git metadata and local package/runtime information. Script execution is disabled in the foundation build. |
 | OpenStreetMap base map | Online optional | Tiles require network; the panel remains visible if tiles fail. |
 | Local Situation layer toggles | Offline with local data | Preferences are stored in `map-layers.json` and mirrored in renderer local storage. |
 | RainViewer radar | Online optional | No key required; unavailable service shows a radar-unavailable state. |
@@ -52,6 +53,9 @@ providers.
 - Launch Bay: missing game images show cockpit placeholders; missing launch
   URLs show `NOT CONFIGURED`; Steam/custom launcher URLs are opened only when
   explicitly clicked.
+- Developer Deck: missing Git/package data shows unavailable/placeholder rows;
+  sensitive files such as `.env`, keys, tokens and session files are not opened
+  from the project structure panel.
 - Calendar permission denied: Calendar shows a local permissions/account
   prompt instead of crashing.
 - Apple Music permission denied: Music shows a disconnected/permission state
@@ -66,4 +70,6 @@ providers.
 - Situational Awareness future layers do not poll while they are placeholders.
 - Launch Bay does not poll or scan libraries in v1.6.0; it only reads the local
   JSON configuration when the workspace is rendered.
+- Developer Deck runs short read-only local checks only when the workspace is
+  rendered or refreshed. It has no timers, no polling loop and no cloud calls.
 - External IP lookup has a short timeout and does not log raw response bodies.

@@ -17,7 +17,8 @@ const EXPORTABLE_JSON_FILES = [
     "projects.json",
     "music-playlists.json",
     "map-layers.json",
-    "launch-bay-games.json"
+    "launch-bay-games.json",
+    "developer-deck.json"
 ];
 
 const SENSITIVE_KEYS = new Set([

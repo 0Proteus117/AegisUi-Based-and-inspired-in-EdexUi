@@ -54,6 +54,7 @@
     "musicPlaylists": "music-playlists.json",
     "mapLayers": "map-layers.json",
     "launchBayGames": "launch-bay-games.json",
+    "developerDeck": "developer-deck.json",
     "settings": "settings.json",
     "shortcuts": "shortcuts.json"
   },
@@ -62,5 +63,12 @@
     "autoDetectGames": false,
     "cloudArtwork": false,
     "futureArtworkProvider": "SteamGridDB"
+  },
+  "developerDeck": {
+    "storage": "developer-deck.json",
+    "activeProjectPath": "/Users/you/Projects/my-project",
+    "favoriteScripts": ["start", "dev", "test", "build"],
+    "runScriptsByDefault": false,
+    "gitWriteActions": false
   }
 }

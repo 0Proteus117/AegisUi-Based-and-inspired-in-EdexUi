@@ -38,12 +38,15 @@ keyboard and large terminal with:
   artwork directly from Music, with the existing cockpit animation as fallback;
 - a local-first Launch Bay game deck with a lightweight 3D carousel, hero
   backdrop, manual game configuration and safe launch URLs;
+- a Developer Classic Deck that preserves the original eDEX-UI programming
+  spirit with terminal focus, Git status, detected npm scripts, project
+  structure and dependency/runtime health;
 - editable project timelines for engineering work, with a visual Project
   Control popup for creating projects, managing milestones, changing status,
   reordering steps and saving without manually editing JSON;
 - a launch grid containing the applications installed on the Mac.
 
-Version 1.6 adds a modular Command Deck with eight navigable workspaces:
+Version 1.7 adds a modular Command Deck with nine navigable workspaces:
 
 - `HUB` preserves this complete original dashboard;
 - `ENGINEER` adds project status, CAD/CAE/simulation launchers, research,
@@ -56,8 +59,11 @@ Version 1.6 adds a modular Command Deck with eight navigable workspaces:
 - `LAUNCH BAY` adds a local-first game launcher foundation with a lightweight
   3D carousel, manual `launch-bay-games.json` configuration and safe Steam or
   launcher URLs.
+- `DEVELOPER` brings back the classic programming cockpit: terminal bridge,
+  read-only Git status, quick script launchers in safe placeholder mode, logs,
+  curated project structure and dependency/runtime health.
 
-The workspace bar supports mouse navigation and `Command + Option + 1…8`.
+The workspace bar supports mouse navigation and `Command + Option + 1…9`.
 Changing workspace never recreates the HUB: its map, Calendar, Music and
 project state remain alive in the background. Non-HUB views are rendered only
 when first opened.
@@ -86,6 +92,9 @@ application-data folder. They are never committed to GitHub:
   map overlays and placeholder/future layer choices. It never stores API keys.
 - `launch-bay-games.json` contains the manual local game library for Launch
   Bay. It stores titles, launcher URLs and local artwork paths, but no tokens.
+- `developer-deck.json` contains the active project path, favorite script names
+  and display limits for DEVELOPER. It does not store secrets, tokens or
+  credentials.
 
 The Engineering Dashboard uses a restrained blue cockpit palette:
 `#3BA7FF`, `#7CCBFF`, `#13263A`, `#070B10`, `#101820` and `#24445F`.
@@ -101,7 +110,7 @@ Current stable foundation:
 
 - HUB dashboard with map, traffic, radar, Calendar, Music, projects and apps;
 - workspaces for HUB, ENGINEER, OSINT / ANALYST, STUDENT, ARTIST, BUSINESS,
-  COMMS and LAUNCH BAY;
+  COMMS, LAUNCH BAY and DEVELOPER;
 - Apple Silicon macOS build path;
 - local JSON project timelines and playlists;
 - optional online services with graceful fallback where configured.
@@ -118,6 +127,9 @@ Security/offline documentation:
   WhatsApp safety boundaries and future official API options.
 - [GAME_DECK.md](GAME_DECK.md) documents Launch Bay, manual game configuration,
   safe launch URLs and future platform/artwork integrations.
+- [DEVELOPER_DECK.md](DEVELOPER_DECK.md) documents the classic developer
+  workspace, local configuration, script safety boundaries and future terminal
+  improvements.
 - [SECURITY.md](SECURITY.md) documents the current security posture and known
   Electron hardening work.
 - [CHANGELOG.md](CHANGELOG.md) tracks the AegisUi/EdexUi-Eng fork changes.

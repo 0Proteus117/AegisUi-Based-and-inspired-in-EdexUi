@@ -54,6 +54,7 @@ const projectsFile = path.join(electron.app.getPath("userData"), "projects.json"
 const musicPlaylistsFile = path.join(electron.app.getPath("userData"), "music-playlists.json");
 const mapLayersFile = path.join(electron.app.getPath("userData"), "map-layers.json");
 const launchBayGamesFile = path.join(electron.app.getPath("userData"), "launch-bay-games.json");
+const developerDeckFile = path.join(electron.app.getPath("userData"), "developer-deck.json");
 const themesDir = path.join(electron.app.getPath("userData"), "themes");
 const innerThemesDir = path.join(__dirname, "assets/themes");
 const kblayoutsDir = path.join(electron.app.getPath("userData"), "keyboards");
@@ -264,6 +265,232 @@ function readLaunchBayGames() {
     } catch (error) {
         return sanitizeLaunchBayGames(defaultLaunchBayGames());
     }
+}
+
+function defaultDeveloperDeckConfig() {
+    const fallbackProject = process.env.AEGISUI_DEVELOPER_PROJECT
+        || path.resolve(__dirname, "..");
+    return {
+        version: 1,
+        description: "Local Developer Deck preferences. Do not store secrets here.",
+        activeProjectPath: fallbackProject,
+        favoriteScripts: ["start", "dev", "test", "build", "security:audit"],
+        maxModifiedFiles: 30
+    };
+}
+
+function sanitizeDeveloperDeckConfig(input = {}) {
+    const defaults = defaultDeveloperDeckConfig();
+    const requestedPath = String(input.activeProjectPath || defaults.activeProjectPath || "").trim();
+    const activeProjectPath = path.isAbsolute(requestedPath) && fs.existsSync(requestedPath)
+        ? requestedPath
+        : defaults.activeProjectPath;
+    const favorites = Array.isArray(input.favoriteScripts)
+        ? input.favoriteScripts
+        : defaults.favoriteScripts;
+    const maxModifiedFiles = Number(input.maxModifiedFiles);
+
+    return {
+        version: 1,
+        updatedAt: new Date().toISOString(),
+        activeProjectPath,
+        favoriteScripts: favorites
+            .map(script => String(script || "").trim().slice(0, 80))
+            .filter(script => /^[A-Za-z0-9:_-]+$/.test(script))
+            .slice(0, 16),
+        maxModifiedFiles: Number.isFinite(maxModifiedFiles)
+            ? Math.max(5, Math.min(100, Math.round(maxModifiedFiles)))
+            : defaults.maxModifiedFiles
+    };
+}
+
+function readDeveloperDeckConfig() {
+    try {
+        if (!fs.existsSync(developerDeckFile)) return sanitizeDeveloperDeckConfig(defaultDeveloperDeckConfig());
+        return sanitizeDeveloperDeckConfig(JSON.parse(fs.readFileSync(developerDeckFile, "utf8")));
+    } catch (error) {
+        return sanitizeDeveloperDeckConfig(defaultDeveloperDeckConfig());
+    }
+}
+
+function isSensitiveProjectPath(filePath) {
+    const base = path.basename(filePath).toLowerCase();
+    return base === ".env"
+        || base.startsWith(".env.")
+        || /token|secret|credential|password|cookie|session|private|keychain/.test(base)
+        || /\.(pem|key|p8|p12|crt|cer|mobileprovision)$/i.test(base);
+}
+
+function safeRelativeProjectPath(projectPath, target) {
+    const relative = String(target || "").trim();
+    if (!relative || relative.includes("\0") || path.isAbsolute(relative)) {
+        throw new Error("Invalid project path.");
+    }
+    const resolved = path.resolve(projectPath, relative);
+    const normalizedProject = path.resolve(projectPath);
+    if (resolved !== normalizedProject && !resolved.startsWith(`${normalizedProject}${path.sep}`)) {
+        throw new Error("Path is outside the active project.");
+    }
+    if (isSensitiveProjectPath(resolved)) {
+        throw new Error("Sensitive files are not opened from Developer Deck.");
+    }
+    return resolved;
+}
+
+async function runReadOnlyCommand(command, args, options = {}) {
+    try {
+        const result = await execFileAsync(command, args, {
+            cwd: options.cwd,
+            timeout: options.timeout || 3500,
+            maxBuffer: options.maxBuffer || 512 * 1024
+        });
+        return {ok: true, stdout: result.stdout || "", stderr: result.stderr || ""};
+    } catch (error) {
+        return {
+            ok: false,
+            stdout: error.stdout || "",
+            stderr: error.stderr || "",
+            error: error.message || "Command unavailable."
+        };
+    }
+}
+
+async function getDeveloperGitStatus(projectPath, maximumFiles) {
+    const status = await runReadOnlyCommand("git", ["-C", projectPath, "status", "--porcelain=v1", "--branch"], {
+        cwd: projectPath
+    });
+    if (!status.ok) {
+        return {
+            available: false,
+            clean: false,
+            branch: "UNAVAILABLE",
+            lastCommit: "",
+            modifiedCount: 0,
+            files: [],
+            error: status.error
+        };
+    }
+
+    const lines = status.stdout.split(/\r?\n/).filter(Boolean);
+    const branchLine = lines.find(line => line.startsWith("## ")) || "";
+    const files = lines
+        .filter(line => !line.startsWith("## "))
+        .map(line => ({
+            status: line.slice(0, 2).trim() || "??",
+            path: line.slice(3).trim()
+        }))
+        .filter(file => !isSensitiveProjectPath(file.path));
+    const last = await runReadOnlyCommand(
+        "git",
+        ["-C", projectPath, "log", "-1", "--pretty=format:%h%x09%s%x09%cr"],
+        {cwd: projectPath}
+    );
+
+    return {
+        available: true,
+        clean: files.length === 0,
+        branch: branchLine.replace(/^##\s*/, "").split("...")[0] || "DETACHED",
+        lastCommit: last.ok ? last.stdout.trim() : "No commit data",
+        modifiedCount: files.length,
+        files: files.slice(0, maximumFiles),
+        error: ""
+    };
+}
+
+function getDeveloperScripts(projectPath, favoriteScripts) {
+    const packageFile = path.join(projectPath, "package.json");
+    if (!fs.existsSync(packageFile)) return {available: false, scripts: []};
+    try {
+        const manifest = JSON.parse(fs.readFileSync(packageFile, "utf8"));
+        const scripts = manifest && manifest.scripts && typeof manifest.scripts === "object"
+            ? Object.keys(manifest.scripts).map(name => ({
+                name,
+                command: String(manifest.scripts[name] || "").slice(0, 240),
+                favorite: favoriteScripts.includes(name)
+            }))
+            : [];
+        scripts.sort((a, b) => Number(b.favorite) - Number(a.favorite) || a.name.localeCompare(b.name));
+        return {available: true, scripts: scripts.slice(0, 24)};
+    } catch (error) {
+        return {available: false, scripts: [], error: error.message};
+    }
+}
+
+function getDeveloperStructure(projectPath) {
+    const entries = [
+        "README.md",
+        "CHANGELOG.md",
+        "CONFIGURATION.md",
+        "SECURITY.md",
+        "GAME_DECK.md",
+        "COMMS_DECK.md",
+        "MAP_LAYERS.md",
+        "package.json",
+        "src",
+        "src/config",
+        "src/classes",
+        "tools",
+        "build",
+        "docs"
+    ];
+
+    return entries
+        .map(entry => {
+            const fullPath = path.join(projectPath, entry);
+            if (!fs.existsSync(fullPath) || isSensitiveProjectPath(fullPath)) return null;
+            const stat = fs.statSync(fullPath);
+            return {
+                label: entry,
+                path: entry,
+                type: stat.isDirectory() ? "directory" : "file"
+            };
+        })
+        .filter(Boolean);
+}
+
+async function getDeveloperHealth(projectPath) {
+    const npmVersion = await runReadOnlyCommand("npm", ["--version"], {cwd: projectPath, timeout: 2500});
+    let dependencyCount = 0;
+    let devDependencyCount = 0;
+    try {
+        const manifest = JSON.parse(fs.readFileSync(path.join(projectPath, "package.json"), "utf8"));
+        dependencyCount = manifest.dependencies ? Object.keys(manifest.dependencies).length : 0;
+        devDependencyCount = manifest.devDependencies ? Object.keys(manifest.devDependencies).length : 0;
+    } catch (error) {}
+
+    return {
+        node: process.version,
+        electron: process.versions.electron,
+        chrome: process.versions.chrome,
+        npm: npmVersion.ok ? npmVersion.stdout.trim() : "UNAVAILABLE",
+        packageLock: fs.existsSync(path.join(projectPath, "package-lock.json")),
+        nodeModules: fs.existsSync(path.join(projectPath, "node_modules")),
+        dependencyCount,
+        devDependencyCount,
+        audit: "PLACEHOLDER · run npm audit manually"
+    };
+}
+
+async function getDeveloperDeckData() {
+    const config = readDeveloperDeckConfig();
+    const projectPath = config.activeProjectPath;
+    const git = await getDeveloperGitStatus(projectPath, config.maxModifiedFiles);
+    const scripts = getDeveloperScripts(projectPath, config.favoriteScripts);
+    const health = await getDeveloperHealth(projectPath);
+    return {
+        config,
+        projectPath,
+        git,
+        scripts,
+        structure: getDeveloperStructure(projectPath),
+        health,
+        logs: [
+            "Developer Deck loaded in read-only foundation mode.",
+            "Quick scripts are detected but not executed automatically.",
+            "Git actions are read-only; commit/push buttons are placeholders.",
+            "Sensitive files such as .env, keys and tokens are hidden."
+        ]
+    };
 }
 
 function loadLocalEnvFile() {
@@ -719,6 +946,34 @@ ipc.handle("launch-bay-launch", async (event, target) => {
         return {ok: false, error: error.message || "Cannot launch this game."};
     }
 });
+ipc.handle("developer-deck-data", async () => {
+    try {
+        return {ok: true, data: await getDeveloperDeckData()};
+    } catch (error) {
+        return {ok: false, error: error.message || "Developer Deck data unavailable."};
+    }
+});
+ipc.handle("developer-open-config", async () => {
+    const error = await shell.openPath(developerDeckFile);
+    return error ? {ok: false, error} : {ok: true};
+});
+ipc.handle("developer-open-project-file", async (event, target) => {
+    try {
+        const config = readDeveloperDeckConfig();
+        const filePath = safeRelativeProjectPath(config.activeProjectPath, target);
+        if (!fs.existsSync(filePath)) throw new Error("Project path does not exist.");
+        const error = await shell.openPath(filePath);
+        return error ? {ok: false, error} : {ok: true};
+    } catch (error) {
+        return {ok: false, error: error.message || "Cannot open project file."};
+    }
+});
+ipc.handle("developer-run-script", async () => {
+    return {
+        ok: false,
+        error: "Script execution is disabled in Developer Deck foundation. Run scripts manually in the terminal."
+    };
+});
 ipc.handle("engineering-projects", () => {
     try {
         return {ok: true, data: JSON.parse(fs.readFileSync(projectsFile, "utf8"))};
@@ -1026,6 +1281,10 @@ if (!fs.existsSync(mapLayersFile)) {
 if (!fs.existsSync(launchBayGamesFile)) {
     fs.writeFileSync(launchBayGamesFile, JSON.stringify(defaultLaunchBayGames(), null, 4));
     signale.info(`Default Launch Bay game library written to ${launchBayGamesFile}`);
+}
+if (!fs.existsSync(developerDeckFile)) {
+    fs.writeFileSync(developerDeckFile, JSON.stringify(defaultDeveloperDeckConfig(), null, 4));
+    signale.info(`Default Developer Deck preferences written to ${developerDeckFile}`);
 }
 if (!fs.existsSync(musicPlaylistsFile)) {
     fs.writeFileSync(musicPlaylistsFile, JSON.stringify([], null, 4));

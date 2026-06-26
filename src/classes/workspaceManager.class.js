@@ -141,6 +141,7 @@ class WorkspaceManager {
         this.renderQuickActions(view, definition.quickActions || []);
         if (definition.id === "engineer") this.renderEngineer(view, definition);
         else if (definition.id === "launch-bay") this.renderLaunchBay(view, definition);
+        else if (definition.id === "developer") this.renderDeveloper(view, definition);
         else this.renderFoundation(view, definition);
     }
 
@@ -388,6 +389,215 @@ class WorkspaceManager {
 
         const response = await this.ipc.invoke("launch-bay-launch", selected.launchUrl);
         this.showToast(view, response.ok ? `LAUNCHING ${selected.title}` : response.error);
+    }
+
+    async renderDeveloper(view, definition) {
+        view.classList.add("developer-workspace");
+        const grid = view.querySelector(".workspace-grid");
+        grid.classList.add("developer-grid");
+        grid.innerHTML = `
+            <article class="workspace-panel developer-terminal-panel">
+                <header><h2>TERMINAL BRIDGE</h2><span>ACTIVE</span></header>
+                <div class="workspace-panel-content">
+                    <div class="workspace-loading">READING TERMINAL STATE</div>
+                </div>
+            </article>
+            <article class="workspace-panel developer-git-panel">
+                <header><h2>GIT STATUS</h2><span>LOADING</span></header>
+                <div class="workspace-panel-content"></div>
+            </article>
+            <article class="workspace-panel developer-scripts-panel">
+                <header><h2>QUICK SCRIPTS</h2><span>SAFE MODE</span></header>
+                <div class="workspace-panel-content"></div>
+            </article>
+            <article class="workspace-panel developer-logs-panel">
+                <header><h2>LOGS / CONSOLE</h2><span>READ ONLY</span></header>
+                <div class="workspace-panel-content"></div>
+            </article>
+            <article class="workspace-panel developer-structure-panel">
+                <header><h2>PROJECT STRUCTURE</h2><span>SUMMARY</span></header>
+                <div class="workspace-panel-content"></div>
+            </article>
+            <article class="workspace-panel developer-health-panel">
+                <header><h2>DEPENDENCY / HEALTH</h2><span>LOCAL</span></header>
+                <div class="workspace-panel-content"></div>
+            </article>`;
+
+        await this.refreshDeveloper(view);
+    }
+
+    async refreshDeveloper(view) {
+        const response = await this.ipc.invoke("developer-deck-data");
+        if (!response.ok) {
+            view.querySelector(".developer-terminal-panel .workspace-panel-content").innerHTML =
+                `<div class="workspace-empty">DEVELOPER DATA UNAVAILABLE</div>`;
+            this.showToast(view, response.error);
+            return;
+        }
+        this.developerData = response.data;
+        this.renderDeveloperTerminal(view, response.data);
+        this.renderDeveloperGit(view, response.data);
+        this.renderDeveloperScripts(view, response.data);
+        this.renderDeveloperLogs(view, response.data);
+        this.renderDeveloperStructure(view, response.data);
+        this.renderDeveloperHealth(view, response.data);
+    }
+
+    renderDeveloperTerminal(view, data) {
+        const content = view.querySelector(".developer-terminal-panel .workspace-panel-content");
+        const term = window.term && window.term[window.currentTerm];
+        const cwd = term && term.cwd ? term.cwd : "Terminal cwd unavailable";
+        const process = term && term.process ? term.process : "interactive shell";
+        content.innerHTML = `
+            <div class="developer-terminal-readout">
+                <div class="developer-terminal-screen">
+                    <p><span>user@aegis</span>:<strong>~ developer</strong>$ terminal bridge --status</p>
+                    <p>ACTIVE PROJECT: ${this.escape(data.projectPath || "UNCONFIGURED")}</p>
+                    <p>CURRENT TERM: ${this.escape(String(window.currentTerm || 0))} · ${this.escape(process)}</p>
+                    <p>CWD: ${this.escape(cwd)}</p>
+                    <p>MODE: SAFE FOUNDATION · NO ARBITRARY COMMAND EXECUTION</p>
+                </div>
+                <div class="developer-terminal-actions">
+                    <button id="developer_focus_terminal" type="button">FOCUS HUB TERMINAL</button>
+                    <button id="developer_refresh" type="button">REFRESH STATUS</button>
+                    <button id="developer_config" type="button">OPEN CONFIG</button>
+                </div>
+            </div>`;
+        content.querySelector("#developer_focus_terminal").addEventListener("click", () => {
+            this.activate("hub", false);
+            setTimeout(() => {
+                if (window.term && window.term[window.currentTerm]) window.term[window.currentTerm].term.focus();
+            }, 80);
+        });
+        content.querySelector("#developer_refresh").addEventListener("click", () => this.refreshDeveloper(view));
+        content.querySelector("#developer_config").addEventListener("click", async () => {
+            const response = await this.ipc.invoke("developer-open-config");
+            this.showToast(view, response.ok ? "OPENING DEVELOPER CONFIG" : response.error);
+        });
+    }
+
+    renderDeveloperGit(view, data) {
+        const panel = view.querySelector(".developer-git-panel");
+        const content = panel.querySelector(".workspace-panel-content");
+        const status = panel.querySelector("header span");
+        const git = data.git || {};
+        status.className = git.available ? (git.clean ? "online" : "login-required") : "offline";
+        status.innerText = git.available ? (git.clean ? "CLEAN" : "DIRTY") : "UNAVAILABLE";
+
+        content.innerHTML = `
+            <div class="developer-git-summary">
+                <div><small>BRANCH</small><strong>${this.escape(git.branch || "UNAVAILABLE")}</strong></div>
+                <div><small>LAST COMMIT</small><strong>${this.escape(git.lastCommit || "NO DATA")}</strong></div>
+                <div><small>MODIFIED</small><strong>${this.escape(String(git.modifiedCount || 0))}</strong></div>
+            </div>
+            <div class="developer-file-list"></div>
+            <div class="developer-placeholder-actions">
+                <button type="button">COMMIT PLACEHOLDER</button>
+                <button type="button">PUSH PLACEHOLDER</button>
+            </div>`;
+
+        const list = content.querySelector(".developer-file-list");
+        const files = Array.isArray(git.files) ? git.files : [];
+        if (!git.available) {
+            list.innerHTML = `<div class="workspace-empty">${this.escape(git.error || "NOT A GIT REPOSITORY")}</div>`;
+        } else if (!files.length) {
+            list.innerHTML = `<div class="workspace-empty">WORKTREE CLEAN</div>`;
+        } else {
+            files.forEach(file => {
+                const row = document.createElement("div");
+                row.innerHTML = `<span>${this.escape(file.status)}</span><strong>${this.escape(file.path)}</strong>`;
+                list.appendChild(row);
+            });
+        }
+        content.querySelectorAll(".developer-placeholder-actions button").forEach(button => {
+            button.addEventListener("click", () => this.showToast(view, "GIT ACTIONS ARE PLACEHOLDERS IN THIS FOUNDATION"));
+        });
+    }
+
+    renderDeveloperScripts(view, data) {
+        const content = view.querySelector(".developer-scripts-panel .workspace-panel-content");
+        const scripts = data.scripts && Array.isArray(data.scripts.scripts) ? data.scripts.scripts : [];
+        if (!scripts.length) {
+            content.innerHTML = `<div class="workspace-empty">NO PACKAGE SCRIPTS DETECTED</div>`;
+            return;
+        }
+
+        content.innerHTML = `<div class="developer-script-list"></div>`;
+        const list = content.querySelector(".developer-script-list");
+        scripts.forEach(script => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = script.favorite ? "favorite" : "";
+            button.innerHTML = `
+                <strong>npm run ${this.escape(script.name)}</strong>
+                <small>${this.escape(script.command)}</small>
+                <em>${script.favorite ? "FAVORITE" : "DETECTED"}</em>`;
+            button.addEventListener("click", async () => {
+                const response = await this.ipc.invoke("developer-run-script", script.name);
+                this.showToast(view, response.ok ? `RUNNING ${script.name}` : response.error);
+            });
+            list.appendChild(button);
+        });
+    }
+
+    renderDeveloperLogs(view, data) {
+        const content = view.querySelector(".developer-logs-panel .workspace-panel-content");
+        const logs = Array.isArray(data.logs) ? data.logs : [];
+        content.innerHTML = `<div class="developer-log-lines"></div>`;
+        const lines = content.querySelector(".developer-log-lines");
+        logs.forEach((line, index) => {
+            const row = document.createElement("p");
+            row.innerHTML = `<span>${String(index + 1).padStart(2, "0")}</span>${this.escape(line)}`;
+            lines.appendChild(row);
+        });
+    }
+
+    renderDeveloperStructure(view, data) {
+        const content = view.querySelector(".developer-structure-panel .workspace-panel-content");
+        const structure = Array.isArray(data.structure) ? data.structure : [];
+        if (!structure.length) {
+            content.innerHTML = `<div class="workspace-empty">NO PROJECT STRUCTURE FOUND</div>`;
+            return;
+        }
+
+        content.innerHTML = `<div class="developer-structure-list"></div>`;
+        const list = content.querySelector(".developer-structure-list");
+        structure.forEach(entry => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.innerHTML = `
+                <span>${entry.type === "directory" ? "DIR" : "FILE"}</span>
+                <strong>${this.escape(entry.label)}</strong>`;
+            button.addEventListener("click", async () => {
+                const response = await this.ipc.invoke("developer-open-project-file", entry.path);
+                this.showToast(view, response.ok ? `OPENING ${entry.label}` : response.error);
+            });
+            list.appendChild(button);
+        });
+    }
+
+    renderDeveloperHealth(view, data) {
+        const content = view.querySelector(".developer-health-panel .workspace-panel-content");
+        const health = data.health || {};
+        const rows = [
+            ["NODE", health.node || "UNAVAILABLE"],
+            ["ELECTRON", health.electron || "UNAVAILABLE"],
+            ["CHROME", health.chrome || "UNAVAILABLE"],
+            ["NPM", health.npm || "UNAVAILABLE"],
+            ["PACKAGE LOCK", health.packageLock ? "FOUND" : "MISSING"],
+            ["NODE MODULES", health.nodeModules ? "FOUND" : "MISSING"],
+            ["DEPENDENCIES", String(health.dependencyCount || 0)],
+            ["DEV DEPENDENCIES", String(health.devDependencyCount || 0)],
+            ["AUDIT", health.audit || "PLACEHOLDER"]
+        ];
+
+        content.innerHTML = `<div class="developer-health-list"></div>`;
+        const list = content.querySelector(".developer-health-list");
+        rows.forEach(([label, value]) => {
+            const row = document.createElement("div");
+            row.innerHTML = `<span>${this.escape(label)}</span><strong>${this.escape(value)}</strong>`;
+            list.appendChild(row);
+        });
     }
 
     createPanel(widget = {}, extraClass = "") {

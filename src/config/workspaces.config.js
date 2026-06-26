@@ -374,6 +374,35 @@
                 "Emulator profiles",
                 "Manual installed-game validation"
             ]
+        },
+        {
+            id: "developer",
+            navigationLabel: "DEVELOPER",
+            name: "Developer Classic Deck",
+            description: "The classic eDEX-UI spirit rebuilt for modern development: terminal bridge, Git, scripts, logs, structure and health.",
+            status: "active",
+            implementation: "classic deck foundation",
+            categories: ["terminal", "git", "scripts", "logs", "code", "dependencies"],
+            quickActions: [
+                link("GITHUB", "https://github.com/", "Repository hosting", "EXTERNAL"),
+                link("NPM", "https://www.npmjs.com/", "Package registry", "EXTERNAL"),
+                link("NODE DOCS", "https://nodejs.org/api/", "Runtime reference", "EXTERNAL")
+            ],
+            widgets: [
+                {id: "developer-terminal", name: "Terminal bridge", type: "developer-terminal", status: "active"},
+                {id: "developer-git", name: "Git status", type: "developer-git", status: "active"},
+                {id: "developer-scripts", name: "Quick scripts", type: "developer-scripts", status: "placeholder"},
+                {id: "developer-logs", name: "Logs / console output", type: "developer-logs", status: "placeholder"},
+                {id: "developer-structure", name: "Project structure", type: "developer-structure", status: "active"},
+                {id: "developer-health", name: "Dependency / health", type: "developer-health", status: "active"}
+            ],
+            futureModules: [
+                "Confirmed script runner",
+                "Task process monitor",
+                "Safe Git action queue",
+                "Terminal session profiles",
+                "Dependency audit snapshots"
+            ]
         }
     ];
 })();

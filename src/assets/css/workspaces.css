@@ -2,11 +2,11 @@
     position: fixed;
     z-index: 1200;
     top: .28vh;
-    left: 32vw;
+    left: 23vw;
     right: .9vw;
     height: 1.9vh;
     display: grid;
-    grid-template-columns: repeat(8, minmax(0, 1fr));
+    grid-template-columns: repeat(9, minmax(0, 1fr));
     align-items: stretch;
     gap: .28vh;
 }
@@ -20,7 +20,7 @@
     border: .08vh solid rgba(36, 68, 95, .82);
     color: rgba(124, 203, 255, .68);
     background: rgba(7, 11, 16, .96);
-    font: .66vh var(--font_main);
+    font: .6vh var(--font_main);
     letter-spacing: .05vh;
     text-align: center;
     transition: color .18s ease, border-color .18s ease, background .18s ease, box-shadow .18s ease;
@@ -580,6 +580,18 @@
     color: #d8b65c;
 }
 
+.engineering-mode .workspace-panel > header span.online {
+    color: #7CFFB2;
+}
+
+.engineering-mode .workspace-panel > header span.offline {
+    color: #7a8ea3;
+}
+
+.engineering-mode .workspace-panel > header span.login-required {
+    color: #d8b65c;
+}
+
 .engineering-mode .workspace-panel-content {
     position: absolute;
     inset: 2.25vh 0 0;
@@ -834,9 +846,243 @@
     transform: translateY(0);
 }
 
+.engineering-mode .developer-workspace {
+    grid-template-rows: 7.8vh 4.4vh minmax(0, 1fr);
+}
+
+.engineering-mode .developer-grid {
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, .72fr) minmax(0, .72fr);
+    grid-template-rows: minmax(0, .92fr) minmax(0, .78fr) minmax(0, .58fr);
+    grid-template-areas:
+        "terminal git scripts"
+        "terminal logs structure"
+        "terminal health health";
+}
+
+.engineering-mode .developer-terminal-panel { grid-area: terminal; }
+.engineering-mode .developer-git-panel { grid-area: git; }
+.engineering-mode .developer-scripts-panel { grid-area: scripts; }
+.engineering-mode .developer-logs-panel { grid-area: logs; }
+.engineering-mode .developer-structure-panel { grid-area: structure; }
+.engineering-mode .developer-health-panel { grid-area: health; }
+
+.engineering-mode .developer-terminal-panel {
+    border-color: rgba(59, 167, 255, .95);
+    background:
+        linear-gradient(rgba(59, 167, 255, .035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(59, 167, 255, .025) 1px, transparent 1px),
+        rgba(3, 7, 11, .92);
+    background-size: 1.35vh 1.35vh;
+    box-shadow: inset 0 0 2.5vh rgba(59, 167, 255, .06);
+}
+
+.engineering-mode .developer-terminal-readout {
+    height: 100%;
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto;
+    gap: .8vh;
+}
+
+.engineering-mode .developer-terminal-screen {
+    min-height: 0;
+    overflow: auto;
+    padding: .9vh;
+    border: .08vh solid rgba(36, 68, 95, .72);
+    background: rgba(0, 0, 0, .58);
+    box-shadow: inset 0 0 1.8vh rgba(59, 167, 255, .08);
+}
+
+.engineering-mode .developer-terminal-screen p {
+    margin: 0 0 .52vh;
+    color: rgba(216, 241, 255, .72);
+    font: .76vh var(--font_mono);
+    line-height: 1.45;
+}
+
+.engineering-mode .developer-terminal-screen span {
+    color: #7CFFB2;
+}
+
+.engineering-mode .developer-terminal-screen strong {
+    color: #7CCBFF;
+    font-weight: normal;
+}
+
+.engineering-mode .developer-terminal-actions,
+.engineering-mode .developer-placeholder-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: .45vh;
+}
+
+.engineering-mode .developer-terminal-actions button,
+.engineering-mode .developer-placeholder-actions button,
+.engineering-mode .developer-script-list button,
+.engineering-mode .developer-structure-list button {
+    min-width: 0;
+    border: .08vh solid rgba(36, 68, 95, .88);
+    color: rgba(216, 241, 255, .72);
+    background: rgba(7, 11, 16, .62);
+    font: .62vh var(--font_main);
+    text-align: left;
+}
+
+.engineering-mode .developer-terminal-actions button,
+.engineering-mode .developer-placeholder-actions button {
+    padding: .55vh .62vh;
+    text-align: center;
+}
+
+.engineering-mode .developer-terminal-actions button:hover,
+.engineering-mode .developer-placeholder-actions button:hover,
+.engineering-mode .developer-script-list button:hover,
+.engineering-mode .developer-structure-list button:hover {
+    border-color: #3BA7FF;
+    color: #d8f1ff;
+    background: rgba(19, 38, 58, .78);
+}
+
+.engineering-mode .developer-git-summary {
+    display: grid;
+    gap: .48vh;
+}
+
+.engineering-mode .developer-git-summary > div,
+.engineering-mode .developer-health-list > div {
+    display: grid;
+    grid-template-columns: 7vh minmax(0, 1fr);
+    gap: .55vh;
+    padding: .42vh .52vh;
+    background: rgba(7, 11, 16, .52);
+    border-left: .14vh solid rgba(59, 167, 255, .62);
+}
+
+.engineering-mode .developer-git-summary small,
+.engineering-mode .developer-health-list span {
+    color: rgba(124, 203, 255, .48);
+    font: .54vh var(--font_mono);
+    text-transform: uppercase;
+}
+
+.engineering-mode .developer-git-summary strong,
+.engineering-mode .developer-health-list strong {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: rgba(216, 241, 255, .78);
+    font: .65vh var(--font_mono);
+    font-weight: normal;
+}
+
+.engineering-mode .developer-file-list,
+.engineering-mode .developer-script-list,
+.engineering-mode .developer-structure-list,
+.engineering-mode .developer-health-list,
+.engineering-mode .developer-log-lines {
+    display: grid;
+    align-content: start;
+    gap: .42vh;
+}
+
+.engineering-mode .developer-file-list {
+    margin: .65vh 0;
+    max-height: 8vh;
+    overflow: auto;
+}
+
+.engineering-mode .developer-file-list > div {
+    display: grid;
+    grid-template-columns: 2.4vh minmax(0, 1fr);
+    gap: .45vh;
+    padding: .28vh .42vh;
+    background: rgba(7, 11, 16, .42);
+}
+
+.engineering-mode .developer-file-list span {
+    color: #d8b65c;
+    font: .56vh var(--font_mono);
+}
+
+.engineering-mode .developer-file-list strong {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: rgba(216, 241, 255, .7);
+    font: .6vh var(--font_mono);
+    font-weight: normal;
+}
+
+.engineering-mode .developer-script-list button {
+    position: relative;
+    display: grid;
+    gap: .18vh;
+    padding: .5vh .62vh;
+}
+
+.engineering-mode .developer-script-list button.favorite {
+    border-color: rgba(59, 167, 255, .76);
+    background: rgba(59, 167, 255, .08);
+}
+
+.engineering-mode .developer-script-list strong,
+.engineering-mode .developer-structure-list strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: rgba(216, 241, 255, .78);
+    font: .68vh var(--font_main);
+    font-weight: normal;
+}
+
+.engineering-mode .developer-script-list small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: rgba(124, 203, 255, .46);
+    font: .55vh var(--font_mono);
+}
+
+.engineering-mode .developer-script-list em {
+    position: absolute;
+    right: .48vh;
+    top: .35vh;
+    color: rgba(124, 203, 255, .42);
+    font: .48vh var(--font_mono);
+    font-style: normal;
+}
+
+.engineering-mode .developer-log-lines p {
+    margin: 0;
+    padding: .38vh .46vh;
+    color: rgba(216, 241, 255, .62);
+    background: rgba(7, 11, 16, .44);
+    font: .6vh var(--font_mono);
+    line-height: 1.35;
+}
+
+.engineering-mode .developer-log-lines span {
+    margin-right: .55vh;
+    color: rgba(59, 167, 255, .52);
+}
+
+.engineering-mode .developer-structure-list button {
+    display: grid;
+    grid-template-columns: 2.8vh minmax(0, 1fr);
+    gap: .5vh;
+    align-items: center;
+    padding: .46vh .52vh;
+}
+
+.engineering-mode .developer-structure-list span {
+    color: rgba(59, 167, 255, .58);
+    font: .52vh var(--font_mono);
+}
+
 @media (max-aspect-ratio: 16/10) {
     .engineering-mode #workspace_navigation {
-        left: 30vw;
+        left: 22vw;
     }
 
     .engineering-mode .engineer-workspace-grid {

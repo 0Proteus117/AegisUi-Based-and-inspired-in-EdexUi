@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "description": "Copy this structure into the local app data file named developer-deck.json. Do not store secrets here.",
+  "activeProjectPath": "/Users/you/Projects/my-project",
+  "favoriteScripts": [
+    "start",
+    "dev",
+    "test",
+    "build",
+    "security:audit"
+  ],
+  "maxModifiedFiles": 30
+}
