@@ -2,39 +2,114 @@
     position: fixed;
     z-index: 1200;
     top: .28vh;
-    left: 21.5vw;
+    left: 20.8vw;
     right: .9vw;
-    height: 1.9vh;
+    height: 2.35vh;
     display: grid;
-    grid-template-columns: repeat(10, minmax(0, 1fr));
+    grid-template-columns: 7.4vh minmax(0, 1fr);
+    align-items: stretch;
+    gap: .42vh;
+    overflow: visible;
+}
+
+.engineering-mode .workspace-nav-scroll {
+    min-width: 0;
+    display: flex;
     align-items: stretch;
     gap: .28vh;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: .34vh;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(59, 167, 255, .45) rgba(7, 11, 16, .2);
+    scroll-snap-type: x proximity;
+    -webkit-mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 2.3vh), transparent);
+    mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 2.3vh), transparent);
+}
+
+.engineering-mode .workspace-nav-scroll::-webkit-scrollbar {
+    height: .28vh;
+}
+
+.engineering-mode .workspace-nav-scroll::-webkit-scrollbar-track {
+    background: rgba(7, 11, 16, .22);
+}
+
+.engineering-mode .workspace-nav-scroll::-webkit-scrollbar-thumb {
+    background: rgba(59, 167, 255, .36);
+    border-radius: 1vh;
 }
 
 .engineering-mode .workspace-nav-button {
-    min-width: 0;
-    display: flex;
+    position: relative;
+    flex: 0 0 auto;
+    min-width: 5.7vh;
+    max-width: 8.8vh;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
     align-items: center;
-    justify-content: center;
-    padding: .18vh .55vh;
+    gap: .32vh;
+    padding: .22vh .58vh;
     border: .08vh solid rgba(36, 68, 95, .82);
     color: rgba(124, 203, 255, .68);
-    background: rgba(7, 11, 16, .96);
-    font: .54vh var(--font_main);
-    letter-spacing: .035vh;
-    text-align: center;
-    transition: color .18s ease, border-color .18s ease, background .18s ease, box-shadow .18s ease;
+    background:
+        linear-gradient(100deg, rgba(59, 167, 255, .035), transparent 58%),
+        rgba(7, 11, 16, .96);
+    font: .58vh var(--font_main);
+    letter-spacing: .04vh;
+    text-align: left;
+    scroll-snap-align: center;
+    transition: color .18s ease, border-color .18s ease, background .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+
+.engineering-mode .workspace-nav-button.workspace-nav-hub {
+    min-width: 0;
+    max-width: none;
+    border-color: rgba(59, 167, 255, .78);
+    background:
+        linear-gradient(100deg, rgba(59, 167, 255, .16), transparent 65%),
+        rgba(7, 11, 16, .98);
 }
 
 .engineering-mode .workspace-nav-button span {
-    display: none;
+    display: grid;
+    width: 1.05vh;
+    height: 1.05vh;
+    place-items: center;
+    border: .08vh solid rgba(36, 68, 95, .82);
+    color: rgba(124, 203, 255, .55);
+    background: rgba(3, 7, 11, .56);
+    font: .48vh var(--font_mono);
 }
 
 .engineering-mode .workspace-nav-button strong {
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     font-weight: normal;
+}
+
+.engineering-mode .workspace-nav-button::before {
+    content: "";
+    position: absolute;
+    left: .42vh;
+    right: .42vh;
+    bottom: -.08vh;
+    height: .12vh;
+    background: rgba(36, 68, 95, .62);
+}
+
+.engineering-mode .workspace-nav-button[data-nav-group="build"]::before {
+    background: rgba(59, 167, 255, .62);
+}
+
+.engineering-mode .workspace-nav-button[data-nav-group="ops"]::before {
+    background: rgba(124, 203, 255, .46);
+}
+
+.engineering-mode .workspace-nav-button[data-nav-group="creative"]::before {
+    background: rgba(216, 182, 92, .44);
 }
 
 .engineering-mode .workspace-nav-button:hover,
@@ -42,11 +117,18 @@
     color: #d8f1ff;
     border-color: #3BA7FF;
     background: rgba(19, 38, 58, .94);
-    box-shadow: inset 0 -.16vh 0 #3BA7FF, 0 0 .9vh rgba(59, 167, 255, .18);
+    box-shadow: inset 0 -.18vh 0 #3BA7FF, 0 0 .9vh rgba(59, 167, 255, .18);
+    transform: translateY(-.04vh);
 }
 
 .engineering-mode .workspace-nav-button.active span {
     color: #7CCBFF;
+    border-color: rgba(59, 167, 255, .9);
+}
+
+.engineering-mode .workspace-nav-button.active::before {
+    background: #3BA7FF;
+    box-shadow: 0 0 .55vh rgba(59, 167, 255, .35);
 }
 
 .engineering-mode .workspace-is-hidden {

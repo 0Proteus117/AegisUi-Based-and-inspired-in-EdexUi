@@ -27,26 +27,68 @@ class WorkspaceManager {
     }
 
     buildNavigation() {
+        this.navigation.innerHTML = "";
+        this.navigation.classList.add("workspace-navigation-scalable");
         this.navigation.setAttribute("aria-label", "Workspace modes");
+        const rail = document.createElement("div");
+        rail.className = "workspace-nav-scroll";
+        rail.setAttribute("aria-label", "Additional workspaces");
+
         this.definitions.forEach((definition, index) => {
             const button = document.createElement("button");
+            const shortcut = this.shortcutForIndex(index);
             button.type = "button";
             button.className = "workspace-nav-button";
+            if (definition.preserveExistingView || definition.id === "hub") button.classList.add("workspace-nav-hub");
             button.dataset.workspace = definition.id;
+            button.dataset.navGroup = this.navigationGroup(definition);
+            button.dataset.tooltip = `${definition.name} · ${shortcut}`;
             button.setAttribute("aria-controls", definition.preserveExistingView
                 ? this.hub.id
                 : `workspace_${definition.id}`);
-            button.title = `${definition.name} · ${this.shortcutForIndex(index)}`;
+            button.setAttribute("aria-label", `${definition.name}. ${shortcut}`);
+            button.title = `${definition.name} · ${shortcut}`;
             button.innerHTML = `
-                <span>${String(index + 1).padStart(2, "0")}</span>
-                <strong>${this.escape(definition.navigationLabel)}</strong>`;
+                <span>${this.escape(this.shortcutKeyForIndex(index))}</span>
+                <strong>${this.escape(this.compactNavigationLabel(definition))}</strong>`;
             button.addEventListener("click", () => this.activate(definition.id));
-            this.navigation.appendChild(button);
+            if (button.classList.contains("workspace-nav-hub")) this.navigation.appendChild(button);
+            else rail.appendChild(button);
         });
+
+        this.navigation.appendChild(rail);
     }
 
     shortcutForIndex(index) {
         return index === 9 ? "⌘⌥0" : `⌘⌥${index + 1}`;
+    }
+
+    shortcutKeyForIndex(index) {
+        return index === 9 ? "0" : String(index + 1);
+    }
+
+    compactNavigationLabel(definition) {
+        const labels = {
+            hub: "HUB",
+            engineer: "ENG",
+            osint: "OSINT",
+            student: "STUD",
+            artist: "ART",
+            business: "BUS",
+            comms: "COMMS",
+            "launch-bay": "BAY",
+            developer: "DEV",
+            "agent-command": "AGENT"
+        };
+        return labels[definition.id] || definition.navigationLabel || definition.name || "MODE";
+    }
+
+    navigationGroup(definition) {
+        if (definition.id === "hub") return "core";
+        if (["engineer", "developer", "agent-command"].includes(definition.id)) return "build";
+        if (["osint", "business", "comms"].includes(definition.id)) return "ops";
+        if (["student", "artist", "launch-bay"].includes(definition.id)) return "creative";
+        return "general";
     }
 
     buildViews() {
@@ -88,6 +130,13 @@ class WorkspaceManager {
             const active = button.dataset.workspace === workspaceId;
             button.classList.toggle("active", active);
             button.setAttribute("aria-pressed", String(active));
+            if (active && !button.classList.contains("workspace-nav-hub")) {
+                setTimeout(() => button.scrollIntoView({
+                    behavior: "smooth",
+                    block: "nearest",
+                    inline: "center"
+                }), 20);
+            }
         });
 
         if (!definition.preserveExistingView && !this.rendered.has(workspaceId)) {

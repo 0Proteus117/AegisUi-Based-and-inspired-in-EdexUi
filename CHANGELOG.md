@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.8.1 - 2026-06-26
+
+### Changed
+
+- Reworked the top workspace navigation into a scalable two-zone layout:
+  pinned `HUB` plus a compact horizontal workspace rail.
+- Added compact workspace labels such as `ENG`, `BAY`, `DEV` and `AGENT`.
+- Added native hover tooltips with full workspace names and shortcuts.
+- Added automatic scroll-into-view for the active non-HUB workspace.
+- Preserved `Command + Option + 1…9` and `Command + Option + 0` navigation.
+
+### Documentation
+
+- Added `WORKSPACE_NAVIGATION.md` documenting the pinned-HUB/compact-rail
+  decision, shortcuts, behavior and future grouping options.
+
 ## 1.8.0 - 2026-06-26
 
 ### Added

@@ -142,6 +142,8 @@ Security/offline documentation:
 - [AGENT_COMMAND_DECK.md](AGENT_COMMAND_DECK.md) documents the agent command
   room, roles, permissions, task board, approval flow and future AI integration
   boundaries.
+- [WORKSPACE_NAVIGATION.md](WORKSPACE_NAVIGATION.md) documents the scalable
+  pinned-HUB plus compact workspace rail navigation decision.
 - [SECURITY.md](SECURITY.md) documents the current security posture and known
   Electron hardening work.
 - [CHANGELOG.md](CHANGELOG.md) tracks the AegisUi/EdexUi-Eng fork changes.
