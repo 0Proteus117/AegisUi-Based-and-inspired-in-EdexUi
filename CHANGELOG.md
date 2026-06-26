@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.9.6 - 2026-06-26
+
+### Changed
+
+- Replaced the increasingly crowded top workspace rail with a pinned `HUB`
+  button, larger active-deck readout and grouped `ALL DECKS` selector pop-up.
+- Increased minimum readable text sizes across workspaces, Developer Deck,
+  Agent Command, HUB calendar, map controls, timelines, media controls,
+  playlists and app tiles.
+- Added more breathing room to quick actions, panel headers, action buttons,
+  task cards and dense cockpit lists to reduce overlap and visual crowding.
+
+### Documentation
+
+- Updated `WORKSPACE_NAVIGATION.md` with the new selector-based navigation
+  decision and future scaling path.
+
 ## 1.9.5 - 2026-06-26
 
 ### Added

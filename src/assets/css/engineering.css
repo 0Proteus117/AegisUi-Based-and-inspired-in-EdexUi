@@ -1711,6 +1711,241 @@ body.engineering-mode {
     }
 }
 
+/* Cockpit UI/UX readability pass.
+   The dashboard keeps its dense technical style, but text and controls now have
+   pixel-safe minimums so Retina/high-resolution displays do not turn modules
+   into unreadable micro-panels. */
+
+.engineering-mode button {
+    min-height: 28px;
+    font-size: clamp(9px, .86vh, 12px);
+}
+
+.engineering-mode .leaflet-control-attribution {
+    max-width: 62%;
+    font-size: clamp(8px, .68vh, 10px);
+}
+
+.engineering-mode .eng-map-controls {
+    right: clamp(48px, 5.8vh, 68px);
+    grid-template-columns: repeat(3, minmax(58px, 1fr));
+    max-width: calc(100% - clamp(58px, 6.8vh, 82px));
+    gap: clamp(4px, .42vh, 7px);
+}
+
+.engineering-mode .eng-map-layer-toggle {
+    min-width: 58px;
+    padding: clamp(5px, .42vh, 7px) clamp(6px, .55vh, 8px);
+}
+
+.engineering-mode .eng-map-layer-toggle strong,
+.engineering-mode .eng-map-layer-readout article strong {
+    font: clamp(9px, .78vh, 12px) var(--font_main);
+}
+
+.engineering-mode .eng-map-layer-toggle small,
+.engineering-mode .eng-map-layer-readout > span,
+.engineering-mode .eng-map-layer-readout article span,
+.engineering-mode .eng-map-layer-readout article em {
+    font-size: clamp(8px, .58vh, 10px);
+}
+
+.engineering-mode .eng-map-layer-readout {
+    max-width: min(300px, calc(100% - 1.4vh));
+}
+
+.engineering-mode .eng-map-layer-readout > strong {
+    font: clamp(10px, .76vh, 12px) var(--font_main);
+}
+
+.engineering-mode .eng-connect-state,
+.engineering-mode .eng-loading,
+.engineering-mode .eng-empty-state {
+    font-size: clamp(12px, 1.05vh, 16px);
+}
+
+.engineering-mode .eng-connect-state small,
+.engineering-mode .eng-music-connect small,
+.engineering-mode #eng_traffic_form small {
+    font-size: clamp(9px, .74vh, 12px);
+}
+
+.engineering-mode .eng-calendar-toolbar {
+    height: clamp(34px, 3.75vh, 44px);
+    gap: clamp(4px, .45vh, 8px);
+}
+
+.engineering-mode .eng-calendar-toolbar button,
+.engineering-mode .eng-calendar-picker header button,
+.engineering-mode #eng_playlists footer button {
+    min-height: 26px;
+    font-size: clamp(8px, .68vh, 10px);
+}
+
+.engineering-mode .eng-calendar-toolbar > strong,
+.engineering-mode .eng-calendar-picker header strong,
+.engineering-mode .eng-calendar-choice strong {
+    font-size: clamp(9px, .78vh, 12px);
+}
+
+.engineering-mode .eng-calendar-choice small,
+.engineering-mode .eng-calendar-choice em,
+.engineering-mode .eng-calendar-day > header span,
+.engineering-mode .eng-calendar-event-chip time,
+.engineering-mode .eng-calendar-more {
+    font-size: clamp(8px, .58vh, 10px);
+}
+
+.engineering-mode #eng_calendar_grid {
+    inset: clamp(42px, 4.75vh, 54px) .55vh .55vh;
+}
+
+.engineering-mode .eng-calendar-day {
+    grid-template-rows: clamp(30px, 3.45vh, 40px) minmax(0, 1fr);
+}
+
+.engineering-mode .eng-calendar-day > header strong,
+.engineering-mode .eng-calendar-month-day > strong {
+    font-size: clamp(10px, .9vh, 13px);
+}
+
+.engineering-mode .eng-calendar-event-chip strong {
+    font-size: clamp(8px, .64vh, 10px);
+}
+
+.engineering-mode .eng-calendar-month-heading {
+    font-size: clamp(8px, .58vh, 10px);
+}
+
+.engineering-mode .eng-calendar-event-chip.compact strong {
+    font-size: clamp(7px, .52vh, 9px);
+}
+
+.engineering-mode .eng-project-toolbar {
+    height: clamp(34px, 3.45vh, 42px);
+}
+
+.engineering-mode .eng-project-toolbar span,
+.engineering-mode .eng-project-toolbar button,
+.engineering-mode .eng-project header p,
+.engineering-mode .eng-milestone span,
+.engineering-mode .eng-milestone strong,
+.engineering-mode .eng-milestone em {
+    font-size: clamp(8px, .72vh, 11px);
+}
+
+.engineering-mode .eng-project-list {
+    inset: clamp(34px, 3.45vh, 42px) 0 0;
+    padding: clamp(7px, .8vh, 12px);
+}
+
+.engineering-mode .eng-project {
+    padding: clamp(7px, .76vh, 11px);
+}
+
+.engineering-mode .eng-project header {
+    grid-template-columns: clamp(30px, 3.2vh, 40px) minmax(0, 1fr) clamp(42px, 4.2vh, 54px);
+}
+
+.engineering-mode .eng-project header h2 {
+    font-size: clamp(12px, 1.05vh, 16px);
+}
+
+.engineering-mode .eng-project header > strong {
+    font-size: clamp(13px, 1.2vh, 18px);
+}
+
+.engineering-mode .eng-milestones {
+    grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+}
+
+.engineering-mode .eng-milestone {
+    grid-template-columns: 8px 24px minmax(0, 1fr) auto;
+    min-height: 24px;
+}
+
+.engineering-mode .eng-project-editor-header small,
+.engineering-mode .eng-milestone-editor-title small,
+.engineering-mode #eng_project_editor_state,
+.engineering-mode .eng-project-navigator-title,
+.engineering-mode .eng-project-fields label > span,
+.engineering-mode .eng-project-editor-footer > span {
+    font-size: clamp(9px, .74vh, 12px);
+}
+
+.engineering-mode .eng-project-editor-header h1,
+.engineering-mode .eng-milestone-editor-title h2 {
+    font-size: clamp(20px, 2vh, 28px);
+}
+
+.engineering-mode button.eng-project-nav-item {
+    min-height: 56px;
+}
+
+.engineering-mode .eng-project-nav-item strong,
+.engineering-mode .eng-project-fields input,
+.engineering-mode .eng-milestone-editor-row input,
+.engineering-mode .eng-milestone-editor-row select {
+    font-size: clamp(10px, .96vh, 14px);
+}
+
+.engineering-mode .eng-project-nav-item small,
+.engineering-mode .eng-project-editor-empty p,
+.engineering-mode .eng-milestone-editor-index,
+.engineering-mode .eng-milestone-editor-empty {
+    font-size: clamp(9px, .78vh, 12px);
+}
+
+.engineering-mode .eng-milestone-editor-row {
+    grid-template-columns: 36px minmax(0, 1fr) minmax(120px, 13vh) minmax(104px, 11.6vh);
+}
+
+.engineering-mode .eng-track-data small,
+.engineering-mode .eng-track-data p,
+.engineering-mode .eng-music-controls .eng-music-toggle,
+.engineering-mode #eng_playlists > h3,
+.engineering-mode .eng-playlist span,
+.engineering-mode .eng-playlist strong,
+.engineering-mode .eng-playlist-empty,
+.engineering-mode .eng-playlist-loading {
+    font-size: clamp(9px, .78vh, 12px);
+}
+
+.engineering-mode .eng-track-data h2 {
+    font-size: clamp(22px, 2.1vh, 30px);
+}
+
+.engineering-mode .eng-track-data h3 {
+    font-size: clamp(12px, 1.15vh, 16px);
+}
+
+.engineering-mode .eng-music-controls button {
+    min-width: 38px;
+    min-height: 30px;
+}
+
+.engineering-mode .eng-music-controls .eng-music-toggle {
+    min-width: 62px;
+}
+
+.engineering-mode #eng_playlists {
+    grid-template-rows: clamp(28px, 2.75vh, 34px) minmax(0, 1fr) clamp(34px, 3.35vh, 42px);
+}
+
+.engineering-mode #eng_apps_content {
+    grid-auto-columns: clamp(86px, 9.6vh, 112px);
+    gap: clamp(6px, .7vh, 10px);
+    padding: clamp(7px, .8vh, 12px);
+}
+
+.engineering-mode .eng-app-tile {
+    width: clamp(86px, 9.6vh, 112px);
+}
+
+.engineering-mode .eng-app-tile > span:last-child {
+    font-size: clamp(10px, .86vh, 13px);
+}
+
 @media (max-aspect-ratio: 4/3) {
     .engineering-mode main#engineering_dashboard {
         grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);

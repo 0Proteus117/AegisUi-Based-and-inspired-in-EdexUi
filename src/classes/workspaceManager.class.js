@@ -31,33 +31,125 @@ class WorkspaceManager {
         this.navigation.innerHTML = "";
         this.navigation.classList.add("workspace-navigation-scalable");
         this.navigation.setAttribute("aria-label", "Workspace modes");
-        const rail = document.createElement("div");
-        rail.className = "workspace-nav-scroll";
-        rail.setAttribute("aria-label", "Additional workspaces");
+        this.navigation.classList.remove("workspace-nav-open");
 
-        this.definitions.forEach((definition, index) => {
-            const button = document.createElement("button");
-            const shortcut = this.shortcutForIndex(index);
-            button.type = "button";
-            button.className = "workspace-nav-button";
-            if (definition.preserveExistingView || definition.id === "hub") button.classList.add("workspace-nav-hub");
-            button.dataset.workspace = definition.id;
-            button.dataset.navGroup = this.navigationGroup(definition);
-            button.dataset.tooltip = `${definition.name} · ${shortcut}`;
-            button.setAttribute("aria-controls", definition.preserveExistingView
-                ? this.hub.id
-                : `workspace_${definition.id}`);
-            button.setAttribute("aria-label", `${definition.name}. ${shortcut}`);
-            button.title = `${definition.name} · ${shortcut}`;
-            button.innerHTML = `
-                <span>${this.escape(this.shortcutKeyForIndex(index))}</span>
-                <strong>${this.escape(this.compactNavigationLabel(definition))}</strong>`;
-            button.addEventListener("click", () => this.activate(definition.id));
-            if (button.classList.contains("workspace-nav-hub")) this.navigation.appendChild(button);
-            else rail.appendChild(button);
+        const hubDefinition = this.byId.get("hub");
+        const hubIndex = this.definitions.findIndex(definition => definition.id === "hub");
+        const hubButton = this.createNavigationButton(
+            hubDefinition,
+            hubIndex >= 0 ? hubIndex : 0,
+            "workspace-nav-button workspace-nav-hub"
+        );
+
+        const currentDeck = document.createElement("button");
+        currentDeck.type = "button";
+        currentDeck.className = "workspace-current-deck";
+        currentDeck.setAttribute("aria-haspopup", "dialog");
+        currentDeck.setAttribute("aria-expanded", "false");
+        currentDeck.setAttribute("aria-label", "Open workspace selector");
+        currentDeck.innerHTML = `
+            <span class="workspace-current-glyph">⌂</span>
+            <strong id="workspace_nav_current_label">HUB</strong>
+            <small id="workspace_nav_current_name">Personal Engineering HUB</small>`;
+        currentDeck.addEventListener("click", () => this.toggleNavigationMenu());
+
+        const toggle = document.createElement("button");
+        toggle.type = "button";
+        toggle.className = "workspace-menu-toggle";
+        toggle.setAttribute("aria-haspopup", "dialog");
+        toggle.setAttribute("aria-expanded", "false");
+        toggle.innerHTML = "<span>DECKS</span><strong>ALL</strong>";
+        toggle.addEventListener("click", () => this.toggleNavigationMenu());
+
+        const menu = document.createElement("div");
+        menu.className = "workspace-deck-menu";
+        menu.setAttribute("role", "dialog");
+        menu.setAttribute("aria-label", "Workspace selector");
+        menu.setAttribute("aria-hidden", "true");
+        menu.innerHTML = `
+            <header>
+                <div>
+                    <span>WORKSPACE SELECTOR</span>
+                    <strong>Choose cockpit deck</strong>
+                </div>
+                <button class="workspace-deck-close" type="button" aria-label="Close workspace selector">×</button>
+            </header>
+            <div class="workspace-deck-groups"></div>`;
+
+        const groupsContainer = menu.querySelector(".workspace-deck-groups");
+        ["core", "build", "ops", "creative", "general"].forEach(groupId => {
+            const groupDefinitions = this.definitions.filter(definition => this.navigationGroup(definition) === groupId);
+            if (!groupDefinitions.length) return;
+            const section = document.createElement("section");
+            section.className = "workspace-deck-group";
+            section.dataset.navGroup = groupId;
+            section.innerHTML = `<h3>${this.escape(this.navigationGroupLabel(groupId))}</h3>`;
+            groupDefinitions.forEach(definition => {
+                const index = this.definitions.findIndex(item => item.id === definition.id);
+                const option = this.createNavigationButton(definition, index, "workspace-deck-option");
+                option.innerHTML = `
+                    <span class="workspace-deck-glyph">${this.escape(this.workspaceGlyph(definition))}</span>
+                    <strong>${this.escape(definition.navigationLabel || definition.name)}</strong>
+                    <small>${this.escape(definition.name)}</small>
+                    <em>${this.escape(String(definition.implementation || definition.status || "ready").toUpperCase())}</em>`;
+                section.appendChild(option);
+            });
+            groupsContainer.appendChild(section);
         });
 
-        this.navigation.appendChild(rail);
+        menu.querySelector(".workspace-deck-close").addEventListener("click", () => this.closeNavigationMenu());
+        this.navigation.appendChild(hubButton);
+        this.navigation.appendChild(currentDeck);
+        this.navigation.appendChild(toggle);
+        this.navigation.appendChild(menu);
+        this.navigationMenu = menu;
+        this.navigationCurrentDeck = currentDeck;
+        this.navigationToggle = toggle;
+
+        document.addEventListener("click", event => {
+            if (!this.navigation.contains(event.target)) this.closeNavigationMenu();
+        });
+        window.addEventListener("keydown", event => {
+            if (event.key === "Escape") this.closeNavigationMenu();
+        });
+    }
+
+    createNavigationButton(definition, index, className) {
+        const button = document.createElement("button");
+        const shortcut = this.shortcutForIndex(index);
+        button.type = "button";
+        button.className = className;
+        button.dataset.workspace = definition.id;
+        button.dataset.navGroup = this.navigationGroup(definition);
+        button.dataset.tooltip = `${definition.name} · ${shortcut}`;
+        button.setAttribute("aria-controls", definition.preserveExistingView
+            ? this.hub.id
+            : `workspace_${definition.id}`);
+        button.setAttribute("aria-label", `${definition.name}. ${shortcut}`);
+        button.title = `${definition.name} · ${shortcut}`;
+        button.innerHTML = `
+            <span>${this.escape(this.workspaceGlyph(definition))}</span>
+            <strong>${this.escape(this.compactNavigationLabel(definition))}</strong>`;
+        button.addEventListener("click", () => this.activate(definition.id));
+        return button;
+    }
+
+    toggleNavigationMenu() {
+        if (this.navigation.classList.contains("workspace-nav-open")) this.closeNavigationMenu();
+        else {
+            this.navigation.classList.add("workspace-nav-open");
+            if (this.navigationMenu) this.navigationMenu.setAttribute("aria-hidden", "false");
+            if (this.navigationCurrentDeck) this.navigationCurrentDeck.setAttribute("aria-expanded", "true");
+            if (this.navigationToggle) this.navigationToggle.setAttribute("aria-expanded", "true");
+        }
+    }
+
+    closeNavigationMenu() {
+        if (!this.navigation) return;
+        this.navigation.classList.remove("workspace-nav-open");
+        if (this.navigationMenu) this.navigationMenu.setAttribute("aria-hidden", "true");
+        if (this.navigationCurrentDeck) this.navigationCurrentDeck.setAttribute("aria-expanded", "false");
+        if (this.navigationToggle) this.navigationToggle.setAttribute("aria-expanded", "false");
     }
 
     shortcutForIndex(index) {
@@ -84,12 +176,39 @@ class WorkspaceManager {
         return labels[definition.id] || definition.navigationLabel || definition.name || "MODE";
     }
 
+    workspaceGlyph(definition) {
+        const glyphs = {
+            hub: "⌂",
+            engineer: "⚙",
+            osint: "⌖",
+            student: "✎",
+            artist: "◇",
+            business: "▣",
+            comms: "◍",
+            "launch-bay": "▶",
+            developer: ">_",
+            "agent-command": "AI"
+        };
+        return glyphs[definition.id] || "□";
+    }
+
     navigationGroup(definition) {
         if (definition.id === "hub") return "core";
         if (["engineer", "developer", "agent-command"].includes(definition.id)) return "build";
         if (["osint", "business", "comms"].includes(definition.id)) return "ops";
         if (["student", "artist", "launch-bay"].includes(definition.id)) return "creative";
         return "general";
+    }
+
+    navigationGroupLabel(groupId) {
+        const labels = {
+            core: "Core",
+            build: "Build / Engineering",
+            ops: "Operations / Comms",
+            creative: "Study / Creative / Play",
+            general: "Other decks"
+        };
+        return labels[groupId] || "Decks";
     }
 
     buildViews() {
@@ -127,18 +246,13 @@ class WorkspaceManager {
             view.classList.toggle("workspace-is-hidden", view.dataset.workspace !== workspaceId);
         });
 
-        this.navigation.querySelectorAll(".workspace-nav-button").forEach(button => {
+        this.navigation.querySelectorAll("[data-workspace]").forEach(button => {
             const active = button.dataset.workspace === workspaceId;
             button.classList.toggle("active", active);
             button.setAttribute("aria-pressed", String(active));
-            if (active && !button.classList.contains("workspace-nav-hub")) {
-                setTimeout(() => button.scrollIntoView({
-                    behavior: "smooth",
-                    block: "nearest",
-                    inline: "center"
-                }), 20);
-            }
         });
+        this.updateNavigationReadout(definition);
+        this.closeNavigationMenu();
 
         if (!definition.preserveExistingView && !this.rendered.has(workspaceId)) {
             this.renderWorkspace(definition);
@@ -162,6 +276,15 @@ class WorkspaceManager {
         }
 
         if (playSound && window.audioManager) window.audioManager.folder.play();
+    }
+
+    updateNavigationReadout(definition) {
+        const label = document.getElementById("workspace_nav_current_label");
+        const name = document.getElementById("workspace_nav_current_name");
+        const glyph = this.navigation && this.navigation.querySelector(".workspace-current-glyph");
+        if (label) label.innerText = definition.navigationLabel || this.compactNavigationLabel(definition);
+        if (name) name.innerText = definition.name || definition.description || "Workspace";
+        if (glyph) glyph.innerText = this.workspaceGlyph(definition);
     }
 
     async restorePersistedWorkspaceState() {

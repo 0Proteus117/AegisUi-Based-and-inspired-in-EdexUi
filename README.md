@@ -143,7 +143,7 @@ Security/offline documentation:
   room, roles, permissions, task board, approval flow and future AI integration
   boundaries.
 - [WORKSPACE_NAVIGATION.md](WORKSPACE_NAVIGATION.md) documents the scalable
-  pinned-HUB plus compact workspace rail navigation decision.
+  pinned-HUB, active-deck readout and grouped deck selector decision.
 - [MOCK_TO_REAL_AUDIT.md](MOCK_TO_REAL_AUDIT.md) inventories mockups,
   placeholders and recommended activation order.
 - [INTEGRATIONS.md](INTEGRATIONS.md) tracks real integrations, launchers,

@@ -1,34 +1,30 @@
 # Workspace navigation
 
-AegisUi now has enough workspaces that a fixed equal-width tab bar no longer
-scales well. The v1.8.1 navigation update keeps the cockpit feel while making
-the top bar able to grow.
+AegisUi now has enough workspaces that a fixed equal-width tab bar or a long
+horizontal rail no longer scales comfortably. The v1.9.6 navigation update
+keeps the cockpit feel while making the top bar easier to read and safer to
+grow.
 
 ## Decision
 
-Use a two-zone navigation bar:
+Use a three-part command selector:
 
 1. `HUB` remains pinned and always visible.
-2. Every other workspace lives in a compact horizontal rail.
+2. The current workspace is shown as a larger active-deck readout.
+3. `ALL DECKS` opens a cockpit-style selector pop-up with every workspace.
 
-The rail uses short labels, native tooltips and subtle horizontal scrolling.
-This keeps the interface readable without hiding the command deck behind a
-generic mobile-style menu.
+This avoids shrinking labels into unreadable tabs while still keeping the user
+oriented. It also leaves room for future workspaces without turning the top
+bar into visual noise.
 
-## Current compact labels
+## Selector groups
 
-| Workspace | Compact label |
+| Group | Workspaces |
 | --- | --- |
-| HUB | HUB |
-| ENGINEER | ENG |
-| OSINT | OSINT |
-| STUDENT | STUD |
-| ARTIST | ART |
-| BUSINESS | BUS |
-| COMMS | COMMS |
-| LAUNCH BAY | BAY |
-| DEVELOPER | DEV |
-| AGENT COMMAND | AGENT |
+| Core | HUB |
+| Build / Engineering | ENGINEER, DEVELOPER, AGENT COMMAND |
+| Operations / Comms | OSINT, BUSINESS, COMMS |
+| Study / Creative / Play | STUDENT, ARTIST, LAUNCH BAY |
 
 ## Keyboard shortcuts
 
@@ -42,37 +38,30 @@ Command + Option + 0
 
 ## Behavior
 
-- The active workspace remains visually clear with a blue cockpit underline and
-  glow.
-- The active non-HUB button scrolls into view automatically.
-- Hovering a button shows the full workspace name and shortcut through the
-  native tooltip.
+- The active workspace remains visible in the top bar.
+- `HUB` is always one click away.
+- The selector uses larger readable cards, deck icons and grouped sections.
+- Hovering a deck still shows the full workspace name and shortcut through the
+  native tooltip where available.
 - The last active workspace is still remembered through local storage.
 - The modal context-preservation behavior remains unchanged: modals must not
   force the app back to `HUB`.
+- Pressing `Escape` closes the selector without changing workspace.
 
-## Why not a dropdown first?
+## Why replace the compact rail?
 
-A dropdown would reduce visible clutter, but it would also hide the command
-deck. AegisUi benefits from visible mode awareness: the user should always
-know that ENGINEER, DEVELOPER, AGENT COMMAND and the other decks exist.
+The compact rail was a good first scaling step, but once COMMS, LAUNCH BAY,
+DEVELOPER and AGENT COMMAND were added it made the cockpit feel too busy. The
+selector pattern is more comfortable because it:
 
-The compact rail is a better first scaling step because it:
-
-- preserves direct one-click access;
 - keeps `HUB` anchored;
-- supports more workspaces without shrinking text indefinitely;
-- does not require a larger navigation rewrite;
-- remains visually close to the cockpit language.
+- shows the current deck clearly;
+- avoids tiny text and horizontal scroll hunting;
+- supports future decks without redesigning the top bar again;
+- keeps the visual language technical instead of using a generic mobile menu.
 
 ## Future options
 
-If the workspace count grows significantly, the next layer should be optional
-favorites or grouped filters, for example:
-
-- CORE: HUB;
-- OPS: OSINT, BUSINESS, COMMS;
-- BUILD: ENGINEER, DEVELOPER, AGENT COMMAND;
-- CREATIVE: STUDENT, ARTIST, LAUNCH BAY.
-
-That should be added only if the rail becomes genuinely crowded.
+If the workspace count grows significantly again, the next layer should be
+optional favorites or user-configured deck ordering. That should be added only
+after real usage shows which decks are daily tools and which are occasional.

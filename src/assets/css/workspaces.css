@@ -1,85 +1,55 @@
 .engineering-mode #workspace_navigation {
     position: fixed;
-    z-index: 1200;
-    top: .28vh;
-    left: 20.8vw;
+    z-index: 1800;
+    top: .38vh;
+    left: 52vw;
     right: .9vw;
-    height: 2.35vh;
+    height: clamp(30px, 3.25vh, 40px);
     display: grid;
-    grid-template-columns: 7.4vh minmax(0, 1fr);
+    grid-template-columns: minmax(72px, 6vw) minmax(0, 1fr) minmax(92px, 7.8vw);
     align-items: stretch;
-    gap: .42vh;
+    gap: .55vh;
     overflow: visible;
 }
 
-.engineering-mode .workspace-nav-scroll {
-    min-width: 0;
-    display: flex;
-    align-items: stretch;
-    gap: .28vh;
-    overflow-x: auto;
-    overflow-y: hidden;
-    padding-bottom: .34vh;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(59, 167, 255, .45) rgba(7, 11, 16, .2);
-    scroll-snap-type: x proximity;
-    -webkit-mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 2.3vh), transparent);
-    mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 2.3vh), transparent);
-}
-
-.engineering-mode .workspace-nav-scroll::-webkit-scrollbar {
-    height: .28vh;
-}
-
-.engineering-mode .workspace-nav-scroll::-webkit-scrollbar-track {
-    background: rgba(7, 11, 16, .22);
-}
-
-.engineering-mode .workspace-nav-scroll::-webkit-scrollbar-thumb {
-    background: rgba(59, 167, 255, .36);
-    border-radius: 1vh;
-}
-
-.engineering-mode .workspace-nav-button {
+.engineering-mode .workspace-nav-button,
+.engineering-mode .workspace-current-deck,
+.engineering-mode .workspace-menu-toggle {
     position: relative;
-    flex: 0 0 auto;
-    min-width: 5.7vh;
-    max-width: 8.8vh;
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    align-items: center;
-    gap: .32vh;
-    padding: .22vh .58vh;
-    border: .08vh solid rgba(36, 68, 95, .82);
-    color: rgba(124, 203, 255, .68);
+    min-width: 0;
+    min-height: 30px;
+    box-sizing: border-box;
+    border: .08vh solid rgba(36, 68, 95, .86);
+    color: rgba(216, 241, 255, .76);
     background:
-        linear-gradient(100deg, rgba(59, 167, 255, .035), transparent 58%),
-        rgba(7, 11, 16, .96);
-    font: .58vh var(--font_main);
-    letter-spacing: .04vh;
-    text-align: left;
-    scroll-snap-align: center;
+        linear-gradient(100deg, rgba(59, 167, 255, .07), transparent 62%),
+        rgba(7, 11, 16, .95);
     transition: color .18s ease, border-color .18s ease, background .18s ease, box-shadow .18s ease, transform .18s ease;
 }
 
-.engineering-mode .workspace-nav-button.workspace-nav-hub {
-    min-width: 0;
-    max-width: none;
-    border-color: rgba(59, 167, 255, .78);
+.engineering-mode .workspace-nav-button {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: .48vh;
+    padding: .38vh .66vh;
     background:
-        linear-gradient(100deg, rgba(59, 167, 255, .16), transparent 65%),
+        linear-gradient(100deg, rgba(59, 167, 255, .16), transparent 66%),
         rgba(7, 11, 16, .98);
+    font: clamp(9px, .76vh, 12px) var(--font_main);
+    letter-spacing: .07vh;
+    text-align: left;
 }
 
 .engineering-mode .workspace-nav-button span {
     display: grid;
-    width: 1.05vh;
-    height: 1.05vh;
+    width: clamp(17px, 1.75vh, 22px);
+    height: clamp(17px, 1.75vh, 22px);
     place-items: center;
-    border: .08vh solid rgba(36, 68, 95, .82);
-    color: rgba(124, 203, 255, .55);
-    background: rgba(3, 7, 11, .56);
-    font: .48vh var(--font_mono);
+    border: .08vh solid rgba(59, 167, 255, .42);
+    color: #7CCBFF;
+    background: rgba(3, 7, 11, .72);
+    font: clamp(9px, .8vh, 12px) var(--font_mono);
 }
 
 .engineering-mode .workspace-nav-button strong {
@@ -90,7 +60,9 @@
     font-weight: normal;
 }
 
-.engineering-mode .workspace-nav-button::before {
+.engineering-mode .workspace-nav-button::before,
+.engineering-mode .workspace-current-deck::before,
+.engineering-mode .workspace-menu-toggle::before {
     content: "";
     position: absolute;
     left: .42vh;
@@ -112,8 +84,77 @@
     background: rgba(216, 182, 92, .44);
 }
 
+.engineering-mode .workspace-current-deck {
+    display: grid;
+    grid-template-columns: clamp(24px, 2.4vh, 30px) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: .65vh;
+    align-items: center;
+    padding: .34vh .78vh .38vh;
+    text-align: left;
+}
+
+.engineering-mode .workspace-current-glyph {
+    grid-row: 1 / -1;
+    display: grid;
+    width: clamp(22px, 2.35vh, 30px);
+    height: clamp(22px, 2.35vh, 30px);
+    place-items: center;
+    border: .08vh solid rgba(59, 167, 255, .62);
+    color: #d8f1ff;
+    background: radial-gradient(circle, rgba(59, 167, 255, .24), rgba(7, 11, 16, .86));
+    box-shadow: inset 0 0 .9vh rgba(59, 167, 255, .12);
+    font: clamp(10px, .95vh, 14px) var(--font_mono);
+}
+
+.engineering-mode .workspace-current-deck strong,
+.engineering-mode .workspace-current-deck small {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.engineering-mode .workspace-current-deck strong {
+    color: #d8f1ff;
+    font: clamp(10px, .92vh, 14px) var(--font_main);
+    letter-spacing: .08vh;
+}
+
+.engineering-mode .workspace-current-deck small {
+    color: rgba(124, 203, 255, .54);
+    font: clamp(8px, .68vh, 11px) var(--font_main_light);
+}
+
+.engineering-mode .workspace-menu-toggle {
+    display: grid;
+    align-content: center;
+    justify-items: center;
+    gap: .08vh;
+    padding: .26vh .65vh;
+    text-align: center;
+}
+
+.engineering-mode .workspace-menu-toggle span {
+    color: rgba(124, 203, 255, .56);
+    font: clamp(8px, .62vh, 10px) var(--font_mono);
+    letter-spacing: .11vh;
+}
+
+.engineering-mode .workspace-menu-toggle strong {
+    color: #7CCBFF;
+    font: clamp(11px, .95vh, 14px) var(--font_main);
+    font-weight: normal;
+    letter-spacing: .08vh;
+}
+
 .engineering-mode .workspace-nav-button:hover,
-.engineering-mode .workspace-nav-button.active {
+.engineering-mode .workspace-nav-button.active,
+.engineering-mode .workspace-current-deck:hover,
+.engineering-mode .workspace-menu-toggle:hover,
+.engineering-mode.workspace-nav-open .workspace-current-deck,
+.engineering-mode .workspace-navigation-scalable.workspace-nav-open .workspace-current-deck,
+.engineering-mode .workspace-navigation-scalable.workspace-nav-open .workspace-menu-toggle {
     color: #d8f1ff;
     border-color: #3BA7FF;
     background: rgba(19, 38, 58, .94);
@@ -129,6 +170,169 @@
 .engineering-mode .workspace-nav-button.active::before {
     background: #3BA7FF;
     box-shadow: 0 0 .55vh rgba(59, 167, 255, .35);
+}
+
+.engineering-mode .workspace-deck-menu {
+    position: absolute;
+    top: calc(100% + .65vh);
+    right: 0;
+    width: min(46vw, 760px);
+    max-height: min(72vh, 720px);
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    border: .08vh solid rgba(59, 167, 255, .72);
+    background:
+        linear-gradient(135deg, rgba(59, 167, 255, .11), transparent 48%),
+        rgba(7, 11, 16, .98);
+    box-shadow: 0 1.4vh 4vh rgba(0, 0, 0, .55), 0 0 2vh rgba(59, 167, 255, .12);
+    backdrop-filter: blur(8px);
+    opacity: 0;
+    transform: translateY(-.6vh) scale(.985);
+    pointer-events: none;
+    transition: opacity .18s ease, transform .18s ease;
+}
+
+.engineering-mode .workspace-navigation-scalable.workspace-nav-open .workspace-deck-menu {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+}
+
+.engineering-mode .workspace-deck-menu > header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1vh;
+    padding: .95vh 1vh;
+    border-bottom: .08vh solid rgba(36, 68, 95, .8);
+    background: rgba(3, 7, 11, .72);
+}
+
+.engineering-mode .workspace-deck-menu > header span,
+.engineering-mode .workspace-deck-group h3 {
+    display: block;
+    color: rgba(124, 203, 255, .56);
+    font: clamp(8px, .68vh, 11px) var(--font_mono);
+    letter-spacing: .14vh;
+    text-transform: uppercase;
+}
+
+.engineering-mode .workspace-deck-menu > header strong {
+    display: block;
+    margin-top: .16vh;
+    color: #d8f1ff;
+    font: clamp(12px, 1.05vh, 16px) var(--font_main);
+    font-weight: normal;
+}
+
+.engineering-mode .workspace-deck-close {
+    width: clamp(26px, 2.55vh, 34px);
+    height: clamp(26px, 2.55vh, 34px);
+    border: .08vh solid rgba(36, 68, 95, .9);
+    color: #7CCBFF;
+    background: rgba(7, 11, 16, .7);
+    font: clamp(16px, 1.55vh, 22px) var(--font_main_light);
+}
+
+.engineering-mode .workspace-deck-close:hover {
+    border-color: #3BA7FF;
+    color: #d8f1ff;
+}
+
+.engineering-mode .workspace-deck-groups {
+    min-height: 0;
+    overflow: auto;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .9vh;
+    padding: 1vh;
+}
+
+.engineering-mode .workspace-deck-group {
+    min-width: 0;
+    display: grid;
+    align-content: start;
+    gap: .55vh;
+}
+
+.engineering-mode .workspace-deck-group h3 {
+    margin: 0 0 .1vh;
+    padding-left: .35vh;
+    border-left: .14vh solid rgba(59, 167, 255, .62);
+}
+
+.engineering-mode .workspace-deck-option {
+    position: relative;
+    min-width: 0;
+    min-height: clamp(50px, 5.2vh, 68px);
+    display: grid;
+    grid-template-columns: clamp(28px, 3.1vh, 38px) minmax(0, 1fr) auto;
+    grid-template-rows: auto auto;
+    gap: .18vh .68vh;
+    align-items: center;
+    padding: .62vh .72vh;
+    border: .08vh solid rgba(36, 68, 95, .82);
+    color: rgba(216, 241, 255, .74);
+    background:
+        linear-gradient(100deg, rgba(59, 167, 255, .055), transparent 62%),
+        rgba(16, 24, 32, .72);
+    text-align: left;
+    transition: border-color .16s ease, background .16s ease, color .16s ease, transform .16s ease;
+}
+
+.engineering-mode .workspace-deck-option:hover,
+.engineering-mode .workspace-deck-option.active {
+    border-color: #3BA7FF;
+    color: #d8f1ff;
+    background:
+        linear-gradient(100deg, rgba(59, 167, 255, .18), transparent 66%),
+        rgba(19, 38, 58, .86);
+    transform: translateX(.16vh);
+}
+
+.engineering-mode .workspace-deck-glyph {
+    grid-row: 1 / -1;
+    display: grid;
+    width: clamp(27px, 2.9vh, 36px);
+    height: clamp(27px, 2.9vh, 36px);
+    place-items: center;
+    border: .08vh solid rgba(59, 167, 255, .5);
+    color: #7CCBFF;
+    background: rgba(3, 7, 11, .68);
+    font: clamp(10px, .95vh, 14px) var(--font_mono);
+}
+
+.engineering-mode .workspace-deck-option strong,
+.engineering-mode .workspace-deck-option small {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.engineering-mode .workspace-deck-option strong {
+    color: #d8f1ff;
+    font: clamp(10px, .9vh, 13px) var(--font_main);
+    font-weight: normal;
+    letter-spacing: .06vh;
+}
+
+.engineering-mode .workspace-deck-option small {
+    color: rgba(124, 203, 255, .5);
+    font: clamp(8px, .68vh, 11px) var(--font_main_light);
+}
+
+.engineering-mode .workspace-deck-option em {
+    grid-row: 1 / -1;
+    align-self: center;
+    max-width: 7.5vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: rgba(124, 203, 255, .48);
+    font: clamp(7px, .58vh, 9px) var(--font_mono);
+    font-style: normal;
+    text-transform: uppercase;
 }
 
 .engineering-mode .workspace-is-hidden {
@@ -1464,9 +1668,203 @@
     color: rgba(59, 167, 255, .62);
 }
 
+/* UI/UX polish pass: keep the cockpit dense, but stop tiny text and cramped cards
+   from fighting the user on Retina and high-resolution displays. */
+
+.engineering-mode .workspace-view {
+    grid-template-rows: minmax(78px, 9.2vh) minmax(44px, 5.4vh) minmax(0, 1fr);
+    gap: clamp(9px, 1.12vh, 15px);
+}
+
+.engineering-mode .workspace-header {
+    gap: clamp(14px, 1.7vh, 24px);
+    padding: clamp(10px, 1.15vh, 16px) clamp(12px, 1.35vh, 18px);
+}
+
+.engineering-mode .workspace-eyebrow {
+    font: clamp(8px, .72vh, 11px) var(--font_mono);
+}
+
+.engineering-mode .workspace-header h1 {
+    font: clamp(22px, 2.05vh, 30px) var(--font_main);
+}
+
+.engineering-mode .workspace-header p {
+    font: clamp(10px, .9vh, 13px) var(--font_main_light);
+    line-height: 1.42;
+}
+
+.engineering-mode .workspace-header-status small,
+.engineering-mode .workspace-header-status span {
+    font-size: clamp(8px, .66vh, 10px);
+}
+
+.engineering-mode .workspace-header-status strong {
+    font-size: clamp(11px, 1.05vh, 15px);
+}
+
+.engineering-mode .workspace-quickbar {
+    grid-auto-columns: minmax(128px, 1fr);
+    gap: clamp(6px, .7vh, 10px);
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: .25vh;
+}
+
+.engineering-mode .workspace-action {
+    min-height: 42px;
+    padding: clamp(12px, 1.1vh, 16px) clamp(9px, .9vh, 13px) clamp(7px, .72vh, 11px);
+}
+
+.engineering-mode .workspace-action strong {
+    font: clamp(10px, .82vh, 13px) var(--font_main);
+}
+
+.engineering-mode .workspace-action small {
+    font: clamp(8px, .66vh, 11px) var(--font_main_light);
+}
+
+.engineering-mode .workspace-action-status {
+    top: .42vh;
+    right: .55vh;
+    max-width: 86px;
+    font: clamp(7px, .54vh, 9px) var(--font_mono);
+}
+
+.engineering-mode .workspace-action[data-action="application"]::before {
+    right: .55vh;
+    bottom: .42vh;
+    font: clamp(7px, .56vh, 9px) var(--font_mono);
+}
+
+.engineering-mode .workspace-grid {
+    gap: clamp(9px, 1.12vh, 15px);
+}
+
+.engineering-mode .workspace-panel > header {
+    height: clamp(27px, 2.45vh, 34px);
+    padding: 0 clamp(9px, .9vh, 13px);
+}
+
+.engineering-mode .workspace-panel > header h2 {
+    font: clamp(10px, .86vh, 13px) var(--font_main);
+}
+
+.engineering-mode .workspace-panel > header span {
+    font: clamp(8px, .62vh, 10px) var(--font_mono);
+}
+
+.engineering-mode .workspace-panel-content {
+    inset: clamp(27px, 2.45vh, 34px) 0 0;
+    padding: clamp(8px, .9vh, 13px);
+}
+
+.engineering-mode .workspace-panel-description,
+.engineering-mode .workspace-placeholder p,
+.engineering-mode .workspace-status-list p {
+    font-size: clamp(9px, .68vh, 12px);
+    line-height: 1.42;
+}
+
+.engineering-mode .workspace-tool-group h3,
+.engineering-mode .workspace-roadmap span,
+.engineering-mode .workspace-roadmap em,
+.engineering-mode .workspace-status-list span {
+    font-size: clamp(8px, .6vh, 10px);
+}
+
+.engineering-mode .workspace-project-row strong,
+.engineering-mode .workspace-roadmap strong,
+.engineering-mode .workspace-status-list strong {
+    font-size: clamp(10px, .78vh, 13px);
+}
+
+.engineering-mode .workspace-project-row small {
+    font-size: clamp(8px, .58vh, 10px);
+}
+
+.engineering-mode .workspace-manage-projects,
+.engineering-mode .launch-bay-actions button,
+.engineering-mode .developer-terminal-actions button,
+.engineering-mode .developer-placeholder-actions button,
+.engineering-mode .developer-script-list button,
+.engineering-mode .developer-structure-list button,
+.engineering-mode .agent-command-task-state button,
+.engineering-mode .agent-command-output-actions button {
+    min-height: 30px;
+    font-size: clamp(9px, .66vh, 12px);
+}
+
+.engineering-mode .developer-terminal-actions,
+.engineering-mode .developer-placeholder-actions,
+.engineering-mode .agent-command-output-actions {
+    grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+}
+
+.engineering-mode .developer-terminal-screen p,
+.engineering-mode .developer-git-summary strong,
+.engineering-mode .developer-health-list strong,
+.engineering-mode .developer-file-list strong,
+.engineering-mode .developer-log-lines p,
+.engineering-mode .agent-command-agent-card p,
+.engineering-mode .agent-command-task-main p,
+.engineering-mode .agent-command-prompt p,
+.engineering-mode .agent-command-output p,
+.engineering-mode .agent-command-flow p,
+.engineering-mode .agent-command-locks p {
+    font-size: clamp(9px, .66vh, 12px);
+}
+
+.engineering-mode .developer-git-summary small,
+.engineering-mode .developer-health-list span,
+.engineering-mode .developer-file-list span,
+.engineering-mode .developer-script-list small,
+.engineering-mode .developer-script-list em,
+.engineering-mode .developer-structure-list span,
+.engineering-mode .agent-command-agent-card span,
+.engineering-mode .agent-command-agent-card small,
+.engineering-mode .agent-command-task-main small,
+.engineering-mode .agent-command-task-state em,
+.engineering-mode .agent-command-priority,
+.engineering-mode .agent-command-context span,
+.engineering-mode .agent-command-agent-head span,
+.engineering-mode .agent-command-prompt em,
+.engineering-mode .agent-command-output em,
+.engineering-mode .agent-command-agent-head small,
+.engineering-mode .agent-command-permissions strong,
+.engineering-mode .agent-command-metrics small,
+.engineering-mode .agent-command-flow h3,
+.engineering-mode .agent-command-locks h3 {
+    font-size: clamp(8px, .56vh, 10px);
+}
+
+.engineering-mode .agent-command-agent-card strong,
+.engineering-mode .agent-command-task-main strong,
+.engineering-mode .developer-script-list strong,
+.engineering-mode .developer-structure-list strong {
+    font-size: clamp(10px, .78vh, 13px);
+}
+
+.engineering-mode .agent-command-task-card {
+    grid-template-columns: minmax(0, 1fr) minmax(128px, 16vw);
+}
+
+.engineering-mode .agent-command-permissions,
+.engineering-mode .agent-command-metrics {
+    grid-template-columns: repeat(auto-fit, minmax(95px, 1fr));
+}
+
+.engineering-mode .workspace-toast {
+    font: clamp(9px, .7vh, 12px) var(--font_mono);
+}
+
 @media (max-aspect-ratio: 16/10) {
     .engineering-mode #workspace_navigation {
-        left: 20.5vw;
+        left: 43vw;
+    }
+
+    .engineering-mode .workspace-deck-menu {
+        width: min(55vw, 760px);
     }
 
     .engineering-mode .engineer-workspace-grid {
