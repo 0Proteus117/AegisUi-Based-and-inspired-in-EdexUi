@@ -343,6 +343,37 @@
                 "Provider-approved APIs only",
                 "WhatsApp Business Cloud API research for business accounts"
             ]
+        },
+        {
+            id: "launch-bay",
+            navigationLabel: "LAUNCH BAY",
+            name: "Launch Bay",
+            description: "A local-first game library with a lightweight 3D carousel, hero backdrop and safe launcher URLs.",
+            status: "active",
+            implementation: "game deck foundation",
+            categories: ["gaming", "library", "launcher", "offline", "manual config"],
+            quickActions: [
+                link("STEAM STORE", "https://store.steampowered.com/", "External store reference", "EXTERNAL"),
+                link("EPIC GAMES", "https://store.epicgames.com/", "Future launcher support", "EXTERNAL"),
+                link("GOG", "https://www.gog.com/", "Future launcher support", "EXTERNAL"),
+                link("STEAMGRIDDB", "https://www.steamgriddb.com/", "Future cover/hero asset source", "FUTURE")
+            ],
+            widgets: [
+                {
+                    id: "launch-bay-library",
+                    name: "Game carousel",
+                    type: "game-carousel",
+                    status: "active",
+                    description: "Manual local game library rendered as a lightweight 3D carousel."
+                }
+            ],
+            futureModules: [
+                "Steam local library scan",
+                "SteamGridDB cover and hero artwork",
+                "Epic Games / GOG / Battle.net library import",
+                "Emulator profiles",
+                "Manual installed-game validation"
+            ]
         }
     ];
 })();

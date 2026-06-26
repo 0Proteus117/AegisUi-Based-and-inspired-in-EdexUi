@@ -53,6 +53,7 @@ const lastWindowStateFile = path.join(electron.app.getPath("userData"), "lastWin
 const projectsFile = path.join(electron.app.getPath("userData"), "projects.json");
 const musicPlaylistsFile = path.join(electron.app.getPath("userData"), "music-playlists.json");
 const mapLayersFile = path.join(electron.app.getPath("userData"), "map-layers.json");
+const launchBayGamesFile = path.join(electron.app.getPath("userData"), "launch-bay-games.json");
 const themesDir = path.join(electron.app.getPath("userData"), "themes");
 const innerThemesDir = path.join(__dirname, "assets/themes");
 const kblayoutsDir = path.join(electron.app.getPath("userData"), "keyboards");
@@ -129,6 +130,140 @@ function writeMapLayersConfig(input) {
     fs.writeFileSync(temporaryFile, JSON.stringify(cleanConfig, null, 4), {encoding: "utf8"});
     fs.renameSync(temporaryFile, mapLayersFile);
     return cleanConfig;
+}
+
+function defaultLaunchBayGames() {
+    return {
+        version: 1,
+        description: "Manual local game library for AegisUi Launch Bay. Keep personal paths local and do not commit this file.",
+        games: [
+            {
+                id: "steam-game-example",
+                title: "Add Steam Game",
+                platform: "Steam",
+                launchUrl: "",
+                coverPath: "",
+                heroPath: "",
+                status: "missing",
+                tags: ["steam", "example", "configure"]
+            },
+            {
+                id: "manual-game-example",
+                title: "Manual Game Slot",
+                platform: "Manual",
+                launchUrl: "",
+                coverPath: "",
+                heroPath: "",
+                status: "missing",
+                tags: ["manual", "example"]
+            }
+        ]
+    };
+}
+
+function cleanLaunchText(value, fallback, maximum) {
+    const text = String(value || "").trim().slice(0, maximum);
+    return text || fallback;
+}
+
+function makeLaunchBayId(value, index) {
+    return cleanLaunchText(value, `game-${index + 1}`, 80)
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 64) || `game-${index + 1}`;
+}
+
+function localImageFileUrl(filePath) {
+    const value = String(filePath || "").trim();
+    if (!value || !path.isAbsolute(value)) return "";
+    const extension = path.extname(value).toLowerCase();
+    if (![".jpg", ".jpeg", ".png", ".webp", ".gif"].includes(extension)) return "";
+    if (!fs.existsSync(value)) return "";
+    return url.pathToFileURL(value).toString();
+}
+
+function sanitizeLaunchUrl(value) {
+    const launchUrl = String(value || "").trim().slice(0, 2048);
+    if (!launchUrl) return "";
+
+    const parsed = new URL(launchUrl);
+    const allowedProtocols = new Set([
+        "steam:",
+        "https:",
+        "com.epicgames.launcher:",
+        "goggalaxy:",
+        "battlenet:"
+    ]);
+    if (!allowedProtocols.has(parsed.protocol)) {
+        throw new Error("Launch URL protocol is not allowed.");
+    }
+
+    const steamRoute = `${parsed.hostname}${parsed.pathname}`.replace(/^\/+/, "");
+    if (parsed.protocol === "steam:" && !/^(rungameid\/\d+|open\/games)$/i.test(steamRoute)) {
+        throw new Error("Steam launch URLs must use steam://rungameid/<APP_ID> or steam://open/games.");
+    }
+
+    if (parsed.protocol === "https:" && !parsed.hostname) {
+        throw new Error("HTTPS launch URL must include a host.");
+    }
+
+    return parsed.toString();
+}
+
+function sanitizeLaunchBayGames(input = {}) {
+    const sourceGames = input && Array.isArray(input.games) ? input.games : [];
+    const usedIds = new Set();
+    const games = sourceGames.slice(0, 200).map((game, index) => {
+        const item = game && typeof game === "object" ? game : {};
+        let id = makeLaunchBayId(item.id || item.title, index);
+        let suffix = 2;
+        while (usedIds.has(id)) id = `${id}-${suffix++}`;
+        usedIds.add(id);
+
+        let launchUrl = "";
+        try {
+            launchUrl = sanitizeLaunchUrl(item.launchUrl);
+        } catch (error) {
+            launchUrl = "";
+        }
+
+        const status = ["installed", "missing", "external"].includes(item.status)
+            ? item.status
+            : (launchUrl ? "external" : "missing");
+
+        return {
+            id,
+            title: cleanLaunchText(item.title, `GAME ${index + 1}`, 90),
+            platform: cleanLaunchText(item.platform, "Manual", 40),
+            launchUrl,
+            coverPath: String(item.coverPath || "").trim().slice(0, 1024),
+            heroPath: String(item.heroPath || "").trim().slice(0, 1024),
+            coverUrl: localImageFileUrl(item.coverPath),
+            heroUrl: localImageFileUrl(item.heroPath),
+            status,
+            tags: Array.isArray(item.tags)
+                ? item.tags.slice(0, 12).map(tag => cleanLaunchText(tag, "", 32)).filter(Boolean)
+                : []
+        };
+    });
+
+    return {
+        version: 1,
+        updatedAt: new Date().toISOString(),
+        games
+    };
+}
+
+function readLaunchBayGames() {
+    try {
+        if (!fs.existsSync(launchBayGamesFile)) return sanitizeLaunchBayGames(defaultLaunchBayGames());
+        return sanitizeLaunchBayGames(JSON.parse(fs.readFileSync(launchBayGamesFile, "utf8")));
+    } catch (error) {
+        return sanitizeLaunchBayGames(defaultLaunchBayGames());
+    }
 }
 
 function loadLocalEnvFile() {
@@ -563,6 +698,27 @@ ipc.handle("map-layers-save", (event, payload) => {
         return {ok: false, error: error.message};
     }
 });
+ipc.handle("launch-bay-games", () => {
+    try {
+        return {ok: true, data: readLaunchBayGames()};
+    } catch (error) {
+        return {ok: false, error: error.message};
+    }
+});
+ipc.handle("launch-bay-open-config", async () => {
+    const error = await shell.openPath(launchBayGamesFile);
+    return error ? {ok: false, error} : {ok: true};
+});
+ipc.handle("launch-bay-launch", async (event, target) => {
+    try {
+        const launchUrl = sanitizeLaunchUrl(target);
+        if (!launchUrl) throw new Error("NOT CONFIGURED");
+        await shell.openExternal(launchUrl);
+        return {ok: true};
+    } catch (error) {
+        return {ok: false, error: error.message || "Cannot launch this game."};
+    }
+});
 ipc.handle("engineering-projects", () => {
     try {
         return {ok: true, data: JSON.parse(fs.readFileSync(projectsFile, "utf8"))};
@@ -866,6 +1022,10 @@ ensureTimelineMilestone({
 if (!fs.existsSync(mapLayersFile)) {
     fs.writeFileSync(mapLayersFile, JSON.stringify(defaultMapLayersConfig(), null, 4));
     signale.info(`Default map layer preferences written to ${mapLayersFile}`);
+}
+if (!fs.existsSync(launchBayGamesFile)) {
+    fs.writeFileSync(launchBayGamesFile, JSON.stringify(defaultLaunchBayGames(), null, 4));
+    signale.info(`Default Launch Bay game library written to ${launchBayGamesFile}`);
 }
 if (!fs.existsSync(musicPlaylistsFile)) {
     fs.writeFileSync(musicPlaylistsFile, JSON.stringify([], null, 4));

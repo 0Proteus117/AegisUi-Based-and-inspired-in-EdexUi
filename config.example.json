@@ -53,7 +53,14 @@
     "projects": "projects.json",
     "musicPlaylists": "music-playlists.json",
     "mapLayers": "map-layers.json",
+    "launchBayGames": "launch-bay-games.json",
     "settings": "settings.json",
     "shortcuts": "shortcuts.json"
+  },
+  "launchBay": {
+    "storage": "launch-bay-games.json",
+    "autoDetectGames": false,
+    "cloudArtwork": false,
+    "futureArtworkProvider": "SteamGridDB"
   }
 }

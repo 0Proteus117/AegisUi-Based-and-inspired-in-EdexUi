@@ -140,6 +140,7 @@ class WorkspaceManager {
 
         this.renderQuickActions(view, definition.quickActions || []);
         if (definition.id === "engineer") this.renderEngineer(view, definition);
+        else if (definition.id === "launch-bay") this.renderLaunchBay(view, definition);
         else this.renderFoundation(view, definition);
     }
 
@@ -211,6 +212,182 @@ class WorkspaceManager {
             content.appendChild(section);
         });
         grid.appendChild(tools);
+    }
+
+    async renderLaunchBay(view, definition) {
+        view.classList.add("launch-bay-workspace");
+        const grid = view.querySelector(".workspace-grid");
+        grid.classList.add("launch-bay-grid");
+        grid.innerHTML = `
+            <div class="launch-bay-backdrop" aria-hidden="true"></div>
+            <article class="launch-bay-stage workspace-panel">
+                <header><h2>GAME LIBRARY</h2><span>LOCAL</span></header>
+                <div class="workspace-panel-content">
+                    <div class="workspace-loading">READING LOCAL GAME LIBRARY</div>
+                </div>
+            </article>
+            <article class="launch-bay-detail workspace-panel">
+                <header><h2>SELECTED TITLE</h2><span>STANDBY</span></header>
+                <div class="workspace-panel-content"></div>
+            </article>`;
+
+        const response = await this.ipc.invoke("launch-bay-games");
+        if (!response.ok) {
+            grid.querySelector(".launch-bay-stage .workspace-panel-content").innerHTML =
+                `<div class="workspace-empty">GAME LIBRARY UNAVAILABLE</div>`;
+            return;
+        }
+
+        const games = Array.isArray(response.data.games) ? response.data.games : [];
+        this.launchBayState = {
+            games,
+            index: Math.min(Number(localStorage.getItem("aegisui-launch-bay-index")) || 0, Math.max(games.length - 1, 0))
+        };
+
+        const render = () => this.renderLaunchBayState(view);
+        render();
+
+        if (!view.dataset.launchBayKeyboardBound) {
+            view.dataset.launchBayKeyboardBound = "true";
+            window.addEventListener("keydown", event => {
+                if (this.activeId !== "launch-bay" || !this.launchBayState) return;
+                if (event.key === "ArrowLeft") {
+                    event.preventDefault();
+                    this.moveLaunchBaySelection(view, -1);
+                } else if (event.key === "ArrowRight") {
+                    event.preventDefault();
+                    this.moveLaunchBaySelection(view, 1);
+                } else if (event.key === "Enter") {
+                    event.preventDefault();
+                    this.launchSelectedGame(view);
+                }
+            });
+        }
+    }
+
+    renderLaunchBayState(view) {
+        const state = this.launchBayState || {games: [], index: 0};
+        const stage = view.querySelector(".launch-bay-stage .workspace-panel-content");
+        const detail = view.querySelector(".launch-bay-detail .workspace-panel-content");
+        const detailStatus = view.querySelector(".launch-bay-detail > header span");
+        const backdrop = view.querySelector(".launch-bay-backdrop");
+        if (!stage || !detail || !backdrop) return;
+
+        if (!state.games.length) {
+            stage.innerHTML = `<div class="workspace-empty">NO GAMES CONFIGURED</div>`;
+            detail.innerHTML = `
+                <div class="workspace-placeholder">
+                    <span>LOCAL CONFIG</span>
+                    <strong>Launch Bay is empty</strong>
+                    <p>Add games in launch-bay-games.json inside the app data folder.</p>
+                </div>`;
+            return;
+        }
+
+        const selected = state.games[state.index] || state.games[0];
+        const safeHeroUrl = String(selected.heroUrl || "").replace(/"/g, "%22");
+        backdrop.style.backgroundImage = safeHeroUrl
+            ? `linear-gradient(115deg, rgba(7,11,16,.92), rgba(19,38,58,.66)), url("${safeHeroUrl}")`
+            : "";
+        backdrop.classList.toggle("has-image", Boolean(safeHeroUrl));
+
+        stage.innerHTML = `
+            <button class="launch-bay-nav previous" type="button" aria-label="Previous game">‹</button>
+            <div class="launch-bay-carousel" aria-label="Configured games"></div>
+            <button class="launch-bay-nav next" type="button" aria-label="Next game">›</button>`;
+        stage.querySelector(".previous").addEventListener("click", () => this.moveLaunchBaySelection(view, -1));
+        stage.querySelector(".next").addEventListener("click", () => this.moveLaunchBaySelection(view, 1));
+
+        const carousel = stage.querySelector(".launch-bay-carousel");
+        state.games.forEach((game, index) => {
+            const offset = index - state.index;
+            const card = document.createElement("button");
+            card.type = "button";
+            card.className = "launch-bay-card";
+            card.dataset.offset = String(offset);
+            card.classList.toggle("selected", index === state.index);
+            card.classList.toggle("distant", Math.abs(offset) > 2);
+            card.style.setProperty("--offset", String(Math.max(-3, Math.min(3, offset))));
+            card.style.setProperty("--abs-offset", String(Math.min(3, Math.abs(offset))));
+
+            const cover = document.createElement("div");
+            cover.className = "launch-bay-cover";
+            if (game.coverUrl) {
+                const image = document.createElement("img");
+                image.src = game.coverUrl;
+                image.alt = "";
+                image.loading = "lazy";
+                cover.appendChild(image);
+            } else {
+                cover.innerHTML = `
+                    <span>${this.escape(game.platform || "GAME")}</span>
+                    <strong>${this.escape(game.title)}</strong>`;
+            }
+
+            const label = document.createElement("span");
+            label.className = "launch-bay-card-label";
+            label.innerText = game.title;
+            card.appendChild(cover);
+            card.appendChild(label);
+            card.addEventListener("click", () => {
+                state.index = index;
+                localStorage.setItem("aegisui-launch-bay-index", String(index));
+                this.renderLaunchBayState(view);
+            });
+            carousel.appendChild(card);
+        });
+
+        const status = selected.launchUrl
+            ? String(selected.status || "external").toUpperCase()
+            : "NOT CONFIGURED";
+        if (detailStatus) {
+            detailStatus.className = this.statusClass(status);
+            detailStatus.innerText = status;
+        }
+
+        const tags = Array.isArray(selected.tags) ? selected.tags : [];
+        detail.innerHTML = `
+            <div class="launch-bay-selected">
+                <span>${this.escape(selected.platform || "Manual")}</span>
+                <h2>${this.escape(selected.title)}</h2>
+                <p>${selected.launchUrl
+                    ? this.escape(selected.launchUrl)
+                    : "No launchUrl configured. Steam games can use steam://rungameid/<APP_ID>."}</p>
+                <div class="launch-bay-tags">
+                    ${tags.length ? tags.map(tag => `<em>${this.escape(tag)}</em>`).join("") : "<em>NO TAGS</em>"}
+                </div>
+                <div class="launch-bay-actions">
+                    <button id="launch_bay_play" type="button">${selected.launchUrl ? "LAUNCH" : "NOT CONFIGURED"}</button>
+                    <button id="launch_bay_config" type="button">OPEN CONFIG</button>
+                </div>
+                <small>Arrow keys select · Enter launches · config stays local.</small>
+            </div>`;
+
+        detail.querySelector("#launch_bay_play").addEventListener("click", () => this.launchSelectedGame(view));
+        detail.querySelector("#launch_bay_config").addEventListener("click", async () => {
+            const response = await this.ipc.invoke("launch-bay-open-config");
+            this.showToast(view, response.ok ? "OPENING LOCAL GAME CONFIG" : response.error);
+        });
+    }
+
+    moveLaunchBaySelection(view, direction) {
+        const state = this.launchBayState;
+        if (!state || !state.games.length) return;
+        state.index = (state.index + direction + state.games.length) % state.games.length;
+        localStorage.setItem("aegisui-launch-bay-index", String(state.index));
+        this.renderLaunchBayState(view);
+    }
+
+    async launchSelectedGame(view) {
+        const state = this.launchBayState;
+        const selected = state && state.games[state.index];
+        if (!selected || !selected.launchUrl) {
+            this.showToast(view, "NOT CONFIGURED");
+            return;
+        }
+
+        const response = await this.ipc.invoke("launch-bay-launch", selected.launchUrl);
+        this.showToast(view, response.ok ? `LAUNCHING ${selected.title}` : response.error);
     }
 
     createPanel(widget = {}, extraClass = "") {

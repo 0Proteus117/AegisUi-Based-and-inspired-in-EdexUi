@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "description": "Copy this structure into the local app data file named launch-bay-games.json. Keep personal paths local and do not commit that private file.",
+  "games": [
+    {
+      "id": "my-steam-game",
+      "title": "My Steam Game",
+      "platform": "Steam",
+      "launchUrl": "steam://rungameid/123456",
+      "coverPath": "/Users/you/Pictures/Game Covers/my-steam-game-cover.jpg",
+      "heroPath": "/Users/you/Pictures/Game Covers/my-steam-game-hero.jpg",
+      "status": "installed",
+      "tags": ["steam", "favorite"]
+    },
+    {
+      "id": "manual-game-slot",
+      "title": "Manual Game Slot",
+      "platform": "Manual",
+      "launchUrl": "",
+      "coverPath": "",
+      "heroPath": "",
+      "status": "missing",
+      "tags": ["configure"]
+    }
+  ]
+}

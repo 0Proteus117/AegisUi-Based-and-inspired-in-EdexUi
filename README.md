@@ -36,12 +36,14 @@ keyboard and large terminal with:
 - Apple Music metadata, controls, progress, a playback-driven visualizer and
   a local playlist launcher. The player also displays the current track
   artwork directly from Music, with the existing cockpit animation as fallback;
+- a local-first Launch Bay game deck with a lightweight 3D carousel, hero
+  backdrop, manual game configuration and safe launch URLs;
 - editable project timelines for engineering work, with a visual Project
   Control popup for creating projects, managing milestones, changing status,
   reordering steps and saving without manually editing JSON;
 - a launch grid containing the applications installed on the Mac.
 
-Version 1.5 adds a modular Command Deck with seven navigable workspaces:
+Version 1.6 adds a modular Command Deck with eight navigable workspaces:
 
 - `HUB` preserves this complete original dashboard;
 - `ENGINEER` adds project status, CAD/CAE/simulation launchers, research,
@@ -51,8 +53,11 @@ Version 1.5 adds a modular Command Deck with seven navigable workspaces:
 - `COMMS` centralizes safe launchers for WhatsApp Web, Slack, Teams, Discord,
   Gmail, Outlook, LinkedIn, Instagram and X / Twitter, plus local communication
   status and notification placeholders.
+- `LAUNCH BAY` adds a local-first game launcher foundation with a lightweight
+  3D carousel, manual `launch-bay-games.json` configuration and safe Steam or
+  launcher URLs.
 
-The workspace bar supports mouse navigation and `Command + Option + 1…7`.
+The workspace bar supports mouse navigation and `Command + Option + 1…8`.
 Changing workspace never recreates the HUB: its map, Calendar, Music and
 project state remain alive in the background. Non-HUB views are rendered only
 when first opened.
@@ -69,7 +74,7 @@ pressed. Calendar requests local read-only EventKit access; Music requests
 Automation access. Weather radar needs no key. Real-time road traffic can be
 enabled from the map's `API KEY` button with a TomTom Traffic API key.
 
-The dashboard creates two private configuration files inside the EdexUi-Eng
+The dashboard creates private configuration files inside the EdexUi-Eng
 application-data folder. They are never committed to GitHub:
 
 - `projects.json` contains the project timelines and supports the states
@@ -79,6 +84,8 @@ application-data folder. They are never committed to GitHub:
   starts that playlist without bringing Music to the foreground.
 - `map-layers.json` contains Local Situation layer preferences such as enabled
   map overlays and placeholder/future layer choices. It never stores API keys.
+- `launch-bay-games.json` contains the manual local game library for Launch
+  Bay. It stores titles, launcher URLs and local artwork paths, but no tokens.
 
 The Engineering Dashboard uses a restrained blue cockpit palette:
 `#3BA7FF`, `#7CCBFF`, `#13263A`, `#070B10`, `#101820` and `#24445F`.
@@ -93,8 +100,8 @@ phase.
 Current stable foundation:
 
 - HUB dashboard with map, traffic, radar, Calendar, Music, projects and apps;
-- workspaces for HUB, ENGINEER, OSINT / ANALYST, STUDENT, ARTIST, BUSINESS and
-  COMMS;
+- workspaces for HUB, ENGINEER, OSINT / ANALYST, STUDENT, ARTIST, BUSINESS,
+  COMMS and LAUNCH BAY;
 - Apple Silicon macOS build path;
 - local JSON project timelines and playlists;
 - optional online services with graceful fallback where configured.
@@ -109,6 +116,8 @@ Security/offline documentation:
   architecture, states, providers, privacy and performance rules.
 - [COMMS_DECK.md](COMMS_DECK.md) documents the COMMS launcher foundation,
   WhatsApp safety boundaries and future official API options.
+- [GAME_DECK.md](GAME_DECK.md) documents Launch Bay, manual game configuration,
+  safe launch URLs and future platform/artwork integrations.
 - [SECURITY.md](SECURITY.md) documents the current security posture and known
   Electron hardening work.
 - [CHANGELOG.md](CHANGELOG.md) tracks the AegisUi/EdexUi-Eng fork changes.

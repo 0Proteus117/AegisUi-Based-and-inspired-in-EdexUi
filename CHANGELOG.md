@@ -1,5 +1,33 @@
 # Changelog
 
+## 1.6.0 - 2026-06-26
+
+### Added
+
+- Added the `LAUNCH BAY` workspace after `COMMS`.
+- Added a local-first game deck with lightweight 3D carousel, central selected
+  game, angled side cards, hero backdrop, keyboard navigation and launch
+  button.
+- Added `launch-bay-games.json` as a private local game-library file in app
+  data.
+- Added `launch-bay-games.example.json` as a safe manual configuration example.
+- Added secure Launch Bay IPC handlers for reading local game config, opening
+  the local config file and launching validated external game URLs.
+- Added `GAME_DECK.md` with manual setup, Steam launch URL format,
+  SteamGridDB future artwork notes, safety boundaries and limitations.
+
+### Changed
+
+- Workspace navigation now supports eight tabs and `Command + Option + 1…8`.
+- Configuration/export documentation now includes Launch Bay local data.
+
+### Security
+
+- Launch Bay does not auto-scan libraries, call cloud artwork APIs, store
+  tokens or execute arbitrary user commands.
+- Launch URLs are restricted to known safe external protocols such as
+  `steam://rungameid/<APP_ID>` and selected launcher URL schemes.
+
 ## 1.5.4 - 2026-06-26
 
 ### Added
