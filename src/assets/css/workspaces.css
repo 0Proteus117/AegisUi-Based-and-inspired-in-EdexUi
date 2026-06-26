@@ -2,11 +2,11 @@
     position: fixed;
     z-index: 1200;
     top: .28vh;
-    left: 23vw;
+    left: 21.5vw;
     right: .9vw;
     height: 1.9vh;
     display: grid;
-    grid-template-columns: repeat(9, minmax(0, 1fr));
+    grid-template-columns: repeat(10, minmax(0, 1fr));
     align-items: stretch;
     gap: .28vh;
 }
@@ -20,8 +20,8 @@
     border: .08vh solid rgba(36, 68, 95, .82);
     color: rgba(124, 203, 255, .68);
     background: rgba(7, 11, 16, .96);
-    font: .6vh var(--font_main);
-    letter-spacing: .05vh;
+    font: .54vh var(--font_main);
+    letter-spacing: .035vh;
     text-align: center;
     transition: color .18s ease, border-color .18s ease, background .18s ease, box-shadow .18s ease;
 }
@@ -1080,9 +1080,308 @@
     font: .52vh var(--font_mono);
 }
 
+.engineering-mode .agent-command-workspace {
+    grid-template-rows: 7.8vh 4.4vh minmax(0, 1fr);
+}
+
+.engineering-mode .agent-command-grid {
+    grid-template-columns: minmax(0, .78fr) minmax(0, 1.35fr) minmax(0, .9fr);
+    grid-template-rows: minmax(0, 1fr) minmax(0, .74fr);
+    grid-template-areas:
+        "agents board output"
+        "agents board safety";
+}
+
+.engineering-mode .agent-command-agents-panel { grid-area: agents; }
+.engineering-mode .agent-command-board-panel { grid-area: board; }
+.engineering-mode .agent-command-output-panel { grid-area: output; }
+.engineering-mode .agent-command-safety-panel { grid-area: safety; }
+
+.engineering-mode .agent-command-board-panel {
+    border-color: rgba(59, 167, 255, .92);
+    box-shadow: inset 0 0 2.4vh rgba(59, 167, 255, .045);
+}
+
+.engineering-mode .agent-command-agent-list,
+.engineering-mode .agent-command-task-board {
+    display: grid;
+    align-content: start;
+    gap: .58vh;
+}
+
+.engineering-mode .agent-command-agent-list {
+    max-height: 100%;
+    overflow: auto;
+}
+
+.engineering-mode .agent-command-agent-card {
+    display: grid;
+    gap: .25vh;
+    width: 100%;
+    padding: .62vh .72vh;
+    border: .08vh solid rgba(36, 68, 95, .78);
+    color: rgba(216, 241, 255, .75);
+    background:
+        linear-gradient(100deg, rgba(59, 167, 255, .06), transparent 60%),
+        rgba(7, 11, 16, .58);
+    text-align: left;
+}
+
+.engineering-mode .agent-command-agent-card.selected,
+.engineering-mode .agent-command-agent-card:hover {
+    border-color: rgba(59, 167, 255, .92);
+    background:
+        linear-gradient(100deg, rgba(59, 167, 255, .14), transparent 62%),
+        rgba(19, 38, 58, .68);
+}
+
+.engineering-mode .agent-command-agent-card span,
+.engineering-mode .agent-command-task-state em {
+    justify-self: start;
+    padding: .12vh .42vh;
+    border: .08vh solid rgba(36, 68, 95, .72);
+    color: rgba(124, 203, 255, .72);
+    background: rgba(7, 11, 16, .62);
+    font: .5vh var(--font_mono);
+    font-style: normal;
+}
+
+.engineering-mode .agent-command-agent-card span.thinking,
+.engineering-mode .agent-command-agent-card span.reviewing,
+.engineering-mode .agent-command-task-state em.active,
+.engineering-mode .agent-command-task-state em.waiting-review {
+    border-color: rgba(59, 167, 255, .82);
+    color: #d8f1ff;
+}
+
+.engineering-mode .agent-command-agent-card span.done,
+.engineering-mode .agent-command-task-state em.approved,
+.engineering-mode .agent-command-task-state em.done {
+    border-color: rgba(124, 255, 178, .55);
+    color: #7CFFB2;
+}
+
+.engineering-mode .agent-command-agent-card span.error,
+.engineering-mode .agent-command-task-state em.rejected,
+.engineering-mode .agent-command-task-state em.blocked {
+    border-color: rgba(255, 94, 94, .55);
+    color: #ff8a8a;
+}
+
+.engineering-mode .agent-command-agent-card strong {
+    color: #d8f1ff;
+    font: .78vh var(--font_main);
+    font-weight: normal;
+    letter-spacing: .04vh;
+}
+
+.engineering-mode .agent-command-agent-card small,
+.engineering-mode .agent-command-task-main small {
+    color: rgba(124, 203, 255, .52);
+    font: .52vh var(--font_mono);
+}
+
+.engineering-mode .agent-command-agent-card p,
+.engineering-mode .agent-command-task-main p,
+.engineering-mode .agent-command-prompt p,
+.engineering-mode .agent-command-output p,
+.engineering-mode .agent-command-flow p,
+.engineering-mode .agent-command-locks p {
+    margin: 0;
+    color: rgba(216, 241, 255, .62);
+    font: .6vh var(--font_mono);
+    line-height: 1.38;
+}
+
+.engineering-mode .agent-command-task-board {
+    max-height: 100%;
+    overflow: auto;
+}
+
+.engineering-mode .agent-command-task-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 13.5vh;
+    gap: .75vh;
+    padding: .72vh;
+    border: .08vh solid rgba(36, 68, 95, .78);
+    background:
+        linear-gradient(90deg, rgba(59, 167, 255, .075), transparent 55%),
+        rgba(7, 11, 16, .54);
+}
+
+.engineering-mode .agent-command-task-main {
+    min-width: 0;
+    display: grid;
+    align-content: start;
+    gap: .35vh;
+}
+
+.engineering-mode .agent-command-priority {
+    justify-self: start;
+    padding: .1vh .42vh;
+    color: rgba(216, 241, 255, .72);
+    background: rgba(36, 68, 95, .42);
+    font: .48vh var(--font_mono);
+}
+
+.engineering-mode .agent-command-priority.high,
+.engineering-mode .agent-command-priority.critical {
+    color: #d8f1ff;
+    background: rgba(59, 167, 255, .22);
+}
+
+.engineering-mode .agent-command-task-main strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #d8f1ff;
+    font: .78vh var(--font_main);
+    font-weight: normal;
+}
+
+.engineering-mode .agent-command-task-state {
+    display: grid;
+    align-content: start;
+    gap: .38vh;
+}
+
+.engineering-mode .agent-command-task-state button,
+.engineering-mode .agent-command-output-actions button {
+    min-width: 0;
+    padding: .42vh .5vh;
+    border: .08vh solid rgba(36, 68, 95, .84);
+    color: rgba(216, 241, 255, .7);
+    background: rgba(7, 11, 16, .62);
+    font: .52vh var(--font_main);
+}
+
+.engineering-mode .agent-command-task-state button:hover,
+.engineering-mode .agent-command-output-actions button:hover {
+    border-color: #3BA7FF;
+    color: #d8f1ff;
+    background: rgba(19, 38, 58, .72);
+}
+
+.engineering-mode .agent-command-selected-agent {
+    display: grid;
+    gap: .7vh;
+}
+
+.engineering-mode .agent-command-agent-head,
+.engineering-mode .agent-command-prompt,
+.engineering-mode .agent-command-output,
+.engineering-mode .agent-command-permissions > div,
+.engineering-mode .agent-command-metrics > div {
+    padding: .62vh;
+    border-left: .14vh solid rgba(59, 167, 255, .58);
+    background: rgba(7, 11, 16, .48);
+}
+
+.engineering-mode .agent-command-agent-head span,
+.engineering-mode .agent-command-prompt em,
+.engineering-mode .agent-command-output em {
+    color: rgba(124, 203, 255, .48);
+    font: .52vh var(--font_mono);
+    font-style: normal;
+}
+
+.engineering-mode .agent-command-agent-head strong {
+    display: block;
+    margin: .25vh 0;
+    color: #d8f1ff;
+    font: .95vh var(--font_main);
+    font-weight: normal;
+}
+
+.engineering-mode .agent-command-agent-head small {
+    color: rgba(216, 241, 255, .56);
+    font: .56vh var(--font_mono);
+}
+
+.engineering-mode .agent-command-context {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .35vh;
+}
+
+.engineering-mode .agent-command-context span {
+    padding: .18vh .44vh;
+    color: rgba(124, 203, 255, .65);
+    border: .08vh solid rgba(36, 68, 95, .65);
+    background: rgba(7, 11, 16, .48);
+    font: .5vh var(--font_mono);
+}
+
+.engineering-mode .agent-command-output-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: .42vh;
+}
+
+.engineering-mode .agent-command-permissions,
+.engineering-mode .agent-command-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: .45vh;
+    margin-bottom: .6vh;
+}
+
+.engineering-mode .agent-command-permissions strong,
+.engineering-mode .agent-command-metrics small {
+    display: block;
+    color: rgba(124, 203, 255, .48);
+    font: .5vh var(--font_mono);
+}
+
+.engineering-mode .agent-command-permissions span,
+.engineering-mode .agent-command-metrics strong {
+    display: block;
+    color: #d8f1ff;
+    font: .6vh var(--font_main);
+    font-weight: normal;
+}
+
+.engineering-mode .agent-command-permissions p {
+    margin: .22vh 0 0;
+    color: rgba(216, 241, 255, .45);
+    font: .48vh var(--font_mono);
+    line-height: 1.28;
+}
+
+.engineering-mode .agent-command-permissions .future {
+    opacity: .62;
+    border-left-color: rgba(216, 182, 92, .45);
+}
+
+.engineering-mode .agent-command-flow,
+.engineering-mode .agent-command-locks {
+    display: grid;
+    gap: .32vh;
+    margin-top: .55vh;
+}
+
+.engineering-mode .agent-command-flow h3,
+.engineering-mode .agent-command-locks h3 {
+    margin: 0;
+    color: rgba(124, 203, 255, .62);
+    font: .56vh var(--font_mono);
+    font-weight: normal;
+}
+
+.engineering-mode .agent-command-flow p,
+.engineering-mode .agent-command-locks p {
+    padding: .28vh .42vh;
+    background: rgba(7, 11, 16, .38);
+}
+
+.engineering-mode .agent-command-flow span {
+    margin-right: .55vh;
+    color: rgba(59, 167, 255, .62);
+}
+
 @media (max-aspect-ratio: 16/10) {
     .engineering-mode #workspace_navigation {
-        left: 22vw;
+        left: 20.5vw;
     }
 
     .engineering-mode .engineer-workspace-grid {

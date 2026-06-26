@@ -41,12 +41,14 @@ keyboard and large terminal with:
 - a Developer Classic Deck that preserves the original eDEX-UI programming
   spirit with terminal focus, Git status, detected npm scripts, project
   structure and dependency/runtime health;
+- an Agent Command deck for human-controlled AI-agent coordination, with local
+  agent roles, prompt templates, permission levels and a central task board;
 - editable project timelines for engineering work, with a visual Project
   Control popup for creating projects, managing milestones, changing status,
   reordering steps and saving without manually editing JSON;
 - a launch grid containing the applications installed on the Mac.
 
-Version 1.7 adds a modular Command Deck with nine navigable workspaces:
+Version 1.8 adds a modular Command Deck with ten navigable workspaces:
 
 - `HUB` preserves this complete original dashboard;
 - `ENGINEER` adds project status, CAD/CAE/simulation launchers, research,
@@ -62,8 +64,12 @@ Version 1.7 adds a modular Command Deck with nine navigable workspaces:
 - `DEVELOPER` brings back the classic programming cockpit: terminal bridge,
   read-only Git status, quick script launchers in safe placeholder mode, logs,
   curated project structure and dependency/runtime health.
+- `AGENT COMMAND` adds a local-first control room for configurable programming
+  agents, task routing, prompts, permission levels and approval-first workflow
+  placeholders.
 
-The workspace bar supports mouse navigation and `Command + Option + 1…9`.
+The workspace bar supports mouse navigation, `Command + Option + 1…9` and
+`Command + Option + 0` for the tenth workspace.
 Changing workspace never recreates the HUB: its map, Calendar, Music and
 project state remain alive in the background. Non-HUB views are rendered only
 when first opened.
@@ -95,6 +101,9 @@ application-data folder. They are never committed to GitHub:
 - `developer-deck.json` contains the active project path, favorite script names
   and display limits for DEVELOPER. It does not store secrets, tokens or
   credentials.
+- `agent-command.json` contains local agent definitions, task-board items,
+  prompt templates and placeholder output. It must not contain API keys,
+  tokens, `.env` contents or private histories.
 
 The Engineering Dashboard uses a restrained blue cockpit palette:
 `#3BA7FF`, `#7CCBFF`, `#13263A`, `#070B10`, `#101820` and `#24445F`.
@@ -110,7 +119,7 @@ Current stable foundation:
 
 - HUB dashboard with map, traffic, radar, Calendar, Music, projects and apps;
 - workspaces for HUB, ENGINEER, OSINT / ANALYST, STUDENT, ARTIST, BUSINESS,
-  COMMS, LAUNCH BAY and DEVELOPER;
+  COMMS, LAUNCH BAY, DEVELOPER and AGENT COMMAND;
 - Apple Silicon macOS build path;
 - local JSON project timelines and playlists;
 - optional online services with graceful fallback where configured.
@@ -130,6 +139,9 @@ Security/offline documentation:
 - [DEVELOPER_DECK.md](DEVELOPER_DECK.md) documents the classic developer
   workspace, local configuration, script safety boundaries and future terminal
   improvements.
+- [AGENT_COMMAND_DECK.md](AGENT_COMMAND_DECK.md) documents the agent command
+  room, roles, permissions, task board, approval flow and future AI integration
+  boundaries.
 - [SECURITY.md](SECURITY.md) documents the current security posture and known
   Electron hardening work.
 - [CHANGELOG.md](CHANGELOG.md) tracks the AegisUi/EdexUi-Eng fork changes.

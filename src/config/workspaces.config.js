@@ -403,6 +403,34 @@
                 "Terminal session profiles",
                 "Dependency audit snapshots"
             ]
+        },
+        {
+            id: "agent-command",
+            navigationLabel: "AGENT COMMAND",
+            name: "Agent Command",
+            description: "A human-controlled command room for configurable AI programming agents, task routing and approval-first workflows.",
+            status: "active",
+            implementation: "agent deck foundation",
+            categories: ["agents", "task board", "approval", "prompts", "safe automation"],
+            quickActions: [
+                link("OPENAI DOCS", "https://platform.openai.com/docs", "Future provider reference", "FUTURE"),
+                link("GITHUB ISSUES", "https://github.com/0Proteus117/AegisUi-Based-and-inspired-in-EdexUi/issues", "Future issue integration", "FUTURE"),
+                link("SECURITY MODEL", "https://owasp.org/www-project-top-ten/", "Security review reference", "EXTERNAL")
+            ],
+            widgets: [
+                {id: "agent-command-agents", name: "Agent windows", type: "agent-windows", status: "active"},
+                {id: "agent-command-board", name: "Task board", type: "agent-task-board", status: "active"},
+                {id: "agent-command-output", name: "Selected agent output", type: "agent-output", status: "placeholder"},
+                {id: "agent-command-safety", name: "Approval and safety locks", type: "agent-safety", status: "active"}
+            ],
+            futureModules: [
+                "Real AI provider adapters",
+                "Selected-context sender with redaction",
+                "Diff drafting and review handoff",
+                "Apply-with-approval workflow",
+                "Test execution after explicit approval",
+                "GitHub Issues / Codex integration"
+            ]
         }
     ];
 })();

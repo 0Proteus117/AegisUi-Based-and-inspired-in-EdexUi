@@ -1,5 +1,38 @@
 # Changelog
 
+## 1.8.0 - 2026-06-26
+
+### Added
+
+- Added the `AGENT COMMAND` workspace after `DEVELOPER`.
+- Added a local-first AI-agent command room with configurable agent windows,
+  central task board, selected-agent output panel and approval/safety locks.
+- Added default visual agents: Architect, Builder, Reviewer, Security, Tester,
+  Docs, UX and Performance.
+- Added local task-board fields for priority, type, status, assigned agent and
+  result text.
+- Added local safe actions for copying task results, marking tasks as reviewed
+  and routing tasks to the next configured agent.
+- Added `agent-command.json` as a private local Agent Command configuration
+  file in app data.
+- Added `agent-command.example.json` as a safe non-secret template.
+- Added `AGENT_COMMAND_DECK.md` documenting roles, permissions, task board,
+  approval flow, safety limits and future AI integration roadmap.
+
+### Changed
+
+- Workspace navigation now supports ten tabs. `Command + Option + 0` opens the
+  tenth workspace.
+- Configuration/export/offline documentation now includes Agent Command local
+  data and no-cloud behavior.
+
+### Security
+
+- Agent Command does not connect to external AI providers in this foundation.
+- Agents cannot execute commands, write project files, commit or push.
+- Only permission levels 0 (`READ ONLY`) and 1 (`DRAFT`) are enabled.
+- Higher autonomy levels are documented as future-only and locked.
+
 ## 1.7.0 - 2026-06-26
 
 ### Added

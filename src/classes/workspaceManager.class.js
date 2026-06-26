@@ -36,13 +36,17 @@ class WorkspaceManager {
             button.setAttribute("aria-controls", definition.preserveExistingView
                 ? this.hub.id
                 : `workspace_${definition.id}`);
-            button.title = `${definition.name} · ⌘⌥${index + 1}`;
+            button.title = `${definition.name} · ${this.shortcutForIndex(index)}`;
             button.innerHTML = `
                 <span>${String(index + 1).padStart(2, "0")}</span>
                 <strong>${this.escape(definition.navigationLabel)}</strong>`;
             button.addEventListener("click", () => this.activate(definition.id));
             this.navigation.appendChild(button);
         });
+    }
+
+    shortcutForIndex(index) {
+        return index === 9 ? "⌘⌥0" : `⌘⌥${index + 1}`;
     }
 
     buildViews() {
@@ -61,7 +65,7 @@ class WorkspaceManager {
     bindKeyboardNavigation() {
         window.addEventListener("keydown", event => {
             if (!event.metaKey || !event.altKey) return;
-            const index = Number(event.key) - 1;
+            const index = event.key === "0" ? 9 : Number(event.key) - 1;
             if (!Number.isInteger(index) || !this.definitions[index]) return;
             event.preventDefault();
             this.activate(this.definitions[index].id);
@@ -142,6 +146,7 @@ class WorkspaceManager {
         if (definition.id === "engineer") this.renderEngineer(view, definition);
         else if (definition.id === "launch-bay") this.renderLaunchBay(view, definition);
         else if (definition.id === "developer") this.renderDeveloper(view, definition);
+        else if (definition.id === "agent-command") this.renderAgentCommand(view, definition);
         else this.renderFoundation(view, definition);
     }
 
@@ -598,6 +603,236 @@ class WorkspaceManager {
             row.innerHTML = `<span>${this.escape(label)}</span><strong>${this.escape(value)}</strong>`;
             list.appendChild(row);
         });
+    }
+
+    async renderAgentCommand(view) {
+        view.classList.add("agent-command-workspace");
+        const grid = view.querySelector(".workspace-grid");
+        grid.classList.add("agent-command-grid");
+        grid.innerHTML = `
+            <article class="workspace-panel agent-command-agents-panel">
+                <header><h2>AGENT WINDOWS</h2><span>LOCAL</span></header>
+                <div class="workspace-panel-content">
+                    <div class="workspace-loading">LOADING AGENT PROFILES</div>
+                </div>
+            </article>
+            <article class="workspace-panel agent-command-board-panel">
+                <header><h2>TASK BOARD</h2><span>APPROVAL FIRST</span></header>
+                <div class="workspace-panel-content"></div>
+            </article>
+            <article class="workspace-panel agent-command-output-panel">
+                <header><h2>SELECTED AGENT</h2><span>PLACEHOLDER</span></header>
+                <div class="workspace-panel-content"></div>
+            </article>
+            <article class="workspace-panel agent-command-safety-panel">
+                <header><h2>CONTROL LOCKS</h2><span>ARMED</span></header>
+                <div class="workspace-panel-content"></div>
+            </article>`;
+
+        await this.refreshAgentCommand(view);
+    }
+
+    async refreshAgentCommand(view) {
+        const response = await this.ipc.invoke("agent-command-data");
+        if (!response.ok) {
+            view.querySelector(".agent-command-agents-panel .workspace-panel-content").innerHTML =
+                `<div class="workspace-empty">AGENT COMMAND DATA UNAVAILABLE</div>`;
+            this.showToast(view, response.error);
+            return;
+        }
+
+        this.agentCommandState = response.data;
+        const agents = Array.isArray(response.data.agents) ? response.data.agents : [];
+        const storedAgent = localStorage.getItem("aegisui-agent-command-selected");
+        if (!agents.some(agent => agent.id === storedAgent)) {
+            localStorage.setItem("aegisui-agent-command-selected", agents[0] ? agents[0].id : "");
+        }
+
+        this.renderAgentCommandAgents(view);
+        this.renderAgentCommandBoard(view);
+        this.renderAgentCommandOutput(view);
+        this.renderAgentCommandSafety(view);
+    }
+
+    selectedAgentCommandAgent() {
+        const data = this.agentCommandState || {};
+        const agents = Array.isArray(data.agents) ? data.agents : [];
+        const selectedId = localStorage.getItem("aegisui-agent-command-selected");
+        return agents.find(agent => agent.id === selectedId) || agents[0] || null;
+    }
+
+    renderAgentCommandAgents(view) {
+        const content = view.querySelector(".agent-command-agents-panel .workspace-panel-content");
+        const agents = Array.isArray(this.agentCommandState.agents) ? this.agentCommandState.agents : [];
+        if (!agents.length) {
+            content.innerHTML = `<div class="workspace-empty">NO AGENTS CONFIGURED</div>`;
+            return;
+        }
+
+        const selected = this.selectedAgentCommandAgent();
+        content.innerHTML = `<div class="agent-command-agent-list"></div>`;
+        const list = content.querySelector(".agent-command-agent-list");
+        agents.forEach(agent => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "agent-command-agent-card";
+            button.classList.toggle("selected", selected && selected.id === agent.id);
+            const status = String(agent.status || "IDLE").toUpperCase();
+            button.innerHTML = `
+                <span class="${this.statusClass(status)}">${this.escape(status)}</span>
+                <strong>${this.escape(agent.name)}</strong>
+                <small>${this.escape(agent.role)} · L${this.escape(String(agent.permissionLevel || 0))}</small>
+                <p>${this.escape(agent.description)}</p>`;
+            button.addEventListener("click", () => {
+                localStorage.setItem("aegisui-agent-command-selected", agent.id);
+                this.renderAgentCommandAgents(view);
+                this.renderAgentCommandOutput(view);
+            });
+            list.appendChild(button);
+        });
+    }
+
+    renderAgentCommandBoard(view) {
+        const content = view.querySelector(".agent-command-board-panel .workspace-panel-content");
+        const tasks = Array.isArray(this.agentCommandState.tasks) ? this.agentCommandState.tasks : [];
+        const agents = new Map((this.agentCommandState.agents || []).map(agent => [agent.id, agent]));
+        if (!tasks.length) {
+            content.innerHTML = `<div class="workspace-empty">NO TASKS CONFIGURED</div>`;
+            return;
+        }
+
+        content.innerHTML = `<div class="agent-command-task-board"></div>`;
+        const board = content.querySelector(".agent-command-task-board");
+        tasks.forEach(task => {
+            const agent = agents.get(task.assignedAgent) || {};
+            const row = document.createElement("section");
+            row.className = "agent-command-task-card";
+            row.innerHTML = `
+                <div class="agent-command-task-main">
+                    <span class="agent-command-priority ${this.statusClass(task.priority)}">${this.escape(task.priority)}</span>
+                    <strong>${this.escape(task.title)}</strong>
+                    <small>${this.escape(task.type)} · ${this.escape(agent.name || task.assignedAgent || "UNASSIGNED")}</small>
+                    <p>${this.escape(task.result || "No result yet.")}</p>
+                </div>
+                <div class="agent-command-task-state">
+                    <em class="${this.statusClass(task.status)}">${this.escape(task.status)}</em>
+                    <button type="button" data-action="copy">COPY RESULT</button>
+                    <button type="button" data-action="reviewed">MARK REVIEWED</button>
+                    <button type="button" data-action="route">SEND TO NEXT AGENT</button>
+                </div>`;
+            row.querySelector('[data-action="copy"]').addEventListener("click", async () => {
+                try {
+                    await navigator.clipboard.writeText(task.result || "");
+                    this.showToast(view, "TASK RESULT COPIED");
+                } catch (error) {
+                    this.showToast(view, "CLIPBOARD UNAVAILABLE");
+                }
+            });
+            row.querySelector('[data-action="reviewed"]').addEventListener("click", async () => {
+                const response = await this.ipc.invoke("agent-command-update-task", {
+                    taskId: task.id,
+                    action: "mark-reviewed"
+                });
+                if (response.ok) {
+                    this.agentCommandState = response.data;
+                    this.renderAgentCommandBoard(view);
+                    this.renderAgentCommandSafety(view);
+                }
+                this.showToast(view, response.ok ? "TASK MARKED REVIEWED" : response.error);
+            });
+            row.querySelector('[data-action="route"]').addEventListener("click", async () => {
+                const response = await this.ipc.invoke("agent-command-update-task", {
+                    taskId: task.id,
+                    action: "route-next-agent"
+                });
+                if (response.ok) {
+                    this.agentCommandState = response.data;
+                    this.renderAgentCommandAgents(view);
+                    this.renderAgentCommandBoard(view);
+                    this.renderAgentCommandOutput(view);
+                }
+                this.showToast(view, response.ok ? "TASK ROUTED TO NEXT AGENT" : response.error);
+            });
+            board.appendChild(row);
+        });
+    }
+
+    renderAgentCommandOutput(view) {
+        const panel = view.querySelector(".agent-command-output-panel");
+        const content = panel.querySelector(".workspace-panel-content");
+        const status = panel.querySelector("header span");
+        const agent = this.selectedAgentCommandAgent();
+        if (!agent) {
+            content.innerHTML = `<div class="workspace-empty">NO AGENT SELECTED</div>`;
+            return;
+        }
+
+        const agentStatus = String(agent.status || "IDLE").toUpperCase();
+        status.className = this.statusClass(agentStatus);
+        status.innerText = agentStatus;
+        const contexts = Array.isArray(agent.assignedContext) ? agent.assignedContext : [];
+        content.innerHTML = `
+            <div class="agent-command-selected-agent">
+                <div class="agent-command-agent-head">
+                    <span>${this.escape(agent.role)}</span>
+                    <strong>${this.escape(agent.name)}</strong>
+                    <small>PERMISSION LEVEL ${this.escape(String(agent.permissionLevel || 0))} · ${agent.permissionLevel === 1 ? "DRAFT" : "READ ONLY"}</small>
+                </div>
+                <div class="agent-command-prompt">
+                    <em>BASE PROMPT</em>
+                    <p>${this.escape(agent.basePrompt)}</p>
+                </div>
+                <div class="agent-command-context">
+                    ${contexts.length ? contexts.map(item => `<span>${this.escape(item)}</span>`).join("") : "<span>NO CONTEXT</span>"}
+                </div>
+                <div class="agent-command-output">
+                    <em>CURRENT OUTPUT</em>
+                    <p>${this.escape(agent.output)}</p>
+                </div>
+                <div class="agent-command-output-actions">
+                    <button id="agent_command_request" type="button">REQUEST PROPOSAL</button>
+                    <button id="agent_command_config" type="button">OPEN CONFIG</button>
+                    <button id="agent_command_refresh" type="button">REFRESH</button>
+                </div>
+            </div>`;
+        content.querySelector("#agent_command_request").addEventListener("click", async () => {
+            const response = await this.ipc.invoke("agent-command-run-agent", agent.id);
+            this.showToast(view, response.ok ? "AGENT REQUEST STARTED" : response.error);
+        });
+        content.querySelector("#agent_command_config").addEventListener("click", async () => {
+            const response = await this.ipc.invoke("agent-command-open-config");
+            this.showToast(view, response.ok ? "OPENING AGENT COMMAND CONFIG" : response.error);
+        });
+        content.querySelector("#agent_command_refresh").addEventListener("click", () => this.refreshAgentCommand(view));
+    }
+
+    renderAgentCommandSafety(view) {
+        const content = view.querySelector(".agent-command-safety-panel .workspace-panel-content");
+        const data = this.agentCommandState || {};
+        const flow = Array.isArray(data.approvalFlow) ? data.approvalFlow : [];
+        const locks = Array.isArray(data.safetyLocks) ? data.safetyLocks : [];
+        const tasks = Array.isArray(data.tasks) ? data.tasks : [];
+        const approved = tasks.filter(task => task.status === "APPROVED" || task.status === "DONE").length;
+
+        content.innerHTML = `
+            <div class="agent-command-permissions">
+                <div><strong>L0</strong><span>READ ONLY</span><p>Reads selected context and proposes.</p></div>
+                <div><strong>L1</strong><span>DRAFT</span><p>Drafts text/diffs only. No file writes.</p></div>
+                <div class="future"><strong>L2+</strong><span>FUTURE LOCKED</span><p>Apply/autonomy levels are disabled.</p></div>
+            </div>
+            <div class="agent-command-metrics">
+                <div><small>MODE</small><strong>${this.escape(data.mode || "visual-foundation")}</strong></div>
+                <div><small>AUTONOMY</small><strong>${data.autonomyEnabled ? "ENABLED" : "DISABLED"}</strong></div>
+                <div><small>REVIEWED</small><strong>${approved}/${tasks.length}</strong></div>
+            </div>
+            <div class="agent-command-flow">
+                <h3>APPROVAL FLOW</h3>
+                ${flow.map((step, index) => `<p><span>${String(index + 1).padStart(2, "0")}</span>${this.escape(step)}</p>`).join("")}
+            </div>
+            <div class="agent-command-locks">
+                <h3>SAFETY LOCKS</h3>
+                ${locks.map(lock => `<p>${this.escape(lock)}</p>`).join("")}
+            </div>`;
     }
 
     createPanel(widget = {}, extraClass = "") {

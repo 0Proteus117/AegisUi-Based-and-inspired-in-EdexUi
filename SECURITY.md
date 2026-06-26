@@ -42,6 +42,11 @@ untrusted plugin content before a dedicated Electron hardening phase.
   playback.
 - The app can launch local applications selected from the discovered
   application index.
+- Developer Deck reads local Git/package metadata only and keeps command
+  execution disabled in its foundation version.
+- Agent Command stores local agent/task metadata only. It does not connect to
+  AI providers, execute commands, write files, commit, push or send project
+  context to cloud services in v1.8.0.
 
 ## Network services
 

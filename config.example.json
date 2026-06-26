@@ -55,6 +55,7 @@
     "mapLayers": "map-layers.json",
     "launchBayGames": "launch-bay-games.json",
     "developerDeck": "developer-deck.json",
+    "agentCommand": "agent-command.json",
     "settings": "settings.json",
     "shortcuts": "shortcuts.json"
   },
@@ -70,5 +71,14 @@
     "favoriteScripts": ["start", "dev", "test", "build"],
     "runScriptsByDefault": false,
     "gitWriteActions": false
+  },
+  "agentCommand": {
+    "storage": "agent-command.json",
+    "autonomyEnabled": false,
+    "allowedPermissionLevels": [0, 1],
+    "externalProviders": false,
+    "cloudContextSharing": false,
+    "automaticFileWrites": false,
+    "automaticCommits": false
   }
 }

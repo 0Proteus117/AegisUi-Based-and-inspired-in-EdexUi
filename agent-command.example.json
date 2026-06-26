@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "description": "Copy this structure into the local app data file named agent-command.json. Do not store secrets, tokens, private prompts or sensitive history here.",
+  "mode": "visual-foundation",
+  "autonomyEnabled": false,
+  "allowedPermissionLevels": [0, 1],
+  "agents": [
+    {
+      "id": "architect",
+      "name": "Architect Agent",
+      "role": "ARCHITECTURE",
+      "description": "Analyses architecture, dependencies, structure and design risk.",
+      "basePrompt": "Review the selected context as a software architect. Identify dependencies, boundaries, risks and a safe implementation plan.",
+      "permissionLevel": 0,
+      "permissions": {
+        "level": 0,
+        "label": "READ ONLY",
+        "canReadContext": true,
+        "canDraftText": false,
+        "canApplyChanges": false,
+        "canRunCommands": false,
+        "canCommit": false,
+        "canPush": false,
+        "canShareCloudContext": false
+      },
+      "status": "IDLE",
+      "assignedContext": ["src/config", "src/classes", "README.md"],
+      "provider": {
+        "name": "NOT CONFIGURED",
+        "model": "FUTURE"
+      },
+      "history": [],
+      "output": "Ready to propose architecture."
+    }
+  ],
+  "tasks": [
+    {
+      "id": "task-example",
+      "title": "Example: analyse a UI bug before applying changes",
+      "priority": "HIGH",
+      "type": "UX",
+      "status": "BACKLOG",
+      "assignedAgent": "architect",
+      "result": "Agents propose and route work locally. Nothing is applied automatically."
+    }
+  ],
+  "approvalFlow": [
+    "Architect proposes cause and boundaries.",
+    "Builder drafts a solution as text only.",
+    "Reviewer checks regression risk.",
+    "Tester proposes validation steps.",
+    "Security confirms no secret or permission exposure.",
+    "User explicitly approves before any future apply step."
+  ],
+  "safetyLocks": [
+    "No external AI provider is connected.",
+    "No commands are executed by agents.",
+    "No files are written by agents.",
+    "No commits or pushes are performed by agents.",
+    "No context is sent to cloud services without future explicit confirmation."
+  ]
+}

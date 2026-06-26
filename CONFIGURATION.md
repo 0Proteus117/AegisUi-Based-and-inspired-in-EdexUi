@@ -53,6 +53,9 @@ The app currently uses JSON files in the macOS application-data folder:
 - `developer-deck.json`: Developer workspace preferences, including the active
   project path, favorite scripts and display limits. It should not contain
   secrets.
+- `agent-command.json`: Agent Command local agent definitions, task-board
+  items, prompt templates and placeholder output. It should not contain API
+  keys, tokens, `.env` contents or private chat/history data.
 
 Generated caches and helpers can also exist there, for example GeoIP data,
 application icons and the native Calendar helper. Do not share those by
@@ -83,8 +86,9 @@ launcher URLs; SteamGridDB is documented only as a future optional artwork API.
 Developer Deck uses local read-only Git/package/runtime metadata and does not
 need API keys. You can set its initial project with
 `AEGISUI_DEVELOPER_PROJECT` or later through the local `developer-deck.json`
-file. Calendar and Apple Music use local macOS permissions rather than storing
-account passwords in the project.
+file. Agent Command does not connect to AI providers in v1.8.0 and does not
+need API keys. Calendar and Apple Music use local macOS permissions rather than
+storing account passwords in the project.
 
 ## Export and import
 
@@ -110,7 +114,8 @@ Mac.
 `user-config.local.json`. `map-layers.example.json` shows the safe map layer
 preference structure. `launch-bay-games.example.json` shows the manual game
 library structure. `developer-deck.example.json` shows the Developer workspace
-configuration structure. These examples are intentionally conservative and
+configuration structure. `agent-command.example.json` shows the Agent Command
+agent/task-board structure. These examples are intentionally conservative and
 contain no secrets. The current app does not require those files to run; they
 are safe places to document local preferences while the code continues to use
 the macOS application-data folder.

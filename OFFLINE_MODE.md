@@ -18,6 +18,7 @@ label unavailable services.
 | Workspaces | Offline with local/default data | External links only open when clicked. |
 | Launch Bay | Offline with local data | Uses `launch-bay-games.json`; cloud artwork and auto-detection are not enabled. |
 | Developer Deck | Offline with local data | Uses `developer-deck.json`, local Git metadata and local package/runtime information. Script execution is disabled in the foundation build. |
+| Agent Command | Offline with local data | Uses `agent-command.json`; AI providers, cloud context sending and autonomous actions are not enabled. |
 | OpenStreetMap base map | Online optional | Tiles require network; the panel remains visible if tiles fail. |
 | Local Situation layer toggles | Offline with local data | Preferences are stored in `map-layers.json` and mirrored in renderer local storage. |
 | RainViewer radar | Online optional | No key required; unavailable service shows a radar-unavailable state. |
@@ -56,6 +57,9 @@ providers.
 - Developer Deck: missing Git/package data shows unavailable/placeholder rows;
   sensitive files such as `.env`, keys, tokens and session files are not opened
   from the project structure panel.
+- Agent Command: missing or malformed local config falls back to default local
+  agents and example tasks; request/run buttons report that AI provider
+  integration is not connected.
 - Calendar permission denied: Calendar shows a local permissions/account
   prompt instead of crashing.
 - Apple Music permission denied: Music shows a disconnected/permission state
@@ -72,4 +76,6 @@ providers.
   JSON configuration when the workspace is rendered.
 - Developer Deck runs short read-only local checks only when the workspace is
   rendered or refreshed. It has no timers, no polling loop and no cloud calls.
+- Agent Command reads local JSON only when rendered or when the user updates a
+  task. It has no timers, polling loop, provider calls or command execution.
 - External IP lookup has a short timeout and does not log raw response bodies.

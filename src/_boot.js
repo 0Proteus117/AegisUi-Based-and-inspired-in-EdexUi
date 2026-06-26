@@ -55,6 +55,7 @@ const musicPlaylistsFile = path.join(electron.app.getPath("userData"), "music-pl
 const mapLayersFile = path.join(electron.app.getPath("userData"), "map-layers.json");
 const launchBayGamesFile = path.join(electron.app.getPath("userData"), "launch-bay-games.json");
 const developerDeckFile = path.join(electron.app.getPath("userData"), "developer-deck.json");
+const agentCommandFile = path.join(electron.app.getPath("userData"), "agent-command.json");
 const themesDir = path.join(electron.app.getPath("userData"), "themes");
 const innerThemesDir = path.join(__dirname, "assets/themes");
 const kblayoutsDir = path.join(electron.app.getPath("userData"), "keyboards");
@@ -491,6 +492,312 @@ async function getDeveloperDeckData() {
             "Sensitive files such as .env, keys and tokens are hidden."
         ]
     };
+}
+
+function cleanAgentText(value, fallback = "", maxLength = 240) {
+    const text = String(value || fallback || "")
+        .replace(/[\u0000-\u001f\u007f]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    return text.slice(0, maxLength);
+}
+
+function agentPermission(level) {
+    const safeLevel = level === 1 ? 1 : 0;
+    return {
+        level: safeLevel,
+        label: safeLevel === 1 ? "DRAFT" : "READ ONLY",
+        canReadContext: true,
+        canDraftText: safeLevel >= 1,
+        canApplyChanges: false,
+        canRunCommands: false,
+        canCommit: false,
+        canPush: false,
+        canShareCloudContext: false
+    };
+}
+
+function defaultAgentDefinitions() {
+    return [
+        {
+            id: "architect",
+            name: "Architect Agent",
+            role: "ARCHITECTURE",
+            description: "Analyses architecture, dependencies, structure and design risk.",
+            basePrompt: "Review the selected context as a software architect. Identify dependencies, boundaries, risks and a safe implementation plan.",
+            permissionLevel: 0,
+            status: "IDLE",
+            assignedContext: ["src/config", "src/classes", "README.md"],
+            provider: {name: "NOT CONFIGURED", model: "FUTURE"},
+            history: [],
+            output: "Ready to propose architecture. No external AI provider is connected in this foundation."
+        },
+        {
+            id: "builder",
+            name: "Builder Agent",
+            role: "BUILD",
+            description: "Drafts concrete implementation proposals without applying changes automatically.",
+            basePrompt: "Draft a minimal implementation plan and proposed code changes as text only. Do not write files or run commands.",
+            permissionLevel: 1,
+            status: "WAITING",
+            assignedContext: ["active task", "approved architecture notes"],
+            provider: {name: "NOT CONFIGURED", model: "FUTURE"},
+            history: [],
+            output: "Draft mode only. File writes are disabled until a future explicit approval flow exists."
+        },
+        {
+            id: "reviewer",
+            name: "Reviewer Agent",
+            role: "REVIEW",
+            description: "Checks consistency, regressions, edge cases and maintainability.",
+            basePrompt: "Review proposed changes. Find inconsistencies, likely regressions, unclear assumptions and safer alternatives.",
+            permissionLevel: 0,
+            status: "IDLE",
+            assignedContext: ["diff drafts", "task result"],
+            provider: {name: "NOT CONFIGURED", model: "FUTURE"},
+            history: [],
+            output: "Ready for review handoff."
+        },
+        {
+            id: "security",
+            name: "Security Agent",
+            role: "SECURITY",
+            description: "Reviews secrets, permissions, Electron/webview boundaries and external APIs.",
+            basePrompt: "Review security posture. Look for secrets, unsafe permissions, risky Electron settings, webviews, network calls and data leakage.",
+            permissionLevel: 0,
+            status: "REVIEWING",
+            assignedContext: [".gitignore", "SECURITY.md", "src/_boot.js"],
+            provider: {name: "NOT CONFIGURED", model: "FUTURE"},
+            history: [],
+            output: "Security boundary active: no tokens, no command execution, no automatic file writes."
+        },
+        {
+            id: "tester",
+            name: "Tester Agent",
+            role: "TESTING",
+            description: "Proposes tests, validation steps and failure scenarios.",
+            basePrompt: "Create a validation checklist for the proposed change. Include smoke tests, regression tests and offline/failure states.",
+            permissionLevel: 0,
+            status: "IDLE",
+            assignedContext: ["package scripts", "manual QA notes"],
+            provider: {name: "NOT CONFIGURED", model: "FUTURE"},
+            history: [],
+            output: "Ready to generate validation plans."
+        },
+        {
+            id: "docs",
+            name: "Docs Agent",
+            role: "DOCUMENTATION",
+            description: "Drafts README, changelog, configuration and sharing documentation.",
+            basePrompt: "Draft clear user-facing documentation for the selected change. Keep setup, security and limitations explicit.",
+            permissionLevel: 1,
+            status: "IDLE",
+            assignedContext: ["README.md", "CHANGELOG.md", "docs"],
+            provider: {name: "NOT CONFIGURED", model: "FUTURE"},
+            history: [],
+            output: "Documentation drafts stay local until the user approves."
+        },
+        {
+            id: "ux",
+            name: "UX Agent",
+            role: "UX",
+            description: "Reviews navigation, visual coherence, feedback, legibility and abrupt transitions.",
+            basePrompt: "Review the user experience. Focus on navigation context, visual continuity, readability, feedback and cockpit cohesion.",
+            permissionLevel: 0,
+            status: "IDLE",
+            assignedContext: ["workspace UI", "CSS", "user flow"],
+            provider: {name: "NOT CONFIGURED", model: "FUTURE"},
+            history: [],
+            output: "Ready to inspect interface flow."
+        },
+        {
+            id: "performance",
+            name: "Performance Agent",
+            role: "PERFORMANCE",
+            description: "Checks CPU, RAM, polling, timers, leaks and unnecessary re-renders.",
+            basePrompt: "Review performance risk. Identify polling, timers, memory leaks, heavy rendering and low-consumption alternatives.",
+            permissionLevel: 0,
+            status: "IDLE",
+            assignedContext: ["timers", "polling", "rendering"],
+            provider: {name: "NOT CONFIGURED", model: "FUTURE"},
+            history: [],
+            output: "Ready to flag expensive work."
+        }
+    ].map(agent => ({
+        ...agent,
+        permissions: agentPermission(agent.permissionLevel)
+    }));
+}
+
+function defaultAgentCommandConfig() {
+    return {
+        version: 1,
+        description: "Local Agent Command preferences and placeholder task board. Do not store secrets here.",
+        mode: "visual-foundation",
+        autonomyEnabled: false,
+        allowedPermissionLevels: [0, 1],
+        agents: defaultAgentDefinitions(),
+        tasks: [
+            {
+                id: "task-modal-context-flow",
+                title: "Example: preserve workspace context after modal close",
+                priority: "HIGH",
+                type: "UX",
+                status: "WAITING REVIEW",
+                assignedAgent: "ux",
+                result: "Architect → Builder → Reviewer → Tester → Security handoff model prepared. No automatic changes are applied in this phase."
+            },
+            {
+                id: "task-agent-security-boundary",
+                title: "Define safe permissions for Agent Command",
+                priority: "CRITICAL",
+                type: "SECURITY",
+                status: "ACTIVE",
+                assignedAgent: "security",
+                result: "Only READ ONLY and DRAFT are enabled. Apply/autonomy levels remain future-only."
+            },
+            {
+                id: "task-docs-agent-command",
+                title: "Document Agent Command foundation",
+                priority: "MEDIUM",
+                type: "DOCUMENTATION",
+                status: "BACKLOG",
+                assignedAgent: "docs",
+                result: "Documentation should explain roles, approvals, local config and future AI integration limits."
+            }
+        ],
+        approvalFlow: [
+            "Architect proposes cause and boundaries.",
+            "Builder drafts a solution as text only.",
+            "Reviewer checks regression risk.",
+            "Tester proposes validation steps.",
+            "Security confirms no secret or permission exposure.",
+            "User explicitly approves before any future apply step."
+        ],
+        safetyLocks: [
+            "No external AI provider is connected.",
+            "No commands are executed by agents.",
+            "No files are written by agents.",
+            "No commits or pushes are performed by agents.",
+            "No context is sent to cloud services without future explicit confirmation."
+        ]
+    };
+}
+
+function sanitizeAgentCommandConfig(input = {}) {
+    const defaults = defaultAgentCommandConfig();
+    const allowedStates = new Set(["IDLE", "WAITING", "THINKING", "REVIEWING", "DONE", "ERROR", "DISABLED", "NOT CONFIGURED"]);
+    const allowedTaskStates = new Set(["BACKLOG", "ACTIVE", "WAITING REVIEW", "APPROVED", "REJECTED", "DONE", "BLOCKED"]);
+    const allowedTaskTypes = new Set(["ARCHITECTURE", "BUILD", "REVIEW", "SECURITY", "TESTING", "DOCUMENTATION", "UX", "PERFORMANCE"]);
+    const allowedPriorities = new Set(["LOW", "MEDIUM", "HIGH", "CRITICAL"]);
+    const defaultAgentsById = new Map(defaults.agents.map(agent => [agent.id, agent]));
+    const sourceAgents = Array.isArray(input.agents) ? input.agents : defaults.agents;
+    const agents = sourceAgents
+        .map((agent, index) => {
+            const fallback = defaultAgentsById.get(String(agent && agent.id || "")) || defaults.agents[index] || defaults.agents[0];
+            const id = cleanAgentText(agent && agent.id, fallback.id, 48)
+                .toLowerCase()
+                .replace(/[^a-z0-9_-]/g, "-");
+            const permissionLevel = Number(agent && agent.permissionLevel);
+            const provider = agent && typeof agent.provider === "object" ? agent.provider : fallback.provider;
+            return {
+                id,
+                name: cleanAgentText(agent && agent.name, fallback.name, 80),
+                role: cleanAgentText(agent && agent.role, fallback.role, 40).toUpperCase(),
+                description: cleanAgentText(agent && agent.description, fallback.description, 220),
+                basePrompt: cleanAgentText(agent && agent.basePrompt, fallback.basePrompt, 1200),
+                permissionLevel: Number.isFinite(permissionLevel) && permissionLevel === 1 ? 1 : 0,
+                permissions: agentPermission(Number.isFinite(permissionLevel) && permissionLevel === 1 ? 1 : 0),
+                status: allowedStates.has(String(agent && agent.status || "").toUpperCase())
+                    ? String(agent.status).toUpperCase()
+                    : fallback.status,
+                assignedContext: Array.isArray(agent && agent.assignedContext)
+                    ? agent.assignedContext.slice(0, 12).map(item => cleanAgentText(item, "", 120)).filter(Boolean)
+                    : fallback.assignedContext,
+                provider: {
+                    name: cleanAgentText(provider && provider.name, "NOT CONFIGURED", 80),
+                    model: cleanAgentText(provider && provider.model, "FUTURE", 80)
+                },
+                history: Array.isArray(agent && agent.history)
+                    ? agent.history.slice(-20).map(item => cleanAgentText(item, "", 400)).filter(Boolean)
+                    : [],
+                output: cleanAgentText(agent && agent.output, fallback.output, 1600)
+            };
+        })
+        .filter(agent => agent.id)
+        .slice(0, 12);
+    const agentIds = agents.map(agent => agent.id);
+    const sourceTasks = Array.isArray(input.tasks) ? input.tasks : defaults.tasks;
+    const tasks = sourceTasks.map((task, index) => {
+        const fallback = defaults.tasks[index] || defaults.tasks[0];
+        const type = cleanAgentText(task && task.type, fallback.type, 40).toUpperCase();
+        const status = cleanAgentText(task && task.status, fallback.status, 40).toUpperCase();
+        const priority = cleanAgentText(task && task.priority, fallback.priority, 40).toUpperCase();
+        const assignedAgent = agentIds.includes(task && task.assignedAgent)
+            ? task.assignedAgent
+            : (fallback.assignedAgent && agentIds.includes(fallback.assignedAgent) ? fallback.assignedAgent : agentIds[0]);
+        return {
+            id: cleanAgentText(task && task.id, `task-${index + 1}`, 80).replace(/[^A-Za-z0-9:_-]/g, "-"),
+            title: cleanAgentText(task && task.title, fallback.title, 160),
+            priority: allowedPriorities.has(priority) ? priority : "MEDIUM",
+            type: allowedTaskTypes.has(type) ? type : "REVIEW",
+            status: allowedTaskStates.has(status) ? status : "BACKLOG",
+            assignedAgent,
+            result: cleanAgentText(task && task.result, fallback.result, 1600)
+        };
+    }).slice(0, 40);
+
+    return {
+        version: 1,
+        updatedAt: new Date().toISOString(),
+        description: cleanAgentText(input.description, defaults.description, 200),
+        mode: "visual-foundation",
+        autonomyEnabled: false,
+        allowedPermissionLevels: [0, 1],
+        agents,
+        tasks,
+        approvalFlow: Array.isArray(input.approvalFlow)
+            ? input.approvalFlow.slice(0, 10).map(step => cleanAgentText(step, "", 240)).filter(Boolean)
+            : defaults.approvalFlow,
+        safetyLocks: Array.isArray(input.safetyLocks)
+            ? input.safetyLocks.slice(0, 10).map(lock => cleanAgentText(lock, "", 240)).filter(Boolean)
+            : defaults.safetyLocks
+    };
+}
+
+function readAgentCommandConfig() {
+    try {
+        if (!fs.existsSync(agentCommandFile)) return sanitizeAgentCommandConfig(defaultAgentCommandConfig());
+        return sanitizeAgentCommandConfig(JSON.parse(fs.readFileSync(agentCommandFile, "utf8")));
+    } catch (error) {
+        return sanitizeAgentCommandConfig(defaultAgentCommandConfig());
+    }
+}
+
+function writeAgentCommandConfig(config) {
+    const sanitized = sanitizeAgentCommandConfig(config);
+    fs.writeFileSync(agentCommandFile, JSON.stringify(sanitized, null, 4));
+    return sanitized;
+}
+
+function updateAgentCommandTask(taskId, action) {
+    const config = readAgentCommandConfig();
+    const index = config.tasks.findIndex(task => task.id === taskId);
+    if (index === -1) throw new Error("Task not found.");
+    const task = config.tasks[index];
+    if (action === "mark-reviewed") {
+        task.status = task.status === "DONE" ? "DONE" : "APPROVED";
+        task.result = cleanAgentText(`${task.result} Reviewed by user in Agent Command.`, task.result, 1600);
+    } else if (action === "route-next-agent") {
+        const currentAgentIndex = config.agents.findIndex(agent => agent.id === task.assignedAgent);
+        const nextAgent = config.agents[(currentAgentIndex + 1 + config.agents.length) % config.agents.length];
+        task.assignedAgent = nextAgent.id;
+        task.status = "ACTIVE";
+        task.result = cleanAgentText(`${task.result} Routed to ${nextAgent.name} for the next read-only/draft pass.`, task.result, 1600);
+    } else {
+        throw new Error("Unsupported task action.");
+    }
+    return writeAgentCommandConfig(config);
 }
 
 function loadLocalEnvFile() {
@@ -974,6 +1281,30 @@ ipc.handle("developer-run-script", async () => {
         error: "Script execution is disabled in Developer Deck foundation. Run scripts manually in the terminal."
     };
 });
+ipc.handle("agent-command-data", () => {
+    try {
+        return {ok: true, data: readAgentCommandConfig()};
+    } catch (error) {
+        return {ok: false, error: error.message || "Agent Command data unavailable."};
+    }
+});
+ipc.handle("agent-command-open-config", async () => {
+    const error = await shell.openPath(agentCommandFile);
+    return error ? {ok: false, error} : {ok: true};
+});
+ipc.handle("agent-command-update-task", (event, payload = {}) => {
+    try {
+        return {ok: true, data: updateAgentCommandTask(payload.taskId, payload.action)};
+    } catch (error) {
+        return {ok: false, error: error.message || "Cannot update Agent Command task."};
+    }
+});
+ipc.handle("agent-command-run-agent", async () => {
+    return {
+        ok: false,
+        error: "AI provider integration is not connected in Agent Command foundation. Agents can only hold local prompts, roles and draft placeholders."
+    };
+});
 ipc.handle("engineering-projects", () => {
     try {
         return {ok: true, data: JSON.parse(fs.readFileSync(projectsFile, "utf8"))};
@@ -1285,6 +1616,10 @@ if (!fs.existsSync(launchBayGamesFile)) {
 if (!fs.existsSync(developerDeckFile)) {
     fs.writeFileSync(developerDeckFile, JSON.stringify(defaultDeveloperDeckConfig(), null, 4));
     signale.info(`Default Developer Deck preferences written to ${developerDeckFile}`);
+}
+if (!fs.existsSync(agentCommandFile)) {
+    fs.writeFileSync(agentCommandFile, JSON.stringify(defaultAgentCommandConfig(), null, 4));
+    signale.info(`Default Agent Command deck written to ${agentCommandFile}`);
 }
 if (!fs.existsSync(musicPlaylistsFile)) {
     fs.writeFileSync(musicPlaylistsFile, JSON.stringify([], null, 4));
