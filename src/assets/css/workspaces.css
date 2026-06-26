@@ -4,11 +4,11 @@
     top: .28vh;
     left: 20.8vw;
     right: .9vw;
-    height: 2.35vh;
+    height: 2.55vh;
     display: grid;
-    grid-template-columns: 7.4vh minmax(0, 1fr);
+    grid-template-columns: 8.2vh minmax(0, 1fr);
     align-items: stretch;
-    gap: .42vh;
+    gap: .5vh;
     overflow: visible;
 }
 
@@ -16,19 +16,19 @@
     min-width: 0;
     display: flex;
     align-items: stretch;
-    gap: .28vh;
+    gap: .36vh;
     overflow-x: auto;
     overflow-y: hidden;
-    padding-bottom: .34vh;
+    padding-bottom: .4vh;
     scrollbar-width: thin;
     scrollbar-color: rgba(59, 167, 255, .45) rgba(7, 11, 16, .2);
     scroll-snap-type: x proximity;
-    -webkit-mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 2.3vh), transparent);
-    mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 2.3vh), transparent);
+    -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 1.2vh, #000 calc(100% - 2.4vh), transparent);
+    mask-image: linear-gradient(90deg, transparent 0, #000 1.2vh, #000 calc(100% - 2.4vh), transparent);
 }
 
 .engineering-mode .workspace-nav-scroll::-webkit-scrollbar {
-    height: .28vh;
+    height: .34vh;
 }
 
 .engineering-mode .workspace-nav-scroll::-webkit-scrollbar-track {
@@ -43,20 +43,20 @@
 .engineering-mode .workspace-nav-button {
     position: relative;
     flex: 0 0 auto;
-    min-width: 5.7vh;
-    max-width: 8.8vh;
+    min-width: 7.4vh;
+    max-width: 12.4vh;
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
     align-items: center;
-    gap: .32vh;
-    padding: .22vh .58vh;
+    gap: .42vh;
+    padding: .28vh .7vh;
     border: .08vh solid rgba(36, 68, 95, .82);
     color: rgba(124, 203, 255, .68);
     background:
         linear-gradient(100deg, rgba(59, 167, 255, .035), transparent 58%),
         rgba(7, 11, 16, .96);
-    font: .58vh var(--font_main);
-    letter-spacing: .04vh;
+    font: .7vh var(--font_main);
+    letter-spacing: .055vh;
     text-align: left;
     scroll-snap-align: center;
     transition: color .18s ease, border-color .18s ease, background .18s ease, box-shadow .18s ease, transform .18s ease;
@@ -73,13 +73,13 @@
 
 .engineering-mode .workspace-nav-button span {
     display: grid;
-    width: 1.05vh;
-    height: 1.05vh;
+    width: 1.28vh;
+    height: 1.28vh;
     place-items: center;
     border: .08vh solid rgba(36, 68, 95, .82);
     color: rgba(124, 203, 255, .55);
     background: rgba(3, 7, 11, .56);
-    font: .48vh var(--font_mono);
+    font: .58vh var(--font_mono);
 }
 
 .engineering-mode .workspace-nav-button strong {
@@ -258,12 +258,13 @@
 .engineering-mode .workspace-action {
     position: relative;
     min-width: 0;
+    min-height: 3.35vh;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: flex-start;
-    gap: .22vh;
-    padding: .62vh .75vh;
+    gap: .25vh;
+    padding: .68vh .82vh;
     box-sizing: border-box;
     border: .08vh solid rgba(36, 68, 95, .86);
     color: rgba(216, 241, 255, .76);
@@ -277,7 +278,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font: .78vh var(--font_main);
+    font: .84vh var(--font_main);
     font-weight: normal;
 }
 
@@ -287,19 +288,19 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     color: rgba(124, 203, 255, .42);
-    font: .62vh var(--font_main_light);
+    font: .68vh var(--font_main_light);
 }
 
 .engineering-mode .workspace-action-status {
     position: absolute;
     right: .45vh;
-    top: .34vh;
+    top: .38vh;
     max-width: 5.5vw;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     color: rgba(124, 203, 255, .68);
-    font: .48vh var(--font_mono);
+    font: .55vh var(--font_mono);
     font-style: normal;
     letter-spacing: .05vh;
 }
@@ -345,7 +346,7 @@
     align-self: flex-end;
     position: absolute;
     color: rgba(59, 167, 255, .36);
-    font: .54vh var(--font_mono);
+    font: .58vh var(--font_mono);
 }
 
 .engineering-mode .workspace-grid {
@@ -627,12 +628,12 @@
 }
 
 .engineering-mode .workspace-panel > header {
-    height: 2.25vh;
+    height: 2.42vh;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 1vh;
-    padding: 0 .8vh;
+    padding: 0 .9vh;
     box-sizing: border-box;
     border-bottom: .08vh solid rgba(36, 68, 95, .75);
     background: rgba(7, 11, 16, .9);
@@ -645,14 +646,14 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     color: #7CCBFF;
-    font: .83vh var(--font_main);
+    font: .9vh var(--font_main);
     letter-spacing: .07vh;
     text-transform: uppercase;
 }
 
 .engineering-mode .workspace-panel > header span {
     color: rgba(124, 203, 255, .45);
-    font: .58vh var(--font_mono);
+    font: .64vh var(--font_mono);
     letter-spacing: .08vh;
     text-transform: uppercase;
 }
@@ -679,10 +680,10 @@
 
 .engineering-mode .workspace-panel-content {
     position: absolute;
-    inset: 2.25vh 0 0;
+    inset: 2.42vh 0 0;
     min-width: 0;
     min-height: 0;
-    padding: .75vh;
+    padding: .82vh;
     box-sizing: border-box;
     overflow: auto;
 }
@@ -694,7 +695,7 @@
 .engineering-mode .workspace-tool-group h3 {
     margin: 0 0 .45vh;
     color: rgba(124, 203, 255, .5);
-    font: .63vh var(--font_mono);
+    font: .66vh var(--font_mono);
     letter-spacing: .14vh;
 }
 
@@ -706,13 +707,13 @@
 
 .engineering-mode .workspace-tool-group .workspace-action,
 .engineering-mode .workspace-link-list .workspace-action {
-    min-height: 3.15vh;
+    min-height: 3.35vh;
 }
 
 .engineering-mode .workspace-panel-description {
     margin: 0 0 .65vh;
     color: rgba(216, 241, 255, .48);
-    font: .68vh var(--font_main_light);
+    font: .72vh var(--font_main_light);
     line-height: 1.35;
 }
 

@@ -239,18 +239,18 @@ body.engineering-mode {
     min-width: 5.4vh;
     padding: .35vh .45vh .3vh;
     display: grid;
-    gap: .12vh;
+    gap: .16vh;
     border-color: rgba(36, 68, 95, .88);
     background: rgba(7, 11, 16, .88);
 }
 
 .engineering-mode .eng-map-layer-toggle strong {
-    font: .78vh var(--font_main);
+    font: .84vh var(--font_main);
     letter-spacing: .08vh;
 }
 
 .engineering-mode .eng-map-layer-toggle small {
-    font: .52vh var(--font_mono);
+    font: .58vh var(--font_mono);
     letter-spacing: .04vh;
     opacity: .58;
 }
@@ -293,13 +293,13 @@ body.engineering-mode {
 
 .engineering-mode .eng-map-layer-readout > strong {
     color: var(--eng-blue-soft);
-    font: .7vh var(--font_main);
+    font: .76vh var(--font_main);
     letter-spacing: .08vh;
 }
 
 .engineering-mode .eng-map-layer-readout > span {
     margin-top: -.35vh;
-    font: .62vh var(--font_main_light);
+    font: .66vh var(--font_main_light);
     opacity: .55;
 }
 
@@ -311,17 +311,17 @@ body.engineering-mode {
 
 .engineering-mode .eng-map-layer-readout article strong {
     color: var(--eng-blue-soft);
-    font: .76vh var(--font_main);
+    font: .82vh var(--font_main);
 }
 
 .engineering-mode .eng-map-layer-readout article span {
-    font: .62vh var(--font_mono);
+    font: .66vh var(--font_mono);
     opacity: .7;
 }
 
 .engineering-mode .eng-map-layer-readout article em {
     grid-column: 1 / -1;
-    font: .62vh var(--font_main_light);
+    font: .66vh var(--font_main_light);
     opacity: .52;
 }
 
@@ -470,7 +470,7 @@ body.engineering-mode {
 .engineering-mode .eng-calendar-toolbar button {
     height: 2.45vh;
     padding: .24vh .48vh;
-    font-size: .68vh;
+    font-size: .74vh;
 }
 
 .engineering-mode .eng-calendar-nav,
@@ -491,7 +491,7 @@ body.engineering-mode {
     min-width: 0;
     overflow: hidden;
     color: var(--eng-blue-soft);
-    font: .78vh var(--font_main);
+    font: .84vh var(--font_main);
     letter-spacing: .06vh;
     text-align: center;
     text-overflow: ellipsis;
@@ -535,13 +535,13 @@ body.engineering-mode {
 
 .engineering-mode .eng-calendar-picker header strong {
     margin-right: auto;
-    font: .75vh var(--font_main);
+    font: .8vh var(--font_main);
     letter-spacing: .08vh;
 }
 
 .engineering-mode .eng-calendar-picker header button {
     padding: .28vh .4vh;
-    font-size: .62vh;
+    font-size: .68vh;
 }
 
 .engineering-mode .eng-calendar-picker-list {
@@ -592,17 +592,17 @@ body.engineering-mode {
 }
 
 .engineering-mode .eng-calendar-choice strong {
-    font: .82vh var(--font_main);
+    font: .86vh var(--font_main);
 }
 
 .engineering-mode .eng-calendar-choice small {
     margin-top: .24vh;
-    font: .62vh var(--font_main_light);
+    font: .66vh var(--font_main_light);
     opacity: .5;
 }
 
 .engineering-mode .eng-calendar-choice em {
-    font: .62vh var(--font_main);
+    font: .66vh var(--font_main);
     font-style: normal;
 }
 
@@ -647,7 +647,7 @@ body.engineering-mode {
 }
 
 .engineering-mode .eng-calendar-day > header span {
-    font: .62vh var(--font_main);
+    font: .66vh var(--font_main);
     opacity: .55;
 }
 
@@ -690,13 +690,13 @@ body.engineering-mode {
 
 .engineering-mode .eng-calendar-event-chip time {
     color: color-mix(in srgb, var(--calendar-color) 80%, white);
-    font: .52vh var(--font_mono);
+    font: .56vh var(--font_mono);
 }
 
 .engineering-mode .eng-calendar-event-chip strong {
     margin-top: .18vh;
     color: var(--eng-blue-soft);
-    font: .64vh var(--font_main_light);
+    font: .68vh var(--font_main_light);
 }
 
 .engineering-mode .eng-calendar-month {
@@ -713,7 +713,7 @@ body.engineering-mode {
     color: rgba(124, 203, 255, .55);
     border-right: .08vh solid rgba(36, 68, 95, .62);
     border-bottom: .08vh solid rgba(36, 68, 95, .62);
-    font: .6vh var(--font_main);
+    font: .64vh var(--font_main);
 }
 
 .engineering-mode .eng-calendar-month-day {
@@ -749,13 +749,13 @@ body.engineering-mode {
 
 .engineering-mode .eng-calendar-event-chip.compact strong {
     margin: 0;
-    font-size: .48vh;
+    font-size: .54vh;
 }
 
 .engineering-mode .eng-calendar-more {
     display: block;
     color: var(--eng-blue);
-    font: .52vh var(--font_mono);
+    font: .56vh var(--font_mono);
     text-align: right;
 }
 
@@ -1549,17 +1549,17 @@ body.engineering-mode {
     width: 100%;
     display: grid;
     grid-template-columns: 2.1vh minmax(0, 1fr);
-    gap: .4vh;
+    gap: .45vh;
     align-items: center;
     margin-bottom: .35vh;
-    padding: .45vh;
+    padding: .48vh;
     text-align: left;
     border-color: rgba(36, 68, 95, .75);
 }
 
 .engineering-mode .eng-playlist span {
     color: var(--eng-blue);
-    font: .72vh var(--font_mono);
+    font: .76vh var(--font_mono);
     opacity: .55;
 }
 
@@ -1567,7 +1567,7 @@ body.engineering-mode {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    font: .78vh var(--font_main_light);
+    font: .82vh var(--font_main_light);
 }
 
 .engineering-mode .eng-playlist.active,
@@ -1585,7 +1585,7 @@ body.engineering-mode {
 .engineering-mode .eng-playlist-loading {
     padding: 2vh .55vh;
     text-align: center;
-    font: .75vh var(--font_main_light);
+    font: .8vh var(--font_main_light);
     line-height: 1.5;
     opacity: .45;
 }
@@ -1600,7 +1600,7 @@ body.engineering-mode {
 
 .engineering-mode #eng_playlists footer button {
     padding: .35vh .55vh;
-    font-size: .75vh;
+    font-size: .8vh;
 }
 
 .engineering-mode #eng_equalizer i {
@@ -1624,8 +1624,8 @@ body.engineering-mode {
     display: grid;
     grid-auto-flow: column;
     grid-template-rows: repeat(2, minmax(0, 1fr));
-    grid-auto-columns: 9.3vh;
-    gap: .65vh;
+    grid-auto-columns: 9.8vh;
+    gap: .72vh;
     overflow-x: auto;
     overflow-y: hidden;
     padding: .7vh;
@@ -1633,7 +1633,7 @@ body.engineering-mode {
 }
 
 .engineering-mode .eng-app-tile {
-    width: 9.3vh;
+    width: 9.8vh;
     height: 100%;
     min-height: 0;
     padding: .6vh .4vh;
@@ -1678,7 +1678,7 @@ body.engineering-mode {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    font: .88vh var(--font_main);
+    font: .94vh var(--font_main);
     text-align: center;
 }
 
