@@ -46,6 +46,8 @@ The map controller uses these states:
 | `ONLINE` | Layer is active and its current provider is responding. |
 | `OFFLINE` | App or layer is unavailable because offline mode/network state prevents loading. |
 | `API_KEY_MISSING` | Layer needs a user-owned key and none is configured. |
+| `SERVICE_UNAVAILABLE` | Provider or tile service failed but the HUB remains alive. |
+| `RATE_LIMITED` | Provider rejected or throttled requests. The layer must not retry aggressively. |
 | `ERROR` | Provider call or tile loading failed, but the map remains alive. |
 | `PLACEHOLDER` | Future layer is active only as a mock visual indicator. |
 | `FUTURE` | Future layer is registered but disabled/not implemented yet. |
@@ -115,6 +117,8 @@ The app should remain usable without internet:
 - TomTom traffic reports `API_KEY_MISSING`, `OFFLINE` or `ERROR` instead of
   crashing;
 - RainViewer radar reports unavailable states instead of crashing;
+- provider failures can report `SERVICE_UNAVAILABLE` or `RATE_LIMITED` without
+  starting retry loops;
 - the base map may lose tiles, but the HUB should stay alive.
 
 ## 10. Adding a new layer later

@@ -48,6 +48,8 @@ providers.
 - TomTom unavailable: traffic tile failures report `TRAFFIC SERVICE UNAVAILABLE`.
 - RainViewer unavailable: radar reports `RADAR UNAVAILABLE` or
   `RADAR SERVICE UNAVAILABLE`.
+- Rate-limited or unavailable optional providers are represented as
+  `RATE_LIMITED` or `SERVICE_UNAVAILABLE` without aggressive retry loops.
 - Base map tile failures: the map panel reports `BASE MAP SERVICE UNAVAILABLE`
   while the rest of the HUB remains alive.
 - Future map layers: disabled layers show `FUTURE`; enabled mock layers show

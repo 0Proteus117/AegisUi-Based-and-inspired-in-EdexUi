@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.9.3 - 2026-06-26
+
+### Changed
+
+- Map/radar/traffic optional-provider failures now use clearer fallback states
+  such as `SERVICE_UNAVAILABLE` and `RATE_LIMITED` instead of collapsing every
+  provider problem into generic `ERROR`.
+- Updated map/offline documentation with explicit optional-provider fallback
+  states and no-aggressive-retry expectations.
+
+### Configuration
+
+- Added commented future optional API-key placeholders to `.env.example` for
+  documented integrations only. No new provider calls are made in v1.9.x.
+
 ## 1.9.2 - 2026-06-26
 
 ### Changed

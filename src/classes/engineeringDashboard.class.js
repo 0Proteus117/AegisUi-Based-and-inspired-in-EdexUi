@@ -332,7 +332,7 @@ class EngineeringMapPanel {
             this.activateTrafficLayer(layer, Boolean(options.userInitiated));
         } else if (id === "WEATHER_RADAR") {
             this.activateRadarLayer(layer).catch(error => {
-                layer.status = "ERROR";
+                layer.status = this.normalizeProviderStatus(error);
                 layer.error = error && error.message ? error.message : "Radar layer failed";
                 this.status.innerText = "RADAR SERVICE UNAVAILABLE";
                 this.renderLayerState();
@@ -396,6 +396,16 @@ class EngineeringMapPanel {
         return this.trafficKey || window.settings.tomtomApiKey || "";
     }
 
+    normalizeProviderStatus(error) {
+        const message = String(error && (error.message || error.error || error.status) || "").toLowerCase();
+        if (this.offlineMode || message.includes("offline") || message.includes("network")) return "OFFLINE";
+        if (message.includes("rate") || message.includes("429")) return "RATE_LIMITED";
+        if (message.includes("key") || message.includes("unauthorized") || message.includes("401") || message.includes("403")) {
+            return "API_KEY_MISSING";
+        }
+        return "SERVICE_UNAVAILABLE";
+    }
+
     async activateRadarLayer(layer) {
         if (this.offlineMode) {
             layer.status = "OFFLINE";
@@ -406,7 +416,7 @@ class EngineeringMapPanel {
         this.cleanupLayer(layer);
         const response = await this.ipc.invoke("rainviewer-metadata");
         if (!response.ok || !response.data.radar || !response.data.radar.past.length) {
-            layer.status = response.ok ? "OFFLINE" : "ERROR";
+            layer.status = response.ok ? "SERVICE_UNAVAILABLE" : this.normalizeProviderStatus(response);
             layer.error = response.error || "Radar metadata unavailable";
             this.status.innerText = "MAP ONLINE · RADAR UNAVAILABLE";
             this.renderLayerState();
@@ -425,7 +435,7 @@ class EngineeringMapPanel {
             }
         );
         layer.leafletLayer.on("tileerror", () => {
-            layer.status = "ERROR";
+            layer.status = "SERVICE_UNAVAILABLE";
             layer.error = "Radar tile service unavailable";
             this.status.innerText = "RADAR SERVICE UNAVAILABLE";
             this.renderLayerState();
@@ -459,7 +469,7 @@ class EngineeringMapPanel {
             {opacity: 0.9, maxZoom: 22, zIndex: layer.definition.zIndex, className: "eng-traffic-map"}
         );
         layer.leafletLayer.on("tileerror", () => {
-            layer.status = "ERROR";
+            layer.status = "SERVICE_UNAVAILABLE";
             layer.error = "Traffic tile service unavailable";
             this.status.innerText = "TRAFFIC SERVICE UNAVAILABLE";
             this.renderLayerState();
@@ -569,7 +579,7 @@ class EngineeringMapPanel {
             if (!button) return;
             button.classList.toggle("active", layer.active);
             button.classList.toggle("placeholder", layer.definition.placeholder);
-            button.classList.toggle("error", ["ERROR", "API_KEY_MISSING"].includes(layer.status));
+            button.classList.toggle("error", ["ERROR", "API_KEY_MISSING", "SERVICE_UNAVAILABLE", "RATE_LIMITED"].includes(layer.status));
             button.dataset.state = layer.status;
             const state = button.querySelector("small");
             if (state) state.innerText = layer.status;
@@ -578,7 +588,7 @@ class EngineeringMapPanel {
         const active = Array.from(this.layers.values()).filter(layer => layer.active);
         const online = active.filter(layer => layer.status === "ONLINE").map(layer => layer.definition.label);
         const placeholders = active.filter(layer => layer.status === "PLACEHOLDER").map(layer => layer.definition.label);
-        const warnings = active.filter(layer => ["ERROR", "API_KEY_MISSING", "OFFLINE"].includes(layer.status));
+        const warnings = active.filter(layer => ["ERROR", "API_KEY_MISSING", "OFFLINE", "SERVICE_UNAVAILABLE", "RATE_LIMITED"].includes(layer.status));
 
         if (this.readout) {
             if (!active.length) {
