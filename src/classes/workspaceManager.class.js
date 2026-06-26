@@ -570,8 +570,8 @@ class WorkspaceManager {
             </div>
             <div class="developer-file-list"></div>
             <div class="developer-placeholder-actions">
-                <button type="button">COMMIT PLACEHOLDER</button>
-                <button type="button">PUSH PLACEHOLDER</button>
+                <button type="button">COMMIT LOCKED</button>
+                <button type="button">PUSH LOCKED</button>
             </div>`;
 
         const list = content.querySelector(".developer-file-list");
@@ -588,7 +588,7 @@ class WorkspaceManager {
             });
         }
         content.querySelectorAll(".developer-placeholder-actions button").forEach(button => {
-            button.addEventListener("click", () => this.showToast(view, "GIT ACTIONS ARE PLACEHOLDERS IN THIS FOUNDATION"));
+            button.addEventListener("click", () => this.showToast(view, "APPROVAL REQUIRED · GIT WRITE ACTIONS ARE LOCKED"));
         });
     }
 
@@ -609,7 +609,7 @@ class WorkspaceManager {
             button.innerHTML = `
                 <strong>npm run ${this.escape(script.name)}</strong>
                 <small>${this.escape(script.command)}</small>
-                <em>${script.favorite ? "FAVORITE" : "DETECTED"}</em>`;
+                <em>${script.favorite ? "FAVORITE · DRAFT" : "DRAFT ONLY"}</em>`;
             button.addEventListener("click", async () => {
                 const response = await this.ipc.invoke("developer-run-script", script.name);
                 this.showToast(view, response.ok ? `RUNNING ${script.name}` : response.error);
@@ -662,6 +662,8 @@ class WorkspaceManager {
             ["ELECTRON", health.electron || "UNAVAILABLE"],
             ["CHROME", health.chrome || "UNAVAILABLE"],
             ["NPM", health.npm || "UNAVAILABLE"],
+            ["GIT", health.git || "UNAVAILABLE"],
+            ["PACKAGE MANAGER", health.packageManager || "UNKNOWN"],
             ["PACKAGE LOCK", health.packageLock ? "FOUND" : "MISSING"],
             ["NODE MODULES", health.nodeModules ? "FOUND" : "MISSING"],
             ["DEPENDENCIES", String(health.dependencyCount || 0)],

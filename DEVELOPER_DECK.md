@@ -42,8 +42,8 @@ Favorite scripts are read from local config:
 }
 ```
 
-In v1.7.0, clicking a script does not execute it. The UI explains that script
-execution is disabled until a future confirmed runner exists.
+Clicking a script does not execute it. The UI marks scripts as `DRAFT ONLY`
+and explains that execution is disabled until a future confirmed runner exists.
 
 ### Logs / Console Output
 
@@ -74,10 +74,12 @@ The health panel shows:
 - Electron version;
 - Chrome version;
 - npm version if available;
+- Git version if available;
+- detected package manager;
 - package-lock presence;
 - node_modules presence;
 - dependency counts;
-- audit placeholder.
+- manual audit reminder.
 
 Automatic dependency auditing is not run on every render to avoid heavy work
 and surprise network or CPU use.

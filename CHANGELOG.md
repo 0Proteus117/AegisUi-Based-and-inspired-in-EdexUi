@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.9.4 - 2026-06-26
+
+### Changed
+
+- Developer Deck now reports Git version and detected package manager in the
+  dependency/health panel.
+- Developer quick scripts are explicitly labeled `DRAFT ONLY`.
+- Developer commit/push placeholder buttons are now labeled as locked
+  write-actions requiring future approval.
+- Manual dependency audit status now says `MANUAL ONLY` rather than appearing
+  like an automatic placeholder result.
+
+### Security
+
+- Script execution, commit and push actions remain disabled.
+
 ## 1.9.3 - 2026-06-26
 
 ### Changed

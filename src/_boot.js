@@ -408,7 +408,9 @@ function getDeveloperScripts(projectPath, favoriteScripts) {
             ? Object.keys(manifest.scripts).map(name => ({
                 name,
                 command: String(manifest.scripts[name] || "").slice(0, 240),
-                favorite: favoriteScripts.includes(name)
+                favorite: favoriteScripts.includes(name),
+                state: "DRAFT_ONLY",
+                executable: false
             }))
             : [];
         scripts.sort((a, b) => Number(b.favorite) - Number(a.favorite) || a.name.localeCompare(b.name));
@@ -452,24 +454,34 @@ function getDeveloperStructure(projectPath) {
 
 async function getDeveloperHealth(projectPath) {
     const npmVersion = await runReadOnlyCommand("npm", ["--version"], {cwd: projectPath, timeout: 2500});
+    const gitVersion = await runReadOnlyCommand("git", ["--version"], {cwd: projectPath, timeout: 2500});
     let dependencyCount = 0;
     let devDependencyCount = 0;
+    let packageManager = "UNKNOWN";
     try {
         const manifest = JSON.parse(fs.readFileSync(path.join(projectPath, "package.json"), "utf8"));
         dependencyCount = manifest.dependencies ? Object.keys(manifest.dependencies).length : 0;
         devDependencyCount = manifest.devDependencies ? Object.keys(manifest.devDependencies).length : 0;
+        if (manifest.packageManager) packageManager = String(manifest.packageManager).slice(0, 80);
     } catch (error) {}
+    if (packageManager === "UNKNOWN") {
+        if (fs.existsSync(path.join(projectPath, "package-lock.json"))) packageManager = "npm";
+        else if (fs.existsSync(path.join(projectPath, "pnpm-lock.yaml"))) packageManager = "pnpm";
+        else if (fs.existsSync(path.join(projectPath, "yarn.lock"))) packageManager = "yarn";
+    }
 
     return {
         node: process.version,
         electron: process.versions.electron,
         chrome: process.versions.chrome,
         npm: npmVersion.ok ? npmVersion.stdout.trim() : "UNAVAILABLE",
+        git: gitVersion.ok ? gitVersion.stdout.trim() : "UNAVAILABLE",
+        packageManager,
         packageLock: fs.existsSync(path.join(projectPath, "package-lock.json")),
         nodeModules: fs.existsSync(path.join(projectPath, "node_modules")),
         dependencyCount,
         devDependencyCount,
-        audit: "PLACEHOLDER · run npm audit manually"
+        audit: "MANUAL ONLY · run npm audit explicitly"
     };
 }
 
@@ -1325,7 +1337,7 @@ ipc.handle("developer-open-project-file", async (event, target) => {
 ipc.handle("developer-run-script", async () => {
     return {
         ok: false,
-        error: "Script execution is disabled in Developer Deck foundation. Run scripts manually in the terminal."
+        error: "APPROVAL REQUIRED · Script execution is disabled in Developer Deck. Run scripts manually in the terminal."
     };
 });
 ipc.handle("agent-command-data", () => {
