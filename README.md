@@ -41,15 +41,18 @@ keyboard and large terminal with:
   reordering steps and saving without manually editing JSON;
 - a launch grid containing the applications installed on the Mac.
 
-Version 1.4 adds a modular Command Deck with six navigable workspaces:
+Version 1.5 adds a modular Command Deck with seven navigable workspaces:
 
 - `HUB` preserves this complete original dashboard;
 - `ENGINEER` adds project status, CAD/CAE/simulation launchers, research,
   standards, technical sources and a future-tools roadmap;
 - `OSINT / ANALYST`, `STUDENT`, `ARTIST` and `BUSINESS` provide structured
   foundations ready for profile-specific widgets and integrations.
+- `COMMS` centralizes safe launchers for WhatsApp Web, Slack, Teams, Discord,
+  Gmail, Outlook, LinkedIn, Instagram and X / Twitter, plus local communication
+  status and notification placeholders.
 
-The workspace bar supports mouse navigation and `Command + Option + 1…6`.
+The workspace bar supports mouse navigation and `Command + Option + 1…7`.
 Changing workspace never recreates the HUB: its map, Calendar, Music and
 project state remain alive in the background. Non-HUB views are rendered only
 when first opened.
@@ -90,7 +93,8 @@ phase.
 Current stable foundation:
 
 - HUB dashboard with map, traffic, radar, Calendar, Music, projects and apps;
-- workspaces for HUB, ENGINEER, OSINT / ANALYST, STUDENT, ARTIST and BUSINESS;
+- workspaces for HUB, ENGINEER, OSINT / ANALYST, STUDENT, ARTIST, BUSINESS and
+  COMMS;
 - Apple Silicon macOS build path;
 - local JSON project timelines and playlists;
 - optional online services with graceful fallback where configured.
@@ -103,6 +107,8 @@ Security/offline documentation:
   online and describes expected fallback behavior.
 - [MAP_LAYERS.md](MAP_LAYERS.md) documents the Situational Awareness map layer
   architecture, states, providers, privacy and performance rules.
+- [COMMS_DECK.md](COMMS_DECK.md) documents the COMMS launcher foundation,
+  WhatsApp safety boundaries and future official API options.
 - [SECURITY.md](SECURITY.md) documents the current security posture and known
   Electron hardening work.
 - [CHANGELOG.md](CHANGELOG.md) tracks the AegisUi/EdexUi-Eng fork changes.

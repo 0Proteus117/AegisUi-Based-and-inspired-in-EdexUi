@@ -6,7 +6,7 @@
     right: .9vw;
     height: 1.9vh;
     display: grid;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-columns: repeat(7, minmax(0, 1fr));
     align-items: stretch;
     gap: .28vh;
 }
@@ -206,6 +206,40 @@
     white-space: nowrap;
     color: rgba(124, 203, 255, .42);
     font: .62vh var(--font_main_light);
+}
+
+.engineering-mode .workspace-action-status {
+    position: absolute;
+    right: .45vh;
+    top: .34vh;
+    max-width: 5.5vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: rgba(124, 203, 255, .68);
+    font: .48vh var(--font_mono);
+    font-style: normal;
+    letter-spacing: .05vh;
+}
+
+.engineering-mode .workspace-action-status.online,
+.engineering-mode .workspace-status-list span.online {
+    color: #7CFFB2;
+}
+
+.engineering-mode .workspace-action-status.offline,
+.engineering-mode .workspace-status-list span.offline {
+    color: #7a8ea3;
+}
+
+.engineering-mode .workspace-action-status.login-required,
+.engineering-mode .workspace-status-list span.login-required {
+    color: #d8b65c;
+}
+
+.engineering-mode .workspace-action-status.external,
+.engineering-mode .workspace-status-list span.external {
+    color: #3BA7FF;
 }
 
 .engineering-mode .workspace-action:hover,
@@ -438,6 +472,45 @@
     color: rgba(216, 241, 255, .7);
     font: .7vh var(--font_main_light);
     font-weight: normal;
+}
+
+.engineering-mode .workspace-status-list {
+    display: grid;
+    align-content: start;
+    gap: .5vh;
+}
+
+.engineering-mode .workspace-status-list > div {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: .18vh .7vh;
+    padding: .55vh .62vh;
+    border-left: .14vh solid rgba(59, 167, 255, .62);
+    background: rgba(7, 11, 16, .48);
+}
+
+.engineering-mode .workspace-status-list strong {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: rgba(216, 241, 255, .78);
+    font: .72vh var(--font_main);
+    font-weight: normal;
+}
+
+.engineering-mode .workspace-status-list span {
+    color: rgba(124, 203, 255, .58);
+    font: .56vh var(--font_mono);
+    text-transform: uppercase;
+}
+
+.engineering-mode .workspace-status-list p {
+    grid-column: 1 / -1;
+    margin: 0;
+    color: rgba(216, 241, 255, .42);
+    font: .62vh var(--font_main_light);
+    line-height: 1.35;
 }
 
 .engineering-mode .workspace-placeholder {

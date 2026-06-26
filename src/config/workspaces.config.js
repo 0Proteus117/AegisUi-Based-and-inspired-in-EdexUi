@@ -1,16 +1,18 @@
 (() => {
-    const link = (label, url, description = "") => ({
+    const link = (label, url, description = "", status = "") => ({
         type: "link",
         label,
         url,
-        description
+        description,
+        status
     });
 
-    const app = (label, aliases, description = "") => ({
+    const app = (label, aliases, description = "", status = "") => ({
         type: "application",
         label,
         aliases,
-        description
+        description,
+        status
     });
 
     window.workspaceDefinitions = [
@@ -274,6 +276,73 @@
                 {id: "business-operations", name: "Operations & projects", type: "placeholder", status: "future"}
             ],
             futureModules: ["Read-only KPI connectors", "Portfolio performance", "Communication summaries", "Operations alerts"]
+        },
+        {
+            id: "comms",
+            navigationLabel: "COMMS",
+            name: "Communications Deck",
+            description: "Secure quick access to communication, mail and social platforms without storing sessions or scraping accounts.",
+            status: "active",
+            implementation: "launcher foundation",
+            categories: ["messaging", "mail", "social", "notifications", "status"],
+            quickActions: [
+                link("WHATSAPP WEB", "https://web.whatsapp.com/", "Open WhatsApp Web · QR/login handled by WhatsApp", "LOGIN REQUIRED"),
+                link("SLACK", "https://slack.com/signin", "Open Slack workspace sign-in", "LOGIN REQUIRED"),
+                link("TEAMS", "https://teams.microsoft.com/", "Open Microsoft Teams web", "LOGIN REQUIRED"),
+                link("GMAIL", "https://mail.google.com/", "Open Gmail in browser", "LOGIN REQUIRED"),
+                link("OUTLOOK", "https://outlook.office.com/mail/", "Open Outlook web mail", "LOGIN REQUIRED"),
+                link("LINKEDIN", "https://www.linkedin.com/", "Open LinkedIn", "EXTERNAL"),
+                link("X / TWITTER", "https://x.com/", "Open X / Twitter", "EXTERNAL")
+            ],
+            recommendedTools: [
+                {
+                    category: "MESSAGING",
+                    items: [
+                        link("WHATSAPP WEB", "https://web.whatsapp.com/", "Safe external launcher only", "LOGIN REQUIRED"),
+                        link("SLACK", "https://slack.com/signin", "Workspace login handled by Slack", "LOGIN REQUIRED"),
+                        link("MICROSOFT TEAMS", "https://teams.microsoft.com/", "Microsoft login handled by Teams", "LOGIN REQUIRED"),
+                        link("DISCORD", "https://discord.com/app", "Discord login handled by Discord", "LOGIN REQUIRED")
+                    ]
+                },
+                {
+                    category: "MAIL & SOCIAL",
+                    items: [
+                        link("GMAIL", "https://mail.google.com/", "Google login handled by browser", "LOGIN REQUIRED"),
+                        link("OUTLOOK", "https://outlook.office.com/mail/", "Microsoft login handled by browser", "LOGIN REQUIRED"),
+                        link("LINKEDIN", "https://www.linkedin.com/", "Professional network launcher", "EXTERNAL"),
+                        link("INSTAGRAM", "https://www.instagram.com/", "Social launcher", "EXTERNAL"),
+                        link("X / TWITTER", "https://x.com/", "Social/news launcher", "EXTERNAL")
+                    ]
+                }
+            ],
+            widgets: [
+                {
+                    id: "comms-notifications",
+                    name: "Unified notifications",
+                    type: "placeholder",
+                    status: "placeholder",
+                    description: "Future local notification aggregator. No accounts, cookies, tokens or message data are read in this foundation."
+                },
+                {
+                    id: "comms-status",
+                    name: "Communications status",
+                    type: "status-list",
+                    status: "active",
+                    items: [
+                        {label: "COMMS deck", status: "ONLINE", detail: "Local launcher UI is available."},
+                        {label: "External services", status: "EXTERNAL", detail: "Opened through secure HTTPS links in the default browser."},
+                        {label: "Account sessions", status: "LOGIN REQUIRED", detail: "Handled only by each provider, never by AegisUi."},
+                        {label: "Unified notification feed", status: "OFFLINE", detail: "Placeholder only; no account connector is running."},
+                        {label: "Embedded webviews", status: "OFFLINE", detail: "Disabled until isolation and permissions are reviewed."}
+                    ]
+                }
+            ],
+            futureModules: [
+                "Optional isolated webview review",
+                "Local notification bridge",
+                "Provider-approved APIs only",
+                "WhatsApp Business Cloud API research for business accounts"
+            ]
         }
     ];
 })();

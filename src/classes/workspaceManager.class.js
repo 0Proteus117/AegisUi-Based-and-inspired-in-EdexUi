@@ -179,14 +179,20 @@ class WorkspaceManager {
         grid.classList.add("foundation-workspace-grid");
 
         (definition.widgets || []).forEach(widget => {
-            const panel = this.createPanel(widget, "");
-            panel.querySelector(".workspace-panel-content").innerHTML = `
-                <div class="workspace-placeholder">
-                    <span>${this.escape(widget.status || "future")}</span>
-                    <strong>${this.escape(widget.name)}</strong>
-                    <p>Module boundary defined and ready for a future integration.</p>
-                </div>`;
-            grid.appendChild(panel);
+            if (widget.type === "status-list") {
+                grid.appendChild(this.createStatusListPanel(widget));
+            } else if (widget.type === "link-list") {
+                grid.appendChild(this.createListPanel(widget, view));
+            } else {
+                const panel = this.createPanel(widget, "");
+                panel.querySelector(".workspace-panel-content").innerHTML = `
+                    <div class="workspace-placeholder">
+                        <span>${this.escape(widget.status || "future")}</span>
+                        <strong>${this.escape(widget.name)}</strong>
+                        <p>${this.escape(widget.description || "Module boundary defined and ready for a future integration.")}</p>
+                    </div>`;
+                grid.appendChild(panel);
+            }
         });
 
         const tools = document.createElement("article");
@@ -269,11 +275,36 @@ class WorkspaceManager {
         return panel;
     }
 
+    createStatusListPanel(widget = {}) {
+        const panel = this.createPanel(widget);
+        const content = panel.querySelector(".workspace-panel-content");
+        content.classList.add("workspace-status-list");
+        (widget.items || []).forEach(item => {
+            const row = document.createElement("div");
+            const status = String(item.status || "external").toUpperCase();
+            row.innerHTML = `
+                <strong>${this.escape(item.label)}</strong>
+                <span class="${this.statusClass(status)}">${this.escape(status)}</span>
+                <p>${this.escape(item.detail || "")}</p>`;
+            content.appendChild(row);
+        });
+        return panel;
+    }
+
+    statusClass(status) {
+        return String(status || "")
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/^-+|-+$/g, "");
+    }
+
     createActionButton(action, view, prominent) {
         const button = document.createElement("button");
         button.type = "button";
         button.className = `workspace-action ${prominent ? "prominent" : ""}`.trim();
+        const status = action.status ? String(action.status).toUpperCase() : "";
         button.innerHTML = `
+            ${status ? `<em class="workspace-action-status ${this.statusClass(status)}">${this.escape(status)}</em>` : ""}
             <strong>${this.escape(action.label)}</strong>
             ${action.description ? `<small>${this.escape(action.description)}</small>` : ""}`;
 

@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.5.4 - 2026-06-26
+
+### Added
+
+- Added the shared `COMMS` workspace to the main navigation after `BUSINESS`.
+- Added secure external launchers for WhatsApp Web, Slack, Microsoft Teams,
+  Discord, Gmail, Outlook, LinkedIn, Instagram and X / Twitter.
+- Added COMMS placeholders for unified notifications and communication status.
+- Added visible launcher/status states such as `ONLINE`, `OFFLINE`,
+  `LOGIN REQUIRED` and `EXTERNAL`.
+- Added `COMMS_DECK.md` documenting launcher scope, WhatsApp safety boundaries,
+  webview limitations and future official API options.
+
+### Changed
+
+- Workspace navigation now supports seven tabs and `Command + Option + 1…7`.
+
 ## 1.5.3 - 2026-06-26
 
 ### Added
