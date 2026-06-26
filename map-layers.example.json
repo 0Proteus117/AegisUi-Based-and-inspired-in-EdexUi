@@ -16,22 +16,22 @@
     "AIR_TRAFFIC": {
       "active": false,
       "opacity": 1,
-      "mode": "placeholder"
+      "mode": "live"
     },
     "MARITIME_AIS": {
       "active": false,
       "opacity": 1,
-      "mode": "placeholder"
+      "mode": "live"
     },
     "SATELLITES": {
       "active": false,
       "opacity": 1,
-      "mode": "placeholder"
+      "mode": "catalog"
     },
     "OCEAN_ALERTS": {
       "active": false,
       "opacity": 1,
-      "mode": "placeholder"
+      "mode": "live"
     }
   }
 }

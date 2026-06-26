@@ -1,5 +1,33 @@
 # Changelog
 
+## 2.0.0 - 2026-06-26
+
+### Added
+
+- Added `MAP_SYSTEMS_AUDIT.md` documenting the existing Local Situation map,
+  real providers, placeholder risks, timers, cleanup and implementation plan.
+- Added a modular map-layer provider architecture under `src/classes/map/`.
+- Added real-provider adapters for TomTom traffic, RainViewer radar, OpenSky
+  air traffic, AISStream maritime AIS, CelesTrak GP catalog data and NOAA/NDBC
+  ocean stations.
+
+### Changed
+
+- Replaced decorative future-layer placeholder geometry with provider states,
+  real data, configuration requirements or no-data fallbacks.
+- Map layers now use a central registry for start/stop/refresh/status and
+  shared cache behavior.
+- Disabled layers do not start provider requests, polling timers, sockets or
+  overlays.
+- Satellite data loads as a real CelesTrak catalog but reports
+  `POSITION_ENGINE_REQUIRED` until an approved orbital propagation engine is
+  added.
+
+### Documentation
+
+- Updated map, configuration, offline-mode, integration and README docs for the
+  map systems activation pass.
+
 ## 1.9.5 - 2026-06-26
 
 ### Added

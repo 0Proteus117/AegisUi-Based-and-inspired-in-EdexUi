@@ -44,9 +44,8 @@ The app currently uses JSON files in the macOS application-data folder:
 - `projects.json`: Project Timelines and Project Control data.
 - `projects.backup.json`: automatic project backup.
 - `music-playlists.json`: local Apple Music playlist launcher list.
-- `map-layers.json`: Local Situation layer preferences for traffic, radar and
-  future air/maritime/satellite/ocean placeholders. It does not contain API
-  keys.
+- `map-layers.json`: Local Situation layer preferences for traffic, radar,
+  air, maritime, satellite and ocean layers. It does not contain API keys.
 - `launch-bay-games.json`: manual Launch Bay game library with titles,
   platforms, safe launch URLs and local cover/hero image paths. It does not
   contain tokens or account sessions.
@@ -63,9 +62,11 @@ Generated caches and helpers can also exist there, for example GeoIP data,
 application icons and the native Calendar helper. Do not share those by
 default.
 
-## API keys
+## API keys and optional map providers
 
-Traffic is optional and uses TomTom.
+Map/network providers are optional. The app should run without any provider
+keys; missing configuration becomes an in-app state such as
+`API_KEY_MISSING`, `CONFIG_REQUIRED`, `OFFLINE` or `SERVICE_UNAVAILABLE`.
 
 For local development, copy:
 
@@ -73,29 +74,39 @@ For local development, copy:
 cp .env.example .env
 ```
 
-Then add your own key:
+Then add only the keys/configuration you personally want to use:
 
 ```text
 AEGISUI_TOMTOM_API_KEY=
+OPENSKY_CLIENT_ID=
+OPENSKY_CLIENT_SECRET=
+OPENSKY_ACCESS_TOKEN=
+AISSTREAM_API_KEY=
+CELESTRAK_GROUP=stations
 ```
 
 Never commit `.env`. It is ignored by Git.
 
-Weather radar currently uses RainViewer public metadata and does not require a
-key. Air, maritime, satellite and ocean layers are placeholders in v1.5.x and
-do not require keys yet. Launch Bay uses local manual configuration and safe
-launcher URLs; SteamGridDB is documented only as a future optional artwork API.
+Current map providers:
+
+- TomTom road traffic: optional, requires `AEGISUI_TOMTOM_API_KEY`.
+- RainViewer weather radar: optional, no key.
+- OpenSky air traffic: optional, can run anonymously with rate limits; OAuth or
+  bearer token can be supplied through the OpenSky variables.
+- AISStream maritime AIS: optional, requires `AISSTREAM_API_KEY`.
+- CelesTrak satellite catalog: optional, no key; `CELESTRAK_GROUP` selects the
+  catalog group.
+- NOAA/NDBC ocean stations: optional, no key for the public station endpoints
+  used by AegisUi.
+
+Launch Bay uses local manual configuration and safe launcher URLs; SteamGridDB
+is documented only as a future optional artwork API.
 Developer Deck uses local read-only Git/package/runtime metadata and does not
 need API keys. You can set its initial project with
 `AEGISUI_DEVELOPER_PROJECT` or later through the local `developer-deck.json`
 file. Agent Command does not connect to AI providers in v1.8.0 and does not
 need API keys. Calendar and Apple Music use local macOS permissions rather than
 storing account passwords in the project.
-
-Future optional keys shown in `.env.example` such as
-`AEGISUI_STEAMGRIDDB_API_KEY`, `AEGISUI_ADSB_API_KEY` and
-`AEGISUI_AIS_API_KEY` are documented placeholders only in v1.9.x. The app does
-not call those providers yet.
 
 ## Export and import
 

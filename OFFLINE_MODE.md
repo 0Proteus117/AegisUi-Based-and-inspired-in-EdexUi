@@ -24,7 +24,7 @@ label unavailable services.
 | Local Situation layer toggles | Offline with local data | Preferences are stored in `map-layers.json` and mirrored in renderer local storage. |
 | RainViewer radar | Online optional | No key required; unavailable service shows a radar-unavailable state. |
 | TomTom traffic | Online optional | Requires the user's own key; missing key is a normal state. |
-| Future air/maritime/satellite/ocean layers | Offline with placeholder data | Registered as `FUTURE`/`PLACEHOLDER`; no provider calls are made in v1.5.x. |
+| Air / maritime / satellite / ocean layers | Online optional | Providers are called only while their toggles are ON; missing config or empty real data becomes a visible state. |
 | GeoIP lookup | Offline after local database exists | First setup can download GeoLite2; offline mode skips download if missing. |
 | Update checker | Online optional | Can be disabled with settings or `AEGISUI_DISABLE_UPDATE_CHECK=1`. |
 
@@ -52,8 +52,9 @@ providers.
   `RATE_LIMITED` or `SERVICE_UNAVAILABLE` without aggressive retry loops.
 - Base map tile failures: the map panel reports `BASE MAP SERVICE UNAVAILABLE`
   while the rest of the HUB remains alive.
-- Future map layers: disabled layers show `FUTURE`; enabled mock layers show
-  `PLACEHOLDER` and do not contact external providers.
+- Map layers: disabled layers show `OFF` and do not contact external
+  providers. Missing AIS config shows `CONFIG_REQUIRED`; satellite catalog data
+  can show `POSITION_ENGINE_REQUIRED` until an approved orbital engine exists.
 - Launch Bay: missing game images show cockpit placeholders; missing launch
   URLs show `NOT CONFIGURED`; Steam/custom launcher URLs are opened only when
   explicitly clicked.
@@ -76,7 +77,8 @@ providers.
 - Music polls local playback state every two seconds while connected.
 - Network status checks local interface state every two seconds.
 - RainViewer metadata and update checks now have explicit timeouts.
-- Situational Awareness future layers do not poll while they are placeholders.
+- Situational Awareness layers do not poll, fetch or open sockets while their
+  toggles are OFF.
 - Launch Bay does not poll or scan libraries in v1.6.0; it only reads the local
   JSON configuration when the workspace is rendered.
 - Developer Deck runs short read-only local checks only when the workspace is

@@ -21,6 +21,28 @@
       "enabled": true,
       "apiKeyRequired": false
     },
+    "airTraffic": {
+      "provider": "OpenSky Network",
+      "enabled": false,
+      "apiKeyRequired": false,
+      "optionalAuthEnv": ["OPENSKY_CLIENT_ID", "OPENSKY_CLIENT_SECRET", "OPENSKY_ACCESS_TOKEN"]
+    },
+    "maritimeAis": {
+      "provider": "AISStream",
+      "enabled": false,
+      "apiKeyEnv": "AISSTREAM_API_KEY"
+    },
+    "satellites": {
+      "provider": "CelesTrak GP",
+      "enabled": false,
+      "groupEnv": "CELESTRAK_GROUP",
+      "positionMarkers": "requires future SGP4 engine"
+    },
+    "oceanAlerts": {
+      "provider": "NOAA NDBC",
+      "enabled": false,
+      "apiKeyRequired": false
+    },
     "layers": {
       "storage": "map-layers.json",
       "ROAD_TRAFFIC": {
@@ -33,19 +55,19 @@
       },
       "AIR_TRAFFIC": {
         "enabled": false,
-        "mode": "placeholder"
+        "mode": "live"
       },
       "MARITIME_AIS": {
         "enabled": false,
-        "mode": "placeholder"
+        "mode": "live"
       },
       "SATELLITES": {
         "enabled": false,
-        "mode": "placeholder"
+        "mode": "catalog"
       },
       "OCEAN_ALERTS": {
         "enabled": false,
-        "mode": "placeholder"
+        "mode": "live"
       }
     }
   },

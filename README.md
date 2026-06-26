@@ -28,8 +28,9 @@ keyboard and large terminal with:
 
 - a one-line engineering shell;
 - a local Situational Awareness map with live RainViewer weather radar,
-  optional TomTom traffic and a modular layer foundation for future air,
-  maritime, satellite and ocean-alert overlays;
+  optional TomTom traffic and modular real-provider layers for OpenSky air
+  traffic, AISStream maritime traffic, CelesTrak satellite catalogs and
+  NOAA/NDBC ocean stations;
 - a native macOS Calendar panel with week and month views, recurring events
   and a single calendar selector for every enabled iCloud, Outlook and
   Exchange account;
@@ -84,7 +85,9 @@ in [WORKSPACE_RESEARCH.md](WORKSPACE_RESEARCH.md).
 Calendar and Apple Music remain disconnected until their panel button is
 pressed. Calendar requests local read-only EventKit access; Music requests
 Automation access. Weather radar needs no key. Real-time road traffic can be
-enabled from the map's `API KEY` button with a TomTom Traffic API key.
+enabled from the map's `API KEY` button with a TomTom Traffic API key. Air,
+maritime, satellite and ocean map layers stay fully idle until their toggles
+are enabled.
 
 The dashboard creates private configuration files inside the EdexUi-Eng
 application-data folder. They are never committed to GitHub:
@@ -95,7 +98,7 @@ application-data folder. They are never committed to GitHub:
 - `music-playlists.json` contains Apple Music playlist names. Clicking a name
   starts that playlist without bringing Music to the foreground.
 - `map-layers.json` contains Local Situation layer preferences such as enabled
-  map overlays and placeholder/future layer choices. It never stores API keys.
+  map overlays and layer modes. It never stores API keys.
 - `launch-bay-games.json` contains the manual local game library for Launch
   Bay. It stores titles, launcher URLs and local artwork paths, but no tokens.
 - `developer-deck.json` contains the active project path, favorite script names

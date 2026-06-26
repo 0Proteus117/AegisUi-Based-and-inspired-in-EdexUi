@@ -65,10 +65,10 @@ Launchers currently appear in:
 | --- | --- | --- | --- |
 | TomTom road traffic | `ACTIVE` when user key exists; otherwise `API_KEY_MISSING` | TomTom Traffic API | Yes |
 | RainViewer radar | `ONLINE READY`; public metadata/tile fallback | RainViewer | No |
-| Air traffic | `PLACEHOLDER` only | OpenSky Network, ADS-B Exchange | Maybe |
-| Maritime AIS | `PLACEHOLDER` only | AISStream, AISHub, MarineTraffic, Kpler | Usually |
-| Satellites | `PLACEHOLDER` only | CelesTrak GP/TLE | No/Maybe |
-| Ocean alerts | `PLACEHOLDER` only | NOAA NDBC/DART, NOAA CO-OPS | No/Maybe |
+| Air traffic | `ONLINE READY`; OpenSky state vectors only while enabled | OpenSky Network | Optional auth |
+| Maritime AIS | `CONFIG REQUIRED`; AISStream WebSocket only when key exists | AISStream | Yes |
+| Satellites | `ONLINE READY`; real CelesTrak catalog, no map markers until position engine | CelesTrak GP | No |
+| Ocean alerts | `ONLINE READY`; real NOAA/NDBC stations in current map view | NOAA NDBC/DART | No |
 | Game artwork | Local images only; generated placeholder fallback | SteamGridDB | Yes |
 | Business/market data | Placeholder only | FRED, SEC EDGAR, financial providers | Maybe |
 | News/source feeds | Launcher/placeholder only | RSS/provider-specific feeds | Maybe |

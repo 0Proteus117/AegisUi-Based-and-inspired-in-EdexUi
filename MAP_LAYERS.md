@@ -1,152 +1,190 @@
 # Map layers and Situational Awareness
 
-AegisUi's `Local Situation` panel is moving from a fixed map/radar/traffic
-widget into a modular situational-awareness surface. The goal is to let each
-user profile enable only the layers it needs, without loading future providers,
-timers or overlays while those layers are off.
+AegisUi's `Local Situation` panel is now a modular situational-awareness map.
+Each layer is optional, locally remembered and resource-aware:
 
-This document describes the v1.5.x foundation. It does not add real air,
-maritime, satellite or ocean integrations yet.
+- OFF layers do not fetch, poll, open sockets or render overlays.
+- ON layers must either show real provider data or a real fallback state.
+- No layer should draw fake operational markers.
+- API keys stay in private `.env` / local settings, never in the repository.
 
-## 1. Objective
+## Current layer registry
 
-The map layer system should:
-
-- preserve the existing base map, road traffic and weather radar behavior;
-- expose optional layers through compact cockpit toggles;
-- keep disabled layers fully idle;
-- store user preferences locally;
-- degrade cleanly when offline, missing an API key or when a service fails;
-- make future provider integrations incremental instead of a rewrite.
-
-## 2. Current layers
-
-| Layer ID | Toggle | Provider type | Current behavior | API key |
+| Layer ID | Toggle | Provider | Default | Key/config |
 | --- | --- | --- | --- | --- |
-| `ROAD_TRAFFIC` | `TRAFFIC` | TomTom traffic tiles | Uses the existing live road traffic overlay when a TomTom key is configured. | Required |
-| `WEATHER_RADAR` | `RADAR` | RainViewer public weather maps | Uses the existing radar overlay. | Not required |
+| `ROAD_TRAFFIC` | `TRAFFIC` | TomTom Traffic tiles | OFF unless a key exists | `AEGISUI_TOMTOM_API_KEY` or local settings |
+| `WEATHER_RADAR` | `RADAR` | RainViewer public weather maps | ON unless offline mode | No key |
+| `AIR_TRAFFIC` | `AIR` | OpenSky Network state vectors | OFF | Anonymous public access, optional OpenSky OAuth/Bearer token |
+| `MARITIME_AIS` | `SEA` | AISStream WebSocket | OFF | `AISSTREAM_API_KEY` required |
+| `SATELLITES` | `SAT` | CelesTrak GP JSON catalog | OFF | No key; `CELESTRAK_GROUP` optional |
+| `OCEAN_ALERTS` | `OCEAN` | NOAA/NDBC active stations | OFF | No key |
 
-## 3. Future layers
-
-| Layer ID | Toggle | Future purpose | Current v1.5.x behavior |
-| --- | --- | --- | --- |
-| `AIR_TRAFFIC` | `AIR` | ADS-B aircraft situation layer. | Placeholder only. No provider calls. |
-| `MARITIME_AIS` | `SEA` | AIS vessel movement and maritime logistics layer. | Placeholder only. No provider calls. |
-| `SATELLITES` | `SAT` | Orbital objects based on TLE/GP data. | Placeholder only. No provider calls. |
-| `OCEAN_ALERTS` | `OCEAN` | Buoys, tsunami alerts, tides, currents and water levels. | Placeholder only. No provider calls. |
-
-## 4. Layer states
-
-The map controller uses these states:
+## Layer states
 
 | State | Meaning |
 | --- | --- |
-| `OFF` | Layer is disabled. No overlay, timer or polling is active. |
-| `LOADING` | Layer has been requested and is preparing data or tiles. |
-| `ONLINE` | Layer is active and its current provider is responding. |
-| `OFFLINE` | App or layer is unavailable because offline mode/network state prevents loading. |
-| `API_KEY_MISSING` | Layer needs a user-owned key and none is configured. |
-| `SERVICE_UNAVAILABLE` | Provider or tile service failed but the HUB remains alive. |
-| `RATE_LIMITED` | Provider rejected or throttled requests. The layer must not retry aggressively. |
-| `ERROR` | Provider call or tile loading failed, but the map remains alive. |
-| `PLACEHOLDER` | Future layer is active only as a mock visual indicator. |
-| `FUTURE` | Future layer is registered but disabled/not implemented yet. |
+| `OFF` | Layer is disabled. No overlay, timer, socket or request is active. |
+| `LOADING` | Layer is preparing provider data or tiles. |
+| `CONNECTING` | Live socket provider is connecting. |
+| `ONLINE` | Provider is active and responding with real data/tiles. |
+| `OFFLINE` | Offline mode or network state prevents loading. |
+| `API_KEY_MISSING` | A key-backed tile/API layer has no key. |
+| `CONFIG_REQUIRED` | A provider needs user configuration before it can connect. |
+| `RATE_LIMITED` | Provider throttled the request; the layer must not retry aggressively. |
+| `SERVICE_UNAVAILABLE` | Provider/tile service failed but the map remains alive. |
+| `NO_DATA` | Provider responded, but no real objects exist in the current view/result. |
+| `POSITION_ENGINE_REQUIRED` | Real satellite catalog data loaded, but map positions need a future orbital propagation engine. |
+| `ERROR` | Provider failed in a controlled way. |
+| `DISABLED` | Provider exists but is intentionally unavailable. |
 
-## 5. Possible providers
+## Provider architecture
 
-These are candidates for future research, not active dependencies:
+Map providers live under `src/classes/map/`:
 
-- `AIR_TRAFFIC`
-  - OpenSky Network;
-  - ADS-B Exchange;
-  - other public or commercial ADS-B feeds that allow desktop use.
-- `MARITIME_AIS`
-  - AISStream;
-  - AISHub;
-  - MarineTraffic or Kpler for commercial/advanced logistics use.
-- `SATELLITES`
-  - CelesTrak GP/TLE;
-  - compatible TLE/GP datasets;
-  - filtered subsets such as ISS, Starlink or orbital debris.
-- `OCEAN_ALERTS`
-  - NOAA NDBC / DART buoys;
-  - NOAA CO-OPS tides, currents and water levels.
+```text
+src/classes/map/
+  mapLayerRegistry.js
+  providers/
+    trafficProvider.js
+    weatherRadarProvider.js
+    openSkyProvider.js
+    aisProvider.js
+    celestrakProvider.js
+    noaaOceanProvider.js
+  utils/
+    mapCache.js
+    mapLayerState.js
+```
 
-## 6. API keys
+Each provider exposes the same lifecycle shape:
 
-No new API keys are introduced in v1.5.x.
+- `isConfigured(context)`
+- `start(context)`
+- `stop(context)`
+- `refresh(context)`
+- `getStatus()`
 
-The only current map-related key is:
+The registry owns activation/deactivation and syncs provider status back into
+the existing cockpit UI.
 
-- `AEGISUI_TOMTOM_API_KEY` for optional TomTom road traffic.
+## Provider behavior
 
-Future provider keys must stay out of the repository. Prefer private `.env`
-files or local app-data settings. Never commit personal keys, tokens,
-sessions, cookies or account-specific data.
+Provider references:
 
-## 7. Privacy considerations
+- OpenSky REST API: `https://openskynetwork.github.io/opensky-api/rest.html`
+- AISStream documentation: `https://aisstream.io/documentation`
+- CelesTrak GP data formats: `https://celestrak.org/NORAD/documentation/gp-data-formats.php`
+- NOAA/NDBC active stations: `https://www.ndbc.noaa.gov/activestations.xml`
 
-- Future air/maritime/satellite layers may reveal analysis interests, watched
-  regions or operational workflows.
-- Do not log raw provider responses unless explicitly needed for debugging.
-- Do not export API keys with user configuration bundles.
-- Keep provider terms of service visible in future integration notes.
-- Prefer coarse, explicit refresh intervals over silent real-time tracking.
+### `ROAD_TRAFFIC`
 
-## 8. Performance considerations
+- Uses TomTom traffic tiles.
+- Does not load unless the toggle is ON and a TomTom key exists.
+- Missing key shows `API_KEY_MISSING`.
+- Tile failures show `SERVICE_UNAVAILABLE`.
+- No polling timer is used.
 
-Disabled layers must not:
+### `WEATHER_RADAR`
 
-- fetch metadata;
-- create tile layers;
-- render markers;
-- start timers;
-- keep listeners alive;
-- retry in a loop.
+- Uses RainViewer metadata and radar tiles.
+- Metadata is cached for 5 minutes.
+- Refresh interval is 5 minutes while ON.
+- No key is required.
+- Failures show `SERVICE_UNAVAILABLE` / `OFFLINE`.
 
-Enabled layers should define a reasonable `updateIntervalMs` and clean up all
-timers/listeners when toggled off. v1.5.x future layers are placeholders and
-therefore do not poll.
+### `AIR_TRAFFIC`
 
-## 9. Offline mode
+- Uses OpenSky `states/all` with the visible map bounding box.
+- Anonymous access is allowed but can be rate-limited.
+- Optional auth:
+  - `OPENSKY_ACCESS_TOKEN`; or
+  - `OPENSKY_CLIENT_ID` + `OPENSKY_CLIENT_SECRET` for OAuth client credentials.
+- Cache TTL: 45 seconds.
+- Refresh interval: 60 seconds while ON.
+- Marker cap: 120 aircraft.
+- OFF means no requests and no aircraft markers.
 
-The app should remain usable without internet:
+### `MARITIME_AIS`
 
-- local modules continue to work;
-- future layers remain `FUTURE` or `PLACEHOLDER`;
-- TomTom traffic reports `API_KEY_MISSING`, `OFFLINE` or `ERROR` instead of
-  crashing;
-- RainViewer radar reports unavailable states instead of crashing;
-- provider failures can report `SERVICE_UNAVAILABLE` or `RATE_LIMITED` without
-  starting retry loops;
-- the base map may lose tiles, but the HUB should stay alive.
+- Uses AISStream over secure WebSocket.
+- Requires `AISSTREAM_API_KEY`.
+- Missing key shows `CONFIG_REQUIRED`.
+- OFF means no WebSocket and no vessel markers.
+- The layer closes the socket and clears markers when disabled.
+- Marker cap: 150 vessels.
 
-## 10. Adding a new layer later
+### `SATELLITES`
 
-When adding a real provider:
+- Uses CelesTrak GP JSON data.
+- Default group: `stations`.
+- Override group with `CELESTRAK_GROUP`.
+- Cache TTL: 6 hours.
+- The layer does not draw orbital markers yet because the project does not
+  include an approved SGP4/orbital propagation engine.
+- Successful catalog load reports `POSITION_ENGINE_REQUIRED`, not fake markers.
 
-1. Add a layer definition in `EngineeringMapPanel.createLayerDefinitions()`.
-2. Give it a stable uppercase `id`, short `label`, description, provider type,
-   API-key requirement, recommended interval and render priority.
-3. Add a toggle label that stays compact in `Local Situation`.
-4. Implement activation only inside `activateLayer()`.
-5. Start polling only after the user enables the layer.
-6. Store timer handles on the layer object.
-7. Stop timers and remove overlays inside `cleanupLayer()`.
-8. Add explicit `API_KEY_MISSING`, `OFFLINE` and `ERROR` paths.
-9. Document provider, privacy and rate limits here.
-10. Add safe example configuration without keys.
+### `OCEAN_ALERTS`
 
-## 11. Risks and limits
+- Uses NOAA/NDBC active station XML.
+- Cache TTL: 10 minutes.
+- Refresh interval: 10 minutes while ON.
+- Filters stations to the visible map area when possible.
+- Marker cap: 180 stations.
+- Clicking a station attempts to load its latest public realtime observation.
+- If no station exists in the visible area, the layer reports `NO_DATA`.
 
-- Public/free providers may be rate-limited, incomplete or legally unsuitable
-  for redistribution.
-- Some commercial providers forbid caching or require paid keys.
-- ADS-B and AIS feeds can be delayed, filtered or jurisdiction-dependent.
-- TLE data is predictive and needs careful refresh/orbit handling.
-- NOAA/ocean feeds differ widely by region and data cadence.
-- A visually convincing layer must not imply verified real-time truth unless
-  the provider and refresh cadence are clear.
+## Configuration
 
-The v1.5.x design intentionally creates the control surface first and leaves
-heavy provider integration for a later, separately reviewed sprint.
+Copy `.env.example` to `.env` for private local development:
+
+```sh
+cp .env.example .env
+```
+
+Optional map variables:
+
+```text
+AEGISUI_TOMTOM_API_KEY=
+OPENSKY_CLIENT_ID=
+OPENSKY_CLIENT_SECRET=
+OPENSKY_ACCESS_TOKEN=
+AISSTREAM_API_KEY=
+CELESTRAK_GROUP=stations
+```
+
+Do not commit `.env`, API keys, tokens, account sessions or exported private
+configuration.
+
+Layer toggle preferences are stored locally in app data as `map-layers.json`
+and mirrored in renderer localStorage. That file contains active/opacity/mode
+preferences only; it should not contain provider secrets.
+
+## Offline and fallback behavior
+
+- If the app is offline, online providers report `OFFLINE` or remain `OFF`.
+- Missing TomTom key reports `API_KEY_MISSING`.
+- Missing AISStream key reports `CONFIG_REQUIRED`.
+- OpenSky throttling reports `RATE_LIMITED`.
+- Provider outages report `SERVICE_UNAVAILABLE`.
+- Empty real results report `NO_DATA`.
+- Satellite catalog data does not become map markers until a real position
+  engine is approved.
+
+## Privacy and performance
+
+- Disabled layers do not call providers.
+- Provider data is not logged by default.
+- Refresh intervals are deliberately conservative.
+- AIS/OpenSky views can reveal regions of interest; export config carefully.
+- API keys are not exported or committed.
+- Public providers may be delayed, filtered, incomplete or rate-limited.
+
+## Adding another provider
+
+1. Add a provider file under `src/classes/map/providers/`.
+2. Implement `start()`, `stop()`, `refresh()`, `isConfigured()` and `getStatus()`.
+3. Register it in `mapLayerRegistry.js`.
+4. Add layer metadata in `EngineeringMapPanel.createLayerDefinitions()`.
+5. Define cache TTL, marker limit, fallback state and cleanup behavior.
+6. Ensure OFF performs no requests, sockets, polling or rendering.
+7. Update `.env.example`, `CONFIGURATION.md`, `INTEGRATIONS.md` and this file.
