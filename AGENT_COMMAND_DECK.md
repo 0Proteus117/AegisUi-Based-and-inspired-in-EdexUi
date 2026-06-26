@@ -129,6 +129,7 @@ The Task Board stores local tasks with:
 Current safe actions:
 
 - copy result to clipboard;
+- copy selected agent prompt/output to clipboard;
 - mark a task as reviewed;
 - route a task to the next agent.
 

@@ -146,6 +146,8 @@ Security/offline documentation:
   pinned-HUB plus compact workspace rail navigation decision.
 - [MOCK_TO_REAL_AUDIT.md](MOCK_TO_REAL_AUDIT.md) inventories mockups,
   placeholders and recommended activation order.
+- [INTEGRATIONS.md](INTEGRATIONS.md) tracks real integrations, launchers,
+  optional APIs, system integrations, AI boundaries and fallback states.
 - [SECURITY.md](SECURITY.md) documents the current security posture and known
   Electron hardening work.
 - [CHANGELOG.md](CHANGELOG.md) tracks the AegisUi/EdexUi-Eng fork changes.

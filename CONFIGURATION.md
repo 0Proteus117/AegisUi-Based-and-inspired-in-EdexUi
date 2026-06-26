@@ -92,6 +92,11 @@ file. Agent Command does not connect to AI providers in v1.8.0 and does not
 need API keys. Calendar and Apple Music use local macOS permissions rather than
 storing account passwords in the project.
 
+Future optional keys shown in `.env.example` such as
+`AEGISUI_STEAMGRIDDB_API_KEY`, `AEGISUI_ADSB_API_KEY` and
+`AEGISUI_AIS_API_KEY` are documented placeholders only in v1.9.x. The app does
+not call those providers yet.
+
 ## Export and import
 
 Export a portable configuration bundle:

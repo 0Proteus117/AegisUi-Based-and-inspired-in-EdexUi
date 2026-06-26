@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.9.5 - 2026-06-26
+
+### Added
+
+- Added `INTEGRATIONS.md` documenting local-only modules, external launchers,
+  optional APIs, system integrations, Agent Command boundaries and fallback
+  states.
+- Agent Command selected-agent panel can now copy the base prompt and current
+  local output without connecting to an AI provider.
+
+### Documentation
+
+- Updated README, configuration and Agent Command docs for the Systems Online
+  Pass.
+
 ## 1.9.4 - 2026-06-26
 
 ### Changed

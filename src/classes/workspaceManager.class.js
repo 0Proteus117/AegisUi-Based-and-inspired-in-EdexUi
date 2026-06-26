@@ -865,11 +865,29 @@ class WorkspaceManager {
                     <p>${this.escape(agent.output)}</p>
                 </div>
                 <div class="agent-command-output-actions">
+                    <button id="agent_command_copy_prompt" type="button">COPY PROMPT</button>
+                    <button id="agent_command_copy_output" type="button">COPY OUTPUT</button>
                     <button id="agent_command_request" type="button">REQUEST PROPOSAL</button>
                     <button id="agent_command_config" type="button">OPEN CONFIG</button>
                     <button id="agent_command_refresh" type="button">REFRESH</button>
                 </div>
             </div>`;
+        content.querySelector("#agent_command_copy_prompt").addEventListener("click", async () => {
+            try {
+                await navigator.clipboard.writeText(agent.basePrompt || "");
+                this.showToast(view, "AGENT PROMPT COPIED");
+            } catch (error) {
+                this.showToast(view, "CLIPBOARD UNAVAILABLE");
+            }
+        });
+        content.querySelector("#agent_command_copy_output").addEventListener("click", async () => {
+            try {
+                await navigator.clipboard.writeText(agent.output || "");
+                this.showToast(view, "AGENT OUTPUT COPIED");
+            } catch (error) {
+                this.showToast(view, "CLIPBOARD UNAVAILABLE");
+            }
+        });
         content.querySelector("#agent_command_request").addEventListener("click", async () => {
             const response = await this.ipc.invoke("agent-command-run-agent", agent.id);
             this.showToast(view, response.ok ? "AGENT REQUEST STARTED" : response.error);
