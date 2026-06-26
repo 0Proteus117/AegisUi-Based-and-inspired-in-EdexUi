@@ -1,3 +1,11 @@
+const {MapLayerRegistry} = require(require("path").join(__dirname, "classes/map/mapLayerRegistry.js"));
+const {
+    MAP_LAYER_STATES,
+    formatMapTimestamp,
+    statusNeedsAttention,
+    statusIsInformative
+} = require(require("path").join(__dirname, "classes/map/utils/mapLayerState.js"));
+
 class EngineeringDashboard {
     constructor(parentId) {
         if (!parentId) throw "Missing options";
@@ -58,8 +66,6 @@ class EngineeringMapPanel {
         this.layerStorageKey = "aegisui-map-layers-v1";
         this.layerPreferences = this.loadLayerPreferences();
         this.hasLocalLayerPreferences = Object.keys(this.layerPreferences).length > 0;
-        this.layers = new Map();
-        this.placeholderLayer = L.layerGroup();
         this.layerDefinitions = this.createLayerDefinitions();
 
         this.map = L.map("eng_map_canvas", {
@@ -91,7 +97,7 @@ class EngineeringMapPanel {
             this.saveTrafficKey();
         });
 
-        this.initializeLayers();
+        this.initializeLayerRegistry();
         this.renderLayerControls();
         this.applyInitialLayerState();
         this.syncLayerPreferencesFile();
@@ -114,9 +120,10 @@ class EngineeringMapPanel {
                 defaultActive: Boolean(this.getTrafficKey()),
                 available: true,
                 updateIntervalMs: 0,
+                cacheTtlMs: 0,
                 zIndex: 30,
                 fallbackVisual: "Traffic unavailable state in the Local Situation status bar.",
-                placeholder: false
+                mode: "live"
             },
             {
                 id: "WEATHER_RADAR",
@@ -129,95 +136,99 @@ class EngineeringMapPanel {
                 defaultActive: !this.offlineMode,
                 available: true,
                 updateIntervalMs: 5 * 60 * 1000,
+                cacheTtlMs: 5 * 60 * 1000,
                 zIndex: 20,
                 fallbackVisual: "Radar unavailable state in the Local Situation status bar.",
-                placeholder: false
+                mode: "live",
+                opacity: 0.55
             },
             {
                 id: "AIR_TRAFFIC",
                 label: "AIR",
                 name: "Air traffic",
-                description: "Future ADS-B aircraft situation layer.",
-                providerType: "ADS-B",
-                providerCandidates: ["OpenSky Network", "ADS-B Exchange", "compatible public or commercial ADS-B feeds"],
-                requiresApiKey: true,
+                description: "Live ADS-B aircraft state vectors in the visible map area.",
+                providerType: "OpenSky Network state vectors",
+                providerCandidates: ["OpenSky Network"],
+                requiresApiKey: false,
                 defaultActive: false,
-                available: false,
-                updateIntervalMs: 30 * 1000,
+                available: true,
+                updateIntervalMs: 60 * 1000,
+                cacheTtlMs: 45 * 1000,
+                maxMarkers: 120,
                 zIndex: 45,
-                fallbackVisual: "Placeholder aircraft vectors and provider note.",
-                placeholderShape: "aircraft-vector",
-                placeholder: true
+                fallbackVisual: "OpenSky status/readout with no fake aircraft markers.",
+                mode: "live"
             },
             {
                 id: "MARITIME_AIS",
                 label: "SEA",
                 name: "Maritime AIS",
-                description: "Future maritime vessel tracking layer.",
-                providerType: "AIS",
-                providerCandidates: ["AISStream", "AISHub", "MarineTraffic", "Kpler"],
+                description: "Live AIS vessel messages from a configured provider.",
+                providerType: "AISStream WebSocket",
+                providerCandidates: ["AISStream"],
                 requiresApiKey: true,
                 defaultActive: false,
-                available: false,
-                updateIntervalMs: 60 * 1000,
+                available: true,
+                updateIntervalMs: 0,
+                cacheTtlMs: 0,
+                maxMarkers: 150,
                 zIndex: 42,
-                fallbackVisual: "Placeholder vessel tracks and provider note.",
-                placeholderShape: "vessel-track",
-                placeholder: true
+                fallbackVisual: "CONFIG_REQUIRED until AISSTREAM_API_KEY is configured.",
+                mode: "live"
             },
             {
                 id: "SATELLITES",
                 label: "SAT",
                 name: "Satellites",
-                description: "Future orbital objects and TLE/GP layer.",
-                providerType: "TLE / GP orbital data",
-                providerCandidates: ["CelesTrak GP/TLE", "compatible TLE/GP datasets", "ISS / Starlink / debris subsets"],
+                description: "Real CelesTrak GP catalog data; map positions require a future orbital engine.",
+                providerType: "CelesTrak GP JSON",
+                providerCandidates: ["CelesTrak GP/TLE"],
                 requiresApiKey: false,
                 defaultActive: false,
-                available: false,
-                updateIntervalMs: 15 * 60 * 1000,
+                available: true,
+                updateIntervalMs: 6 * 60 * 60 * 1000,
+                cacheTtlMs: 6 * 60 * 60 * 1000,
+                defaultGroup: "stations",
                 zIndex: 40,
-                fallbackVisual: "Placeholder orbital arcs and provider note.",
-                placeholderShape: "orbital-arc",
-                placeholder: true
+                fallbackVisual: "POSITION_ENGINE_REQUIRED until SGP4 propagation is approved.",
+                mode: "catalog"
             },
             {
                 id: "OCEAN_ALERTS",
                 label: "OCEAN",
                 name: "Ocean alerts",
-                description: "Future ocean buoy, tide, current and tsunami alert layer.",
-                providerType: "Ocean observation feeds",
-                providerCandidates: ["NOAA NDBC / DART", "NOAA CO-OPS"],
+                description: "NOAA/NDBC active stations and buoy metadata in the visible map area.",
+                providerType: "NOAA NDBC active stations",
+                providerCandidates: ["NOAA NDBC / DART"],
                 requiresApiKey: false,
                 defaultActive: false,
-                available: false,
+                available: true,
                 updateIntervalMs: 10 * 60 * 1000,
+                cacheTtlMs: 10 * 60 * 1000,
+                maxMarkers: 180,
                 zIndex: 38,
-                fallbackVisual: "Placeholder ocean alert pulses and provider note.",
-                placeholderShape: "alert-ring",
-                placeholder: true
+                fallbackVisual: "NO_DATA when no NOAA station exists in the current map view.",
+                mode: "live"
             }
         ];
     }
 
-    initializeLayers() {
-        this.layerDefinitions.forEach(definition => {
-            const savedLayer = this.layerPreferences[definition.id] || {};
-            const active = typeof savedLayer.active === "boolean"
-                ? savedLayer.active
-                : definition.defaultActive;
-            this.layers.set(definition.id, {
-                definition,
-                active,
-                available: definition.available,
-                status: active ? "LOADING" : (definition.placeholder ? "FUTURE" : "OFF"),
-                leafletLayer: null,
-                timer: null,
-                error: "",
-                opacity: Number.isFinite(Number(savedLayer.opacity)) ? Number(savedLayer.opacity) : 1,
-                mockMode: Boolean(definition.placeholder)
-            });
+    initializeLayerRegistry() {
+        this.layerRegistry = new MapLayerRegistry({
+            definitions: this.layerDefinitions,
+            preferences: this.layerPreferences,
+            context: {
+                map: this.map,
+                L,
+                ipc: this.ipc,
+                offlineMode: () => this.offlineMode,
+                getTrafficKey: () => this.getTrafficKey(),
+                onTrafficKeyRequired: () => this.showTrafficForm(),
+                getEnv: name => this.getEnv(name)
+            },
+            onLayerChange: () => this.renderLayerState()
         });
+        this.layers = this.layerRegistry.layers;
     }
 
     loadLayerPreferences() {
@@ -230,14 +241,7 @@ class EngineeringMapPanel {
     }
 
     saveLayerPreferences() {
-        const data = {};
-        this.layers.forEach((layer, id) => {
-            data[id] = {
-                active: Boolean(layer.active),
-                opacity: layer.opacity,
-                mode: layer.definition.placeholder ? "placeholder" : "live"
-            };
-        });
+        const data = this.layerRegistry ? this.layerRegistry.serialize() : {};
         try {
             localStorage.setItem(this.layerStorageKey, JSON.stringify(data));
         } catch (error) {}
@@ -295,9 +299,9 @@ class EngineeringMapPanel {
 
     applyInitialLayerState() {
         this.layers.forEach(layer => {
-            if (this.offlineMode && !layer.definition.placeholder) {
+            if (this.offlineMode) {
                 layer.active = false;
-                layer.status = "OFFLINE";
+                layer.status = MAP_LAYER_STATES.OFFLINE;
             }
             if (layer.active) this.activateLayer(layer.definition.id, {persist: false, userInitiated: false});
             else this.deactivateLayer(layer.definition.id, {persist: false});
@@ -316,53 +320,18 @@ class EngineeringMapPanel {
     }
 
     activateLayer(id, options = {}) {
-        const layer = this.layers.get(id);
-        if (!layer) return;
-        layer.active = true;
-        layer.status = "LOADING";
-        layer.error = "";
-        this.renderLayerState();
-
-        if (layer.definition.placeholder) {
-            this.activatePlaceholderLayer(layer, options);
-            return;
-        }
-
-        if (id === "ROAD_TRAFFIC") {
-            this.activateTrafficLayer(layer, Boolean(options.userInitiated));
-        } else if (id === "WEATHER_RADAR") {
-            this.activateRadarLayer(layer).catch(error => {
-                layer.status = this.normalizeProviderStatus(error);
-                layer.error = error && error.message ? error.message : "Radar layer failed";
-                this.status.innerText = "RADAR SERVICE UNAVAILABLE";
-                this.renderLayerState();
-            });
-        }
-
-        if (options.persist !== false) this.saveLayerPreferences();
+        if (!this.layerRegistry) return;
+        this.layerRegistry.activate(id, options).finally(() => {
+            if (options.persist !== false) this.saveLayerPreferences();
+            this.renderLayerState();
+        });
     }
 
     deactivateLayer(id, options = {}) {
-        const layer = this.layers.get(id);
-        if (!layer) return;
-        layer.active = false;
-        this.cleanupLayer(layer);
-        if (layer.definition.placeholder) layer.status = "FUTURE";
-        else layer.status = this.offlineMode ? "OFFLINE" : "OFF";
+        if (!this.layerRegistry) return;
+        this.layerRegistry.deactivate(id);
         if (options.persist !== false) this.saveLayerPreferences();
         this.renderLayerState();
-    }
-
-    cleanupLayer(layer) {
-        if (layer.timer) {
-            clearInterval(layer.timer);
-            layer.timer = null;
-        }
-        if (layer.leafletLayer && this.map.hasLayer(layer.leafletLayer)) {
-            this.map.removeLayer(layer.leafletLayer);
-        }
-        layer.leafletLayer = null;
-        this.renderPlaceholderLayer();
     }
 
     async loadRuntimeConfig() {
@@ -377,7 +346,7 @@ class EngineeringMapPanel {
                 );
                 if (layer && (layer.active || !hasSavedTrafficPreference)) {
                     layer.active = true;
-                    this.activateTrafficLayer(layer, false);
+                    this.activateLayer("ROAD_TRAFFIC", {persist: false, userInitiated: false});
                     this.saveLayerPreferences();
                 }
             }
@@ -385,7 +354,6 @@ class EngineeringMapPanel {
                 this.offlineMode = true;
                 this.status.innerText = "OFFLINE MODE · LOCAL DATA";
                 this.layers.forEach(layer => {
-                    if (layer.definition.placeholder) return;
                     this.deactivateLayer(layer.definition.id, {persist: true});
                 });
             }
@@ -396,181 +364,10 @@ class EngineeringMapPanel {
         return this.trafficKey || window.settings.tomtomApiKey || "";
     }
 
-    normalizeProviderStatus(error) {
-        const message = String(error && (error.message || error.error || error.status) || "").toLowerCase();
-        if (this.offlineMode || message.includes("offline") || message.includes("network")) return "OFFLINE";
-        if (message.includes("rate") || message.includes("429")) return "RATE_LIMITED";
-        if (message.includes("key") || message.includes("unauthorized") || message.includes("401") || message.includes("403")) {
-            return "API_KEY_MISSING";
-        }
-        return "SERVICE_UNAVAILABLE";
-    }
-
-    async activateRadarLayer(layer) {
-        if (this.offlineMode) {
-            layer.status = "OFFLINE";
-            this.status.innerText = "OFFLINE MODE · RADAR OFF";
-            this.renderLayerState();
-            return;
-        }
-        this.cleanupLayer(layer);
-        const response = await this.ipc.invoke("rainviewer-metadata");
-        if (!response.ok || !response.data.radar || !response.data.radar.past.length) {
-            layer.status = response.ok ? "SERVICE_UNAVAILABLE" : this.normalizeProviderStatus(response);
-            layer.error = response.error || "Radar metadata unavailable";
-            this.status.innerText = "MAP ONLINE · RADAR UNAVAILABLE";
-            this.renderLayerState();
-            return;
-        }
-
-        const frame = response.data.radar.past[response.data.radar.past.length - 1];
-        layer.leafletLayer = L.tileLayer(
-            `${response.data.host}${frame.path}/256/{z}/{x}/{y}/2/1_1.png`,
-            {
-                opacity: 0.55,
-                maxNativeZoom: 7,
-                maxZoom: 18,
-                zIndex: layer.definition.zIndex,
-                className: "eng-radar-map"
-            }
-        );
-        layer.leafletLayer.on("tileerror", () => {
-            layer.status = "SERVICE_UNAVAILABLE";
-            layer.error = "Radar tile service unavailable";
-            this.status.innerText = "RADAR SERVICE UNAVAILABLE";
-            this.renderLayerState();
-        });
-        layer.leafletLayer.addTo(this.map);
-        layer.status = "ONLINE";
-        this.renderLayerState();
-    }
-
-    activateTrafficLayer(layer, userInitiated = false) {
-        if (this.offlineMode) {
-            layer.status = "OFFLINE";
-            this.status.innerText = "OFFLINE MODE · TRAFFIC OFF";
-            this.renderLayerState();
-            return;
-        }
-
-        const trafficKey = this.getTrafficKey();
-        if (!trafficKey) {
-            layer.status = "API_KEY_MISSING";
-            this.status.innerText = "TRAFFIC KEY MISSING";
-            if (userInitiated) this.showTrafficForm();
-            this.renderLayerState();
-            return;
-        }
-
-        this.cleanupLayer(layer);
-        const key = encodeURIComponent(trafficKey);
-        layer.leafletLayer = L.tileLayer(
-            `https://api.tomtom.com/traffic/map/4/tile/flow/relative0-dark/{z}/{x}/{y}.png?tileSize=256&key=${key}`,
-            {opacity: 0.9, maxZoom: 22, zIndex: layer.definition.zIndex, className: "eng-traffic-map"}
-        );
-        layer.leafletLayer.on("tileerror", () => {
-            layer.status = "SERVICE_UNAVAILABLE";
-            layer.error = "Traffic tile service unavailable";
-            this.status.innerText = "TRAFFIC SERVICE UNAVAILABLE";
-            this.renderLayerState();
-        });
-        layer.leafletLayer.addTo(this.map);
-        layer.status = "ONLINE";
-        this.renderLayerState();
-    }
-
-    activatePlaceholderLayer(layer, options = {}) {
-        layer.status = "PLACEHOLDER";
-        layer.available = false;
-        layer.error = "";
-        this.renderPlaceholderLayer();
-        this.renderLayerState();
-        if (options.persist !== false) this.saveLayerPreferences();
-    }
-
-    renderPlaceholderLayer() {
-        this.placeholderLayer.clearLayers();
-        if (this.map.hasLayer(this.placeholderLayer)) this.map.removeLayer(this.placeholderLayer);
-
-        const activePlaceholders = Array.from(this.layers.values())
-            .filter(layer => layer.active && layer.definition.placeholder);
-        if (!activePlaceholders.length) return;
-
-        const center = this.map.getCenter();
-        const offsets = [
-            [0.32, -0.42],
-            [-0.28, 0.38],
-            [0.46, 0.28],
-            [-0.4, -0.26]
-        ];
-
-        activePlaceholders.forEach((layer, index) => {
-            const offset = offsets[index % offsets.length];
-            const point = [center.lat + offset[0], center.lng + offset[1]];
-            const tooltip = `${layer.definition.label} · ${layer.status} · Provider integration pending`;
-            const markerStyle = {
-                color: "#7CCBFF",
-                fillColor: "#3BA7FF",
-                fillOpacity: 0.14,
-                opacity: 0.72,
-                weight: 1,
-                pane: "overlayPane"
-            };
-            const tooltipOptions = {
-                permanent: false,
-                direction: "top",
-                className: "eng-map-placeholder-tooltip"
-            };
-
-            if (layer.definition.placeholderShape === "aircraft-vector") {
-                this.placeholderLayer.addLayer(L.polyline([
-                    [point[0] - 0.08, point[1] - 0.18],
-                    point,
-                    [point[0] + 0.1, point[1] + 0.2]
-                ], markerStyle).bindTooltip(tooltip, tooltipOptions));
-                this.placeholderLayer.addLayer(L.circleMarker(point, {
-                    ...markerStyle,
-                    radius: 4.5
-                }));
-            } else if (layer.definition.placeholderShape === "vessel-track") {
-                this.placeholderLayer.addLayer(L.polyline([
-                    [point[0] - 0.05, point[1] - 0.2],
-                    [point[0] - 0.01, point[1] - 0.05],
-                    point,
-                    [point[0] + 0.04, point[1] + 0.19]
-                ], {
-                    ...markerStyle,
-                    dashArray: "4 4"
-                }).bindTooltip(tooltip, tooltipOptions));
-                this.placeholderLayer.addLayer(L.circleMarker(point, {
-                    ...markerStyle,
-                    radius: 5
-                }));
-            } else if (layer.definition.placeholderShape === "orbital-arc") {
-                this.placeholderLayer.addLayer(L.polyline([
-                    [center.lat - 0.48, center.lng - 0.78],
-                    [center.lat - 0.14, center.lng - 0.18],
-                    [center.lat + 0.18, center.lng + 0.42],
-                    [center.lat + 0.44, center.lng + 0.88]
-                ], {
-                    ...markerStyle,
-                    opacity: 0.52,
-                    dashArray: "2 6"
-                }).bindTooltip(tooltip, tooltipOptions));
-            } else if (layer.definition.placeholderShape === "alert-ring") {
-                this.placeholderLayer.addLayer(L.circle(point, {
-                    ...markerStyle,
-                    radius: 18000,
-                    fillOpacity: 0.04
-                }).bindTooltip(tooltip, tooltipOptions));
-            } else {
-                this.placeholderLayer.addLayer(L.circleMarker(point, {
-                    ...markerStyle,
-                    radius: 5 + index
-                }).bindTooltip(tooltip, tooltipOptions));
-            }
-        });
-        this.placeholderLayer.addTo(this.map);
+    getEnv(name) {
+        if (!name) return "";
+        if (typeof process !== "undefined" && process.env && process.env[name]) return process.env[name];
+        return "";
     }
 
     renderLayerState() {
@@ -578,17 +375,19 @@ class EngineeringMapPanel {
             const button = this.controls.querySelector(`[data-layer="${layer.definition.id}"]`);
             if (!button) return;
             button.classList.toggle("active", layer.active);
-            button.classList.toggle("placeholder", layer.definition.placeholder);
-            button.classList.toggle("error", ["ERROR", "API_KEY_MISSING", "SERVICE_UNAVAILABLE", "RATE_LIMITED"].includes(layer.status));
+            button.classList.toggle("placeholder", false);
+            button.classList.toggle("error", statusNeedsAttention(layer.status));
+            button.classList.toggle("informative", statusIsInformative(layer.status));
             button.dataset.state = layer.status;
+            button.title = `${layer.definition.name} · ${layer.summary || layer.definition.description}`;
             const state = button.querySelector("small");
             if (state) state.innerText = layer.status;
         });
 
         const active = Array.from(this.layers.values()).filter(layer => layer.active);
-        const online = active.filter(layer => layer.status === "ONLINE").map(layer => layer.definition.label);
-        const placeholders = active.filter(layer => layer.status === "PLACEHOLDER").map(layer => layer.definition.label);
-        const warnings = active.filter(layer => ["ERROR", "API_KEY_MISSING", "OFFLINE", "SERVICE_UNAVAILABLE", "RATE_LIMITED"].includes(layer.status));
+        const online = active.filter(layer => layer.status === MAP_LAYER_STATES.ONLINE).map(layer => layer.definition.label);
+        const informative = active.filter(layer => statusIsInformative(layer.status)).map(layer => `${layer.definition.label} ${layer.status}`);
+        const warnings = active.filter(layer => statusNeedsAttention(layer.status));
 
         if (this.readout) {
             if (!active.length) {
@@ -598,21 +397,21 @@ class EngineeringMapPanel {
                     <article data-state="${layer.status}">
                         <strong>${window._escapeHtml(layer.definition.label)}</strong>
                         <span>${window._escapeHtml(layer.status)}</span>
-                        <em>${window._escapeHtml(layer.definition.placeholder
-                            ? "Layer architecture ready · Provider integration pending"
-                            : layer.definition.providerType)}</em>
+                        <em>${window._escapeHtml(layer.summary || layer.error || layer.definition.providerType)}</em>
+                        ${layer.count ? `<small>${window._escapeHtml(String(layer.count))} items</small>` : ""}
+                        ${layer.updatedAt ? `<small>${window._escapeHtml(formatMapTimestamp(layer.updatedAt))}</small>` : ""}
                     </article>`).join("");
             }
         }
 
         if (warnings.length) {
             this.status.innerText = warnings.map(layer => `${layer.definition.label} ${layer.status}`).join(" · ");
-        } else if (online.length && placeholders.length) {
-            this.status.innerText = `${online.join("+")} ONLINE · ${placeholders.join("+")} PLACEHOLDER`;
+        } else if (online.length && informative.length) {
+            this.status.innerText = `${online.join("+")} ONLINE · ${informative.join(" · ")}`;
         } else if (online.length) {
             this.status.innerText = `${online.join(" + ")} ONLINE`;
-        } else if (placeholders.length) {
-            this.status.innerText = `${placeholders.join(" + ")} PLACEHOLDER`;
+        } else if (informative.length) {
+            this.status.innerText = informative.join(" · ");
         } else if (this.offlineMode) {
             this.status.innerText = "OFFLINE MODE · LOCAL DATA";
         } else {
@@ -664,7 +463,7 @@ class EngineeringMapPanel {
         const layer = this.layers.get("ROAD_TRAFFIC");
         if (layer) {
             layer.active = Boolean(this.trafficKey);
-            if (layer.active) this.activateTrafficLayer(layer, false);
+            if (layer.active) this.activateLayer("ROAD_TRAFFIC", {persist: false, userInitiated: false});
             else this.deactivateLayer("ROAD_TRAFFIC", {persist: true});
             this.saveLayerPreferences();
         }

@@ -271,6 +271,11 @@ body.engineering-mode {
     color: var(--color_red);
 }
 
+.engineering-mode .eng-map-layer-toggle.informative {
+    border-color: rgba(255, 184, 77, .72);
+    color: #FFB84D;
+}
+
 .engineering-mode .eng-map-layer-readout {
     position: absolute;
     z-index: 540;
@@ -325,11 +330,55 @@ body.engineering-mode {
     opacity: .52;
 }
 
-.engineering-mode .eng-map-placeholder-tooltip {
+.engineering-mode .eng-map-layer-readout article small {
+    font: .6vh var(--font_mono);
+    opacity: .55;
+}
+
+.engineering-mode .eng-map-placeholder-tooltip,
+.engineering-mode .eng-map-provider-tooltip {
     color: var(--eng-blue-soft);
     background: rgba(7, 11, 16, .92);
     border: .08vh solid var(--eng-border);
     font: .72vh var(--font_main);
+}
+
+.engineering-mode .eng-aircraft-div-icon {
+    width: 1.8vh;
+    height: 1.8vh;
+}
+
+.engineering-mode .eng-aircraft-div-icon span {
+    display: block;
+    width: 0;
+    height: 0;
+    border-left: .45vh solid transparent;
+    border-right: .45vh solid transparent;
+    border-bottom: 1.15vh solid var(--eng-blue-soft);
+    filter: drop-shadow(0 0 .45vh rgba(59, 167, 255, .7));
+    transform-origin: 50% 62%;
+}
+
+.engineering-mode .eng-map-provider-popup .leaflet-popup-content-wrapper,
+.engineering-mode .eng-map-provider-popup .leaflet-popup-tip {
+    color: var(--eng-blue-soft);
+    background: rgba(7, 11, 16, .96);
+    border: .08vh solid rgba(124, 203, 255, .38);
+    box-shadow: 0 0 1vh rgba(59, 167, 255, .18);
+}
+
+.engineering-mode .eng-map-provider-popup .leaflet-popup-content {
+    display: grid;
+    gap: .25vh;
+    min-width: 15vh;
+    margin: .8vh 1vh;
+    font: .72vh var(--font_main_light);
+}
+
+.engineering-mode .eng-map-provider-popup strong {
+    color: var(--eng-blue-soft);
+    font-family: var(--font_main);
+    letter-spacing: .06vh;
 }
 
 .engineering-mode button {
