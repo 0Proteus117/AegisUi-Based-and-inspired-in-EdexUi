@@ -1241,12 +1241,17 @@ ipc.handle("music-artwork", async (event, requestedArtworkId) => {
 });
 ipc.handle("workspace-open-link", async (event, target) => {
     try {
-        const parsed = new URL(String(target || ""));
-        if (parsed.protocol !== "https:") throw new Error("Only secure HTTPS links are allowed.");
-        await shell.openExternal(parsed.toString());
-        return {ok: true};
+        const launchUrl = sanitizeLaunchUrl(target);
+        if (!launchUrl) return {ok: false, status: "NOT CONFIGURED", error: "Launcher is not configured."};
+        await shell.openExternal(launchUrl);
+        const parsed = new URL(launchUrl);
+        return {
+            ok: true,
+            status: parsed.protocol === "https:" ? "EXTERNAL" : "READY",
+            target: launchUrl
+        };
     } catch (error) {
-        return {ok: false, error: error.message || "Cannot open this link."};
+        return {ok: false, status: "ERROR", error: error.message || "Cannot open this launcher."};
     }
 });
 ipc.handle("calendar-open-accounts", () => {

@@ -320,11 +320,14 @@
 }
 
 .engineering-mode .workspace-action-status.external,
+.engineering-mode .workspace-action-status.ready,
+.engineering-mode .workspace-action-status.app,
 .engineering-mode .workspace-status-list span.external {
     color: #3BA7FF;
 }
 
 .engineering-mode .workspace-action-status.not-configured,
+.engineering-mode .workspace-action-status.app-not-found,
 .engineering-mode .workspace-status-list span.not-configured,
 .engineering-mode .workspace-panel > header span.not-configured {
     color: #d8b65c;

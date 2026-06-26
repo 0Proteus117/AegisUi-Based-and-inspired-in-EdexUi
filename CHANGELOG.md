@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.9.2 - 2026-06-26
+
+### Changed
+
+- Workspace action buttons now show default launcher states (`EXTERNAL` for
+  links and `APP` for app launchers) even when no explicit status is provided.
+- Workspace external launchers now use the same safe URL validation used by
+  Launch Bay, allowing only approved external protocols such as HTTPS and safe
+  game deep links.
+- App launch failures now report `APP NOT FOUND` explicitly.
+
+### Security
+
+- Workspace launchers still do not run shell commands or arbitrary local
+  executables.
+- Unsafe protocols are rejected before `shell.openExternal()`.
+
 ## 1.9.1 - 2026-06-26
 
 ### Added

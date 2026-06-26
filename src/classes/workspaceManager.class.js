@@ -997,7 +997,9 @@ class WorkspaceManager {
         const button = document.createElement("button");
         button.type = "button";
         button.className = `workspace-action ${prominent ? "prominent" : ""}`.trim();
-        const status = action.status ? String(action.status).toUpperCase() : "";
+        const status = action.status
+            ? String(action.status).toUpperCase()
+            : (action.type === "application" ? "APP" : "EXTERNAL");
         button.innerHTML = `
             ${status ? `<em class="workspace-action-status ${this.statusClass(status)}">${this.escape(status)}</em>` : ""}
             <strong>${this.escape(action.label)}</strong>
@@ -1060,7 +1062,9 @@ class WorkspaceManager {
 
     async openLink(url, view) {
         const response = await this.ipc.invoke("workspace-open-link", url);
-        this.showToast(view, response.ok ? "OPENED IN DEFAULT BROWSER" : response.error);
+        this.showToast(view, response.ok
+            ? `OPENED · ${response.status || "EXTERNAL"}`
+            : `${response.status || "ERROR"} · ${response.error}`);
     }
 
     async launchApplication(action, view, button) {
@@ -1083,7 +1087,7 @@ class WorkspaceManager {
         button.classList.remove("loading");
 
         if (!application) {
-            this.showToast(view, `${action.label} IS NOT INSTALLED`);
+            this.showToast(view, `APP NOT FOUND · ${action.label}`);
             return;
         }
 
