@@ -144,6 +144,8 @@ Security/offline documentation:
   boundaries.
 - [WORKSPACE_NAVIGATION.md](WORKSPACE_NAVIGATION.md) documents the scalable
   pinned-HUB plus compact workspace rail navigation decision.
+- [MOCK_TO_REAL_AUDIT.md](MOCK_TO_REAL_AUDIT.md) inventories mockups,
+  placeholders and recommended activation order.
 - [SECURITY.md](SECURITY.md) documents the current security posture and known
   Electron hardening work.
 - [CHANGELOG.md](CHANGELOG.md) tracks the AegisUi/EdexUi-Eng fork changes.

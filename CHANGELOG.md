@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.9.0 - 2026-06-26
+
+### Added
+
+- Added `MOCK_TO_REAL_AUDIT.md` for the Systems Online Pass.
+- Inventoried current placeholders, mock widgets, future integrations,
+  disabled actions and local/online/system/AI activation categories.
+- Documented recommended mock-to-real activation order, prioritizing local
+  data, safe launchers and fallback states before optional APIs or AI agents.
+
 ## 1.8.1 - 2026-06-26
 
 ### Changed
