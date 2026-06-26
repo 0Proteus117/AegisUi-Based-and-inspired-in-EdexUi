@@ -16,6 +16,7 @@ label unavailable services.
 | Apple Music | Offline with local app permissions | Talks to the local Music app via macOS Automation. Streaming availability depends on Music itself. |
 | Calendar | Offline with local system data | Reads macOS EventKit calendars. iCloud/Outlook/Exchange must already be synced into macOS Calendar/Internet Accounts. |
 | Workspaces | Offline with local/default data | External links only open when clicked. |
+| Workspace state | Offline with local data | Uses `workspace-state.json` plus renderer local storage to remember the active workspace and navigation mode. |
 | Launch Bay | Offline with local data | Uses `launch-bay-games.json`; cloud artwork and auto-detection are not enabled. |
 | Developer Deck | Offline with local data | Uses `developer-deck.json`, local Git metadata and local package/runtime information. Script execution is disabled in the foundation build. |
 | Agent Command | Offline with local data | Uses `agent-command.json`; AI providers, cloud context sending and autonomous actions are not enabled. |
@@ -60,6 +61,8 @@ providers.
 - Agent Command: missing or malformed local config falls back to default local
   agents and example tasks; request/run buttons report that AI provider
   integration is not connected.
+- Workspace state: missing local state falls back to `HUB`; imported state is
+  sanitized to known-safe workspace ids.
 - Calendar permission denied: Calendar shows a local permissions/account
   prompt instead of crashing.
 - Apple Music permission denied: Music shows a disconnected/permission state

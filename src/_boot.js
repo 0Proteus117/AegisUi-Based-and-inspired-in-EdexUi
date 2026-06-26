@@ -56,6 +56,7 @@ const mapLayersFile = path.join(electron.app.getPath("userData"), "map-layers.js
 const launchBayGamesFile = path.join(electron.app.getPath("userData"), "launch-bay-games.json");
 const developerDeckFile = path.join(electron.app.getPath("userData"), "developer-deck.json");
 const agentCommandFile = path.join(electron.app.getPath("userData"), "agent-command.json");
+const workspaceStateFile = path.join(electron.app.getPath("userData"), "workspace-state.json");
 const themesDir = path.join(electron.app.getPath("userData"), "themes");
 const innerThemesDir = path.join(__dirname, "assets/themes");
 const kblayoutsDir = path.join(electron.app.getPath("userData"), "keyboards");
@@ -800,6 +801,47 @@ function updateAgentCommandTask(taskId, action) {
     return writeAgentCommandConfig(config);
 }
 
+function defaultWorkspaceState() {
+    return {
+        version: 1,
+        activeWorkspace: "hub",
+        lastNonHubWorkspace: "",
+        navigationMode: "pinned-hub-scroll-rail"
+    };
+}
+
+function sanitizeWorkspaceState(input = {}) {
+    const cleanId = value => {
+        const id = String(value || "").trim().toLowerCase();
+        return /^[a-z0-9_-]{1,80}$/.test(id) ? id : "";
+    };
+    const activeWorkspace = cleanId(input.activeWorkspace) || "hub";
+    const lastNonHubWorkspace = cleanId(input.lastNonHubWorkspace);
+    return {
+        version: 1,
+        updatedAt: new Date().toISOString(),
+        activeWorkspace,
+        lastNonHubWorkspace: lastNonHubWorkspace === "hub" ? "" : lastNonHubWorkspace,
+        navigationMode: "pinned-hub-scroll-rail"
+    };
+}
+
+function readWorkspaceState() {
+    try {
+        if (!fs.existsSync(workspaceStateFile)) return sanitizeWorkspaceState(defaultWorkspaceState());
+        return sanitizeWorkspaceState(JSON.parse(fs.readFileSync(workspaceStateFile, "utf8")));
+    } catch (error) {
+        return sanitizeWorkspaceState(defaultWorkspaceState());
+    }
+}
+
+function writeWorkspaceState(input = {}) {
+    const current = readWorkspaceState();
+    const next = sanitizeWorkspaceState({...current, ...input});
+    fs.writeFileSync(workspaceStateFile, JSON.stringify(next, null, 4));
+    return next;
+}
+
 function loadLocalEnvFile() {
     const candidates = [
         process.env.AEGISUI_ENV_FILE,
@@ -1305,6 +1347,20 @@ ipc.handle("agent-command-run-agent", async () => {
         error: "AI provider integration is not connected in Agent Command foundation. Agents can only hold local prompts, roles and draft placeholders."
     };
 });
+ipc.handle("workspace-state-read", () => {
+    try {
+        return {ok: true, data: readWorkspaceState()};
+    } catch (error) {
+        return {ok: false, error: error.message || "Workspace state unavailable."};
+    }
+});
+ipc.handle("workspace-state-save", (event, payload = {}) => {
+    try {
+        return {ok: true, data: writeWorkspaceState(payload)};
+    } catch (error) {
+        return {ok: false, error: error.message || "Cannot save workspace state."};
+    }
+});
 ipc.handle("engineering-projects", () => {
     try {
         return {ok: true, data: JSON.parse(fs.readFileSync(projectsFile, "utf8"))};
@@ -1620,6 +1676,10 @@ if (!fs.existsSync(developerDeckFile)) {
 if (!fs.existsSync(agentCommandFile)) {
     fs.writeFileSync(agentCommandFile, JSON.stringify(defaultAgentCommandConfig(), null, 4));
     signale.info(`Default Agent Command deck written to ${agentCommandFile}`);
+}
+if (!fs.existsSync(workspaceStateFile)) {
+    fs.writeFileSync(workspaceStateFile, JSON.stringify(defaultWorkspaceState(), null, 4));
+    signale.info(`Default workspace state written to ${workspaceStateFile}`);
 }
 if (!fs.existsSync(musicPlaylistsFile)) {
     fs.writeFileSync(musicPlaylistsFile, JSON.stringify([], null, 4));

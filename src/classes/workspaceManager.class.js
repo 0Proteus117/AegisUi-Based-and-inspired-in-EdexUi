@@ -20,6 +20,7 @@ class WorkspaceManager {
 
         const savedWorkspace = localStorage.getItem("edexui-eng-active-workspace");
         this.activate(this.byId.has(savedWorkspace) ? savedWorkspace : "hub", false);
+        this.restorePersistedWorkspaceState();
     }
 
     escape(value) {
@@ -146,6 +147,8 @@ class WorkspaceManager {
 
         document.body.dataset.workspace = workspaceId;
         localStorage.setItem("edexui-eng-active-workspace", workspaceId);
+        if (workspaceId !== "hub") localStorage.setItem("edexui-eng-last-non-hub-workspace", workspaceId);
+        this.persistWorkspaceState(workspaceId);
         const label = document.getElementById("workspace_active_label");
         if (label) label.innerText = definition.navigationLabel;
 
@@ -159,6 +162,27 @@ class WorkspaceManager {
         }
 
         if (playSound && window.audioManager) window.audioManager.folder.play();
+    }
+
+    async restorePersistedWorkspaceState() {
+        try {
+            const response = await this.ipc.invoke("workspace-state-read");
+            if (!response.ok || !response.data) return;
+            const storedWorkspace = response.data.activeWorkspace;
+            if (this.byId.has(storedWorkspace) && storedWorkspace !== this.activeId) {
+                this.activate(storedWorkspace, false);
+            }
+        } catch (error) {}
+    }
+
+    persistWorkspaceState(workspaceId) {
+        if (!this.ipc || !this.ipc.invoke) return;
+        this.ipc.invoke("workspace-state-save", {
+            activeWorkspace: workspaceId,
+            lastNonHubWorkspace: workspaceId === "hub"
+                ? localStorage.getItem("edexui-eng-last-non-hub-workspace") || ""
+                : workspaceId
+        }).catch(() => {});
     }
 
     getActiveWorkspace() {

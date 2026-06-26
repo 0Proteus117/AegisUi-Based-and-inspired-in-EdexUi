@@ -56,6 +56,7 @@
     "launchBayGames": "launch-bay-games.json",
     "developerDeck": "developer-deck.json",
     "agentCommand": "agent-command.json",
+    "workspaceState": "workspace-state.json",
     "settings": "settings.json",
     "shortcuts": "shortcuts.json"
   },
@@ -80,5 +81,10 @@
     "cloudContextSharing": false,
     "automaticFileWrites": false,
     "automaticCommits": false
+  },
+  "workspaceState": {
+    "storage": "workspace-state.json",
+    "activeWorkspace": "hub",
+    "navigationMode": "pinned-hub-scroll-rail"
   }
 }

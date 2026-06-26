@@ -19,7 +19,8 @@ const EXPORTABLE_JSON_FILES = [
     "map-layers.json",
     "launch-bay-games.json",
     "developer-deck.json",
-    "agent-command.json"
+    "agent-command.json",
+    "workspace-state.json"
 ];
 
 const SENSITIVE_KEYS = new Set([

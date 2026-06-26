@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.9.1 - 2026-06-26
+
+### Added
+
+- Added exportable local `workspace-state.json` for the active workspace,
+  last non-HUB workspace and navigation mode.
+- Added safe IPC read/write handlers for workspace state.
+
+### Changed
+
+- Workspace navigation now mirrors its remembered state to local app data in
+  addition to renderer local storage, making workspace state portable through
+  the existing config export/import flow.
+
 ## 1.9.0 - 2026-06-26
 
 ### Added
