@@ -87,7 +87,10 @@ pressed. Calendar requests local read-only EventKit access; Music requests
 Automation access. Weather radar needs no key. Real-time road traffic can be
 enabled from the map's `API KEY` button with a TomTom Traffic API key. Air,
 maritime, satellite and ocean map layers stay fully idle until their toggles
-are enabled.
+are enabled. The map's `⚙` settings button controls layer toggles, SAT
+CelesTrak groups, density caps, provider limits, radar opacity, expanded-map
+behavior, local UI sounds and location fallback behavior without storing API
+keys.
 
 The dashboard creates private configuration files inside the EdexUi-Eng
 application-data folder. They are never committed to GitHub:

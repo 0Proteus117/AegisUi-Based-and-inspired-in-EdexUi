@@ -34,6 +34,13 @@ function getObjectName(item) {
         || (item.NORAD_CAT_ID ? `NORAD ${item.NORAD_CAT_ID}` : "Unknown satellite");
 }
 
+function isCelesTrakNotUpdated(error) {
+    const body = String(error && error.responseText ? error.responseText : "").toLowerCase();
+    return Number(error && error.status) === 403
+        && body.includes("gp data has not updated")
+        && body.includes("last successful");
+}
+
 class CelesTrakProvider extends BaseMapProvider {
     constructor(definition) {
         super(definition);
@@ -47,7 +54,7 @@ class CelesTrakProvider extends BaseMapProvider {
         const configured = context && context.getEnv
             ? context.getEnv("CELESTRAK_GROUP") || context.getEnv("AEGISUI_CELESTRAK_GROUP")
             : "";
-        return String(configured || this.definition.defaultGroup || "stations")
+        return String(this.definition.defaultGroup || configured || "stations")
             .trim()
             .replace(/[^a-z0-9_-]/ig, "")
             .toLowerCase() || "stations";
@@ -138,6 +145,14 @@ class CelesTrakProvider extends BaseMapProvider {
             this.renderSatellitePositions(context);
         } catch (error) {
             if (this.layerGroup) this.layerGroup.clearLayers();
+            if (isCelesTrakNotUpdated(error)) {
+                this.setStatus(MAP_LAYER_STATES.RATE_LIMITED, {
+                    error: "CelesTrak data has not updated since the last successful download",
+                    summary: `CelesTrak cache window active · ${group}`,
+                    count: 0
+                });
+                return;
+            }
             this.applyProviderError(error, context, "CelesTrak service unavailable");
         }
     }

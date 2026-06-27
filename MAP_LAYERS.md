@@ -19,6 +19,26 @@ Each layer is optional, locally remembered and resource-aware:
 | `SATELLITES` | `SAT` | CelesTrak GP JSON + SGP4 positions | OFF | No key; `CELESTRAK_GROUP` optional |
 | `OCEAN_ALERTS` | `OCEAN` | NOAA/NDBC active stations | OFF | No key |
 
+## Map settings popup
+
+v2.0.4 adds a compact cockpit settings button (`⚙`) inside `Local Situation`.
+The popup is local-only and lets the user tune provider behavior without
+editing JSON by hand:
+
+- enable/disable `TRAFFIC`, `RADAR`, `AIR`, `SEA`, `SAT` and `OCEAN`;
+- choose CelesTrak satellite group and density;
+- cap AIR aircraft, SEA vessels, SAT objects/markers and OCEAN stations;
+- tune AIR refresh interval and wider/visible bounding-box mode;
+- select OCEAN source/filter mode;
+- adjust radar and traffic opacity;
+- see provider status/configuration hints;
+- toggle subtle local UI sounds;
+- choose default map-location behavior.
+
+The popup writes renderer `localStorage` preferences only. API keys are not
+stored there. Existing `map-layers.json` remains the portable layer-state file
+for active/opacity/mode preferences.
+
 ## Layer states
 
 | State | Meaning |
@@ -93,6 +113,10 @@ Provider references:
 - Refresh interval is 5 minutes while ON.
 - No key is required.
 - Failures show `SERVICE_UNAVAILABLE` / `OFFLINE`.
+- Radar opacity is configurable in the map settings popup.
+- Dedicated maritime radar coverage is marked `NOT SUPPORTED BY CURRENT
+  PROVIDER`. RainViewer may show precipitation wherever its public mosaic has
+  coverage, but AegisUi does not fake sea radar or infer marine coverage.
 
 ### `AIR_TRAFFIC`
 
@@ -102,8 +126,9 @@ Provider references:
   - `OPENSKY_ACCESS_TOKEN`; or
   - `OPENSKY_CLIENT_ID` + `OPENSKY_CLIENT_SECRET` for OAuth client credentials.
 - Cache TTL: 45 seconds.
-- Refresh interval: 60 seconds while ON.
-- Marker cap: 120 aircraft.
+- Refresh interval is configurable: 30s, 60s or 120s.
+- Marker cap is configurable: 25, 50, 100 or 200 aircraft.
+- Bounding-box mode can use visible map bounds or a wider surrounding area.
 - OFF means no requests and no aircraft markers.
 
 ### `MARITIME_AIS`
@@ -113,7 +138,9 @@ Provider references:
 - Missing key shows `CONFIG_REQUIRED`.
 - OFF means no WebSocket and no vessel markers.
 - The layer closes the socket and clears markers when disabled.
-- Marker cap: 150 vessels.
+- Marker cap is configurable: 50, 100 or 250 vessels.
+- AISStream is the current provider. `TEST CONNECTION` in settings does not
+  open a WebSocket unless the SEA layer itself is enabled.
 
 ### `SATELLITES`
 
@@ -121,12 +148,28 @@ Provider references:
 - Converts CelesTrak OMM/GP records with `satellite.js` `json2satrec`.
 - Propagates positions locally with SGP4; no fake satellite markers are drawn.
 - Default group: `stations`.
-- Override group with `CELESTRAK_GROUP`.
+- The settings popup can select:
+  - `stations`: small, clean station-related set;
+  - `active`: broad active catalog;
+  - `starlink`: Starlink constellation;
+  - `weather`: meteorological satellites;
+  - `gps-ops`: operational GPS;
+  - `visual`: commonly visible objects;
+  - `last-30-days`: recently updated/launched objects;
+  - `geo`: geostationary objects;
+  - `science`: science missions.
+- `CELESTRAK_GROUP` remains a local fallback, but the UI selector has priority
+  once a user chooses a group.
+- Density presets:
+  - `LOW`: process 200 objects, draw up to 40 markers;
+  - `MEDIUM`: process 800 objects, draw up to 80 markers;
+  - `HIGH`: process 2000 objects, draw up to 200 markers;
+  - `CUSTOM`: user-defined local caps.
 - Cache TTL: 6 hours.
+- CelesTrak can respond with a `403` cache-window message when the same group
+  is requested again before its GP data has updated; AegisUi reports this as
+  `RATE_LIMITED`/cache-window status rather than drawing stale fake markers.
 - Position refresh interval: 60 seconds while ON.
-- Marker cap: 80 visible satellites.
-- Catalog processing cap: 800 objects to protect CPU when broad CelesTrak
-  groups are selected.
 - OFF means no CelesTrak requests, no propagation timer and no satellite
   markers.
 - Successful propagation reports `ONLINE` and draws only real calculated
@@ -139,10 +182,24 @@ Provider references:
 - Uses NOAA/NDBC active station XML.
 - Cache TTL: 10 minutes.
 - Refresh interval: 10 minutes while ON.
-- Filters stations to the visible map area when possible.
-- Marker cap: 180 stations.
+- Source is configurable between NDBC active stations and DART tsunami buoys.
+- Filter mode is configurable:
+  - visible map bounds;
+  - global;
+  - coastal-only best-effort filtering from real NOAA/NDBC station metadata.
+- Marker cap is configurable: 100, 500 or 1500 stations.
 - Clicking a station attempts to load its latest public realtime observation.
 - If no station exists in the visible area, the layer reports `NO_DATA`.
+
+## Map controls
+
+- `⚙` opens the map-layer settings popup.
+- `⛶` expands/collapses the map inside the app with a short local cockpit
+  transition sound when UI sounds are enabled.
+- `⌖` asks the browser/Electron geolocation API for current location. If
+  permission is unavailable or denied, the map shows `LOCATION PERMISSION
+  REQUIRED` / fallback status and centers on the configured local fallback
+  rather than storing or committing private coordinates.
 
 ## Configuration
 
@@ -178,8 +235,8 @@ preferences only; it should not contain provider secrets.
 - OpenSky throttling reports `RATE_LIMITED`.
 - Provider outages report `SERVICE_UNAVAILABLE`.
 - Empty real results report `NO_DATA`.
-- Satellite catalog data does not become map markers until a real position
-  engine is approved.
+- Satellite catalog data does not become map markers unless local SGP4
+  propagation calculates real latitude/longitude positions.
 
 ## Privacy and performance
 

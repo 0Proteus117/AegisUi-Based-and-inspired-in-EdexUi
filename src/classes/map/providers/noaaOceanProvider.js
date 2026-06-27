@@ -50,6 +50,16 @@ function parseRealtimeObservation(text) {
     return record;
 }
 
+function stationLooksCoastal(station) {
+    const text = [
+        station.owner,
+        station.program,
+        station.type,
+        station.name
+    ].join(" ").toLowerCase();
+    return /coast|co-op|coops|ports|tide|water level|estuar|fixed|pier|shore|harbor|harbour/.test(text);
+}
+
 class NOAAOceanProvider extends BaseMapProvider {
     async start(context) {
         await super.start(context);
@@ -101,7 +111,7 @@ class NOAAOceanProvider extends BaseMapProvider {
         }
 
         this.setStatus(MAP_LAYER_STATES.LOADING, {
-            summary: "Loading NOAA/NDBC active stations"
+            summary: `Loading NOAA/NDBC ${this.definition.source === "dart" ? "DART buoys" : "active stations"}`
         });
 
         const controller = this.createAbortController();
@@ -112,7 +122,10 @@ class NOAAOceanProvider extends BaseMapProvider {
                 this.definition.cacheTtlMs,
                 () => this.fetchText(NDBC_ACTIVE_STATIONS_URL, {signal: controller.signal})
             );
-            const stations = parseStationXml(xmlText);
+            let stations = parseStationXml(xmlText);
+            if (this.definition.source === "dart") {
+                stations = stations.filter(station => String(station.dart || "").toLowerCase() === "y");
+            }
             this.renderStations(context, stations);
         } catch (error) {
             if (this.layerGroup) this.layerGroup.clearLayers();
@@ -128,15 +141,17 @@ class NOAAOceanProvider extends BaseMapProvider {
         }
 
         const bounds = this.getMapBounds(context);
+        const filterMode = this.definition.filterMode || "visible";
         const visibleStations = stations
             .filter(station => {
-                if (!bounds) return true;
+                if (filterMode === "coastal" && !stationLooksCoastal(station)) return false;
+                if (filterMode === "global" || !bounds) return true;
                 return station.latitude >= bounds.south
                     && station.latitude <= bounds.north
                     && station.longitude >= bounds.west
                     && station.longitude <= bounds.east;
             })
-            .slice(0, this.definition.maxMarkers);
+            .slice(0, this.definition.maxMarkers || 500);
 
         this.layerGroup.clearLayers();
 
@@ -164,14 +179,14 @@ class NOAAOceanProvider extends BaseMapProvider {
 
         if (!visibleStations.length) {
             this.setStatus(MAP_LAYER_STATES.NO_DATA, {
-                summary: `${stations.length} NOAA stations loaded · none in current map view`,
+                summary: `${stations.length} NOAA stations loaded · no ${filterMode} matches`,
                 count: 0
             });
             return;
         }
 
         this.setStatus(MAP_LAYER_STATES.ONLINE, {
-            summary: `NOAA/NDBC active stations in view · ${stations.length} total loaded`,
+            summary: `NOAA/NDBC ${this.definition.source === "dart" ? "DART" : "active"} stations · ${filterMode} · ${stations.length} loaded`,
             count: visibleStations.length
         });
     }

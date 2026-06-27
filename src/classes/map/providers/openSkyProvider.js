@@ -20,6 +20,23 @@ function formatVelocity(ms) {
 }
 
 class OpenSkyProvider extends BaseMapProvider {
+    getRequestBounds(context) {
+        const bounds = this.getMapBounds(context);
+        if (!bounds || this.definition.boundsMode !== "wide") return bounds;
+
+        const latSpan = Math.max(0.5, bounds.north - bounds.south);
+        const lonSpan = Math.max(0.5, bounds.east - bounds.west);
+        const latPadding = Math.min(8, Math.max(0.75, latSpan * 0.75));
+        const lonPadding = Math.min(12, Math.max(0.75, lonSpan * 0.75));
+
+        return {
+            south: Math.max(-90, bounds.south - latPadding),
+            west: Math.max(-180, bounds.west - lonPadding),
+            north: Math.min(90, bounds.north + latPadding),
+            east: Math.min(180, bounds.east + lonPadding)
+        };
+    }
+
     async start(context) {
         await super.start(context);
         this.layerGroup = context.L.layerGroup();
@@ -70,7 +87,7 @@ class OpenSkyProvider extends BaseMapProvider {
             return;
         }
 
-        const bounds = this.getMapBounds(context);
+        const bounds = this.getRequestBounds(context);
         if (!bounds) {
             this.setStatus(MAP_LAYER_STATES.ERROR, {
                 error: "Map bounds unavailable",
@@ -121,7 +138,7 @@ class OpenSkyProvider extends BaseMapProvider {
             }))
             .filter(item => item.latitude !== null && item.longitude !== null)
             .sort((a, b) => Number(b.lastContact || 0) - Number(a.lastContact || 0))
-            .slice(0, this.definition.maxMarkers);
+            .slice(0, this.definition.maxMarkers || 100);
 
         if (!this.layerGroup) {
             this.layerGroup = context.L.layerGroup();
@@ -163,7 +180,7 @@ class OpenSkyProvider extends BaseMapProvider {
         }
 
         this.setStatus(MAP_LAYER_STATES.ONLINE, {
-            summary: `OpenSky aircraft in view · limited to ${this.definition.maxMarkers}`,
+            summary: `OpenSky aircraft ${this.definition.boundsMode === "wide" ? "wide area" : "in view"} · limited to ${this.definition.maxMarkers || 100}`,
             count: aircraft.length
         });
     }

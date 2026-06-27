@@ -195,9 +195,14 @@ class BaseMapProvider {
 
         const response = await fetch(url, options);
         if (!response.ok) {
+            let responseText = "";
+            try {
+                responseText = await response.text();
+            } catch (readError) {}
             const error = new Error(`Remote service returned ${response.status}`);
             error.status = response.status;
             error.statusText = response.statusText;
+            error.responseText = responseText;
             throw error;
         }
         return response.text();
@@ -219,6 +224,7 @@ class BaseMapProvider {
                         const error = new Error(`Remote service returned ${response.statusCode}`);
                         error.status = response.statusCode;
                         error.statusText = response.statusMessage;
+                        error.responseText = body;
                         reject(error);
                         return;
                     }

@@ -233,6 +233,34 @@ body.engineering-mode {
     z-index: 560;
     right: .7vh;
     bottom: .7vh;
+    display: flex;
+    gap: .35vh;
+    align-items: end;
+}
+
+.engineering-mode .eng-map-config-actions button {
+    min-width: 3.1vh;
+}
+
+.engineering-mode .eng-map-config-actions .eng-map-icon-button {
+    width: 3.1vh;
+    min-width: 3.1vh;
+    height: 2.25vh;
+    padding: 0;
+    display: grid;
+    place-items: center;
+    color: var(--eng-blue-soft);
+    border-color: rgba(36, 68, 95, .88);
+    background: rgba(7, 11, 16, .88);
+    font-size: 1.05vh;
+}
+
+.engineering-mode .eng-map-config-actions .eng-map-icon-button:hover,
+.engineering-mode .eng-map-config-actions .eng-map-icon-button.active {
+    color: #071019;
+    border-color: var(--eng-blue);
+    background: var(--eng-blue);
+    box-shadow: 0 0 .8vh rgba(59, 167, 255, .32);
 }
 
 .engineering-mode .eng-map-layer-toggle {
@@ -273,6 +301,211 @@ body.engineering-mode {
 
 .engineering-mode .eng-map-layer-toggle.informative {
     border-color: rgba(255, 184, 77, .72);
+    color: #FFB84D;
+}
+
+.engineering-mode #eng_map_panel.eng-map-expanded {
+    position: fixed;
+    z-index: 2400;
+    inset: 3.2vh 2.2vw 2.2vh 2.2vw;
+    grid-area: none;
+    box-shadow: 0 0 0 200vmax rgba(2, 6, 10, .86), 0 0 5vh rgba(59, 167, 255, .16);
+    transition: inset .24s ease, box-shadow .24s ease, transform .24s ease;
+}
+
+.engineering-mode #eng_map_panel.eng-map-expanded #eng_map_canvas {
+    inset: 2.05vh 0 0;
+}
+
+.engineering-mode #eng_map_panel.eng-map-expanded .eng-map-layer-readout {
+    max-width: min(34vh, calc(100% - 1.4vh));
+}
+
+body.eng-map-expanded-active {
+    overflow: hidden;
+}
+
+.engineering-mode #eng_map_settings_overlay {
+    position: fixed;
+    z-index: 2600;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 3vh;
+    box-sizing: border-box;
+    background:
+        radial-gradient(circle at 50% 28%, rgba(59, 167, 255, .13), transparent 34%),
+        rgba(2, 6, 10, .88);
+    backdrop-filter: blur(.7vh);
+    animation: engEditorBackdropIn .18s ease both;
+}
+
+.engineering-mode #eng_map_settings_modal {
+    width: min(92vw, 168vh);
+    height: min(84vh, 86rem);
+    min-width: min(76vh, 94vw);
+    display: grid;
+    grid-template-rows: 6.7vh minmax(0, 1fr) 5.8vh;
+    color: var(--eng-blue-soft);
+    background:
+        linear-gradient(135deg, rgba(59, 167, 255, .06), transparent 38%),
+        rgba(7, 11, 16, .985);
+    --aug-border: .18vh;
+    --aug-border-bg: var(--eng-blue);
+    --aug-inlay: .42vh;
+    --aug-inlay-bg: rgba(59, 167, 255, .08);
+    box-shadow: 0 0 8vh rgba(0, 0, 0, .75), 0 0 3vh rgba(59, 167, 255, .12);
+}
+
+.engineering-mode .eng-map-settings-header,
+.engineering-mode .eng-map-settings-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1vh;
+    padding: 1vh 1.55vh;
+    box-sizing: border-box;
+    border-bottom: .1vh solid rgba(59, 167, 255, .26);
+    background: linear-gradient(90deg, rgba(19, 38, 58, .72), transparent);
+}
+
+.engineering-mode .eng-map-settings-footer {
+    border-top: .1vh solid rgba(59, 167, 255, .26);
+    border-bottom: 0;
+}
+
+.engineering-mode .eng-map-settings-header small,
+.engineering-mode .eng-map-settings-footer span {
+    color: rgba(124, 203, 255, .56);
+    font: .76vh var(--font_main);
+    letter-spacing: .12vh;
+}
+
+.engineering-mode .eng-map-settings-header h1 {
+    margin: .25vh 0 0;
+    color: var(--eng-blue-soft);
+    font: 1.85vh var(--font_main);
+    letter-spacing: .16vh;
+}
+
+.engineering-mode #eng_map_settings_close {
+    width: 3.2vh;
+    height: 3.2vh;
+    padding: 0;
+    font-size: 1.6vh;
+}
+
+.engineering-mode .eng-map-settings-body {
+    min-height: 0;
+    overflow: auto;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(22vh, 1fr));
+    gap: .9vh;
+    padding: 1vh;
+    box-sizing: border-box;
+}
+
+.engineering-mode .eng-map-settings-section {
+    min-width: 0;
+    display: grid;
+    align-content: start;
+    gap: .7vh;
+    padding: 1vh;
+    border: .1vh solid rgba(36, 68, 95, .72);
+    background: rgba(16, 24, 32, .56);
+}
+
+.engineering-mode .eng-map-settings-section h2 {
+    margin: 0;
+    color: var(--eng-blue);
+    font: 1.05vh var(--font_main);
+    letter-spacing: .13vh;
+}
+
+.engineering-mode .eng-map-settings-section label {
+    min-width: 0;
+    display: grid;
+    gap: .32vh;
+    color: rgba(124, 203, 255, .72);
+    font: .78vh var(--font_main);
+    letter-spacing: .08vh;
+}
+
+.engineering-mode .eng-map-settings-section select,
+.engineering-mode .eng-map-settings-section input[type="number"] {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    padding: .55vh .6vh;
+    border: .1vh solid rgba(36, 68, 95, .9);
+    color: var(--eng-blue-soft);
+    background: rgba(2, 6, 10, .86);
+    font: .88vh var(--font_mono);
+    outline: none;
+}
+
+.engineering-mode .eng-map-settings-section input[type="range"] {
+    width: 100%;
+    accent-color: var(--eng-blue);
+}
+
+.engineering-mode .eng-map-settings-section small,
+.engineering-mode .eng-map-settings-section p {
+    margin: 0;
+    color: rgba(124, 203, 255, .5);
+    font: .72vh var(--font_main_light);
+    line-height: 1.35;
+}
+
+.engineering-mode .eng-map-settings-warning {
+    color: #FFB84D !important;
+}
+
+.engineering-mode .eng-map-settings-pair {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .65vh;
+}
+
+.engineering-mode .eng-map-settings-switch {
+    display: grid !important;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: .45vh .65vh !important;
+    padding: .55vh;
+    border: .1vh solid rgba(36, 68, 95, .68);
+    background: rgba(7, 11, 16, .56);
+}
+
+.engineering-mode .eng-map-settings-switch input {
+    accent-color: var(--eng-blue);
+}
+
+.engineering-mode .eng-map-settings-switch em {
+    font: .68vh var(--font_mono);
+    color: var(--eng-blue-soft);
+    opacity: .76;
+}
+
+.engineering-mode .eng-map-settings-switch small {
+    grid-column: 2 / -1;
+}
+
+.engineering-mode .eng-map-settings-status {
+    display: grid;
+    gap: .25vh;
+    padding: .55vh;
+    border: .1vh solid rgba(36, 68, 95, .72);
+    background: rgba(7, 11, 16, .54);
+    font: .76vh var(--font_main);
+}
+
+.engineering-mode .eng-map-settings-status.ready {
+    border-color: rgba(125, 255, 178, .45);
+}
+
+.engineering-mode .eng-map-settings-status.missing {
+    border-color: rgba(255, 184, 77, .58);
     color: #FFB84D;
 }
 

@@ -6,6 +6,71 @@ const {
     statusIsInformative
 } = require(require("path").join(__dirname, "classes/map/utils/mapLayerState.js"));
 
+const MAP_SATELLITE_GROUPS = Object.freeze({
+    "stations": {
+        label: "Stations",
+        description: "Few objects, clean view: ISS, Tiangong and crewed station-related objects."
+    },
+    "active": {
+        label: "Active",
+        description: "Large active catalog. Use medium/high density carefully."
+    },
+    "starlink": {
+        label: "Starlink",
+        description: "Starlink constellation objects from CelesTrak."
+    },
+    "weather": {
+        label: "Weather",
+        description: "Weather and meteorological satellites."
+    },
+    "gps-ops": {
+        label: "GPS OPS",
+        description: "Operational GPS spacecraft."
+    },
+    "visual": {
+        label: "Visual",
+        description: "Objects commonly visible under favorable sky conditions."
+    },
+    "last-30-days": {
+        label: "Last 30 days",
+        description: "Objects launched or updated in the last 30 days."
+    },
+    "geo": {
+        label: "GEO",
+        description: "Geostationary and near-geostationary objects."
+    },
+    "science": {
+        label: "Science",
+        description: "Scientific spacecraft and research missions."
+    }
+});
+
+const MAP_SATELLITE_DENSITIES = Object.freeze({
+    LOW: {maxOrbitObjects: 200, maxMarkers: 40, description: "Fast and tidy"},
+    MEDIUM: {maxOrbitObjects: 800, maxMarkers: 80, description: "Balanced cockpit default"},
+    HIGH: {maxOrbitObjects: 2000, maxMarkers: 200, description: "Dense view; higher CPU/GPU load"},
+    CUSTOM: {maxOrbitObjects: 800, maxMarkers: 80, description: "Manual limits"}
+});
+
+function clampMapNumber(value, fallback, min, max) {
+    const number = Number(value);
+    if (!Number.isFinite(number)) return fallback;
+    return Math.max(min, Math.min(max, number));
+}
+
+function selectMapOption(value, allowed, fallback) {
+    const normalized = String(value || "").trim();
+    return allowed.includes(normalized) ? normalized : fallback;
+}
+
+function cloneMapData(value) {
+    try {
+        return JSON.parse(JSON.stringify(value || {}));
+    } catch (error) {
+        return {};
+    }
+}
+
 class EngineeringDashboard {
     constructor(parentId) {
         if (!parentId) throw "Missing options";
@@ -18,6 +83,9 @@ class EngineeringDashboard {
                 <div class="eng-map-controls" id="eng_map_layer_controls"></div>
                 <div class="eng-map-layer-readout" id="eng_map_layer_readout"></div>
                 <div class="eng-map-config-actions">
+                    <button id="eng_map_location" class="eng-map-icon-button" title="Return to my location" aria-label="Return to my location">⌖</button>
+                    <button id="eng_map_expand" class="eng-map-icon-button" title="Expand map" aria-label="Expand map">⛶</button>
+                    <button id="eng_map_settings" class="eng-map-icon-button" title="Map layer settings" aria-label="Map layer settings">⚙</button>
                     <button id="eng_traffic_config">API KEY</button>
                 </div>
                 <form id="eng_traffic_form">
@@ -57,6 +125,7 @@ class EngineeringDashboard {
 class EngineeringMapPanel {
     constructor() {
         this.ipc = require("electron").ipcRenderer;
+        this.panel = document.getElementById("eng_map_panel");
         this.status = document.getElementById("eng_map_status");
         this.controls = document.getElementById("eng_map_layer_controls");
         this.readout = document.getElementById("eng_map_layer_readout");
@@ -64,6 +133,10 @@ class EngineeringMapPanel {
         this.trafficKey = window.settings.tomtomApiKey || "";
         this.offlineMode = Boolean(window.settings.offlineMode);
         this.layerStorageKey = "aegisui-map-layers-v1";
+        this.settingsStorageKey = "aegisui-map-settings-v1";
+        this.mapSettings = this.loadMapSettings();
+        this.expanded = false;
+        this.settingsOverlay = null;
         this.layerPreferences = this.loadLayerPreferences();
         this.hasLocalLayerPreferences = Object.keys(this.layerPreferences).length > 0;
         this.layerDefinitions = this.createLayerDefinitions();
@@ -87,6 +160,9 @@ class EngineeringMapPanel {
         });
         L.control.zoom({position: "bottomright"}).addTo(this.map);
 
+        document.getElementById("eng_map_settings").addEventListener("click", () => this.openSettingsModal());
+        document.getElementById("eng_map_expand").addEventListener("click", () => this.toggleExpandedMap());
+        document.getElementById("eng_map_location").addEventListener("click", () => this.returnToMyLocation());
         document.getElementById("eng_traffic_config").addEventListener("click", () => this.showTrafficForm());
         document.getElementById("eng_traffic_get_key").addEventListener("click", () => {
             this.ipc.invoke("traffic-open-key-page");
@@ -104,10 +180,160 @@ class EngineeringMapPanel {
         this.loadRuntimeConfig();
         this.updateLocation();
         this.locationTimer = setInterval(() => this.updateLocation(), 3000);
+        document.addEventListener("keydown", event => {
+            if (event.key !== "Escape") return;
+            if (this.settingsOverlay) {
+                this.closeSettingsModal();
+                return;
+            }
+            if (this.expanded) this.toggleExpandedMap(false);
+        });
         setTimeout(() => this.map.invalidateSize(), 400);
     }
 
+    defaultMapSettings() {
+        return {
+            satellite: {
+                group: "stations",
+                density: "MEDIUM",
+                customMaxOrbitObjects: MAP_SATELLITE_DENSITIES.MEDIUM.maxOrbitObjects,
+                customMaxMarkers: MAP_SATELLITE_DENSITIES.MEDIUM.maxMarkers
+            },
+            air: {
+                maxMarkers: 100,
+                refreshIntervalMs: 60 * 1000,
+                boundsMode: "visible"
+            },
+            sea: {
+                provider: "AISStream",
+                areaMode: "visible",
+                maxVessels: 100
+            },
+            ocean: {
+                source: "ndbc-active",
+                filterMode: "visible",
+                maxStations: 500
+            },
+            radar: {
+                opacity: 0.55,
+                seaCoverage: "not-supported"
+            },
+            traffic: {
+                opacity: 0.9
+            },
+            uiSounds: true,
+            defaultLocation: {
+                mode: "current",
+                customLat: "",
+                customLon: ""
+            }
+        };
+    }
+
+    sanitizeMapSettings(input = {}) {
+        const defaults = this.defaultMapSettings();
+        const satellite = input.satellite && typeof input.satellite === "object" ? input.satellite : {};
+        const air = input.air && typeof input.air === "object" ? input.air : {};
+        const sea = input.sea && typeof input.sea === "object" ? input.sea : {};
+        const ocean = input.ocean && typeof input.ocean === "object" ? input.ocean : {};
+        const radar = input.radar && typeof input.radar === "object" ? input.radar : {};
+        const traffic = input.traffic && typeof input.traffic === "object" ? input.traffic : {};
+        const defaultLocation = input.defaultLocation && typeof input.defaultLocation === "object"
+            ? input.defaultLocation
+            : {};
+
+        return {
+            satellite: {
+                group: selectMapOption(
+                    satellite.group,
+                    Object.keys(MAP_SATELLITE_GROUPS),
+                    defaults.satellite.group
+                ),
+                density: selectMapOption(
+                    String(satellite.density || "").toUpperCase(),
+                    Object.keys(MAP_SATELLITE_DENSITIES),
+                    defaults.satellite.density
+                ),
+                customMaxOrbitObjects: clampMapNumber(
+                    satellite.customMaxOrbitObjects,
+                    defaults.satellite.customMaxOrbitObjects,
+                    50,
+                    5000
+                ),
+                customMaxMarkers: clampMapNumber(
+                    satellite.customMaxMarkers,
+                    defaults.satellite.customMaxMarkers,
+                    10,
+                    500
+                )
+            },
+            air: {
+                maxMarkers: clampMapNumber(air.maxMarkers, defaults.air.maxMarkers, 25, 200),
+                refreshIntervalMs: clampMapNumber(
+                    air.refreshIntervalMs,
+                    defaults.air.refreshIntervalMs,
+                    30 * 1000,
+                    120 * 1000
+                ),
+                boundsMode: selectMapOption(air.boundsMode, ["visible", "wide"], defaults.air.boundsMode)
+            },
+            sea: {
+                provider: "AISStream",
+                areaMode: selectMapOption(sea.areaMode, ["visible", "custom"], defaults.sea.areaMode),
+                maxVessels: clampMapNumber(sea.maxVessels, defaults.sea.maxVessels, 50, 250)
+            },
+            ocean: {
+                source: selectMapOption(ocean.source, ["ndbc-active", "dart"], defaults.ocean.source),
+                filterMode: selectMapOption(
+                    ocean.filterMode,
+                    ["visible", "global", "coastal"],
+                    defaults.ocean.filterMode
+                ),
+                maxStations: clampMapNumber(ocean.maxStations, defaults.ocean.maxStations, 100, 1500)
+            },
+            radar: {
+                opacity: clampMapNumber(radar.opacity, defaults.radar.opacity, 0.15, 0.95),
+                seaCoverage: "not-supported"
+            },
+            traffic: {
+                opacity: clampMapNumber(traffic.opacity, defaults.traffic.opacity, 0.25, 1)
+            },
+            uiSounds: typeof input.uiSounds === "boolean" ? input.uiSounds : defaults.uiSounds,
+            defaultLocation: {
+                mode: selectMapOption(defaultLocation.mode, ["current", "custom", "city"], defaults.defaultLocation.mode),
+                customLat: String(defaultLocation.customLat || "").slice(0, 24),
+                customLon: String(defaultLocation.customLon || "").slice(0, 24)
+            }
+        };
+    }
+
+    loadMapSettings() {
+        try {
+            return this.sanitizeMapSettings(JSON.parse(localStorage.getItem(this.settingsStorageKey) || "{}"));
+        } catch (error) {
+            return this.sanitizeMapSettings({});
+        }
+    }
+
+    saveMapSettings() {
+        try {
+            localStorage.setItem(this.settingsStorageKey, JSON.stringify(this.mapSettings));
+        } catch (error) {}
+    }
+
+    getSatelliteLimits(settings = this.mapSettings) {
+        const density = settings.satellite.density;
+        if (density === "CUSTOM") {
+            return {
+                maxOrbitObjects: settings.satellite.customMaxOrbitObjects,
+                maxMarkers: settings.satellite.customMaxMarkers
+            };
+        }
+        return MAP_SATELLITE_DENSITIES[density] || MAP_SATELLITE_DENSITIES.MEDIUM;
+    }
+
     createLayerDefinitions() {
+        const satelliteLimits = this.getSatelliteLimits();
         return [
             {
                 id: "ROAD_TRAFFIC",
@@ -122,6 +348,7 @@ class EngineeringMapPanel {
                 updateIntervalMs: 0,
                 cacheTtlMs: 0,
                 zIndex: 30,
+                opacity: this.mapSettings.traffic.opacity,
                 fallbackVisual: "Traffic unavailable state in the Local Situation status bar.",
                 mode: "live"
             },
@@ -140,7 +367,8 @@ class EngineeringMapPanel {
                 zIndex: 20,
                 fallbackVisual: "Radar unavailable state in the Local Situation status bar.",
                 mode: "live",
-                opacity: 0.55
+                opacity: this.mapSettings.radar.opacity,
+                seaCoverage: this.mapSettings.radar.seaCoverage
             },
             {
                 id: "AIR_TRAFFIC",
@@ -152,9 +380,10 @@ class EngineeringMapPanel {
                 requiresApiKey: false,
                 defaultActive: false,
                 available: true,
-                updateIntervalMs: 60 * 1000,
-                cacheTtlMs: 45 * 1000,
-                maxMarkers: 120,
+                updateIntervalMs: this.mapSettings.air.refreshIntervalMs,
+                cacheTtlMs: Math.max(25 * 1000, Math.min(this.mapSettings.air.refreshIntervalMs - 5 * 1000, 60 * 1000)),
+                maxMarkers: this.mapSettings.air.maxMarkers,
+                boundsMode: this.mapSettings.air.boundsMode,
                 zIndex: 45,
                 fallbackVisual: "OpenSky status/readout with no fake aircraft markers.",
                 mode: "live"
@@ -171,7 +400,8 @@ class EngineeringMapPanel {
                 available: true,
                 updateIntervalMs: 0,
                 cacheTtlMs: 0,
-                maxMarkers: 150,
+                maxMarkers: this.mapSettings.sea.maxVessels,
+                areaMode: this.mapSettings.sea.areaMode,
                 zIndex: 42,
                 fallbackVisual: "CONFIG_REQUIRED until AISSTREAM_API_KEY is configured.",
                 mode: "live"
@@ -189,9 +419,9 @@ class EngineeringMapPanel {
                 updateIntervalMs: 6 * 60 * 60 * 1000,
                 positionUpdateIntervalMs: 60 * 1000,
                 cacheTtlMs: 6 * 60 * 60 * 1000,
-                defaultGroup: "stations",
-                maxOrbitObjects: 800,
-                maxMarkers: 80,
+                defaultGroup: this.mapSettings.satellite.group,
+                maxOrbitObjects: satelliteLimits.maxOrbitObjects,
+                maxMarkers: satelliteLimits.maxMarkers,
                 zIndex: 40,
                 fallbackVisual: "SERVICE_UNAVAILABLE, POSITION_ENGINE_ERROR or NO_DATA when real positions cannot be calculated.",
                 mode: "live"
@@ -208,7 +438,9 @@ class EngineeringMapPanel {
                 available: true,
                 updateIntervalMs: 10 * 60 * 1000,
                 cacheTtlMs: 10 * 60 * 1000,
-                maxMarkers: 180,
+                maxMarkers: this.mapSettings.ocean.maxStations,
+                source: this.mapSettings.ocean.source,
+                filterMode: this.mapSettings.ocean.filterMode,
                 zIndex: 38,
                 fallbackVisual: "NO_DATA when no NOAA station exists in the current map view.",
                 mode: "live"
@@ -257,6 +489,109 @@ class EngineeringMapPanel {
         }
     }
 
+    applyMapSettingsToRegistry() {
+        if (!this.layers) return;
+        const satelliteLimits = this.getSatelliteLimits();
+        const updates = {
+            ROAD_TRAFFIC: {
+                definition: {
+                    opacity: this.mapSettings.traffic.opacity
+                },
+                opacity: this.mapSettings.traffic.opacity
+            },
+            WEATHER_RADAR: {
+                definition: {
+                    opacity: this.mapSettings.radar.opacity,
+                    seaCoverage: this.mapSettings.radar.seaCoverage
+                },
+                opacity: this.mapSettings.radar.opacity
+            },
+            AIR_TRAFFIC: {
+                definition: {
+                    maxMarkers: this.mapSettings.air.maxMarkers,
+                    updateIntervalMs: this.mapSettings.air.refreshIntervalMs,
+                    cacheTtlMs: Math.max(25 * 1000, Math.min(this.mapSettings.air.refreshIntervalMs - 5 * 1000, 60 * 1000)),
+                    boundsMode: this.mapSettings.air.boundsMode
+                }
+            },
+            MARITIME_AIS: {
+                definition: {
+                    maxMarkers: this.mapSettings.sea.maxVessels,
+                    areaMode: this.mapSettings.sea.areaMode
+                }
+            },
+            SATELLITES: {
+                definition: {
+                    defaultGroup: this.mapSettings.satellite.group,
+                    maxOrbitObjects: satelliteLimits.maxOrbitObjects,
+                    maxMarkers: satelliteLimits.maxMarkers
+                }
+            },
+            OCEAN_ALERTS: {
+                definition: {
+                    maxMarkers: this.mapSettings.ocean.maxStations,
+                    source: this.mapSettings.ocean.source,
+                    filterMode: this.mapSettings.ocean.filterMode
+                }
+            }
+        };
+
+        Object.entries(updates).forEach(([id, config]) => {
+            const layer = this.layers.get(id);
+            if (!layer) return;
+            Object.assign(layer.definition, config.definition || {});
+            if (config.opacity !== undefined) layer.opacity = config.opacity;
+            if (layer.provider) layer.provider.definition = layer.definition;
+        });
+    }
+
+    settingsChangedLayerIds(previousSettings = {}) {
+        const before = this.sanitizeMapSettings(previousSettings);
+        const after = this.mapSettings;
+        const changed = new Set();
+
+        if (JSON.stringify(before.satellite) !== JSON.stringify(after.satellite)) changed.add("SATELLITES");
+        if (JSON.stringify(before.air) !== JSON.stringify(after.air)) changed.add("AIR_TRAFFIC");
+        if (JSON.stringify(before.sea) !== JSON.stringify(after.sea)) changed.add("MARITIME_AIS");
+        if (JSON.stringify(before.ocean) !== JSON.stringify(after.ocean)) changed.add("OCEAN_ALERTS");
+        if (JSON.stringify(before.radar) !== JSON.stringify(after.radar)) changed.add("WEATHER_RADAR");
+        if (JSON.stringify(before.traffic) !== JSON.stringify(after.traffic)) changed.add("ROAD_TRAFFIC");
+
+        return changed;
+    }
+
+    restartLayer(id) {
+        const layer = this.layers.get(id);
+        if (!layer || !layer.active) return;
+        this.layerRegistry.deactivate(id);
+        this.layerRegistry.activate(id, {persist: false, userInitiated: false}).finally(() => {
+            this.saveLayerPreferences();
+            this.renderLayerState();
+        });
+    }
+
+    applySavedMapSettings(previousSettings = {}, requestedActive = {}) {
+        const changed = this.settingsChangedLayerIds(previousSettings);
+        this.applyMapSettingsToRegistry();
+
+        this.layers.forEach((layer, id) => {
+            if (!Object.prototype.hasOwnProperty.call(requestedActive, id)) return;
+            const shouldBeActive = Boolean(requestedActive[id]);
+            if (shouldBeActive && !layer.active) {
+                this.activateLayer(id, {persist: false, userInitiated: true});
+                return;
+            }
+            if (!shouldBeActive && layer.active) {
+                this.deactivateLayer(id, {persist: false});
+                return;
+            }
+            if (shouldBeActive && layer.active && changed.has(id)) this.restartLayer(id);
+        });
+
+        this.saveLayerPreferences();
+        this.renderLayerState();
+    }
+
     async syncLayerPreferencesFile() {
         if (this.hasLocalLayerPreferences) {
             this.saveLayerPreferences();
@@ -298,6 +633,313 @@ class EngineeringMapPanel {
             this.controls.appendChild(button);
         });
         this.renderLayerState();
+    }
+
+    layerStatus(id) {
+        const layer = this.layers && this.layers.get(id);
+        if (!layer) return {status: MAP_LAYER_STATES.DISABLED, summary: "Layer unavailable", active: false};
+        return {
+            status: layer.status,
+            summary: layer.summary || layer.definition.description,
+            active: layer.active,
+            count: layer.count || 0,
+            updatedAt: layer.updatedAt || ""
+        };
+    }
+
+    renderLayerSwitch(id, label) {
+        const layer = this.layers.get(id);
+        const status = this.layerStatus(id);
+        return `
+            <label class="eng-map-settings-switch">
+                <input type="checkbox" data-layer-active="${window._escapeHtml(id)}" ${status.active ? "checked" : ""}>
+                <span>${window._escapeHtml(label)}</span>
+                <em data-state="${window._escapeHtml(status.status)}">${window._escapeHtml(status.status)}</em>
+                <small>${window._escapeHtml(status.summary || layer.definition.providerType)}</small>
+            </label>`;
+    }
+
+    mapSettingsOptions(options, selected) {
+        return options.map(option => {
+            const value = typeof option === "string" ? option : option.value;
+            const label = typeof option === "string" ? option : option.label;
+            return `<option value="${window._escapeHtml(value)}" ${String(value) === String(selected) ? "selected" : ""}>${window._escapeHtml(label)}</option>`;
+        }).join("");
+    }
+
+    openSettingsModal() {
+        this.closeSettingsModal();
+        const settings = this.mapSettings;
+        const group = MAP_SATELLITE_GROUPS[settings.satellite.group] || MAP_SATELLITE_GROUPS.stations;
+        const density = MAP_SATELLITE_DENSITIES[settings.satellite.density] || MAP_SATELLITE_DENSITIES.MEDIUM;
+        const hasAisKey = Boolean(this.getEnv("AISSTREAM_API_KEY")
+            || this.getEnv("AEGISUI_AISSTREAM_API_KEY")
+            || this.getEnv("AEGISUI_AIS_API_KEY"));
+        const hasOpenSkyCredentials = Boolean(this.getEnv("OPENSKY_ACCESS_TOKEN")
+            || this.getEnv("AEGISUI_OPENSKY_ACCESS_TOKEN")
+            || (this.getEnv("OPENSKY_CLIENT_ID") && this.getEnv("OPENSKY_CLIENT_SECRET")));
+
+        const overlay = document.createElement("div");
+        overlay.id = "eng_map_settings_overlay";
+        overlay.innerHTML = `
+            <form id="eng_map_settings_modal" augmented-ui="tl-clip br-clip exe">
+                <header class="eng-map-settings-header">
+                    <div>
+                        <small>LOCAL SITUATION</small>
+                        <h1>MAP LAYER SETTINGS</h1>
+                    </div>
+                    <button type="button" id="eng_map_settings_close" aria-label="Close map settings">×</button>
+                </header>
+                <div class="eng-map-settings-body">
+                    <section class="eng-map-settings-section">
+                        <h2>SATELLITES</h2>
+                        ${this.renderLayerSwitch("SATELLITES", "Enable SAT layer")}
+                        <label>
+                            <span>Satellite Group</span>
+                            <select id="eng_setting_sat_group">
+                                ${this.mapSettingsOptions(Object.entries(MAP_SATELLITE_GROUPS).map(([value, item]) => ({
+                                    value,
+                                    label: `${item.label} · ${value}`
+                                })), settings.satellite.group)}
+                            </select>
+                            <small id="eng_setting_sat_group_help">${window._escapeHtml(group.description)}</small>
+                        </label>
+                        <label>
+                            <span>Density</span>
+                            <select id="eng_setting_sat_density">
+                                ${this.mapSettingsOptions(Object.entries(MAP_SATELLITE_DENSITIES).map(([value, item]) => ({
+                                    value,
+                                    label: `${value} · ${item.maxOrbitObjects}/${item.maxMarkers}`
+                                })), settings.satellite.density)}
+                            </select>
+                            <small id="eng_setting_sat_density_help">${window._escapeHtml(density.description)}</small>
+                        </label>
+                        <div class="eng-map-settings-pair">
+                            <label>
+                                <span>Custom process max</span>
+                                <input id="eng_setting_sat_custom_orbits" type="number" min="50" max="5000" step="50" value="${window._escapeHtml(String(settings.satellite.customMaxOrbitObjects))}">
+                            </label>
+                            <label>
+                                <span>Custom marker max</span>
+                                <input id="eng_setting_sat_custom_markers" type="number" min="10" max="500" step="10" value="${window._escapeHtml(String(settings.satellite.customMaxMarkers))}">
+                            </label>
+                        </div>
+                        <p class="eng-map-settings-warning">HIGH density is real SGP4 data, but can cost more CPU/GPU on dense groups like ACTIVE or STARLINK.</p>
+                    </section>
+
+                    <section class="eng-map-settings-section">
+                        <h2>AIR TRAFFIC</h2>
+                        ${this.renderLayerSwitch("AIR_TRAFFIC", "Enable AIR layer")}
+                        <label>
+                            <span>Max aircraft markers</span>
+                            <select id="eng_setting_air_max">${this.mapSettingsOptions(["25", "50", "100", "200"], String(settings.air.maxMarkers))}</select>
+                        </label>
+                        <label>
+                            <span>Refresh interval</span>
+                            <select id="eng_setting_air_refresh">${this.mapSettingsOptions([
+                                {value: "30000", label: "30s"},
+                                {value: "60000", label: "60s"},
+                                {value: "120000", label: "120s"}
+                            ], String(settings.air.refreshIntervalMs))}</select>
+                        </label>
+                        <label>
+                            <span>Bounding box mode</span>
+                            <select id="eng_setting_air_bounds">${this.mapSettingsOptions([
+                                {value: "visible", label: "Visible map bounds"},
+                                {value: "wide", label: "Wider area"}
+                            ], settings.air.boundsMode)}</select>
+                        </label>
+                        <small>${hasOpenSkyCredentials ? "OpenSky credentials detected." : "OpenSky public mode · rate-limit aware."}</small>
+                    </section>
+
+                    <section class="eng-map-settings-section">
+                        <h2>MARITIME AIS</h2>
+                        ${this.renderLayerSwitch("MARITIME_AIS", "Enable SEA layer")}
+                        <div class="eng-map-settings-status ${hasAisKey ? "ready" : "missing"}">
+                            <strong>AISStream</strong>
+                            <span>${hasAisKey ? "API key configured" : "CONFIG REQUIRED · AISSTREAM_API_KEY missing"}</span>
+                        </div>
+                        <label>
+                            <span>Area mode</span>
+                            <select id="eng_setting_sea_area">${this.mapSettingsOptions([
+                                {value: "visible", label: "Visible map bounds"},
+                                {value: "custom", label: "Custom area reserved"}
+                            ], settings.sea.areaMode)}</select>
+                        </label>
+                        <label>
+                            <span>Max vessels</span>
+                            <select id="eng_setting_sea_max">${this.mapSettingsOptions(["50", "100", "250"], String(settings.sea.maxVessels))}</select>
+                        </label>
+                        <button type="button" id="eng_setting_sea_test">TEST CONNECTION</button>
+                        <small id="eng_setting_sea_test_result">No WebSocket is opened unless SEA is enabled.</small>
+                    </section>
+
+                    <section class="eng-map-settings-section">
+                        <h2>OCEAN / NOAA</h2>
+                        ${this.renderLayerSwitch("OCEAN_ALERTS", "Enable OCEAN layer")}
+                        <label>
+                            <span>Station source</span>
+                            <select id="eng_setting_ocean_source">${this.mapSettingsOptions([
+                                {value: "ndbc-active", label: "NDBC active stations"},
+                                {value: "dart", label: "DART tsunami buoys"}
+                            ], settings.ocean.source)}</select>
+                        </label>
+                        <label>
+                            <span>Filter mode</span>
+                            <select id="eng_setting_ocean_filter">${this.mapSettingsOptions([
+                                {value: "visible", label: "Visible map bounds"},
+                                {value: "global", label: "Global"},
+                                {value: "coastal", label: "Coastal only"}
+                            ], settings.ocean.filterMode)}</select>
+                        </label>
+                        <label>
+                            <span>Max stations</span>
+                            <select id="eng_setting_ocean_max">${this.mapSettingsOptions(["100", "500", "1500"], String(settings.ocean.maxStations))}</select>
+                        </label>
+                    </section>
+
+                    <section class="eng-map-settings-section">
+                        <h2>RADAR / TRAFFIC</h2>
+                        ${this.renderLayerSwitch("WEATHER_RADAR", "Enable RADAR layer")}
+                        <label>
+                            <span>Radar opacity</span>
+                            <input id="eng_setting_radar_opacity" type="range" min="0.15" max="0.95" step="0.05" value="${window._escapeHtml(String(settings.radar.opacity))}">
+                            <small>RainViewer sea coverage: NOT SUPPORTED BY CURRENT PROVIDER as a dedicated maritime layer.</small>
+                        </label>
+                        ${this.renderLayerSwitch("ROAD_TRAFFIC", "Enable TRAFFIC layer")}
+                        <label>
+                            <span>Traffic opacity</span>
+                            <input id="eng_setting_traffic_opacity" type="range" min="0.25" max="1" step="0.05" value="${window._escapeHtml(String(settings.traffic.opacity))}">
+                        </label>
+                    </section>
+
+                    <section class="eng-map-settings-section">
+                        <h2>CONTROLS / PRIVACY</h2>
+                        <label class="eng-map-settings-switch">
+                            <input id="eng_setting_ui_sounds" type="checkbox" ${settings.uiSounds ? "checked" : ""}>
+                            <span>UI sounds</span>
+                            <em>${settings.uiSounds ? "ON" : "OFF"}</em>
+                            <small>Uses the local cockpit expand sound at low volume.</small>
+                        </label>
+                        <label>
+                            <span>Default map location</span>
+                            <select id="eng_setting_location_mode">${this.mapSettingsOptions([
+                                {value: "current", label: "Current location when allowed"},
+                                {value: "custom", label: "Custom local coordinates"},
+                                {value: "city", label: "City default"}
+                            ], settings.defaultLocation.mode)}</select>
+                        </label>
+                        <div class="eng-map-settings-pair">
+                            <label>
+                                <span>Custom latitude</span>
+                                <input id="eng_setting_location_lat" type="number" step="0.000001" value="${window._escapeHtml(settings.defaultLocation.customLat)}">
+                            </label>
+                            <label>
+                                <span>Custom longitude</span>
+                                <input id="eng_setting_location_lon" type="number" step="0.000001" value="${window._escapeHtml(settings.defaultLocation.customLon)}">
+                            </label>
+                        </div>
+                        <small>Coordinates are stored only in localStorage on this Mac, never in Git.</small>
+                    </section>
+                </div>
+                <footer class="eng-map-settings-footer">
+                    <span id="eng_map_settings_state">LOCAL SETTINGS ONLY · NO API KEYS STORED HERE</span>
+                    <button type="button" id="eng_map_settings_cancel">CANCEL</button>
+                    <button type="submit" class="primary">SAVE / APPLY</button>
+                </footer>
+            </form>`;
+
+        document.body.appendChild(overlay);
+        this.settingsOverlay = overlay;
+        this.bindSettingsModalEvents(overlay);
+        if (window.audioManager && window.audioManager.panels && this.mapSettings.uiSounds) {
+            window.audioManager.panels.play();
+        }
+    }
+
+    bindSettingsModalEvents(overlay) {
+        const close = () => this.closeSettingsModal();
+        overlay.addEventListener("click", event => {
+            if (event.target === overlay) close();
+        });
+        overlay.querySelector("#eng_map_settings_close").addEventListener("click", close);
+        overlay.querySelector("#eng_map_settings_cancel").addEventListener("click", close);
+
+        overlay.querySelector("#eng_setting_sat_group").addEventListener("change", event => {
+            const item = MAP_SATELLITE_GROUPS[event.target.value] || MAP_SATELLITE_GROUPS.stations;
+            overlay.querySelector("#eng_setting_sat_group_help").innerText = item.description;
+        });
+        overlay.querySelector("#eng_setting_sat_density").addEventListener("change", event => {
+            const item = MAP_SATELLITE_DENSITIES[event.target.value] || MAP_SATELLITE_DENSITIES.MEDIUM;
+            overlay.querySelector("#eng_setting_sat_density_help").innerText = item.description;
+        });
+        overlay.querySelector("#eng_setting_sea_test").addEventListener("click", () => {
+            const result = overlay.querySelector("#eng_setting_sea_test_result");
+            const hasKey = Boolean(this.getEnv("AISSTREAM_API_KEY")
+                || this.getEnv("AEGISUI_AISSTREAM_API_KEY")
+                || this.getEnv("AEGISUI_AIS_API_KEY"));
+            result.innerText = hasKey
+                ? "CONFIG READY · enable SEA to open AISStream safely."
+                : "CONFIG_REQUIRED · add AISSTREAM_API_KEY in your private environment.";
+        });
+
+        overlay.querySelector("#eng_map_settings_modal").addEventListener("submit", event => {
+            event.preventDefault();
+            this.saveSettingsFromModal(overlay);
+        });
+    }
+
+    closeSettingsModal() {
+        if (!this.settingsOverlay) return;
+        this.settingsOverlay.remove();
+        this.settingsOverlay = null;
+    }
+
+    saveSettingsFromModal(overlay) {
+        const previousSettings = cloneMapData(this.mapSettings);
+        const requestedActive = {};
+        overlay.querySelectorAll("[data-layer-active]").forEach(input => {
+            requestedActive[input.dataset.layerActive] = Boolean(input.checked);
+        });
+
+        this.mapSettings = this.sanitizeMapSettings({
+            satellite: {
+                group: overlay.querySelector("#eng_setting_sat_group").value,
+                density: overlay.querySelector("#eng_setting_sat_density").value,
+                customMaxOrbitObjects: overlay.querySelector("#eng_setting_sat_custom_orbits").value,
+                customMaxMarkers: overlay.querySelector("#eng_setting_sat_custom_markers").value
+            },
+            air: {
+                maxMarkers: overlay.querySelector("#eng_setting_air_max").value,
+                refreshIntervalMs: overlay.querySelector("#eng_setting_air_refresh").value,
+                boundsMode: overlay.querySelector("#eng_setting_air_bounds").value
+            },
+            sea: {
+                areaMode: overlay.querySelector("#eng_setting_sea_area").value,
+                maxVessels: overlay.querySelector("#eng_setting_sea_max").value
+            },
+            ocean: {
+                source: overlay.querySelector("#eng_setting_ocean_source").value,
+                filterMode: overlay.querySelector("#eng_setting_ocean_filter").value,
+                maxStations: overlay.querySelector("#eng_setting_ocean_max").value
+            },
+            radar: {
+                opacity: overlay.querySelector("#eng_setting_radar_opacity").value
+            },
+            traffic: {
+                opacity: overlay.querySelector("#eng_setting_traffic_opacity").value
+            },
+            uiSounds: overlay.querySelector("#eng_setting_ui_sounds").checked,
+            defaultLocation: {
+                mode: overlay.querySelector("#eng_setting_location_mode").value,
+                customLat: overlay.querySelector("#eng_setting_location_lat").value,
+                customLon: overlay.querySelector("#eng_setting_location_lon").value
+            }
+        });
+
+        this.saveMapSettings();
+        this.applySavedMapSettings(previousSettings, requestedActive);
+        this.closeSettingsModal();
     }
 
     applyInitialLayerState() {
@@ -442,6 +1084,115 @@ class EngineeringMapPanel {
         } else {
             this.locationMarker.setLatLng(coordinates);
         }
+    }
+
+    playMapUiSound(sound = "expand") {
+        if (!this.mapSettings.uiSounds || !window.audioManager) return;
+        const target = window.audioManager[sound] || window.audioManager.expand;
+        if (target && typeof target.play === "function") target.play();
+    }
+
+    invalidateMapSoon() {
+        [80, 240, 520].forEach(delay => {
+            setTimeout(() => {
+                if (this.map && typeof this.map.invalidateSize === "function") this.map.invalidateSize();
+            }, delay);
+        });
+    }
+
+    toggleExpandedMap(forceState = null) {
+        const nextState = typeof forceState === "boolean" ? forceState : !this.expanded;
+        if (nextState === this.expanded) return;
+
+        this.expanded = nextState;
+        this.panel.classList.toggle("eng-map-expanded", this.expanded);
+        document.body.classList.toggle("eng-map-expanded-active", this.expanded);
+        const button = document.getElementById("eng_map_expand");
+        if (button) {
+            button.classList.toggle("active", this.expanded);
+            button.innerText = this.expanded ? "↙" : "⛶";
+            button.title = this.expanded ? "Collapse map" : "Expand map";
+            button.setAttribute("aria-label", button.title);
+        }
+        this.playMapUiSound("expand");
+        this.invalidateMapSoon();
+    }
+
+    centerMapAt(coordinates, zoom = 11, summary = "") {
+        if (!Array.isArray(coordinates) || coordinates.length !== 2) return false;
+        const latitude = Number(coordinates[0]);
+        const longitude = Number(coordinates[1]);
+        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return false;
+
+        this.map.setView([latitude, longitude], zoom);
+        if (!this.locationMarker) {
+            this.locationMarker = L.circleMarker([latitude, longitude], {
+                radius: 6,
+                color: "#ffffff",
+                fillColor: "#3BA7FF",
+                fillOpacity: 0.9,
+                weight: 2
+            }).addTo(this.map);
+        } else {
+            this.locationMarker.setLatLng([latitude, longitude]);
+        }
+        if (summary) this.status.innerText = summary;
+        this.invalidateMapSoon();
+        return true;
+    }
+
+    fallbackMapLocation(message = "LOCATION FALLBACK") {
+        const settings = this.mapSettings.defaultLocation;
+        if (settings.mode === "custom") {
+            const latitude = Number(settings.customLat);
+            const longitude = Number(settings.customLon);
+            if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
+                return this.centerMapAt([latitude, longitude], 11, `${message} · CUSTOM`);
+            }
+        }
+
+        const geo = window.mods.netstat && window.mods.netstat.ipinfo && window.mods.netstat.ipinfo.geo;
+        if (settings.mode === "current"
+            && geo
+            && Number.isFinite(Number(geo.latitude))
+            && Number.isFinite(Number(geo.longitude))) {
+            return this.centerMapAt([Number(geo.latitude), Number(geo.longitude)], 11, `${message} · IP GEO`);
+        }
+
+        return this.centerMapAt([40.4168, -3.7038], 10, `${message} · CITY DEFAULT`);
+    }
+
+    returnToMyLocation() {
+        this.playMapUiSound("scan");
+        this.status.innerText = "LOCATING…";
+
+        if (typeof navigator === "undefined" || !navigator.geolocation) {
+            this.status.innerText = "LOCATION PERMISSION REQUIRED";
+            this.fallbackMapLocation("LOCATION UNAVAILABLE");
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            position => {
+                const coordinates = [
+                    Number(position.coords.latitude),
+                    Number(position.coords.longitude)
+                ];
+                this.centerMapAt(coordinates, 12, "LOCATION LOCKED");
+            },
+            error => {
+                const permissionDenied = error && error.code === error.PERMISSION_DENIED;
+                this.status.innerText = permissionDenied
+                    ? "LOCATION PERMISSION REQUIRED"
+                    : "LOCATION SERVICE UNAVAILABLE";
+                this.fallbackMapLocation(permissionDenied ? "LOCATION PERMISSION REQUIRED" : "LOCATION FALLBACK");
+            },
+            {
+                enableHighAccuracy: false,
+                timeout: 6000,
+                maximumAge: 5 * 60 * 1000
+            }
+        );
     }
 
     showTrafficForm() {

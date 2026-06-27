@@ -1,5 +1,31 @@
 # Changelog
 
+## 2.0.4 - 2026-06-27
+
+### Added
+
+- Added a cockpit-style `Local Situation` map settings popup for layer toggles,
+  provider limits, refresh intervals, opacity controls and local UI-sound
+  preference.
+- Added CelesTrak SAT group selection for `stations`, `active`, `starlink`,
+  `weather`, `gps-ops`, `visual`, `last-30-days`, `geo` and `science`.
+- Added SAT density presets: `LOW`, `MEDIUM`, `HIGH` and `CUSTOM`.
+- Added expanded-map control with smooth in-app transition and map-size
+  recalculation.
+- Added “return to my location” map control with geolocation fallback/error
+  states and no repository-stored coordinates.
+
+### Changed
+
+- AIR now respects configurable marker caps, refresh interval and visible/wider
+  bounding-box mode.
+- OCEAN now supports NDBC/DART source selection plus visible/global/coastal
+  filtering from real NOAA/NDBC station data.
+- SEA settings now surface AISStream key status and max vessel limits without
+  opening sockets while disabled.
+- Radar settings expose opacity and clearly mark dedicated maritime radar
+  coverage as not supported by the current provider.
+
 ## 2.0.3 - 2026-06-27
 
 ### Added

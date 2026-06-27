@@ -95,10 +95,30 @@ Current map providers:
   bearer token can be supplied through the OpenSky variables.
 - AISStream maritime AIS: optional, requires `AISSTREAM_API_KEY`.
 - CelesTrak satellite layer: optional, no key; `CELESTRAK_GROUP` selects the
-  catalog group. Satellite positions are calculated locally with
-  `satellite.js` SGP4 propagation and no fake markers are drawn.
+  initial fallback catalog group, while the in-app map settings selector has
+  priority after the user chooses a group. Satellite positions are calculated
+  locally with `satellite.js` SGP4 propagation and no fake markers are drawn.
 - NOAA/NDBC ocean stations: optional, no key for the public station endpoints
   used by AegisUi.
+
+## Local map settings
+
+The `Local Situation` map has an in-app `⚙` settings popup. These preferences
+are stored in renderer localStorage on the same Mac and are not committed:
+
+- selected CelesTrak group: `stations`, `active`, `starlink`, `weather`,
+  `gps-ops`, `visual`, `last-30-days`, `geo` or `science`;
+- SAT density: `LOW`, `MEDIUM`, `HIGH` or `CUSTOM`;
+- AIR marker cap, refresh interval and visible/wide bounds mode;
+- SEA AIS marker cap and area mode;
+- OCEAN source/filter/max station count;
+- radar and traffic opacity;
+- local UI-sound toggle;
+- default map-location behavior.
+
+Location coordinates entered as a custom fallback are local-only. Do not copy
+private coordinates into repository files, issues or screenshots unless you
+intend to share them.
 
 Launch Bay uses local manual configuration and safe launcher URLs; SteamGridDB
 is documented only as a future optional artwork API.
