@@ -359,6 +359,24 @@ body.engineering-mode {
     transform-origin: 50% 62%;
 }
 
+.engineering-mode .eng-satellite-div-icon {
+    width: 1.6vh;
+    height: 1.6vh;
+}
+
+.engineering-mode .eng-satellite-div-icon span {
+    display: block;
+    width: .72vh;
+    height: .72vh;
+    margin: .44vh;
+    border: .12vh solid var(--eng-blue-soft);
+    border-radius: 50%;
+    background: rgba(124, 203, 255, .32);
+    box-shadow:
+        0 0 .45vh rgba(124, 203, 255, .72),
+        0 0 0 .38vh rgba(59, 167, 255, .12);
+}
+
 .engineering-mode .eng-map-provider-popup .leaflet-popup-content-wrapper,
 .engineering-mode .eng-map-provider-popup .leaflet-popup-tip {
     color: var(--eng-blue-soft);

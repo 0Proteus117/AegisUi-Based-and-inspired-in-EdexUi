@@ -94,8 +94,9 @@ Current map providers:
 - OpenSky air traffic: optional, can run anonymously with rate limits; OAuth or
   bearer token can be supplied through the OpenSky variables.
 - AISStream maritime AIS: optional, requires `AISSTREAM_API_KEY`.
-- CelesTrak satellite catalog: optional, no key; `CELESTRAK_GROUP` selects the
-  catalog group.
+- CelesTrak satellite layer: optional, no key; `CELESTRAK_GROUP` selects the
+  catalog group. Satellite positions are calculated locally with
+  `satellite.js` SGP4 propagation and no fake markers are drawn.
 - NOAA/NDBC ocean stations: optional, no key for the public station endpoints
   used by AegisUi.
 

@@ -1,5 +1,23 @@
 # Changelog
 
+## 2.0.3 - 2026-06-27
+
+### Added
+
+- Added `satellite.js` as the local SGP4 orbital propagation engine for the
+  `SATELLITES` map layer.
+- SAT now converts real CelesTrak GP/OMM records with `json2satrec`, propagates
+  them locally and renders real satellite markers on the map.
+- SAT popups now include satellite name, NORAD ID, calculated latitude/longitude,
+  approximate altitude, timestamp and CelesTrak source.
+
+### Changed
+
+- SAT no longer stops at `POSITION_ENGINE_REQUIRED` when the propagation engine
+  is available.
+- Disabled SAT keeps CelesTrak requests, propagation timers and map markers off.
+- Added `POSITION_ENGINE_ERROR` for real catalog data that cannot be propagated.
+
 ## 2.0.0 - 2026-06-26
 
 ### Added

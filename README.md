@@ -29,8 +29,8 @@ keyboard and large terminal with:
 - a one-line engineering shell;
 - a local Situational Awareness map with live RainViewer weather radar,
   optional TomTom traffic and modular real-provider layers for OpenSky air
-  traffic, AISStream maritime traffic, CelesTrak satellite catalogs and
-  NOAA/NDBC ocean stations;
+  traffic, AISStream maritime traffic, CelesTrak satellite positions with
+  local SGP4 propagation and NOAA/NDBC ocean stations;
 - a native macOS Calendar panel with week and month views, recurring events
   and a single calendar selector for every enabled iCloud, Outlook and
   Exchange account;
@@ -165,8 +165,8 @@ The intended portable flow is:
 4. Run `cd src && npm ci && cd ..`.
 5. Copy `.env.example` to `.env` only if you want private local API keys.
 6. Add your own `AEGISUI_TOMTOM_API_KEY` if you want live TomTom traffic.
-   Future air, sea, satellite and ocean layers do not require keys yet because
-   they are placeholders only.
+   Air, satellite and ocean layers can run without keys; maritime AIS requires
+   `AISSTREAM_API_KEY` if you want live vessel data.
 7. Run `npm run start`.
 
 The app should still open without any API key. In that case:

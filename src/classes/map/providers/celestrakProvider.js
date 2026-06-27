@@ -1,9 +1,48 @@
 const {BaseMapProvider} = require("./baseProvider.js");
 const {MAP_LAYER_STATES, isOffline} = require("../utils/mapLayerState.js");
+const satellite = require("satellite.js");
 
 const CELESTRAK_GP_URL = "https://celestrak.org/NORAD/elements/gp.php";
 
+function finiteNumber(value) {
+    const number = Number(value);
+    return Number.isFinite(number) ? number : null;
+}
+
+function normalizeLongitude(value) {
+    let longitude = finiteNumber(value);
+    if (longitude === null) return null;
+    while (longitude > 180) longitude -= 360;
+    while (longitude < -180) longitude += 360;
+    return longitude;
+}
+
+function formatCoordinate(value) {
+    const number = finiteNumber(value);
+    return number === null ? "n/a" : number.toFixed(3);
+}
+
+function formatAltitudeKm(value) {
+    const number = finiteNumber(value);
+    return number === null ? "n/a" : `${Math.round(number)} km`;
+}
+
+function getObjectName(item) {
+    return item.OBJECT_NAME
+        || item.OBJECT_ID
+        || item.OBJECT_NAME_FULL
+        || (item.NORAD_CAT_ID ? `NORAD ${item.NORAD_CAT_ID}` : "Unknown satellite");
+}
+
 class CelesTrakProvider extends BaseMapProvider {
+    constructor(definition) {
+        super(definition);
+        this.catalog = [];
+        this.satrecs = [];
+        this.layerGroup = null;
+        this.moveRefreshTimer = null;
+    }
+
     getGroup(context = this.context) {
         const configured = context && context.getEnv
             ? context.getEnv("CELESTRAK_GROUP") || context.getEnv("AEGISUI_CELESTRAK_GROUP")
@@ -16,6 +55,18 @@ class CelesTrakProvider extends BaseMapProvider {
 
     async start(context) {
         await super.start(context);
+        this.layerGroup = context.L.layerGroup();
+        this.rememberLeafletLayer(this.layerGroup);
+        this.layerGroup.addTo(context.map);
+
+        this.rememberMapListener(context.map, "moveend", () => {
+            if (!this.active) return;
+            clearTimeout(this.moveRefreshTimer);
+            this.moveRefreshTimer = setTimeout(() => {
+                this.renderSatellitePositions(context);
+            }, 900);
+        });
+
         await this.refresh(context);
 
         if (this.active && this.definition.updateIntervalMs > 0) {
@@ -27,12 +78,28 @@ class CelesTrakProvider extends BaseMapProvider {
                 ));
             }, this.definition.updateIntervalMs));
         }
+
+        if (this.active && this.definition.positionUpdateIntervalMs > 0) {
+            this.rememberTimer(setInterval(() => {
+                this.renderSatellitePositions(context);
+            }, this.definition.positionUpdateIntervalMs));
+        }
+    }
+
+    stop(context = this.context) {
+        clearTimeout(this.moveRefreshTimer);
+        this.moveRefreshTimer = null;
+        this.catalog = [];
+        this.satrecs = [];
+        super.stop(context);
+        this.layerGroup = null;
     }
 
     async refresh(context = this.context) {
         if (!this.active) return;
 
         if (isOffline(context)) {
+            if (this.layerGroup) this.layerGroup.clearLayers();
             this.setStatus(MAP_LAYER_STATES.OFFLINE, {
                 summary: "Offline mode · satellite catalog disabled"
             });
@@ -56,6 +123,9 @@ class CelesTrakProvider extends BaseMapProvider {
             const count = Array.isArray(data) ? data.length : 0;
 
             if (!count) {
+                if (this.layerGroup) this.layerGroup.clearLayers();
+                this.catalog = [];
+                this.satrecs = [];
                 this.setStatus(MAP_LAYER_STATES.NO_DATA, {
                     summary: `CelesTrak returned no objects for ${group}`,
                     count: 0
@@ -63,19 +133,155 @@ class CelesTrakProvider extends BaseMapProvider {
                 return;
             }
 
-            this.catalogSample = data.slice(0, 6).map(item => ({
-                name: item.OBJECT_NAME || item.OBJECT_ID || item.NORAD_CAT_ID || "Unknown object",
-                norad: item.NORAD_CAT_ID || "",
-                epoch: item.EPOCH || ""
-            }));
-            this.setStatus(MAP_LAYER_STATES.POSITION_ENGINE_REQUIRED, {
-                summary: `${count} real CelesTrak GP objects loaded · SGP4 position engine required for markers`,
-                count,
-                updatedAt: new Date().toISOString()
-            });
+            this.catalog = data;
+            this.satrecs = this.buildSatelliteRecords(data);
+            this.renderSatellitePositions(context);
         } catch (error) {
+            if (this.layerGroup) this.layerGroup.clearLayers();
             this.applyProviderError(error, context, "CelesTrak service unavailable");
         }
+    }
+
+    buildSatelliteRecords(data) {
+        const maxOrbitObjects = this.definition.maxOrbitObjects || 800;
+        const records = [];
+        const items = Array.isArray(data) ? data.slice(0, maxOrbitObjects) : [];
+
+        items.forEach(item => {
+            try {
+                const satrec = satellite.json2satrec(item);
+                records.push({
+                    name: getObjectName(item),
+                    norad: item.NORAD_CAT_ID || satrec.satnum || "",
+                    epoch: item.EPOCH || "",
+                    source: "CelesTrak GP",
+                    satrec
+                });
+            } catch (error) {}
+        });
+
+        return records;
+    }
+
+    renderSatellitePositions(context = this.context) {
+        if (!this.active || !context || !context.L || !context.map) return;
+
+        if (!satellite || typeof satellite.propagate !== "function") {
+            if (this.layerGroup) this.layerGroup.clearLayers();
+            this.setStatus(MAP_LAYER_STATES.POSITION_ENGINE_ERROR, {
+                error: "satellite.js propagation engine unavailable",
+                summary: "SGP4 position engine unavailable",
+                count: 0
+            });
+            return;
+        }
+
+        if (!this.layerGroup) {
+            this.layerGroup = context.L.layerGroup();
+            this.rememberLeafletLayer(this.layerGroup);
+            this.layerGroup.addTo(context.map);
+        }
+
+        if (!this.satrecs.length) {
+            this.layerGroup.clearLayers();
+            this.setStatus(MAP_LAYER_STATES.NO_DATA, {
+                summary: "No valid CelesTrak orbital records available for SGP4",
+                count: 0
+            });
+            return;
+        }
+
+        const now = new Date();
+        const bounds = this.getMapBounds(context);
+        let engineFailures = 0;
+        const isInBounds = item => {
+            if (!bounds) return true;
+            return item.latitude >= bounds.south
+                && item.latitude <= bounds.north
+                && item.longitude >= bounds.west
+                && item.longitude <= bounds.east;
+        };
+        const propagatedPositions = this.satrecs
+            .map(record => {
+                try {
+                    const positionAndVelocity = satellite.propagate(record.satrec, now);
+                    if (!positionAndVelocity || !positionAndVelocity.position) {
+                        engineFailures += 1;
+                        return null;
+                    }
+
+                    const geodetic = satellite.eciToGeodetic(
+                        positionAndVelocity.position,
+                        satellite.gstime(now)
+                    );
+                    const latitude = finiteNumber(satellite.degreesLat(geodetic.latitude));
+                    const longitude = normalizeLongitude(satellite.degreesLong(geodetic.longitude));
+                    const altitudeKm = finiteNumber(geodetic.height);
+                    if (latitude === null || longitude === null) return null;
+
+                    return {
+                        ...record,
+                        latitude,
+                        longitude,
+                        altitudeKm,
+                        timestamp: now.toISOString()
+                    };
+                } catch (error) {
+                    engineFailures += 1;
+                    return null;
+                }
+            })
+            .filter(Boolean);
+        const visibleCount = propagatedPositions.filter(isInBounds).length;
+        const positions = propagatedPositions
+            .sort((a, b) => Number(isInBounds(b)) - Number(isInBounds(a)))
+            .slice(0, this.definition.maxMarkers || 80);
+
+        this.layerGroup.clearLayers();
+
+        positions.forEach(item => {
+            const icon = context.L.divIcon({
+                className: "eng-satellite-div-icon",
+                html: "<span></span>",
+                iconSize: [16, 16],
+                iconAnchor: [8, 8]
+            });
+            const marker = context.L.marker([item.latitude, item.longitude], {icon});
+            marker.bindTooltip(this.escapeHtml(item.name), {
+                direction: "top",
+                className: "eng-map-provider-tooltip"
+            });
+            marker.bindPopup(`
+                <strong>${this.escapeHtml(item.name)}</strong>
+                <span>NORAD ${this.escapeHtml(item.norad || "n/a")}</span>
+                <span>LAT ${this.escapeHtml(formatCoordinate(item.latitude))} · LON ${this.escapeHtml(formatCoordinate(item.longitude))}</span>
+                <span>ALT ${this.escapeHtml(formatAltitudeKm(item.altitudeKm))}</span>
+                <span>EPOCH ${this.escapeHtml(item.epoch || "n/a")}</span>
+                <span>${this.escapeHtml(item.timestamp)}</span>
+                <span>SRC ${this.escapeHtml(item.source)}</span>
+            `, {className: "eng-map-provider-popup"});
+            marker.addTo(this.layerGroup);
+        });
+
+        if (!propagatedPositions.length) {
+            this.setStatus(engineFailures >= this.satrecs.length
+                ? MAP_LAYER_STATES.POSITION_ENGINE_ERROR
+                : MAP_LAYER_STATES.NO_DATA, {
+                error: engineFailures >= this.satrecs.length ? "SGP4 failed for all loaded satellites" : "",
+                summary: engineFailures >= this.satrecs.length
+                    ? "SGP4 could not calculate satellite positions"
+                    : "No valid CelesTrak satellite positions calculated",
+                count: 0,
+                updatedAt: now.toISOString()
+            });
+            return;
+        }
+
+        this.setStatus(MAP_LAYER_STATES.ONLINE, {
+            summary: `${propagatedPositions.length} real satellite positions · ${visibleCount} in current view`,
+            count: positions.length,
+            updatedAt: now.toISOString()
+        });
     }
 }
 

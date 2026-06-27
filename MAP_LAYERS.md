@@ -16,7 +16,7 @@ Each layer is optional, locally remembered and resource-aware:
 | `WEATHER_RADAR` | `RADAR` | RainViewer public weather maps | ON unless offline mode | No key |
 | `AIR_TRAFFIC` | `AIR` | OpenSky Network state vectors | OFF | Anonymous public access, optional OpenSky OAuth/Bearer token |
 | `MARITIME_AIS` | `SEA` | AISStream WebSocket | OFF | `AISSTREAM_API_KEY` required |
-| `SATELLITES` | `SAT` | CelesTrak GP JSON catalog | OFF | No key; `CELESTRAK_GROUP` optional |
+| `SATELLITES` | `SAT` | CelesTrak GP JSON + SGP4 positions | OFF | No key; `CELESTRAK_GROUP` optional |
 | `OCEAN_ALERTS` | `OCEAN` | NOAA/NDBC active stations | OFF | No key |
 
 ## Layer states
@@ -33,7 +33,8 @@ Each layer is optional, locally remembered and resource-aware:
 | `RATE_LIMITED` | Provider throttled the request; the layer must not retry aggressively. |
 | `SERVICE_UNAVAILABLE` | Provider/tile service failed but the map remains alive. |
 | `NO_DATA` | Provider responded, but no real objects exist in the current view/result. |
-| `POSITION_ENGINE_REQUIRED` | Real satellite catalog data loaded, but map positions need a future orbital propagation engine. |
+| `POSITION_ENGINE_REQUIRED` | Legacy state for builds without an orbital propagation engine. v2.0.3 should not use this when `satellite.js` is available. |
+| `POSITION_ENGINE_ERROR` | Real satellite catalog data loaded, but SGP4 propagation failed or the local engine is unavailable. |
 | `ERROR` | Provider failed in a controlled way. |
 | `DISABLED` | Provider exists but is intentionally unavailable. |
 
@@ -74,6 +75,7 @@ Provider references:
 - OpenSky REST API: `https://openskynetwork.github.io/opensky-api/rest.html`
 - AISStream documentation: `https://aisstream.io/documentation`
 - CelesTrak GP data formats: `https://celestrak.org/NORAD/documentation/gp-data-formats.php`
+- satellite.js SGP4 propagation engine: `https://github.com/shashwatak/satellite-js`
 - NOAA/NDBC active stations: `https://www.ndbc.noaa.gov/activestations.xml`
 
 ### `ROAD_TRAFFIC`
@@ -116,12 +118,21 @@ Provider references:
 ### `SATELLITES`
 
 - Uses CelesTrak GP JSON data.
+- Converts CelesTrak OMM/GP records with `satellite.js` `json2satrec`.
+- Propagates positions locally with SGP4; no fake satellite markers are drawn.
 - Default group: `stations`.
 - Override group with `CELESTRAK_GROUP`.
 - Cache TTL: 6 hours.
-- The layer does not draw orbital markers yet because the project does not
-  include an approved SGP4/orbital propagation engine.
-- Successful catalog load reports `POSITION_ENGINE_REQUIRED`, not fake markers.
+- Position refresh interval: 60 seconds while ON.
+- Marker cap: 80 visible satellites.
+- Catalog processing cap: 800 objects to protect CPU when broad CelesTrak
+  groups are selected.
+- OFF means no CelesTrak requests, no propagation timer and no satellite
+  markers.
+- Successful propagation reports `ONLINE` and draws only real calculated
+  positions.
+- If the catalog loads but SGP4 cannot calculate positions, the layer reports
+  `POSITION_ENGINE_ERROR`.
 
 ### `OCEAN_ALERTS`
 
