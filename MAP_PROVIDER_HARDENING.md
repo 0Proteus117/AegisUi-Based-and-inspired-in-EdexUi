@@ -1,4 +1,4 @@
-# MAP PROVIDER HARDENING — v2.0.5
+# MAP PROVIDER HARDENING — v2.0.5 / v2.0.7
 
 Scope: `Local Situation` map only. No non-map workspaces were intentionally
 changed.
@@ -101,3 +101,22 @@ process to avoid frontend CORS ambiguity.
   remains correctly unavailable.
 - Open-Meteo Marine provides forecast cells, not AIS vessel positions.
 - RainViewer is precipitation radar, not marine-condition radar.
+
+## v2.0.7 runtime fix
+
+v2.0.7 adds a stricter runtime diagnostics and rendering pass:
+
+- TomTom traffic now supports:
+  - `TOMTOM_FLOW_TILES` via real TomTom raster flow tiles;
+  - `TOMTOM_FLOW_SEGMENTS` via real Flow Segment polylines if tiles fail but
+    segment data works;
+  - `OFFLINE` / key / rate-limit states without fake traffic.
+- AISStream now defaults to a global live subscription/preset model and renders
+  only messages with real MMSI and latitude/longitude.
+- RainViewer radar uses the latest real metadata frame with explicit
+  attribution.
+- Open-Meteo Marine uses real sea-state cells and can fall back from inland
+  views to configured sea presets.
+- `scripts/test-map-providers.js` tests TomTom Flow Segment, TomTom Flow Tile,
+  AISStream global live, RainViewer metadata and Open-Meteo Marine without
+  printing full keys.

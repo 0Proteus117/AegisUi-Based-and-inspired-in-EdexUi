@@ -83,6 +83,8 @@ AEGISUI_TOMTOM_API_KEY=
 TOMTOM_KEY=
 VITE_TOMTOM_API_KEY=
 REACT_APP_TOMTOM_API_KEY=
+OPENSKY_USERNAME=
+OPENSKY_PASSWORD=
 OPENSKY_CLIENT_ID=
 OPENSKY_CLIENT_SECRET=
 OPENSKY_ACCESS_TOKEN=
@@ -97,13 +99,18 @@ Current map providers:
 - TomTom base map and road traffic: optional. The base map can fall back to
   OSM; traffic remains TomTom-only. Accepted key aliases are `TOMTOM_API_KEY`,
   `AEGISUI_TOMTOM_API_KEY`, `TOMTOM_KEY`, `VITE_TOMTOM_API_KEY` and
-  `REACT_APP_TOMTOM_API_KEY`.
+  `REACT_APP_TOMTOM_API_KEY`. v2.0.7 tests TomTom Flow Tiles first and can
+  render real Flow Segment polylines when tiles are unavailable but the segment
+  endpoint responds.
 - RainViewer precipitation radar: optional, no key.
 - OpenSky air traffic: optional, can run anonymously with rate limits; OAuth or
   bearer token can be supplied through the OpenSky variables.
-- AISStream maritime AIS: optional, requires `AISSTREAM_API_KEY`.
-- Open-Meteo Marine: optional, no key. This provides sea-state conditions, not
-  vessel positions.
+- AISStream maritime AIS: optional, requires `AISSTREAM_API_KEY`. v2.0.7 uses
+  AISStream global live WebSocket data and never draws vessel markers without
+  MMSI and real latitude/longitude.
+- Open-Meteo Marine: optional, no key. This provides real sea-state conditions,
+  not vessel positions; inland map views can fall back to configured sea
+  presets so the MARINE layer can still show real ocean cells.
 - CelesTrak satellite layer: optional, no key; `CELESTRAK_GROUP` selects the
   initial fallback catalog group, while the in-app map settings selector has
   priority after the user chooses a group. Satellite positions are calculated

@@ -56,7 +56,8 @@ class WeatherRadarProvider extends BaseMapProvider {
                     maxNativeZoom: 7,
                     maxZoom: 18,
                     zIndex: this.definition.zIndex,
-                    className: "eng-radar-map"
+                    className: "eng-radar-map",
+                    attribution: "Weather data by RainViewer"
                 }
             );
 
@@ -72,7 +73,7 @@ class WeatherRadarProvider extends BaseMapProvider {
             this.rememberLeafletLayer(tileLayer);
             tileLayer.addTo(context.map);
             this.setStatus(MAP_LAYER_STATES.ONLINE, {
-                summary: "RainViewer precipitation radar · maritime coverage depends on public mosaic",
+                summary: "RainViewer precipitation radar · latest real frame",
                 updatedAt: frame.time ? new Date(frame.time * 1000).toISOString() : new Date().toISOString(),
                 count: 1
             });

@@ -691,6 +691,26 @@ body.eng-map-expanded-active {
     transform-origin: 50% 62%;
 }
 
+.engineering-mode .eng-ais-vessel-marker {
+    width: 1.8vh;
+    height: 1.8vh;
+}
+
+.engineering-mode .eng-ais-vessel-marker span {
+    display: block;
+    width: 0;
+    height: 0;
+    margin: .2vh auto 0;
+    border-left: .48vh solid transparent;
+    border-right: .48vh solid transparent;
+    border-bottom: 1.25vh solid var(--eng-blue-soft);
+    filter:
+        drop-shadow(0 0 .45vh rgba(124, 203, 255, .82))
+        drop-shadow(0 0 .9vh rgba(59, 167, 255, .35));
+    opacity: .95;
+    transform-origin: 50% 62%;
+}
+
 .engineering-mode .eng-satellite-div-icon {
     width: 1.6vh;
     height: 1.6vh;

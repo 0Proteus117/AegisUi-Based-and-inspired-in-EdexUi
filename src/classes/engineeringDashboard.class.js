@@ -135,7 +135,8 @@ class EngineeringMapPanel {
         this.controls = document.getElementById("eng_map_layer_controls");
         this.readout = document.getElementById("eng_map_layer_readout");
         this.locationApplied = false;
-        this.trafficKey = window.settings.tomtomApiKey || "";
+        this.localEnv = this.loadLocalEnvSnapshot();
+        this.trafficKey = "";
         this.offlineMode = Boolean(window.settings.offlineMode);
         this.layerStorageKey = "aegisui-map-layers-v1";
         this.settingsStorageKey = "aegisui-map-settings-v1";
@@ -218,13 +219,13 @@ class EngineeringMapPanel {
             },
             sea: {
                 provider: "AISStream",
-                areaMode: "visible",
+                areaMode: "WORLD_SAMPLE",
                 maxVessels: 100
             },
             marineWeather: {
                 active: false,
-                mode: "visible",
-                preset: "iberian",
+                mode: "preset",
+                preset: "IBERIAN_ATLANTIC",
                 maxMarkers: 4
             },
             ocean: {
@@ -238,6 +239,8 @@ class EngineeringMapPanel {
                 seaCoverage: "precipitation-mosaic"
             },
             traffic: {
+                provider: "auto",
+                preset: "MADRID",
                 opacity: 0.9
             },
             uiSounds: true,
@@ -310,7 +313,26 @@ class EngineeringMapPanel {
                 provider: "AISStream",
                 areaMode: selectMapOption(
                     sea.areaMode,
-                    ["visible", "iberian", "mediterranean", "atlantic"],
+                    [
+                        "WORLD_SAMPLE",
+                        "CURRENT_VIEW",
+                        "ATLANTIC",
+                        "MEDITERRANEAN",
+                        "NORTH_SEA",
+                        "ENGLISH_CHANNEL",
+                        "GIBRALTAR",
+                        "CARIBBEAN",
+                        "US_EAST_COAST",
+                        "US_WEST_COAST",
+                        "SINGAPORE_STRAIT",
+                        "SOUTH_CHINA_SEA",
+                        "JAPAN",
+                        "AUSTRALIA_EAST",
+                        "visible",
+                        "iberian",
+                        "mediterranean",
+                        "atlantic"
+                    ],
                     defaults.sea.areaMode
                 ),
                 maxVessels: clampMapNumber(sea.maxVessels, defaults.sea.maxVessels, 50, 250)
@@ -326,7 +348,20 @@ class EngineeringMapPanel {
                 ),
                 preset: selectMapOption(
                     marineWeather.preset,
-                    ["iberian", "mediterranean", "atlantic", "global-low"],
+                    [
+                        "NEAREST_SEA",
+                        "IBERIAN_ATLANTIC",
+                        "BAY_OF_BISCAY",
+                        "MEDITERRANEAN_WEST",
+                        "GIBRALTAR",
+                        "BALEARIC_SEA",
+                        "NORTH_ATLANTIC",
+                        "CARIBBEAN",
+                        "iberian",
+                        "mediterranean",
+                        "atlantic",
+                        "global-low"
+                    ],
                     defaults.marineWeather.preset
                 ),
                 maxMarkers: clampMapNumber(marineWeather.maxMarkers, defaults.marineWeather.maxMarkers, 1, 12)
@@ -346,6 +381,8 @@ class EngineeringMapPanel {
                 seaCoverage: "precipitation-mosaic"
             },
             traffic: {
+                provider: selectMapOption(traffic.provider, ["auto", "tomtom-tiles", "tomtom-segments"], defaults.traffic.provider),
+                preset: selectMapOption(traffic.preset, ["CURRENT_VIEW", "MADRID", "LONDON", "PARIS"], defaults.traffic.preset),
                 opacity: clampMapNumber(traffic.opacity, defaults.traffic.opacity, 0.25, 1)
             },
             uiSounds: typeof input.uiSounds === "boolean" ? input.uiSounds : defaults.uiSounds,
@@ -510,10 +547,12 @@ class EngineeringMapPanel {
                 requiresApiKey: true,
                 defaultActive: Boolean(this.getTrafficKey()),
                 available: true,
-                updateIntervalMs: 0,
+                updateIntervalMs: 90 * 1000,
                 cacheTtlMs: 0,
                 zIndex: 30,
                 opacity: this.mapSettings.traffic.opacity,
+                provider: this.mapSettings.traffic.provider,
+                preset: this.mapSettings.traffic.preset,
                 fallbackVisual: "Traffic unavailable state in the Local Situation status bar.",
                 mode: "live"
             },
@@ -680,6 +719,9 @@ class EngineeringMapPanel {
         const updates = {
             ROAD_TRAFFIC: {
                 definition: {
+                    provider: this.mapSettings.traffic.provider,
+                    preset: this.mapSettings.traffic.preset,
+                    updateIntervalMs: 90 * 1000,
                     opacity: this.mapSettings.traffic.opacity
                 },
                 opacity: this.mapSettings.traffic.opacity
@@ -1105,10 +1147,20 @@ class EngineeringMapPanel {
                         <label>
                             <span>Area mode</span>
                             ${this.renderCockpitSelect("eng_setting_sea_area", [
-                                {value: "visible", label: "Visible map bounds"},
-                                {value: "iberian", label: "Iberian coast preset"},
-                                {value: "mediterranean", label: "Mediterranean preset"},
-                                {value: "atlantic", label: "Atlantic preset"}
+                                {value: "WORLD_SAMPLE", label: "World Sample"},
+                                {value: "CURRENT_VIEW", label: "Current View"},
+                                {value: "ATLANTIC", label: "Atlantic"},
+                                {value: "MEDITERRANEAN", label: "Mediterranean"},
+                                {value: "NORTH_SEA", label: "North Sea"},
+                                {value: "ENGLISH_CHANNEL", label: "English Channel"},
+                                {value: "GIBRALTAR", label: "Gibraltar"},
+                                {value: "CARIBBEAN", label: "Caribbean"},
+                                {value: "US_EAST_COAST", label: "US East Coast"},
+                                {value: "US_WEST_COAST", label: "US West Coast"},
+                                {value: "SINGAPORE_STRAIT", label: "Singapore Strait"},
+                                {value: "SOUTH_CHINA_SEA", label: "South China Sea"},
+                                {value: "JAPAN", label: "Japan"},
+                                {value: "AUSTRALIA_EAST", label: "Australia East"}
                             ], settings.sea.areaMode)}
                         </label>
                         <label>
@@ -1138,10 +1190,14 @@ class EngineeringMapPanel {
                         <label>
                             <span>Preset</span>
                             ${this.renderCockpitSelect("eng_setting_marine_preset", [
-                                {value: "iberian", label: "Iberian coast"},
-                                {value: "mediterranean", label: "Mediterranean"},
-                                {value: "atlantic", label: "Atlantic"},
-                                {value: "global-low", label: "Global low density"}
+                                {value: "NEAREST_SEA", label: "Nearest Sea"},
+                                {value: "IBERIAN_ATLANTIC", label: "Iberian Atlantic"},
+                                {value: "BAY_OF_BISCAY", label: "Bay of Biscay"},
+                                {value: "MEDITERRANEAN_WEST", label: "Mediterranean West"},
+                                {value: "GIBRALTAR", label: "Gibraltar"},
+                                {value: "BALEARIC_SEA", label: "Balearic Sea"},
+                                {value: "NORTH_ATLANTIC", label: "North Atlantic"},
+                                {value: "CARIBBEAN", label: "Caribbean"}
                             ], settings.marineWeather.preset)}
                         </label>
                         <label>
@@ -1191,9 +1247,28 @@ class EngineeringMapPanel {
                         </label>
                         ${this.renderLayerSwitch("ROAD_TRAFFIC", "Enable TRAFFIC layer")}
                         <label>
+                            <span>Traffic provider</span>
+                            ${this.renderCockpitSelect("eng_setting_traffic_provider", [
+                                {value: "auto", label: "Auto · tiles then segments"},
+                                {value: "tomtom-tiles", label: "TomTom Tiles"},
+                                {value: "tomtom-segments", label: "TomTom Segments"}
+                            ], settings.traffic.provider)}
+                        </label>
+                        <label>
+                            <span>Traffic preset</span>
+                            ${this.renderCockpitSelect("eng_setting_traffic_preset", [
+                                {value: "CURRENT_VIEW", label: "Current View"},
+                                {value: "MADRID", label: "Madrid"},
+                                {value: "LONDON", label: "London"},
+                                {value: "PARIS", label: "Paris"}
+                            ], settings.traffic.preset)}
+                        </label>
+                        <label>
                             <span>Traffic opacity</span>
                             <input id="eng_setting_traffic_opacity" type="range" min="0.25" max="1" step="0.05" value="${window._escapeHtml(String(settings.traffic.opacity))}">
                         </label>
+                        <button type="button" id="eng_setting_traffic_test">TEST TOMTOM</button>
+                        <small id="eng_setting_traffic_test_result">Runs real TomTom traffic diagnostics; key is never printed.</small>
                         <small>Traffic remains TomTom-only and requires a valid TomTom key.</small>
                     </section>
 
@@ -1268,6 +1343,22 @@ class EngineeringMapPanel {
                 ? "CONFIG READY · enable SEA to open AISStream safely."
                 : "CONFIG_REQUIRED · add AISSTREAM_API_KEY in your private environment.";
         });
+        overlay.querySelector("#eng_setting_traffic_test").addEventListener("click", async () => {
+            const result = overlay.querySelector("#eng_setting_traffic_test_result");
+            result.innerText = "Testing TomTom traffic endpoints…";
+            try {
+                const layer = this.layers.get("ROAD_TRAFFIC");
+                const provider = layer && layer.provider;
+                const diagnostic = provider && provider.runTomTomTrafficDiagnostics
+                    ? await provider.runTomTomTrafficDiagnostics(this.layerRegistry.buildContext("ROAD_TRAFFIC"), this.getTrafficKey())
+                    : null;
+                result.innerText = diagnostic
+                    ? `TRAFFIC ${diagnostic.status || "UNKNOWN"} · ${diagnostic.mode || "OFFLINE"} · ${diagnostic.summary || ""}`
+                    : "TRAFFIC diagnostic unavailable";
+            } catch (error) {
+                result.innerText = `TRAFFIC ERROR · ${error.message || "diagnostic failed"}`;
+            }
+        });
 
         overlay.querySelector("#eng_map_settings_modal").addEventListener("submit", event => {
             event.preventDefault();
@@ -1324,6 +1415,8 @@ class EngineeringMapPanel {
                 opacity: overlay.querySelector("#eng_setting_radar_opacity").value
             },
             traffic: {
+                provider: this.settingValue(overlay, "eng_setting_traffic_provider"),
+                preset: this.settingValue(overlay, "eng_setting_traffic_preset"),
                 opacity: overlay.querySelector("#eng_setting_traffic_opacity").value
             },
             uiSounds: overlay.querySelector("#eng_setting_ui_sounds").checked,
@@ -1379,7 +1472,7 @@ class EngineeringMapPanel {
     async loadRuntimeConfig() {
         try {
             const config = await this.ipc.invoke("runtime-config");
-            if (config && config.tomtomApiKey && !this.trafficKey) {
+            if (config && config.tomtomApiKey) {
                 this.trafficKey = config.tomtomApiKey;
                 this.tomTomDiagnostic = {
                     keyStatus: config.tomtomKeyStatus || "CONFIGURED",
@@ -1410,20 +1503,88 @@ class EngineeringMapPanel {
     }
 
     getTrafficKey() {
-        return this.trafficKey
-            || window.settings.tomtomApiKey
-            || this.getEnv("TOMTOM_API_KEY")
+        return this.getEnv("TOMTOM_API_KEY")
             || this.getEnv("AEGISUI_TOMTOM_API_KEY")
             || this.getEnv("TOMTOM_KEY")
             || this.getEnv("VITE_TOMTOM_API_KEY")
             || this.getEnv("REACT_APP_TOMTOM_API_KEY")
+            || this.trafficKey
+            || window.settings.tomtomApiKey
             || "";
     }
 
     getEnv(name) {
         if (!name) return "";
         if (typeof process !== "undefined" && process.env && process.env[name]) return process.env[name];
+        if (this.localEnv && this.localEnv[name]) return this.localEnv[name];
         return "";
+    }
+
+    loadLocalEnvSnapshot() {
+        try {
+            const fs = require("fs");
+            const path = require("path");
+            const roots = Array.from(new Set([
+                typeof process !== "undefined" && process.cwd ? process.cwd() : "",
+                __dirname,
+                path.join(__dirname, ".."),
+                path.join(__dirname, "..", "..")
+            ].filter(Boolean)));
+            const candidates = roots.flatMap(root => [
+                path.join(root, ".env.local"),
+                path.join(root, ".env")
+            ]);
+            const values = {};
+            candidates.forEach(file => {
+                if (!fs.existsSync(file)) return;
+                fs.readFileSync(file, "utf8").split(/\r?\n/).forEach(raw => {
+                    const line = raw.trim();
+                    if (!line || line.startsWith("#") || !line.includes("=")) return;
+                    const index = line.indexOf("=");
+                    const key = line.slice(0, index).trim();
+                    let value = line.slice(index + 1).trim();
+                    if ((value.startsWith("\"") && value.endsWith("\""))
+                        || (value.startsWith("'") && value.endsWith("'"))) {
+                        value = value.slice(1, -1);
+                    }
+                    if (key && value && !values[key]) values[key] = value;
+                });
+            });
+            return values;
+        } catch (error) {
+            return {};
+        }
+    }
+
+    layerDisplayStatus(layer) {
+        if (!layer) return MAP_LAYER_STATES.DISABLED;
+        const summary = String(layer.summary || "");
+        if (layer.status === MAP_LAYER_STATES.ONLINE) {
+            if (layer.definition.id === "ROAD_TRAFFIC") {
+                if (/segment/i.test(summary)) return "ONLINE / SEGMENTS";
+                if (/tile/i.test(summary)) return "ONLINE / TILES";
+                return "ONLINE";
+            }
+            if (layer.definition.id === "MARITIME_AIS") return "ONLINE / AISSTREAM";
+            if (layer.definition.id === "WEATHER_RADAR") return "ONLINE / RAINVIEWER";
+            if (layer.definition.id === "MARINE_WEATHER") return "ONLINE / OPEN-METEO";
+        }
+        if (layer.definition.id === "MARITIME_AIS" && layer.status === MAP_LAYER_STATES.CONFIG_REQUIRED) {
+            return "GLOBAL KEY REQUIRED";
+        }
+        if (layer.definition.id === "MARITIME_AIS" && layer.status === MAP_LAYER_STATES.NO_DATA) {
+            return "NO VESSELS";
+        }
+        if (layer.definition.id === "WEATHER_RADAR" && layer.status === MAP_LAYER_STATES.NO_DATA) {
+            return "NO PRECIP";
+        }
+        if (layer.definition.id === "MARINE_WEATHER" && layer.status === MAP_LAYER_STATES.NO_DATA) {
+            return "NO SEA CELL";
+        }
+        if (layer.definition.id === "ROAD_TRAFFIC" && layer.status === MAP_LAYER_STATES.API_KEY_INVALID) {
+            return "KEY_INVALID";
+        }
+        return layer.status;
     }
 
     renderLayerState() {
@@ -1437,7 +1598,7 @@ class EngineeringMapPanel {
             button.dataset.state = layer.status;
             button.title = `${layer.definition.name} · ${layer.summary || layer.definition.description}`;
             const state = button.querySelector("small");
-            if (state) state.innerText = layer.status;
+            if (state) state.innerText = this.layerDisplayStatus(layer);
         });
 
         const active = Array.from(this.layers.values()).filter(layer => layer.active);
@@ -1452,7 +1613,7 @@ class EngineeringMapPanel {
                 this.readout.innerHTML = active.map(layer => `
                     <article data-state="${layer.status}">
                         <strong>${window._escapeHtml(layer.definition.label)}</strong>
-                        <span>${window._escapeHtml(layer.status)}</span>
+                        <span>${window._escapeHtml(this.layerDisplayStatus(layer))}</span>
                         <em>${window._escapeHtml(layer.summary || layer.error || layer.definition.providerType)}</em>
                         ${layer.count ? `<small>${window._escapeHtml(String(layer.count))} items</small>` : ""}
                         ${layer.updatedAt ? `<small>${window._escapeHtml(formatMapTimestamp(layer.updatedAt))}</small>` : ""}

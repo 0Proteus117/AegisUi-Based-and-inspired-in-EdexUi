@@ -1,5 +1,26 @@
 # Changelog
 
+## 2.0.7 - 2026-07-02
+
+### Fixed
+
+- Added real TomTom traffic runtime mode selection: Flow Tiles first, Flow
+  Segment polylines as a real fallback when tiles are unavailable but segment
+  data responds.
+- Added a provider diagnostic script for TomTom Flow Segment, TomTom Flow Tile,
+  AISStream global live, RainViewer metadata and Open-Meteo Marine.
+- SEA now uses AISStream global live by default with global/preset bounding
+  boxes and real vessel markers only.
+- MARINE now falls back from inland/current-map views to real Open-Meteo sea
+  presets instead of staying visually empty.
+- RainViewer radar attribution and latest-frame status are explicit.
+
+### Security
+
+- Map provider diagnostics mask key suffixes and never print full API keys.
+- `.env.local` remains ignored and is the preferred local place for live map
+  provider keys.
+
 ## 2.0.6 - 2026-07-02
 
 ### Fixed

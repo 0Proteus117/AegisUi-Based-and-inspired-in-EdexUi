@@ -13,6 +13,40 @@ const MARINE_HOURLY_FIELDS = [
 ];
 
 const MARINE_PRESETS = Object.freeze({
+    NEAREST_SEA: [
+        {label: "Nearest configured sea · Gulf of Cadiz", latitude: 36.55, longitude: -7.25}
+    ],
+    IBERIAN_ATLANTIC: [
+        {label: "Gulf of Cadiz", latitude: 36.55, longitude: -7.25},
+        {label: "Galicia Atlantic", latitude: 43.38, longitude: -8.52},
+        {label: "Portuguese Coast", latitude: 39.0, longitude: -9.8},
+        {label: "Canary Basin", latitude: 28.2, longitude: -16.4}
+    ],
+    BAY_OF_BISCAY: [
+        {label: "Bay of Biscay West", latitude: 44.8, longitude: -5.5},
+        {label: "Bay of Biscay East", latitude: 44.2, longitude: -2.2}
+    ],
+    MEDITERRANEAN_WEST: [
+        {label: "Alboran Sea", latitude: 36.72, longitude: -4.42},
+        {label: "Balearic Sea", latitude: 39.45, longitude: 2.55},
+        {label: "Gulf of Lion", latitude: 42.5, longitude: 4.3}
+    ],
+    GIBRALTAR: [
+        {label: "Gibraltar Strait", latitude: 35.95, longitude: -5.55},
+        {label: "Alboran West", latitude: 36.2, longitude: -4.9}
+    ],
+    BALEARIC_SEA: [
+        {label: "Mallorca Channel", latitude: 39.45, longitude: 2.55},
+        {label: "Ibiza Channel", latitude: 38.9, longitude: 1.45}
+    ],
+    NORTH_ATLANTIC: [
+        {label: "North Atlantic", latitude: 45.0, longitude: -25.0},
+        {label: "Azores", latitude: 38.5, longitude: -28.0}
+    ],
+    CARIBBEAN: [
+        {label: "Caribbean Sea", latitude: 15.5, longitude: -72.0},
+        {label: "Lesser Antilles", latitude: 14.5, longitude: -61.5}
+    ],
     iberian: [
         {label: "Alboran Sea", latitude: 36.72, longitude: -4.42},
         {label: "Gulf of Cadiz", latitude: 36.55, longitude: -7.25},
@@ -167,7 +201,7 @@ class MarineWeatherProvider extends BaseMapProvider {
 
     resolveMarinePoints(context) {
         const mode = this.definition.mode || "visible";
-        const preset = this.definition.preset || "iberian";
+        const preset = this.definition.preset || "IBERIAN_ATLANTIC";
         const bounds = this.getMapBounds(context);
 
         if (mode === "preset") return MARINE_PRESETS[preset] || MARINE_PRESETS.iberian;
@@ -178,7 +212,9 @@ class MarineWeatherProvider extends BaseMapProvider {
             return [{label: "Nearest sea cell", latitude: center.lat, longitude: center.lng}];
         }
 
-        if (!bounds || !ROUGH_MARINE_VIEW_BOXES.some(box => intersects(bounds, box))) return [];
+        if (!bounds || !ROUGH_MARINE_VIEW_BOXES.some(box => intersects(bounds, box))) {
+            return MARINE_PRESETS.NEAREST_SEA || MARINE_PRESETS.IBERIAN_ATLANTIC;
+        }
         const center = context.map.getCenter();
         return [{label: "Visible sea cell", latitude: center.lat, longitude: center.lng}];
     }
