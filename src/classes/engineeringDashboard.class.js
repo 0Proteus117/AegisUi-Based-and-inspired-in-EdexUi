@@ -1524,8 +1524,13 @@ class EngineeringMapPanel {
         try {
             const fs = require("fs");
             const path = require("path");
+            let userDataDir = "";
+            try {
+                userDataDir = require("@electron/remote").app.getPath("userData");
+            } catch (error) {}
             const roots = Array.from(new Set([
                 typeof process !== "undefined" && process.cwd ? process.cwd() : "",
+                userDataDir,
                 __dirname,
                 path.join(__dirname, ".."),
                 path.join(__dirname, "..", "..")

@@ -858,10 +858,13 @@ function writeWorkspaceState(input = {}) {
 function loadLocalEnvFile() {
     const candidates = [
         process.env.AEGISUI_ENV_FILE,
+        path.join(process.cwd(), ".env.local"),
         path.join(process.cwd(), ".env"),
+        path.join(__dirname, "..", ".env.local"),
         path.join(__dirname, "..", ".env")
     ];
     try {
+        candidates.push(path.join(app.getPath("userData"), ".env.local"));
         candidates.push(path.join(app.getPath("userData"), ".env"));
     } catch (error) {}
 

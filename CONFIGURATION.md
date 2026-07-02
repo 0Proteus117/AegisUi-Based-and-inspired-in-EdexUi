@@ -92,7 +92,9 @@ AISSTREAM_API_KEY=
 CELESTRAK_GROUP=stations
 ```
 
-Never commit `.env`. It is ignored by Git.
+Never commit `.env` or `.env.local`. Both are ignored by Git. For packaged
+local use, the app also checks `~/Library/Application Support/EdexUi-Eng/.env`
+and `.env.local`.
 
 Current map providers:
 
