@@ -919,6 +919,22 @@ function maskSecret(value) {
     return `••••${text.slice(-4)}`;
 }
 
+function tomTomDiagnosticStatusFromHttp(statusCode) {
+    if (statusCode >= 200 && statusCode < 300) {
+        return {ok: true, keyStatus: "CONFIGURED", serviceStatus: "ONLINE"};
+    }
+    if (statusCode === 401 || statusCode === 403) {
+        return {ok: false, keyStatus: "INVALID", serviceStatus: "API_KEY_INVALID"};
+    }
+    if (statusCode === 429) {
+        return {ok: false, keyStatus: "CONFIGURED", serviceStatus: "RATE_LIMITED"};
+    }
+    if (statusCode >= 500) {
+        return {ok: false, keyStatus: "CONFIGURED", serviceStatus: "SERVICE_UNAVAILABLE"};
+    }
+    return {ok: false, keyStatus: "CONFIGURED", serviceStatus: "ERROR"};
+}
+
 ipc.handle("runtime-config", () => ({
     tomtomApiKey: getTomTomApiKey(),
     tomtomKeyStatus: getTomTomApiKey() ? "CONFIGURED" : "MISSING",
@@ -1016,25 +1032,14 @@ ipc.handle("tomtom-diagnostic", async (event, candidateKey = "") => {
     const url = `https://api.tomtom.com/map/1/tile/basic/main/0/0/0.png?tileSize=256&key=${encodeURIComponent(key)}`;
     try {
         const response = await getHttpStatus(url);
-        if (response.statusCode >= 200 && response.statusCode < 300) {
-            return {
-                ok: true,
-                keyStatus: "CONFIGURED",
-                serviceStatus: "ONLINE",
-                last4: maskSecret(key),
-                httpStatus: response.statusCode,
-                summary: "TomTom base map endpoint reachable"
-            };
-        }
-
-        const invalid = response.statusCode === 401 || response.statusCode === 403;
+        const status = tomTomDiagnosticStatusFromHttp(response.statusCode);
         return {
-            ok: false,
-            keyStatus: invalid ? "INVALID" : "CONFIGURED",
-            serviceStatus: invalid ? "INVALID" : "ERROR",
+            ...status,
             last4: maskSecret(key),
             httpStatus: response.statusCode,
-            summary: `TomTom returned HTTP ${response.statusCode}`
+            summary: status.ok
+                ? "TomTom base map endpoint reachable"
+                : `TomTom base map returned HTTP ${response.statusCode}`
         };
     } catch (error) {
         return {
@@ -1043,6 +1048,40 @@ ipc.handle("tomtom-diagnostic", async (event, candidateKey = "") => {
             serviceStatus: "ERROR",
             last4: maskSecret(key),
             summary: error.message || "TomTom diagnostic failed"
+        };
+    }
+});
+
+ipc.handle("tomtom-traffic-diagnostic", async (event, candidateKey = "") => {
+    const key = String(candidateKey || getTomTomApiKey() || "").trim();
+    if (!key) {
+        return {
+            ok: false,
+            keyStatus: "MISSING",
+            serviceStatus: "API_KEY_MISSING",
+            summary: "TomTom traffic key missing"
+        };
+    }
+
+    const url = `https://api.tomtom.com/traffic/map/4/tile/flow/relative0-dark/5/15/10.png?tileSize=256&key=${encodeURIComponent(key)}`;
+    try {
+        const response = await getHttpStatus(url);
+        const status = tomTomDiagnosticStatusFromHttp(response.statusCode);
+        return {
+            ...status,
+            last4: maskSecret(key),
+            httpStatus: response.statusCode,
+            summary: status.ok
+                ? "TomTom traffic endpoint reachable"
+                : `TomTom traffic returned HTTP ${response.statusCode}`
+        };
+    } catch (error) {
+        return {
+            ok: false,
+            keyStatus: "CONFIGURED",
+            serviceStatus: "SERVICE_UNAVAILABLE",
+            last4: maskSecret(key),
+            summary: error.message || "TomTom traffic diagnostic failed"
         };
     }
 });

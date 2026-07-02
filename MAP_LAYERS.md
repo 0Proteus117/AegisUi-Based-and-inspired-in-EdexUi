@@ -60,6 +60,7 @@ It can configure:
 | `ONLINE` | Provider is active and responding with real data/tiles. |
 | `OFFLINE` | Offline mode or network state prevents loading. |
 | `API_KEY_MISSING` | A key-backed tile/API layer has no key. |
+| `API_KEY_INVALID` | A configured key was rejected by the provider. No fake fallback is drawn. |
 | `CONFIG_REQUIRED` | A provider needs local configuration before it can connect. |
 | `RATE_LIMITED` | Provider throttled the request; no aggressive retry. |
 | `SERVICE_UNAVAILABLE` | Provider/tile service failed but the map remains alive. |
@@ -98,6 +99,7 @@ OFF providers do not poll, open sockets or draw markers.
 - Uses TomTom Traffic tiles.
 - Requires a TomTom key.
 - Missing key reports `API_KEY_MISSING`.
+- Rejected key reports `API_KEY_INVALID` after a real traffic endpoint test.
 - There is no fake traffic fallback.
 
 ### `WEATHER_RADAR`

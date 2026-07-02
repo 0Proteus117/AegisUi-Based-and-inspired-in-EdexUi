@@ -29,6 +29,33 @@ class TrafficProvider extends BaseMapProvider {
             return;
         }
 
+        if (context.ipc && typeof context.ipc.invoke === "function") {
+            try {
+                const diagnostic = await context.ipc.invoke("tomtom-traffic-diagnostic", trafficKey);
+                if (diagnostic && diagnostic.ok === false) {
+                    const status = diagnostic.serviceStatus === MAP_LAYER_STATES.API_KEY_INVALID
+                        || diagnostic.keyStatus === "INVALID"
+                        ? MAP_LAYER_STATES.API_KEY_INVALID
+                        : (diagnostic.serviceStatus === MAP_LAYER_STATES.RATE_LIMITED
+                            ? MAP_LAYER_STATES.RATE_LIMITED
+                            : MAP_LAYER_STATES.SERVICE_UNAVAILABLE);
+                    this.setStatus(status, {
+                        error: diagnostic.summary || "TomTom traffic diagnostic failed",
+                        summary: diagnostic.keyStatus === "INVALID"
+                            ? "TomTom traffic key rejected by provider"
+                            : (diagnostic.summary || "TomTom traffic unavailable")
+                    });
+                    return;
+                }
+            } catch (error) {
+                this.setStatus(MAP_LAYER_STATES.SERVICE_UNAVAILABLE, {
+                    error: error.message || "TomTom traffic diagnostic failed",
+                    summary: "TomTom traffic diagnostic failed"
+                });
+                return;
+            }
+        }
+
         const key = encodeURIComponent(trafficKey);
         const layer = context.L.tileLayer(
             `https://api.tomtom.com/traffic/map/4/tile/flow/relative0-dark/{z}/{x}/{y}.png?tileSize=256&key=${key}`,

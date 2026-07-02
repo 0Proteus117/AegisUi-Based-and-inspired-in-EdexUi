@@ -1,5 +1,23 @@
 # Changelog
 
+## 2.0.6 - 2026-07-02
+
+### Fixed
+
+- TomTom Traffic now runs a real provider diagnostic before adding traffic
+  tiles. A rejected key reports `API_KEY_INVALID` instead of the misleading
+  generic `SERVICE_UNAVAILABLE`.
+- Base-map fallback tiles are brighter and clearer so OSM fallback does not look
+  like a dead/black map.
+- TomTom diagnostics now distinguish missing, invalid, rate-limited and service
+  unavailable states without printing the full key.
+
+### Notes
+
+- If TomTom returns HTTP 401/403 for the locally saved key, AegisUi cannot make
+  TomTom traffic real. The correct behavior is `API_KEY_INVALID`; no fake
+  traffic is drawn.
+
 ## 2.0.5 - 2026-07-02
 
 ### Added

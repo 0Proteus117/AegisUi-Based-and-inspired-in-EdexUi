@@ -4,6 +4,7 @@ const MAP_LAYER_STATES = Object.freeze({
     ONLINE: "ONLINE",
     OFFLINE: "OFFLINE",
     API_KEY_MISSING: "API_KEY_MISSING",
+    API_KEY_INVALID: "API_KEY_INVALID",
     CONFIG_REQUIRED: "CONFIG_REQUIRED",
     RATE_LIMITED: "RATE_LIMITED",
     SERVICE_UNAVAILABLE: "SERVICE_UNAVAILABLE",
@@ -20,6 +21,7 @@ const MAP_LAYER_STATES = Object.freeze({
 const ATTENTION_STATES = new Set([
     MAP_LAYER_STATES.OFFLINE,
     MAP_LAYER_STATES.API_KEY_MISSING,
+    MAP_LAYER_STATES.API_KEY_INVALID,
     MAP_LAYER_STATES.CONFIG_REQUIRED,
     MAP_LAYER_STATES.RATE_LIMITED,
     MAP_LAYER_STATES.SERVICE_UNAVAILABLE,
@@ -62,10 +64,12 @@ function normalizeProviderError(error, context = {}) {
     if ([401, 403].includes(statusCode)
         || message.includes("unauthorized")
         || message.includes("forbidden")
+        || message.includes("invalid")
+        || message.includes("authentication credentials")
         || message.includes("api key")
         || message.includes("apikey")
         || message.includes("credential")) {
-        return MAP_LAYER_STATES.API_KEY_MISSING;
+        return MAP_LAYER_STATES.API_KEY_INVALID;
     }
     if (statusCode >= 500
         || message.includes("timeout")

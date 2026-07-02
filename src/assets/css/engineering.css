@@ -190,8 +190,18 @@ body.engineering-mode {
 }
 
 .engineering-mode .eng-base-map {
-    filter: grayscale(1) invert(.92) brightness(.62) contrast(1.28);
-    opacity: .82;
+    filter: grayscale(1) invert(.92) brightness(.78) contrast(1.2);
+    opacity: .94;
+}
+
+.engineering-mode .eng-base-map-osm {
+    filter: grayscale(.92) invert(.88) brightness(.9) contrast(1.16);
+    opacity: .98;
+}
+
+.engineering-mode .eng-base-map-tomtom {
+    filter: grayscale(1) invert(.92) brightness(.8) contrast(1.22);
+    opacity: .94;
 }
 
 .engineering-mode .eng-radar-map {
