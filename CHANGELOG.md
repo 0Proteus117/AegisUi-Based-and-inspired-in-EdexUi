@@ -1,5 +1,30 @@
 # Changelog
 
+## 2.1.0 - 2026-07-02
+
+### Added
+
+- Added Assistant Presence Core: a global lower-left cockpit orb for the future
+  Angie / Gustav assistant system.
+- Added visual assistant states: `IDLE`, `LISTENING`, `THINKING`, `SPEAKING`,
+  `MUTED`, `OFFLINE` and `ERROR`.
+- Added a compact assistant panel with manual text input, mute/unmute, settings,
+  clear and honest backend-offline placeholder.
+- Added public/private naming:
+  - public: `Ares`, `Aphrodite`;
+  - private aliases: `Gustav`, `Angie`.
+- Added local-only assistant settings stored in renderer localStorage.
+- Added assistant bridge and authority scaffolding for future voice, LLM and
+  command-router integration without connecting any backend yet.
+- Added `ASSISTANT_SYSTEM.md` and `ASSISTANT_AUTHORITY_MATRIX.md`.
+
+### Security
+
+- No LLM, STT, voice clone, Ollama, Chatterbox or external API is connected in
+  this phase.
+- Private assistant profiles, memories, voice samples and model files are
+  ignored by Git.
+
 ## 2.0.7 - 2026-07-02
 
 ### Fixed

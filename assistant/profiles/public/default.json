@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "profiles": [
+    {
+      "id": "ares",
+      "publicName": "Ares",
+      "privateAlias": "Gustav",
+      "role": "Operational systems assistant",
+      "status": "visual-only"
+    },
+    {
+      "id": "aphrodite",
+      "publicName": "Aphrodite",
+      "privateAlias": "Angie",
+      "role": "Creative conversational assistant",
+      "status": "visual-only"
+    }
+  ],
+  "note": "Assistant Presence Core does not connect an LLM, speech-to-text or voice model yet."
+}

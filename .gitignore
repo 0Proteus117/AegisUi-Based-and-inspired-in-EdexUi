@@ -32,6 +32,16 @@ local-data/
 user-data/
 exports/
 imports/
+assistant/profiles/private/
+assistant/voices/private/
+assistant/memory/private/
+*.wav
+*.mp3
+*.flac
+*.pt
+*.pth
+*.ckpt
+*.safetensors
 
 # Runtime data
 pids

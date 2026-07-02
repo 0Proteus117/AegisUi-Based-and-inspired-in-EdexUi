@@ -45,6 +45,9 @@ keyboard and large terminal with:
   structure and dependency/runtime health;
 - an Agent Command deck for human-controlled AI-agent coordination, with local
   agent roles, prompt templates, permission levels and a central task board;
+- a global Assistant Presence orb for the future Angie / Gustav assistant
+  system, with local-only visual states, aliases, panel settings and no AI or
+  voice backend connected yet;
 - editable project timelines for engineering work, with a visual Project
   Control popup for creating projects, managing milestones, changing status,
   reordering steps and saving without manually editing JSON;
@@ -151,6 +154,10 @@ Security/offline documentation:
 - [AGENT_COMMAND_DECK.md](AGENT_COMMAND_DECK.md) documents the agent command
   room, roles, permissions, task board, approval flow and future AI integration
   boundaries.
+- [ASSISTANT_SYSTEM.md](ASSISTANT_SYSTEM.md) documents the Assistant Presence
+  orb, states, aliases, local settings, voice safety and future backend bridge.
+- [ASSISTANT_AUTHORITY_MATRIX.md](ASSISTANT_AUTHORITY_MATRIX.md) defines the
+  future assistant permission levels from observe-only to blocked actions.
 - [WORKSPACE_NAVIGATION.md](WORKSPACE_NAVIGATION.md) documents the scalable
   pinned-HUB plus compact workspace rail navigation decision.
 - [MOCK_TO_REAL_AUDIT.md](MOCK_TO_REAL_AUDIT.md) inventories mockups,

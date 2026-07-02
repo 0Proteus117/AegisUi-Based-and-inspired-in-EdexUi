@@ -31,6 +31,11 @@ Private files that must not be committed:
 - `user-config.local.json`;
 - `api-keys.local.json`;
 - `secrets.local.json`;
+- `assistant/profiles/private/`;
+- `assistant/voices/private/`;
+- `assistant/memory/private/`;
+- private voice samples such as `.wav`, `.mp3`, `.flac`;
+- model weights such as `.pt`, `.pth`, `.ckpt`, `.safetensors`;
 - exported local data;
 - build artifacts such as `.dmg`, `.zip` and `dist/`.
 
@@ -58,6 +63,9 @@ The app currently uses JSON files in the macOS application-data folder:
   keys, tokens, `.env` contents or private chat/history data.
 - `workspace-state.json`: last active workspace and navigation mode. It is
   local state only and contains no credentials.
+- Assistant Presence settings are stored in renderer localStorage under
+  `aegisui-assistant-settings-v1`. They contain only visual preferences,
+  aliases, active assistant, muted state and backend status placeholders.
 
 Generated caches and helpers can also exist there, for example GeoIP data,
 application icons and the native Calendar helper. Do not share those by

@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "mode": "private",
+  "activeAssistant": "ares",
+  "aliases": {
+    "ares": "Gustav",
+    "aphrodite": "Angie"
+  },
+  "muted": false,
+  "voiceMode": "default-robotic",
+  "panelOpen": false,
+  "backend": {
+    "assistant": "OFFLINE",
+    "voice": "OFFLINE"
+  }
+}

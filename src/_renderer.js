@@ -434,6 +434,7 @@ async function initUI() {
         navigationElementId: "workspace_navigation",
         viewsElementId: "workspace_views"
     });
+    window.assistantPresence = new AssistantPresence();
 
     window.audioManager.expand.play();
     shellContainer.setAttribute("style", "opacity:1;");
