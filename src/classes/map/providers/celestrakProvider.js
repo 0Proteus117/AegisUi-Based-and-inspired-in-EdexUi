@@ -3,6 +3,17 @@ const {MAP_LAYER_STATES, isOffline} = require("../utils/mapLayerState.js");
 const satellite = require("satellite.js");
 
 const CELESTRAK_GP_URL = "https://celestrak.org/NORAD/elements/gp.php";
+const CELESTRAK_GROUPS = Object.freeze({
+    "stations": "STATIONS",
+    "active": "ACTIVE",
+    "starlink": "STARLINK",
+    "weather": "WEATHER",
+    "gps-ops": "GPS-OPS",
+    "visual": "VISUAL",
+    "last-30-days": "LAST-30-DAYS",
+    "geo": "GEO",
+    "science": "SCIENCE"
+});
 
 function finiteNumber(value) {
     const number = Number(value);
@@ -34,6 +45,37 @@ function getObjectName(item) {
         || (item.NORAD_CAT_ID ? `NORAD ${item.NORAD_CAT_ID}` : "Unknown satellite");
 }
 
+function parseTleCatalog(text, satelliteLib) {
+    const lines = String(text || "")
+        .split(/\r?\n/)
+        .map(line => line.trim())
+        .filter(Boolean);
+    const records = [];
+
+    for (let index = 0; index < lines.length; index += 1) {
+        if (!/^1\s+\d+/.test(lines[index])) continue;
+        const name = index > 0 && !/^2\s+\d+/.test(lines[index - 1])
+            ? lines[index - 1]
+            : `NORAD ${lines[index].slice(2, 7).trim()}`;
+        const line1 = lines[index];
+        const line2 = lines[index + 1] || "";
+        if (!/^2\s+\d+/.test(line2)) continue;
+        try {
+            const satrec = satelliteLib.twoline2satrec(line1, line2);
+            records.push({
+                name,
+                norad: satrec.satnum || line1.slice(2, 7).trim(),
+                epoch: line1.slice(18, 32).trim(),
+                source: "CelesTrak GP/TLE",
+                satrec
+            });
+        } catch (error) {}
+        index += 1;
+    }
+
+    return records;
+}
+
 function isCelesTrakNotUpdated(error) {
     const body = String(error && error.responseText ? error.responseText : "").toLowerCase();
     return Number(error && error.status) === 403
@@ -54,10 +96,15 @@ class CelesTrakProvider extends BaseMapProvider {
         const configured = context && context.getEnv
             ? context.getEnv("CELESTRAK_GROUP") || context.getEnv("AEGISUI_CELESTRAK_GROUP")
             : "";
-        return String(this.definition.defaultGroup || configured || "stations")
+        const group = String(this.definition.defaultGroup || configured || "stations")
             .trim()
             .replace(/[^a-z0-9_-]/ig, "")
             .toLowerCase() || "stations";
+        return Object.prototype.hasOwnProperty.call(CELESTRAK_GROUPS, group) ? group : "stations";
+    }
+
+    getCelesTrakGroupName(context = this.context) {
+        return CELESTRAK_GROUPS[this.getGroup(context)] || CELESTRAK_GROUPS.stations;
     }
 
     async start(context) {
@@ -114,41 +161,48 @@ class CelesTrakProvider extends BaseMapProvider {
         }
 
         const group = this.getGroup(context);
-        const url = `${CELESTRAK_GP_URL}?GROUP=${encodeURIComponent(group)}&FORMAT=json`;
+        const celestrakGroup = this.getCelesTrakGroupName(context);
+        const url = `${CELESTRAK_GP_URL}?GROUP=${encodeURIComponent(celestrakGroup)}&FORMAT=tle`;
         const controller = this.createAbortController();
 
         this.setStatus(MAP_LAYER_STATES.LOADING, {
-            summary: `Loading CelesTrak GP data · ${group}`
+            summary: `Loading CelesTrak GP data · ${celestrakGroup}`
         });
 
         try {
-            const data = await context.cache.getOrFetch(
-                `celestrak:${group}`,
+            const records = await context.cache.getOrFetch(
+                `celestrak:${group}:${celestrakGroup}`,
                 this.definition.cacheTtlMs,
-                () => this.fetchJson(url, {signal: controller.signal, headers: {Accept: "application/json"}})
+                async () => {
+                    const text = await this.fetchText(url, {
+                        signal: controller.signal,
+                        headers: {Accept: "text/plain"}
+                    });
+                    return this.buildSatelliteRecords(parseTleCatalog(text, satellite));
+                }
             );
-            const count = Array.isArray(data) ? data.length : 0;
+            const count = Array.isArray(records) ? records.length : 0;
 
             if (!count) {
                 if (this.layerGroup) this.layerGroup.clearLayers();
                 this.catalog = [];
                 this.satrecs = [];
                 this.setStatus(MAP_LAYER_STATES.NO_DATA, {
-                    summary: `CelesTrak returned no objects for ${group}`,
+                    summary: `CelesTrak returned no objects for ${celestrakGroup}`,
                     count: 0
                 });
                 return;
             }
 
-            this.catalog = data;
-            this.satrecs = this.buildSatelliteRecords(data);
+            this.catalog = records;
+            this.satrecs = records;
             this.renderSatellitePositions(context);
         } catch (error) {
             if (this.layerGroup) this.layerGroup.clearLayers();
             if (isCelesTrakNotUpdated(error)) {
                 this.setStatus(MAP_LAYER_STATES.RATE_LIMITED, {
                     error: "CelesTrak data has not updated since the last successful download",
-                    summary: `CelesTrak cache window active · ${group}`,
+                    summary: `CelesTrak cache window active · ${celestrakGroup}`,
                     count: 0
                 });
                 return;
@@ -164,6 +218,11 @@ class CelesTrakProvider extends BaseMapProvider {
 
         items.forEach(item => {
             try {
+                if (item.satrec) {
+                    records.push(item);
+                    return;
+                }
+                if (typeof satellite.json2satrec !== "function") return;
                 const satrec = satellite.json2satrec(item);
                 records.push({
                     name: getObjectName(item),

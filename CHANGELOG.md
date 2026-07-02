@@ -1,5 +1,28 @@
 # Changelog
 
+## 2.0.5 - 2026-07-02
+
+### Added
+
+- Added `MAP_PROVIDER_HARDENING.md` with the v2.0.5 map-provider audit.
+- Added TomTom base-map diagnostics with safe key status, masked suffix and
+  service status.
+- Added OpenStreetMap base-map fallback when TomTom is missing or unavailable.
+- Added cockpit-style custom dropdown controls for the map settings popup.
+- Added real Open-Meteo Marine sea-state provider as `MARINE_WEATHER`.
+
+### Changed
+
+- TomTom key loading now accepts `TOMTOM_API_KEY`, `AEGISUI_TOMTOM_API_KEY`,
+  `TOMTOM_KEY`, `VITE_TOMTOM_API_KEY` and `REACT_APP_TOMTOM_API_KEY`.
+- SAT Starlink now maps explicitly to CelesTrak `GROUP=STARLINK`.
+- SAT now consumes real CelesTrak GP/TLE records with `twoline2satrec`, avoiding
+  the broken local `satellite.js@7` package path while keeping real SGP4
+  propagation.
+- AISStream settings now support safe area presets without opening a socket
+  when the key is missing.
+- Radar copy/status now separates precipitation radar from marine weather.
+
 ## 2.0.4 - 2026-06-27
 
 ### Added

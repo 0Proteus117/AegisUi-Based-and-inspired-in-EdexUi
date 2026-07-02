@@ -431,7 +431,6 @@ body.eng-map-expanded-active {
     letter-spacing: .08vh;
 }
 
-.engineering-mode .eng-map-settings-section select,
 .engineering-mode .eng-map-settings-section input[type="number"] {
     width: 100%;
     min-width: 0;
@@ -442,6 +441,96 @@ body.eng-map-expanded-active {
     background: rgba(2, 6, 10, .86);
     font: .88vh var(--font_mono);
     outline: none;
+}
+
+.engineering-mode .eng-cockpit-select {
+    position: relative;
+    min-width: 0;
+    z-index: 1;
+}
+
+.engineering-mode .eng-cockpit-select.open {
+    z-index: 20;
+}
+
+.engineering-mode .eng-cockpit-select-trigger {
+    width: 100%;
+    min-height: 2.65vh;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .7vh;
+    padding: .55vh .68vh;
+    border: .1vh solid rgba(59, 167, 255, .45);
+    color: var(--eng-blue-soft);
+    background:
+        linear-gradient(90deg, rgba(59, 167, 255, .11), transparent),
+        rgba(2, 6, 10, .9);
+    font: .88vh var(--font_mono);
+    letter-spacing: .06vh;
+    text-align: left;
+    outline: none;
+}
+
+.engineering-mode .eng-cockpit-select-trigger:hover,
+.engineering-mode .eng-cockpit-select.open .eng-cockpit-select-trigger {
+    border-color: rgba(124, 203, 255, .86);
+    box-shadow: inset 0 0 1.2vh rgba(59, 167, 255, .12), 0 0 1vh rgba(59, 167, 255, .1);
+}
+
+.engineering-mode .eng-cockpit-select-trigger span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.engineering-mode .eng-cockpit-select-trigger em {
+    color: var(--eng-blue);
+    font-style: normal;
+}
+
+.engineering-mode .eng-cockpit-select-menu {
+    position: absolute;
+    z-index: 200;
+    top: calc(100% + .22vh);
+    left: 0;
+    right: 0;
+    max-height: 17vh;
+    overflow: auto;
+    display: none;
+    padding: .35vh;
+    border: .1vh solid rgba(124, 203, 255, .64);
+    background: rgba(3, 8, 13, .98);
+    box-shadow: 0 1.5vh 3vh rgba(0, 0, 0, .45), 0 0 1.8vh rgba(59, 167, 255, .12);
+}
+
+.engineering-mode .eng-cockpit-select.open .eng-cockpit-select-menu {
+    display: grid;
+    gap: .25vh;
+}
+
+.engineering-mode .eng-cockpit-select-menu button {
+    display: grid;
+    gap: .18vh;
+    padding: .52vh .55vh;
+    border: .1vh solid transparent;
+    color: rgba(124, 203, 255, .8);
+    background: transparent;
+    font: .82vh var(--font_mono);
+    text-align: left;
+}
+
+.engineering-mode .eng-cockpit-select-menu button:hover,
+.engineering-mode .eng-cockpit-select-menu button[aria-selected="true"] {
+    border-color: rgba(59, 167, 255, .42);
+    color: #fff;
+    background: rgba(59, 167, 255, .12);
+}
+
+.engineering-mode .eng-cockpit-select-menu button small {
+    color: rgba(124, 203, 255, .5);
+    font: .68vh var(--font_main_light);
 }
 
 .engineering-mode .eng-map-settings-section input[type="range"] {

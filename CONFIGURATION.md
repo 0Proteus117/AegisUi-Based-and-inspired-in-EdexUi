@@ -45,7 +45,8 @@ The app currently uses JSON files in the macOS application-data folder:
 - `projects.backup.json`: automatic project backup.
 - `music-playlists.json`: local Apple Music playlist launcher list.
 - `map-layers.json`: Local Situation layer preferences for traffic, radar,
-  air, maritime, satellite and ocean layers. It does not contain API keys.
+  air, maritime AIS, marine weather, satellite and ocean layers. It does not
+  contain API keys.
 - `launch-bay-games.json`: manual Launch Bay game library with titles,
   platforms, safe launch URLs and local cover/hero image paths. It does not
   contain tokens or account sessions.
@@ -77,7 +78,11 @@ cp .env.example .env
 Then add only the keys/configuration you personally want to use:
 
 ```text
+TOMTOM_API_KEY=
 AEGISUI_TOMTOM_API_KEY=
+TOMTOM_KEY=
+VITE_TOMTOM_API_KEY=
+REACT_APP_TOMTOM_API_KEY=
 OPENSKY_CLIENT_ID=
 OPENSKY_CLIENT_SECRET=
 OPENSKY_ACCESS_TOKEN=
@@ -89,15 +94,21 @@ Never commit `.env`. It is ignored by Git.
 
 Current map providers:
 
-- TomTom road traffic: optional, requires `AEGISUI_TOMTOM_API_KEY`.
-- RainViewer weather radar: optional, no key.
+- TomTom base map and road traffic: optional. The base map can fall back to
+  OSM; traffic remains TomTom-only. Accepted key aliases are `TOMTOM_API_KEY`,
+  `AEGISUI_TOMTOM_API_KEY`, `TOMTOM_KEY`, `VITE_TOMTOM_API_KEY` and
+  `REACT_APP_TOMTOM_API_KEY`.
+- RainViewer precipitation radar: optional, no key.
 - OpenSky air traffic: optional, can run anonymously with rate limits; OAuth or
   bearer token can be supplied through the OpenSky variables.
 - AISStream maritime AIS: optional, requires `AISSTREAM_API_KEY`.
+- Open-Meteo Marine: optional, no key. This provides sea-state conditions, not
+  vessel positions.
 - CelesTrak satellite layer: optional, no key; `CELESTRAK_GROUP` selects the
   initial fallback catalog group, while the in-app map settings selector has
   priority after the user chooses a group. Satellite positions are calculated
-  locally with `satellite.js` SGP4 propagation and no fake markers are drawn.
+  locally with `satellite.js` SGP4 propagation from real GP/TLE records and no
+  fake markers are drawn.
 - NOAA/NDBC ocean stations: optional, no key for the public station endpoints
   used by AegisUi.
 
@@ -109,10 +120,12 @@ are stored in renderer localStorage on the same Mac and are not committed:
 - selected CelesTrak group: `stations`, `active`, `starlink`, `weather`,
   `gps-ops`, `visual`, `last-30-days`, `geo` or `science`;
 - SAT density: `LOW`, `MEDIUM`, `HIGH` or `CUSTOM`;
+- selected base-map provider/fallback mode;
 - AIR marker cap, refresh interval and visible/wide bounds mode;
-- SEA AIS marker cap and area mode;
+- SEA AIS marker cap and area preset;
+- Marine Weather mode/preset/marker cap;
 - OCEAN source/filter/max station count;
-- radar and traffic opacity;
+- radar provider, radar opacity and traffic opacity;
 - local UI-sound toggle;
 - default map-location behavior.
 

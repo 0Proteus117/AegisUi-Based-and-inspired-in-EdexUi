@@ -71,6 +71,11 @@ function cloneMapData(value) {
     }
 }
 
+function maskMapSecret(value) {
+    const text = String(value || "").trim();
+    return text ? `••••${text.slice(-4)}` : "";
+}
+
 class EngineeringDashboard {
     constructor(parentId) {
         if (!parentId) throw "Missing options";
@@ -135,6 +140,17 @@ class EngineeringMapPanel {
         this.layerStorageKey = "aegisui-map-layers-v1";
         this.settingsStorageKey = "aegisui-map-settings-v1";
         this.mapSettings = this.loadMapSettings();
+        this.tomTomDiagnostic = {
+            keyStatus: this.getTrafficKey() ? "CONFIGURED" : "MISSING",
+            serviceStatus: "UNKNOWN",
+            last4: maskMapSecret(this.getTrafficKey()),
+            summary: "TomTom diagnostic not run yet"
+        };
+        this.baseMapStatus = {
+            provider: "FALLBACK",
+            status: "LOADING",
+            summary: "Base map initializing"
+        };
         this.expanded = false;
         this.settingsOverlay = null;
         this.layerPreferences = this.loadLayerPreferences();
@@ -148,16 +164,8 @@ class EngineeringMapPanel {
         }).setView([40.4168, -3.7038], 10);
         this.map.attributionControl.setPrefix(false);
 
-        this.baseLayer = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-            maxZoom: 19,
-            attribution: "© OpenStreetMap",
-            className: "eng-base-map"
-        }).addTo(this.map);
-        this.baseLayer.on("tileerror", () => {
-            this.status.innerText = this.offlineMode
-                ? "OFFLINE MODE · LOCAL DATA"
-                : "BASE MAP SERVICE UNAVAILABLE";
-        });
+        this.baseLayer = null;
+        this.applyBaseMapProvider();
         L.control.zoom({position: "bottomright"}).addTo(this.map);
 
         document.getElementById("eng_map_settings").addEventListener("click", () => this.openSettingsModal());
@@ -193,6 +201,10 @@ class EngineeringMapPanel {
 
     defaultMapSettings() {
         return {
+            baseMap: {
+                provider: "auto",
+                fallbackEnabled: true
+            },
             satellite: {
                 group: "stations",
                 density: "MEDIUM",
@@ -209,14 +221,21 @@ class EngineeringMapPanel {
                 areaMode: "visible",
                 maxVessels: 100
             },
+            marineWeather: {
+                active: false,
+                mode: "visible",
+                preset: "iberian",
+                maxMarkers: 4
+            },
             ocean: {
                 source: "ndbc-active",
                 filterMode: "visible",
                 maxStations: 500
             },
             radar: {
+                provider: "auto",
                 opacity: 0.55,
-                seaCoverage: "not-supported"
+                seaCoverage: "precipitation-mosaic"
             },
             traffic: {
                 opacity: 0.9
@@ -232,9 +251,13 @@ class EngineeringMapPanel {
 
     sanitizeMapSettings(input = {}) {
         const defaults = this.defaultMapSettings();
+        const baseMap = input.baseMap && typeof input.baseMap === "object" ? input.baseMap : {};
         const satellite = input.satellite && typeof input.satellite === "object" ? input.satellite : {};
         const air = input.air && typeof input.air === "object" ? input.air : {};
         const sea = input.sea && typeof input.sea === "object" ? input.sea : {};
+        const marineWeather = input.marineWeather && typeof input.marineWeather === "object"
+            ? input.marineWeather
+            : {};
         const ocean = input.ocean && typeof input.ocean === "object" ? input.ocean : {};
         const radar = input.radar && typeof input.radar === "object" ? input.radar : {};
         const traffic = input.traffic && typeof input.traffic === "object" ? input.traffic : {};
@@ -243,6 +266,12 @@ class EngineeringMapPanel {
             : {};
 
         return {
+            baseMap: {
+                provider: selectMapOption(baseMap.provider, ["auto", "tomtom", "osm"], defaults.baseMap.provider),
+                fallbackEnabled: typeof baseMap.fallbackEnabled === "boolean"
+                    ? baseMap.fallbackEnabled
+                    : defaults.baseMap.fallbackEnabled
+            },
             satellite: {
                 group: selectMapOption(
                     satellite.group,
@@ -279,8 +308,28 @@ class EngineeringMapPanel {
             },
             sea: {
                 provider: "AISStream",
-                areaMode: selectMapOption(sea.areaMode, ["visible", "custom"], defaults.sea.areaMode),
+                areaMode: selectMapOption(
+                    sea.areaMode,
+                    ["visible", "iberian", "mediterranean", "atlantic"],
+                    defaults.sea.areaMode
+                ),
                 maxVessels: clampMapNumber(sea.maxVessels, defaults.sea.maxVessels, 50, 250)
+            },
+            marineWeather: {
+                active: typeof marineWeather.active === "boolean"
+                    ? marineWeather.active
+                    : defaults.marineWeather.active,
+                mode: selectMapOption(
+                    marineWeather.mode,
+                    ["visible", "nearest", "preset"],
+                    defaults.marineWeather.mode
+                ),
+                preset: selectMapOption(
+                    marineWeather.preset,
+                    ["iberian", "mediterranean", "atlantic", "global-low"],
+                    defaults.marineWeather.preset
+                ),
+                maxMarkers: clampMapNumber(marineWeather.maxMarkers, defaults.marineWeather.maxMarkers, 1, 12)
             },
             ocean: {
                 source: selectMapOption(ocean.source, ["ndbc-active", "dart"], defaults.ocean.source),
@@ -292,8 +341,9 @@ class EngineeringMapPanel {
                 maxStations: clampMapNumber(ocean.maxStations, defaults.ocean.maxStations, 100, 1500)
             },
             radar: {
+                provider: selectMapOption(radar.provider, ["auto", "rainviewer"], defaults.radar.provider),
                 opacity: clampMapNumber(radar.opacity, defaults.radar.opacity, 0.15, 0.95),
-                seaCoverage: "not-supported"
+                seaCoverage: "precipitation-mosaic"
             },
             traffic: {
                 opacity: clampMapNumber(traffic.opacity, defaults.traffic.opacity, 0.25, 1)
@@ -319,6 +369,121 @@ class EngineeringMapPanel {
         try {
             localStorage.setItem(this.settingsStorageKey, JSON.stringify(this.mapSettings));
         } catch (error) {}
+    }
+
+    getTomTomKey() {
+        return this.getTrafficKey();
+    }
+
+    setBaseMapStatus(provider, status, summary = "") {
+        this.baseMapStatus = {provider, status, summary};
+        if (!this.layers || !Array.from(this.layers.values()).some(layer => layer.active)) {
+            this.status.innerText = `BASE MAP: ${provider} · ${status}`;
+        }
+    }
+
+    removeBaseLayer() {
+        if (!this.baseLayer) return;
+        try {
+            if (this.map && this.map.hasLayer(this.baseLayer)) this.map.removeLayer(this.baseLayer);
+        } catch (error) {}
+        this.baseLayer = null;
+    }
+
+    applyBaseMapProvider() {
+        const provider = this.mapSettings.baseMap.provider;
+        const key = this.getTomTomKey();
+        if ((provider === "auto" || provider === "tomtom") && key) {
+            this.useTomTomBaseMap(key);
+            this.runTomTomDiagnostic(key);
+            return;
+        }
+        this.useOsmFallbackBaseMap(key ? "OSM selected" : "TomTom key missing");
+        if (!key) {
+            this.tomTomDiagnostic = {
+                keyStatus: "MISSING",
+                serviceStatus: "CONFIG_REQUIRED",
+                last4: "",
+                summary: "TomTom key missing"
+            };
+        }
+    }
+
+    useTomTomBaseMap(key) {
+        this.removeBaseLayer();
+        const encodedKey = encodeURIComponent(key);
+        const layer = L.tileLayer(
+            `https://api.tomtom.com/map/1/tile/basic/main/{z}/{x}/{y}.png?tileSize=256&key=${encodedKey}`,
+            {
+                maxZoom: 22,
+                attribution: "© TomTom",
+                className: "eng-base-map eng-base-map-tomtom"
+            }
+        );
+        layer.on("tileload", () => {
+            if (this.baseLayer !== layer) return;
+            this.setBaseMapStatus("TOMTOM", "ONLINE", "TomTom base tiles loaded");
+        });
+        layer.on("tileerror", () => {
+            if (this.baseLayer !== layer) return;
+            this.tomTomDiagnostic = {
+                ...this.tomTomDiagnostic,
+                keyStatus: this.tomTomDiagnostic.keyStatus === "MISSING" ? "MISSING" : "CONFIGURED",
+                serviceStatus: "ERROR",
+                summary: "TomTom tile error; fallback map active"
+            };
+            if (this.mapSettings.baseMap.fallbackEnabled) this.useOsmFallbackBaseMap("TomTom tile error");
+            else this.setBaseMapStatus("TOMTOM", "ERROR", "TomTom tile error");
+        });
+        this.baseLayer = layer.addTo(this.map);
+        this.setBaseMapStatus("TOMTOM", "LOADING", "TomTom base tiles requested");
+    }
+
+    useOsmFallbackBaseMap(summary = "Fallback base map") {
+        this.removeBaseLayer();
+        const layer = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            maxZoom: 19,
+            attribution: "© OpenStreetMap",
+            className: "eng-base-map eng-base-map-osm"
+        });
+        layer.on("tileload", () => {
+            this.setBaseMapStatus("FALLBACK", "ONLINE", summary);
+        });
+        layer.on("tileerror", () => {
+            this.setBaseMapStatus("OFFLINE", "ERROR", "Fallback base map unavailable");
+        });
+        this.baseLayer = layer.addTo(this.map);
+        this.setBaseMapStatus("FALLBACK", "LOADING", summary);
+    }
+
+    async runTomTomDiagnostic(key = this.getTomTomKey()) {
+        if (!key || !this.ipc || !this.ipc.invoke) return;
+        try {
+            const result = await this.ipc.invoke("tomtom-diagnostic", key);
+            this.tomTomDiagnostic = {
+                keyStatus: result.keyStatus || "CONFIGURED",
+                serviceStatus: result.serviceStatus || (result.ok ? "ONLINE" : "ERROR"),
+                last4: result.last4 || maskMapSecret(key),
+                httpStatus: result.httpStatus || "",
+                summary: result.summary || ""
+            };
+            if (result.ok) {
+                this.setBaseMapStatus("TOMTOM", "ONLINE", result.summary || "TomTom online");
+            } else if (this.mapSettings.baseMap.fallbackEnabled) {
+                this.useOsmFallbackBaseMap(result.summary || "TomTom diagnostic failed");
+            } else {
+                this.setBaseMapStatus("TOMTOM", this.tomTomDiagnostic.serviceStatus, this.tomTomDiagnostic.summary);
+            }
+            if (this.settingsOverlay) this.refreshSettingsStatusBadges();
+        } catch (error) {
+            this.tomTomDiagnostic = {
+                keyStatus: key ? "CONFIGURED" : "MISSING",
+                serviceStatus: "ERROR",
+                last4: maskMapSecret(key),
+                summary: error.message || "TomTom diagnostic failed"
+            };
+            if (this.mapSettings.baseMap.fallbackEnabled) this.useOsmFallbackBaseMap("TomTom diagnostic failed");
+        }
     }
 
     getSatelliteLimits(settings = this.mapSettings) {
@@ -367,6 +532,7 @@ class EngineeringMapPanel {
                 zIndex: 20,
                 fallbackVisual: "Radar unavailable state in the Local Situation status bar.",
                 mode: "live",
+                provider: this.mapSettings.radar.provider,
                 opacity: this.mapSettings.radar.opacity,
                 seaCoverage: this.mapSettings.radar.seaCoverage
             },
@@ -405,6 +571,25 @@ class EngineeringMapPanel {
                 zIndex: 42,
                 fallbackVisual: "CONFIG_REQUIRED until AISSTREAM_API_KEY is configured.",
                 mode: "live"
+            },
+            {
+                id: "MARINE_WEATHER",
+                label: "MARINE",
+                name: "Marine weather",
+                description: "Open-Meteo Marine sea-state conditions from real ocean forecast cells.",
+                providerType: "Open-Meteo Marine",
+                providerCandidates: ["Open-Meteo Marine"],
+                requiresApiKey: false,
+                defaultActive: Boolean(this.mapSettings.marineWeather.active),
+                available: true,
+                updateIntervalMs: 15 * 60 * 1000,
+                cacheTtlMs: 15 * 60 * 1000,
+                maxMarkers: this.mapSettings.marineWeather.maxMarkers,
+                mode: this.mapSettings.marineWeather.mode,
+                preset: this.mapSettings.marineWeather.preset,
+                zIndex: 39,
+                fallbackVisual: "NO_MARINE_CELL_IN_VIEW or real Open-Meteo Marine markers.",
+                source: "open-meteo"
             },
             {
                 id: "SATELLITES",
@@ -501,6 +686,7 @@ class EngineeringMapPanel {
             },
             WEATHER_RADAR: {
                 definition: {
+                    provider: this.mapSettings.radar.provider,
                     opacity: this.mapSettings.radar.opacity,
                     seaCoverage: this.mapSettings.radar.seaCoverage
                 },
@@ -518,6 +704,13 @@ class EngineeringMapPanel {
                 definition: {
                     maxMarkers: this.mapSettings.sea.maxVessels,
                     areaMode: this.mapSettings.sea.areaMode
+                }
+            },
+            MARINE_WEATHER: {
+                definition: {
+                    maxMarkers: this.mapSettings.marineWeather.maxMarkers,
+                    mode: this.mapSettings.marineWeather.mode,
+                    preset: this.mapSettings.marineWeather.preset
                 }
             },
             SATELLITES: {
@@ -550,9 +743,11 @@ class EngineeringMapPanel {
         const after = this.mapSettings;
         const changed = new Set();
 
+        if (JSON.stringify(before.baseMap) !== JSON.stringify(after.baseMap)) changed.add("BASE_MAP");
         if (JSON.stringify(before.satellite) !== JSON.stringify(after.satellite)) changed.add("SATELLITES");
         if (JSON.stringify(before.air) !== JSON.stringify(after.air)) changed.add("AIR_TRAFFIC");
         if (JSON.stringify(before.sea) !== JSON.stringify(after.sea)) changed.add("MARITIME_AIS");
+        if (JSON.stringify(before.marineWeather) !== JSON.stringify(after.marineWeather)) changed.add("MARINE_WEATHER");
         if (JSON.stringify(before.ocean) !== JSON.stringify(after.ocean)) changed.add("OCEAN_ALERTS");
         if (JSON.stringify(before.radar) !== JSON.stringify(after.radar)) changed.add("WEATHER_RADAR");
         if (JSON.stringify(before.traffic) !== JSON.stringify(after.traffic)) changed.add("ROAD_TRAFFIC");
@@ -573,6 +768,7 @@ class EngineeringMapPanel {
     applySavedMapSettings(previousSettings = {}, requestedActive = {}) {
         const changed = this.settingsChangedLayerIds(previousSettings);
         this.applyMapSettingsToRegistry();
+        if (changed.has("BASE_MAP")) this.applyBaseMapProvider();
 
         this.layers.forEach((layer, id) => {
             if (!Object.prototype.hasOwnProperty.call(requestedActive, id)) return;
@@ -667,6 +863,129 @@ class EngineeringMapPanel {
         }).join("");
     }
 
+    mapOptionLabel(options, selected) {
+        const match = options.find(option => String(typeof option === "string" ? option : option.value) === String(selected));
+        if (!match) return String(selected || "");
+        return typeof match === "string" ? match : match.label;
+    }
+
+    renderCockpitSelect(id, options, selected) {
+        const selectedLabel = this.mapOptionLabel(options, selected);
+        return `
+            <div class="eng-cockpit-select" data-cockpit-select="${window._escapeHtml(id)}">
+                <input type="hidden" id="${window._escapeHtml(id)}" value="${window._escapeHtml(String(selected))}">
+                <button type="button" class="eng-cockpit-select-trigger" aria-haspopup="listbox" aria-expanded="false">
+                    <span>${window._escapeHtml(selectedLabel)}</span>
+                    <em>▾</em>
+                </button>
+                <div class="eng-cockpit-select-menu" role="listbox">
+                    ${options.map(option => {
+                        const value = typeof option === "string" ? option : option.value;
+                        const label = typeof option === "string" ? option : option.label;
+                        const description = typeof option === "string" ? "" : (option.description || "");
+                        return `
+                            <button type="button" role="option" data-value="${window._escapeHtml(String(value))}" ${String(value) === String(selected) ? "aria-selected=\"true\"" : ""}>
+                                <strong>${window._escapeHtml(label)}</strong>
+                                ${description ? `<small>${window._escapeHtml(description)}</small>` : ""}
+                            </button>`;
+                    }).join("")}
+                </div>
+            </div>`;
+    }
+
+    bindCockpitSelects(overlay) {
+        const closeAll = except => {
+            overlay.querySelectorAll(".eng-cockpit-select.open").forEach(select => {
+                if (select === except) return;
+                select.classList.remove("open");
+                const trigger = select.querySelector(".eng-cockpit-select-trigger");
+                if (trigger) trigger.setAttribute("aria-expanded", "false");
+            });
+        };
+
+        overlay.querySelectorAll(".eng-cockpit-select").forEach(select => {
+            const input = select.querySelector("input[type='hidden']");
+            const trigger = select.querySelector(".eng-cockpit-select-trigger");
+            const label = trigger && trigger.querySelector("span");
+            if (!input || !trigger) return;
+
+            trigger.addEventListener("click", event => {
+                event.preventDefault();
+                const shouldOpen = !select.classList.contains("open");
+                closeAll(select);
+                select.classList.toggle("open", shouldOpen);
+                trigger.setAttribute("aria-expanded", shouldOpen ? "true" : "false");
+            });
+
+            select.querySelectorAll(".eng-cockpit-select-menu button[data-value]").forEach(option => {
+                option.addEventListener("click", event => {
+                    event.preventDefault();
+                    input.value = option.dataset.value || "";
+                    if (label) label.innerText = option.querySelector("strong").innerText;
+                    select.querySelectorAll("[aria-selected]").forEach(node => node.removeAttribute("aria-selected"));
+                    option.setAttribute("aria-selected", "true");
+                    select.classList.remove("open");
+                    trigger.setAttribute("aria-expanded", "false");
+                    input.dispatchEvent(new Event("change", {bubbles: true}));
+                });
+            });
+
+            select.addEventListener("keydown", event => {
+                const options = Array.from(select.querySelectorAll(".eng-cockpit-select-menu button[data-value]"));
+                const selectedIndex = Math.max(0, options.findIndex(option => option.getAttribute("aria-selected") === "true"));
+                if (event.key === "Escape") {
+                    select.classList.remove("open");
+                    trigger.setAttribute("aria-expanded", "false");
+                    event.stopPropagation();
+                    return;
+                }
+                if (!["ArrowDown", "ArrowUp", "Enter", " "].includes(event.key)) return;
+                event.preventDefault();
+                if (event.key === "Enter" || event.key === " ") {
+                    trigger.click();
+                    return;
+                }
+                const nextIndex = event.key === "ArrowDown"
+                    ? Math.min(options.length - 1, selectedIndex + 1)
+                    : Math.max(0, selectedIndex - 1);
+                if (options[nextIndex]) options[nextIndex].click();
+            });
+        });
+
+        overlay.addEventListener("click", event => {
+            if (!event.target.closest(".eng-cockpit-select")) closeAll();
+        });
+        overlay.addEventListener("keydown", event => {
+            if (event.key === "Escape" && overlay.querySelector(".eng-cockpit-select.open")) {
+                closeAll();
+                event.stopPropagation();
+            }
+        });
+    }
+
+    settingValue(overlay, id) {
+        const element = overlay.querySelector(`#${id}`);
+        return element ? element.value : "";
+    }
+
+    refreshSettingsStatusBadges() {
+        if (!this.settingsOverlay) return;
+        const tomtom = this.settingsOverlay.querySelector("#eng_setting_tomtom_status");
+        if (tomtom) {
+            const diag = this.tomTomDiagnostic || {};
+            tomtom.classList.toggle("ready", diag.keyStatus === "CONFIGURED" && diag.serviceStatus === "ONLINE");
+            tomtom.classList.toggle("missing", diag.keyStatus === "MISSING" || diag.keyStatus === "INVALID");
+            tomtom.innerHTML = `
+                <strong>TOMTOM KEY</strong>
+                <span>${window._escapeHtml(diag.keyStatus || "UNKNOWN")} ${diag.last4 ? `· ${window._escapeHtml(diag.last4)}` : ""}</span>
+                <small>TOMTOM SERVICE: ${window._escapeHtml(diag.serviceStatus || "UNKNOWN")} · ${window._escapeHtml(diag.summary || "")}</small>`;
+        }
+        const base = this.settingsOverlay.querySelector("#eng_setting_base_status");
+        if (base) {
+            base.innerText = `BASE MAP: ${this.baseMapStatus.provider} · ${this.baseMapStatus.status}`;
+        }
+    }
+
     openSettingsModal() {
         this.closeSettingsModal();
         const settings = this.mapSettings;
@@ -678,6 +997,16 @@ class EngineeringMapPanel {
         const hasOpenSkyCredentials = Boolean(this.getEnv("OPENSKY_ACCESS_TOKEN")
             || this.getEnv("AEGISUI_OPENSKY_ACCESS_TOKEN")
             || (this.getEnv("OPENSKY_CLIENT_ID") && this.getEnv("OPENSKY_CLIENT_SECRET")));
+        const satGroupOptions = Object.entries(MAP_SATELLITE_GROUPS).map(([value, item]) => ({
+            value,
+            label: `${item.label} · ${value}`,
+            description: item.description
+        }));
+        const satDensityOptions = Object.entries(MAP_SATELLITE_DENSITIES).map(([value, item]) => ({
+            value,
+            label: `${value} · ${item.maxOrbitObjects}/${item.maxMarkers}`,
+            description: item.description
+        }));
 
         const overlay = document.createElement("div");
         overlay.id = "eng_map_settings_overlay";
@@ -692,26 +1021,40 @@ class EngineeringMapPanel {
                 </header>
                 <div class="eng-map-settings-body">
                     <section class="eng-map-settings-section">
+                        <h2>BASE MAP</h2>
+                        <div id="eng_setting_tomtom_status" class="eng-map-settings-status ${this.tomTomDiagnostic.keyStatus === "CONFIGURED" ? "ready" : "missing"}">
+                            <strong>TOMTOM KEY</strong>
+                            <span>${window._escapeHtml(this.tomTomDiagnostic.keyStatus)} ${this.tomTomDiagnostic.last4 ? `· ${window._escapeHtml(this.tomTomDiagnostic.last4)}` : ""}</span>
+                            <small>TOMTOM SERVICE: ${window._escapeHtml(this.tomTomDiagnostic.serviceStatus)} · ${window._escapeHtml(this.tomTomDiagnostic.summary || "")}</small>
+                        </div>
+                        <small id="eng_setting_base_status">BASE MAP: ${window._escapeHtml(this.baseMapStatus.provider)} · ${window._escapeHtml(this.baseMapStatus.status)}</small>
+                        <label>
+                            <span>Base provider</span>
+                            ${this.renderCockpitSelect("eng_setting_base_provider", [
+                                {value: "auto", label: "AUTO · TomTom then fallback", description: "Use TomTom when valid; OSM if unavailable."},
+                                {value: "tomtom", label: "TomTom primary", description: "Requires a configured TomTom key."},
+                                {value: "osm", label: "OSM fallback", description: "No key required; traffic remains TomTom-only."}
+                            ], settings.baseMap.provider)}
+                        </label>
+                        <label class="eng-map-settings-switch">
+                            <input id="eng_setting_base_fallback" type="checkbox" ${settings.baseMap.fallbackEnabled ? "checked" : ""}>
+                            <span>Fallback base map</span>
+                            <em>${settings.baseMap.fallbackEnabled ? "ON" : "OFF"}</em>
+                            <small>Fallback is only for base tiles; it does not invent TomTom traffic.</small>
+                        </label>
+                    </section>
+
+                    <section class="eng-map-settings-section">
                         <h2>SATELLITES</h2>
                         ${this.renderLayerSwitch("SATELLITES", "Enable SAT layer")}
                         <label>
                             <span>Satellite Group</span>
-                            <select id="eng_setting_sat_group">
-                                ${this.mapSettingsOptions(Object.entries(MAP_SATELLITE_GROUPS).map(([value, item]) => ({
-                                    value,
-                                    label: `${item.label} · ${value}`
-                                })), settings.satellite.group)}
-                            </select>
+                            ${this.renderCockpitSelect("eng_setting_sat_group", satGroupOptions, settings.satellite.group)}
                             <small id="eng_setting_sat_group_help">${window._escapeHtml(group.description)}</small>
                         </label>
                         <label>
                             <span>Density</span>
-                            <select id="eng_setting_sat_density">
-                                ${this.mapSettingsOptions(Object.entries(MAP_SATELLITE_DENSITIES).map(([value, item]) => ({
-                                    value,
-                                    label: `${value} · ${item.maxOrbitObjects}/${item.maxMarkers}`
-                                })), settings.satellite.density)}
-                            </select>
+                            ${this.renderCockpitSelect("eng_setting_sat_density", satDensityOptions, settings.satellite.density)}
                             <small id="eng_setting_sat_density_help">${window._escapeHtml(density.description)}</small>
                         </label>
                         <div class="eng-map-settings-pair">
@@ -732,22 +1075,22 @@ class EngineeringMapPanel {
                         ${this.renderLayerSwitch("AIR_TRAFFIC", "Enable AIR layer")}
                         <label>
                             <span>Max aircraft markers</span>
-                            <select id="eng_setting_air_max">${this.mapSettingsOptions(["25", "50", "100", "200"], String(settings.air.maxMarkers))}</select>
+                            ${this.renderCockpitSelect("eng_setting_air_max", ["25", "50", "100", "200"], String(settings.air.maxMarkers))}
                         </label>
                         <label>
                             <span>Refresh interval</span>
-                            <select id="eng_setting_air_refresh">${this.mapSettingsOptions([
+                            ${this.renderCockpitSelect("eng_setting_air_refresh", [
                                 {value: "30000", label: "30s"},
                                 {value: "60000", label: "60s"},
                                 {value: "120000", label: "120s"}
-                            ], String(settings.air.refreshIntervalMs))}</select>
+                            ], String(settings.air.refreshIntervalMs))}
                         </label>
                         <label>
                             <span>Bounding box mode</span>
-                            <select id="eng_setting_air_bounds">${this.mapSettingsOptions([
+                            ${this.renderCockpitSelect("eng_setting_air_bounds", [
                                 {value: "visible", label: "Visible map bounds"},
                                 {value: "wide", label: "Wider area"}
-                            ], settings.air.boundsMode)}</select>
+                            ], settings.air.boundsMode)}
                         </label>
                         <small>${hasOpenSkyCredentials ? "OpenSky credentials detected." : "OpenSky public mode · rate-limit aware."}</small>
                     </section>
@@ -761,17 +1104,50 @@ class EngineeringMapPanel {
                         </div>
                         <label>
                             <span>Area mode</span>
-                            <select id="eng_setting_sea_area">${this.mapSettingsOptions([
+                            ${this.renderCockpitSelect("eng_setting_sea_area", [
                                 {value: "visible", label: "Visible map bounds"},
-                                {value: "custom", label: "Custom area reserved"}
-                            ], settings.sea.areaMode)}</select>
+                                {value: "iberian", label: "Iberian coast preset"},
+                                {value: "mediterranean", label: "Mediterranean preset"},
+                                {value: "atlantic", label: "Atlantic preset"}
+                            ], settings.sea.areaMode)}
                         </label>
                         <label>
                             <span>Max vessels</span>
-                            <select id="eng_setting_sea_max">${this.mapSettingsOptions(["50", "100", "250"], String(settings.sea.maxVessels))}</select>
+                            ${this.renderCockpitSelect("eng_setting_sea_max", ["50", "100", "250"], String(settings.sea.maxVessels))}
                         </label>
                         <button type="button" id="eng_setting_sea_test">TEST CONNECTION</button>
                         <small id="eng_setting_sea_test_result">No WebSocket is opened unless SEA is enabled.</small>
+                    </section>
+
+                    <section class="eng-map-settings-section">
+                        <h2>MARINE WEATHER</h2>
+                        ${this.renderLayerSwitch("MARINE_WEATHER", "Enable MARINE WX layer")}
+                        <div class="eng-map-settings-status ready">
+                            <strong>Open-Meteo Marine</strong>
+                            <span>NO API KEY REQUIRED</span>
+                            <small>Sea-state forecast cells; separate from AIS vessels and precipitation radar.</small>
+                        </div>
+                        <label>
+                            <span>Mode</span>
+                            ${this.renderCockpitSelect("eng_setting_marine_mode", [
+                                {value: "visible", label: "Visible sea cells", description: "Shows NO_MARINE_CELL_IN_VIEW inland."},
+                                {value: "nearest", label: "Nearest sea cell", description: "Queries nearest sea cell around map center."},
+                                {value: "preset", label: "Preset area", description: "Uses configured maritime preset."}
+                            ], settings.marineWeather.mode)}
+                        </label>
+                        <label>
+                            <span>Preset</span>
+                            ${this.renderCockpitSelect("eng_setting_marine_preset", [
+                                {value: "iberian", label: "Iberian coast"},
+                                {value: "mediterranean", label: "Mediterranean"},
+                                {value: "atlantic", label: "Atlantic"},
+                                {value: "global-low", label: "Global low density"}
+                            ], settings.marineWeather.preset)}
+                        </label>
+                        <label>
+                            <span>Max marine markers</span>
+                            ${this.renderCockpitSelect("eng_setting_marine_max", ["1", "4", "8", "12"], String(settings.marineWeather.maxMarkers))}
+                        </label>
                     </section>
 
                     <section class="eng-map-settings-section">
@@ -779,22 +1155,22 @@ class EngineeringMapPanel {
                         ${this.renderLayerSwitch("OCEAN_ALERTS", "Enable OCEAN layer")}
                         <label>
                             <span>Station source</span>
-                            <select id="eng_setting_ocean_source">${this.mapSettingsOptions([
+                            ${this.renderCockpitSelect("eng_setting_ocean_source", [
                                 {value: "ndbc-active", label: "NDBC active stations"},
                                 {value: "dart", label: "DART tsunami buoys"}
-                            ], settings.ocean.source)}</select>
+                            ], settings.ocean.source)}
                         </label>
                         <label>
                             <span>Filter mode</span>
-                            <select id="eng_setting_ocean_filter">${this.mapSettingsOptions([
+                            ${this.renderCockpitSelect("eng_setting_ocean_filter", [
                                 {value: "visible", label: "Visible map bounds"},
                                 {value: "global", label: "Global"},
                                 {value: "coastal", label: "Coastal only"}
-                            ], settings.ocean.filterMode)}</select>
+                            ], settings.ocean.filterMode)}
                         </label>
                         <label>
                             <span>Max stations</span>
-                            <select id="eng_setting_ocean_max">${this.mapSettingsOptions(["100", "500", "1500"], String(settings.ocean.maxStations))}</select>
+                            ${this.renderCockpitSelect("eng_setting_ocean_max", ["100", "500", "1500"], String(settings.ocean.maxStations))}
                         </label>
                     </section>
 
@@ -802,15 +1178,23 @@ class EngineeringMapPanel {
                         <h2>RADAR / TRAFFIC</h2>
                         ${this.renderLayerSwitch("WEATHER_RADAR", "Enable RADAR layer")}
                         <label>
+                            <span>Radar provider</span>
+                            ${this.renderCockpitSelect("eng_setting_radar_provider", [
+                                {value: "auto", label: "AUTO · RainViewer"},
+                                {value: "rainviewer", label: "RainViewer precip"}
+                            ], settings.radar.provider)}
+                        </label>
+                        <label>
                             <span>Radar opacity</span>
                             <input id="eng_setting_radar_opacity" type="range" min="0.15" max="0.95" step="0.05" value="${window._escapeHtml(String(settings.radar.opacity))}">
-                            <small>RainViewer sea coverage: NOT SUPPORTED BY CURRENT PROVIDER as a dedicated maritime layer.</small>
+                            <small>Radar precip coverage depends on RainViewer mosaic; marine conditions are handled by Marine Weather.</small>
                         </label>
                         ${this.renderLayerSwitch("ROAD_TRAFFIC", "Enable TRAFFIC layer")}
                         <label>
                             <span>Traffic opacity</span>
                             <input id="eng_setting_traffic_opacity" type="range" min="0.25" max="1" step="0.05" value="${window._escapeHtml(String(settings.traffic.opacity))}">
                         </label>
+                        <small>Traffic remains TomTom-only and requires a valid TomTom key.</small>
                     </section>
 
                     <section class="eng-map-settings-section">
@@ -823,11 +1207,11 @@ class EngineeringMapPanel {
                         </label>
                         <label>
                             <span>Default map location</span>
-                            <select id="eng_setting_location_mode">${this.mapSettingsOptions([
+                            ${this.renderCockpitSelect("eng_setting_location_mode", [
                                 {value: "current", label: "Current location when allowed"},
                                 {value: "custom", label: "Custom local coordinates"},
                                 {value: "city", label: "City default"}
-                            ], settings.defaultLocation.mode)}</select>
+                            ], settings.defaultLocation.mode)}
                         </label>
                         <div class="eng-map-settings-pair">
                             <label>
@@ -859,6 +1243,8 @@ class EngineeringMapPanel {
 
     bindSettingsModalEvents(overlay) {
         const close = () => this.closeSettingsModal();
+        this.bindCockpitSelects(overlay);
+        this.refreshSettingsStatusBadges();
         overlay.addEventListener("click", event => {
             if (event.target === overlay) close();
         });
@@ -903,27 +1289,38 @@ class EngineeringMapPanel {
         });
 
         this.mapSettings = this.sanitizeMapSettings({
+            baseMap: {
+                provider: this.settingValue(overlay, "eng_setting_base_provider"),
+                fallbackEnabled: overlay.querySelector("#eng_setting_base_fallback").checked
+            },
             satellite: {
-                group: overlay.querySelector("#eng_setting_sat_group").value,
-                density: overlay.querySelector("#eng_setting_sat_density").value,
+                group: this.settingValue(overlay, "eng_setting_sat_group"),
+                density: this.settingValue(overlay, "eng_setting_sat_density"),
                 customMaxOrbitObjects: overlay.querySelector("#eng_setting_sat_custom_orbits").value,
                 customMaxMarkers: overlay.querySelector("#eng_setting_sat_custom_markers").value
             },
             air: {
-                maxMarkers: overlay.querySelector("#eng_setting_air_max").value,
-                refreshIntervalMs: overlay.querySelector("#eng_setting_air_refresh").value,
-                boundsMode: overlay.querySelector("#eng_setting_air_bounds").value
+                maxMarkers: this.settingValue(overlay, "eng_setting_air_max"),
+                refreshIntervalMs: this.settingValue(overlay, "eng_setting_air_refresh"),
+                boundsMode: this.settingValue(overlay, "eng_setting_air_bounds")
             },
             sea: {
-                areaMode: overlay.querySelector("#eng_setting_sea_area").value,
-                maxVessels: overlay.querySelector("#eng_setting_sea_max").value
+                areaMode: this.settingValue(overlay, "eng_setting_sea_area"),
+                maxVessels: this.settingValue(overlay, "eng_setting_sea_max")
+            },
+            marineWeather: {
+                active: Boolean(requestedActive.MARINE_WEATHER),
+                mode: this.settingValue(overlay, "eng_setting_marine_mode"),
+                preset: this.settingValue(overlay, "eng_setting_marine_preset"),
+                maxMarkers: this.settingValue(overlay, "eng_setting_marine_max")
             },
             ocean: {
-                source: overlay.querySelector("#eng_setting_ocean_source").value,
-                filterMode: overlay.querySelector("#eng_setting_ocean_filter").value,
-                maxStations: overlay.querySelector("#eng_setting_ocean_max").value
+                source: this.settingValue(overlay, "eng_setting_ocean_source"),
+                filterMode: this.settingValue(overlay, "eng_setting_ocean_filter"),
+                maxStations: this.settingValue(overlay, "eng_setting_ocean_max")
             },
             radar: {
+                provider: this.settingValue(overlay, "eng_setting_radar_provider"),
                 opacity: overlay.querySelector("#eng_setting_radar_opacity").value
             },
             traffic: {
@@ -931,7 +1328,7 @@ class EngineeringMapPanel {
             },
             uiSounds: overlay.querySelector("#eng_setting_ui_sounds").checked,
             defaultLocation: {
-                mode: overlay.querySelector("#eng_setting_location_mode").value,
+                mode: this.settingValue(overlay, "eng_setting_location_mode"),
                 customLat: overlay.querySelector("#eng_setting_location_lat").value,
                 customLon: overlay.querySelector("#eng_setting_location_lon").value
             }
@@ -984,6 +1381,13 @@ class EngineeringMapPanel {
             const config = await this.ipc.invoke("runtime-config");
             if (config && config.tomtomApiKey && !this.trafficKey) {
                 this.trafficKey = config.tomtomApiKey;
+                this.tomTomDiagnostic = {
+                    keyStatus: config.tomtomKeyStatus || "CONFIGURED",
+                    serviceStatus: "UNKNOWN",
+                    last4: config.tomtomKeyLast4 || maskMapSecret(config.tomtomApiKey),
+                    summary: "TomTom key loaded from runtime config"
+                };
+                this.applyBaseMapProvider();
                 const layer = this.layers.get("ROAD_TRAFFIC");
                 const hasSavedTrafficPreference = Object.prototype.hasOwnProperty.call(
                     this.layerPreferences,
@@ -1006,7 +1410,14 @@ class EngineeringMapPanel {
     }
 
     getTrafficKey() {
-        return this.trafficKey || window.settings.tomtomApiKey || "";
+        return this.trafficKey
+            || window.settings.tomtomApiKey
+            || this.getEnv("TOMTOM_API_KEY")
+            || this.getEnv("AEGISUI_TOMTOM_API_KEY")
+            || this.getEnv("TOMTOM_KEY")
+            || this.getEnv("VITE_TOMTOM_API_KEY")
+            || this.getEnv("REACT_APP_TOMTOM_API_KEY")
+            || "";
     }
 
     getEnv(name) {
@@ -1214,6 +1625,13 @@ class EngineeringMapPanel {
         );
         require("fs").writeFileSync(settingsPath, JSON.stringify(window.settings, null, 4));
         this.hideTrafficForm();
+        this.tomTomDiagnostic = {
+            keyStatus: this.trafficKey ? "CONFIGURED" : "MISSING",
+            serviceStatus: "UNKNOWN",
+            last4: maskMapSecret(this.trafficKey),
+            summary: this.trafficKey ? "TomTom key saved locally" : "TomTom key removed"
+        };
+        this.applyBaseMapProvider();
         const layer = this.layers.get("ROAD_TRAFFIC");
         if (layer) {
             layer.active = Boolean(this.trafficKey);

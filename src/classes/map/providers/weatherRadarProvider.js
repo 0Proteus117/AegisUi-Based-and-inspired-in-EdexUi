@@ -29,7 +29,7 @@ class WeatherRadarProvider extends BaseMapProvider {
         }
 
         this.setStatus(MAP_LAYER_STATES.LOADING, {
-            summary: "Loading RainViewer radar metadata"
+            summary: "Loading RainViewer precipitation radar metadata"
         });
 
         try {
@@ -72,7 +72,7 @@ class WeatherRadarProvider extends BaseMapProvider {
             this.rememberLeafletLayer(tileLayer);
             tileLayer.addTo(context.map);
             this.setStatus(MAP_LAYER_STATES.ONLINE, {
-                summary: "RainViewer weather radar",
+                summary: "RainViewer precipitation radar · maritime coverage depends on public mosaic",
                 updatedAt: frame.time ? new Date(frame.time * 1000).toISOString() : new Date().toISOString(),
                 count: 1
             });

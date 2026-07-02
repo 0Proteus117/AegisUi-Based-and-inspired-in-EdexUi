@@ -10,6 +10,7 @@ const {OpenSkyProvider} = require("./providers/openSkyProvider.js");
 const {AISProvider} = require("./providers/aisProvider.js");
 const {CelesTrakProvider} = require("./providers/celestrakProvider.js");
 const {NOAAOceanProvider} = require("./providers/noaaOceanProvider.js");
+const {MarineWeatherProvider} = require("./providers/marineWeatherProvider.js");
 
 class MapLayerRegistry {
     constructor(options = {}) {
@@ -55,6 +56,7 @@ class MapLayerRegistry {
         if (definition.id === "WEATHER_RADAR") return new WeatherRadarProvider(definition);
         if (definition.id === "AIR_TRAFFIC") return new OpenSkyProvider(definition);
         if (definition.id === "MARITIME_AIS") return new AISProvider(definition);
+        if (definition.id === "MARINE_WEATHER") return new MarineWeatherProvider(definition);
         if (definition.id === "SATELLITES") return new CelesTrakProvider(definition);
         if (definition.id === "OCEAN_ALERTS") return new NOAAOceanProvider(definition);
         throw new Error(`Unknown map layer provider: ${definition.id}`);

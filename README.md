@@ -27,10 +27,11 @@ original system telemetry and visual language while replacing the touch
 keyboard and large terminal with:
 
 - a one-line engineering shell;
-- a local Situational Awareness map with live RainViewer weather radar,
-  optional TomTom traffic and modular real-provider layers for OpenSky air
-  traffic, AISStream maritime traffic, CelesTrak satellite positions with
-  local SGP4 propagation and NOAA/NDBC ocean stations;
+- a local Situational Awareness map with TomTom/OSM base-map fallback, live
+  RainViewer precipitation radar, optional TomTom traffic and modular
+  real-provider layers for OpenSky air traffic, AISStream maritime traffic,
+  Open-Meteo Marine sea-state cells, CelesTrak satellite positions with local
+  SGP4 propagation and NOAA/NDBC ocean stations;
 - a native macOS Calendar panel with week and month views, recurring events
   and a single calendar selector for every enabled iCloud, Outlook and
   Exchange account;
@@ -84,13 +85,14 @@ in [WORKSPACE_RESEARCH.md](WORKSPACE_RESEARCH.md).
 
 Calendar and Apple Music remain disconnected until their panel button is
 pressed. Calendar requests local read-only EventKit access; Music requests
-Automation access. Weather radar needs no key. Real-time road traffic can be
-enabled from the map's `API KEY` button with a TomTom Traffic API key. Air,
-maritime, satellite and ocean map layers stay fully idle until their toggles
-are enabled. The map's `⚙` settings button controls layer toggles, SAT
-CelesTrak groups, density caps, provider limits, radar opacity, expanded-map
-behavior, local UI sounds and location fallback behavior without storing API
-keys.
+Automation access. Weather radar and Marine Weather need no key. Real-time
+road traffic can be enabled from the map's `API KEY` button with a TomTom key;
+the base map can fall back to OSM if TomTom is unavailable. Air, maritime AIS,
+marine weather, satellite and ocean map layers stay fully idle until their
+toggles are enabled. The map's `⚙` settings button controls layer toggles, SAT
+CelesTrak groups, density caps, provider limits, base-map fallback, radar
+opacity, expanded-map behavior, local UI sounds and location fallback behavior
+without storing API keys.
 
 The dashboard creates private configuration files inside the EdexUi-Eng
 application-data folder. They are never committed to GitHub:
@@ -101,7 +103,8 @@ application-data folder. They are never committed to GitHub:
 - `music-playlists.json` contains Apple Music playlist names. Clicking a name
   starts that playlist without bringing Music to the foreground.
 - `map-layers.json` contains Local Situation layer preferences such as enabled
-  map overlays and layer modes. It never stores API keys.
+  map overlays and layer modes, including Marine Weather. It never stores API
+  keys.
 - `launch-bay-games.json` contains the manual local game library for Launch
   Bay. It stores titles, launcher URLs and local artwork paths, but no tokens.
 - `developer-deck.json` contains the active project path, favorite script names
@@ -167,9 +170,10 @@ The intended portable flow is:
 3. Run `npm ci`.
 4. Run `cd src && npm ci && cd ..`.
 5. Copy `.env.example` to `.env` only if you want private local API keys.
-6. Add your own `AEGISUI_TOMTOM_API_KEY` if you want live TomTom traffic.
-   Air, satellite and ocean layers can run without keys; maritime AIS requires
-   `AISSTREAM_API_KEY` if you want live vessel data.
+6. Add your own `TOMTOM_API_KEY` or compatible TomTom alias if you want TomTom
+   base tiles and live TomTom traffic. Air, satellite, marine weather and ocean
+   layers can run without keys; maritime AIS requires `AISSTREAM_API_KEY` if
+   you want live vessel data.
 7. Run `npm run start`.
 
 The app should still open without any API key. In that case:

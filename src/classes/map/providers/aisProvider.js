@@ -2,6 +2,11 @@ const {BaseMapProvider} = require("./baseProvider.js");
 const {MAP_LAYER_STATES, isOffline} = require("../utils/mapLayerState.js");
 
 const AISSTREAM_URL = "wss://stream.aisstream.io/v0/stream";
+const AIS_PRESET_BOUNDS = Object.freeze({
+    mediterranean: {south: 30, west: -6, north: 46, east: 37},
+    atlantic: {south: 20, west: -80, north: 65, east: 15},
+    iberian: {south: 35, west: -12, north: 45, east: 6}
+});
 
 function finiteNumber(value) {
     const number = Number(value);
@@ -88,7 +93,7 @@ class AISProvider extends BaseMapProvider {
     }
 
     openSocket(context) {
-        const bounds = this.getMapBounds(context);
+        const bounds = this.getSubscriptionBounds(context);
         if (!bounds) {
             this.setStatus(MAP_LAYER_STATES.ERROR, {
                 error: "Map bounds unavailable",
@@ -112,7 +117,12 @@ class AISProvider extends BaseMapProvider {
                     [bounds.south, bounds.west],
                     [bounds.north, bounds.east]
                 ]],
-                FilterMessageTypes: ["PositionReport", "StandardClassBPositionReport", "ExtendedClassBPositionReport"]
+                FilterMessageTypes: [
+                    "PositionReport",
+                    "StandardClassBPositionReport",
+                    "ExtendedClassBPositionReport",
+                    "ShipStaticData"
+                ]
             }));
             this.setStatus(MAP_LAYER_STATES.ONLINE, {
                 summary: "AISStream connected · waiting for vessel messages",
@@ -142,6 +152,12 @@ class AISProvider extends BaseMapProvider {
         };
     }
 
+    getSubscriptionBounds(context) {
+        const mode = this.definition.areaMode || "visible";
+        if (AIS_PRESET_BOUNDS[mode]) return AIS_PRESET_BOUNDS[mode];
+        return this.getMapBounds(context);
+    }
+
     handleMessage(context, raw) {
         let payload = null;
         try {
@@ -150,10 +166,20 @@ class AISProvider extends BaseMapProvider {
             return;
         }
 
-        const position = vesselPosition(payload);
-        if (position.latitude === null || position.longitude === null) return;
-
         const identity = vesselIdentity(payload);
+        const position = vesselPosition(payload);
+        if (position.latitude === null || position.longitude === null) {
+            if (identity.mmsi && this.vessels && this.vessels.has(identity.mmsi)) {
+                this.vessels.set(identity.mmsi, {
+                    ...this.vessels.get(identity.mmsi),
+                    ...identity,
+                    updatedAt: Date.now()
+                });
+                this.renderVessels(context);
+            }
+            return;
+        }
+
         const key = identity.mmsi || `${position.latitude}:${position.longitude}`;
         const existing = this.vessels.get(key) || {};
         const vessel = {

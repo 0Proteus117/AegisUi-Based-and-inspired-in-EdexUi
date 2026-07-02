@@ -1,43 +1,54 @@
 # Map layers and Situational Awareness
 
-AegisUi's `Local Situation` panel is now a modular situational-awareness map.
-Each layer is optional, locally remembered and resource-aware:
+AegisUi's `Local Situation` panel is a modular, optional-provider map. A layer
+must either render real provider data, show an honest fallback/config state, or
+stay OFF without consuming resources.
 
-- OFF layers do not fetch, poll, open sockets or render overlays.
-- ON layers must either show real provider data or a real fallback state.
-- No layer should draw fake operational markers.
-- API keys stay in private `.env` / local settings, never in the repository.
+## Base map
+
+v2.0.5 uses TomTom as the primary base-map provider when a key is configured
+and valid. If TomTom is missing or unavailable, the app falls back to
+OpenStreetMap base tiles.
+
+Accepted TomTom key aliases:
+
+- `TOMTOM_API_KEY`
+- `AEGISUI_TOMTOM_API_KEY`
+- `TOMTOM_KEY`
+- `VITE_TOMTOM_API_KEY`
+- `REACT_APP_TOMTOM_API_KEY`
+
+The UI shows only safe diagnostics such as `CONFIGURED`, `MISSING`, `INVALID`
+and masked suffixes like `••••1234`. It never displays the full key.
 
 ## Current layer registry
 
 | Layer ID | Toggle | Provider | Default | Key/config |
 | --- | --- | --- | --- | --- |
-| `ROAD_TRAFFIC` | `TRAFFIC` | TomTom Traffic tiles | OFF unless a key exists | `AEGISUI_TOMTOM_API_KEY` or local settings |
-| `WEATHER_RADAR` | `RADAR` | RainViewer public weather maps | ON unless offline mode | No key |
-| `AIR_TRAFFIC` | `AIR` | OpenSky Network state vectors | OFF | Anonymous public access, optional OpenSky OAuth/Bearer token |
+| `ROAD_TRAFFIC` | `TRAFFIC` | TomTom Traffic tiles | OFF unless a key exists | TomTom key required |
+| `WEATHER_RADAR` | `RADAR` | RainViewer precipitation radar | ON unless offline mode | No key |
+| `AIR_TRAFFIC` | `AIR` | OpenSky state vectors | OFF | Anonymous public access; optional OpenSky credentials |
 | `MARITIME_AIS` | `SEA` | AISStream WebSocket | OFF | `AISSTREAM_API_KEY` required |
-| `SATELLITES` | `SAT` | CelesTrak GP JSON + SGP4 positions | OFF | No key; `CELESTRAK_GROUP` optional |
-| `OCEAN_ALERTS` | `OCEAN` | NOAA/NDBC active stations | OFF | No key |
+| `MARINE_WEATHER` | `MARINE` | Open-Meteo Marine sea-state cells | OFF | No key |
+| `SATELLITES` | `SAT` | CelesTrak GP/TLE + local SGP4 | OFF | No key; `CELESTRAK_GROUP` optional |
+| `OCEAN_ALERTS` | `OCEAN` | NOAA/NDBC stations | OFF | No key |
 
 ## Map settings popup
 
-v2.0.4 adds a compact cockpit settings button (`⚙`) inside `Local Situation`.
-The popup is local-only and lets the user tune provider behavior without
-editing JSON by hand:
+The cockpit `⚙` settings popup stores local renderer preferences only. API keys
+are not stored there.
 
-- enable/disable `TRAFFIC`, `RADAR`, `AIR`, `SEA`, `SAT` and `OCEAN`;
-- choose CelesTrak satellite group and density;
-- cap AIR aircraft, SEA vessels, SAT objects/markers and OCEAN stations;
-- tune AIR refresh interval and wider/visible bounding-box mode;
-- select OCEAN source/filter mode;
-- adjust radar and traffic opacity;
-- see provider status/configuration hints;
-- toggle subtle local UI sounds;
-- choose default map-location behavior.
+It can configure:
 
-The popup writes renderer `localStorage` preferences only. API keys are not
-stored there. Existing `map-layers.json` remains the portable layer-state file
-for active/opacity/mode preferences.
+- base-map provider and fallback mode;
+- `TRAFFIC`, `RADAR`, `AIR`, `SEA`, `MARINE`, `SAT` and `OCEAN` layer toggles;
+- CelesTrak group and SAT density;
+- AIR marker cap, refresh interval and bounds mode;
+- AIS vessel cap and area preset;
+- Marine Weather mode/preset/marker cap;
+- NOAA/NDBC source/filter/max stations;
+- radar provider and opacity;
+- local UI sounds and location fallback behavior.
 
 ## Layer states
 
@@ -49,18 +60,17 @@ for active/opacity/mode preferences.
 | `ONLINE` | Provider is active and responding with real data/tiles. |
 | `OFFLINE` | Offline mode or network state prevents loading. |
 | `API_KEY_MISSING` | A key-backed tile/API layer has no key. |
-| `CONFIG_REQUIRED` | A provider needs user configuration before it can connect. |
-| `RATE_LIMITED` | Provider throttled the request; the layer must not retry aggressively. |
+| `CONFIG_REQUIRED` | A provider needs local configuration before it can connect. |
+| `RATE_LIMITED` | Provider throttled the request; no aggressive retry. |
 | `SERVICE_UNAVAILABLE` | Provider/tile service failed but the map remains alive. |
 | `NO_DATA` | Provider responded, but no real objects exist in the current view/result. |
-| `POSITION_ENGINE_REQUIRED` | Legacy state for builds without an orbital propagation engine. v2.0.3 should not use this when `satellite.js` is available. |
-| `POSITION_ENGINE_ERROR` | Real satellite catalog data loaded, but SGP4 propagation failed or the local engine is unavailable. |
+| `NO_COVERAGE` | Provider is online but has no coverage for the selected area. |
+| `GROUP_UNAVAILABLE` | Selected upstream group is unavailable. |
+| `POSITION_ENGINE_ERROR` | Real satellite catalog loaded, but SGP4 propagation failed. |
 | `ERROR` | Provider failed in a controlled way. |
 | `DISABLED` | Provider exists but is intentionally unavailable. |
 
 ## Provider architecture
-
-Map providers live under `src/classes/map/`:
 
 ```text
 src/classes/map/
@@ -70,6 +80,7 @@ src/classes/map/
     weatherRadarProvider.js
     openSkyProvider.js
     aisProvider.js
+    marineWeatherProvider.js
     celestrakProvider.js
     noaaOceanProvider.js
   utils/
@@ -77,182 +88,82 @@ src/classes/map/
     mapLayerState.js
 ```
 
-Each provider exposes the same lifecycle shape:
-
-- `isConfigured(context)`
-- `start(context)`
-- `stop(context)`
-- `refresh(context)`
-- `getStatus()`
-
-The registry owns activation/deactivation and syncs provider status back into
-the existing cockpit UI.
+Each provider supports `start`, `stop`, `refresh`, status reporting and cleanup.
+OFF providers do not poll, open sockets or draw markers.
 
 ## Provider behavior
 
-Provider references:
-
-- OpenSky REST API: `https://openskynetwork.github.io/opensky-api/rest.html`
-- AISStream documentation: `https://aisstream.io/documentation`
-- CelesTrak GP data formats: `https://celestrak.org/NORAD/documentation/gp-data-formats.php`
-- satellite.js SGP4 propagation engine: `https://github.com/shashwatak/satellite-js`
-- NOAA/NDBC active stations: `https://www.ndbc.noaa.gov/activestations.xml`
-
 ### `ROAD_TRAFFIC`
 
-- Uses TomTom traffic tiles.
-- Does not load unless the toggle is ON and a TomTom key exists.
-- Missing key shows `API_KEY_MISSING`.
-- Tile failures show `SERVICE_UNAVAILABLE`.
-- No polling timer is used.
+- Uses TomTom Traffic tiles.
+- Requires a TomTom key.
+- Missing key reports `API_KEY_MISSING`.
+- There is no fake traffic fallback.
 
 ### `WEATHER_RADAR`
 
-- Uses RainViewer metadata and radar tiles.
-- Metadata is cached for 5 minutes.
-- Refresh interval is 5 minutes while ON.
-- No key is required.
-- Failures show `SERVICE_UNAVAILABLE` / `OFFLINE`.
-- Radar opacity is configurable in the map settings popup.
-- Dedicated maritime radar coverage is marked `NOT SUPPORTED BY CURRENT
-  PROVIDER`. RainViewer may show precipitation wherever its public mosaic has
-  coverage, but AegisUi does not fake sea radar or infer marine coverage.
+- Uses RainViewer public precipitation radar metadata/tiles.
+- No key required.
+- Radar precipitation is not the same as marine sea-state conditions.
+- Maritime precipitation coverage depends on RainViewer's public mosaic. If it
+  has no coverage, AegisUi does not synthesize radar.
 
 ### `AIR_TRAFFIC`
 
-- Uses OpenSky `states/all` with the visible map bounding box.
-- Anonymous access is allowed but can be rate-limited.
-- Optional auth:
-  - `OPENSKY_ACCESS_TOKEN`; or
-  - `OPENSKY_CLIENT_ID` + `OPENSKY_CLIENT_SECRET` for OAuth client credentials.
-- Cache TTL: 45 seconds.
-- Refresh interval is configurable: 30s, 60s or 120s.
-- Marker cap is configurable: 25, 50, 100 or 200 aircraft.
-- Bounding-box mode can use visible map bounds or a wider surrounding area.
-- OFF means no requests and no aircraft markers.
+- Uses OpenSky `states/all` for real ADS-B state vectors.
+- Anonymous access can work but is rate-limited.
+- Optional credentials can be supplied through OpenSky env variables.
+- OFF means no OpenSky requests and no aircraft markers.
 
 ### `MARITIME_AIS`
 
 - Uses AISStream over secure WebSocket.
 - Requires `AISSTREAM_API_KEY`.
-- Missing key shows `CONFIG_REQUIRED`.
-- OFF means no WebSocket and no vessel markers.
-- The layer closes the socket and clears markers when disabled.
-- Marker cap is configurable: 50, 100 or 250 vessels.
-- AISStream is the current provider. `TEST CONNECTION` in settings does not
-  open a WebSocket unless the SEA layer itself is enabled.
+- Missing key reports `CONFIG_REQUIRED` and opens no socket.
+- Supports visible bounds plus Iberian, Mediterranean and Atlantic presets.
+- Markers are created only from live AIS messages.
+
+### `MARINE_WEATHER`
+
+- Uses Open-Meteo Marine public API.
+- No key required.
+- Shows real sea-state cells: wave height/direction/period, sea-surface
+  temperature, ocean current velocity/direction and sea-level height where
+  upstream data exists.
+- `visible` mode reports `NO_MARINE_CELL_IN_VIEW` for inland views rather than
+  drawing fake sea data.
+- `nearest` and preset modes can show real coastal/ocean cells without AIS.
 
 ### `SATELLITES`
 
-- Uses CelesTrak GP JSON data.
-- Converts CelesTrak OMM/GP records with `satellite.js` `json2satrec`.
-- Propagates positions locally with SGP4; no fake satellite markers are drawn.
-- Default group: `stations`.
-- The settings popup can select:
-  - `stations`: small, clean station-related set;
-  - `active`: broad active catalog;
-  - `starlink`: Starlink constellation;
-  - `weather`: meteorological satellites;
-  - `gps-ops`: operational GPS;
-  - `visual`: commonly visible objects;
-  - `last-30-days`: recently updated/launched objects;
-  - `geo`: geostationary objects;
-  - `science`: science missions.
-- `CELESTRAK_GROUP` remains a local fallback, but the UI selector has priority
-  once a user chooses a group.
-- Density presets:
-  - `LOW`: process 200 objects, draw up to 40 markers;
-  - `MEDIUM`: process 800 objects, draw up to 80 markers;
-  - `HIGH`: process 2000 objects, draw up to 200 markers;
-  - `CUSTOM`: user-defined local caps.
-- Cache TTL: 6 hours.
-- CelesTrak can respond with a `403` cache-window message when the same group
-  is requested again before its GP data has updated; AegisUi reports this as
-  `RATE_LIMITED`/cache-window status rather than drawing stale fake markers.
-- Position refresh interval: 60 seconds while ON.
-- OFF means no CelesTrak requests, no propagation timer and no satellite
-  markers.
-- Successful propagation reports `ONLINE` and draws only real calculated
-  positions.
-- If the catalog loads but SGP4 cannot calculate positions, the layer reports
-  `POSITION_ENGINE_ERROR`.
+- Uses real CelesTrak GP/TLE catalog data.
+- Propagates locally with `satellite.js` SGP4 via `twoline2satrec`.
+- `starlink` maps to upstream `GROUP=STARLINK`.
+- Density controls limit processed objects and rendered markers.
+- CelesTrak can return a cache-window `403` if the same group was downloaded
+  recently; AegisUi reports that as `RATE_LIMITED` instead of drawing fake
+  satellites.
 
 ### `OCEAN_ALERTS`
 
-- Uses NOAA/NDBC active station XML.
-- Cache TTL: 10 minutes.
-- Refresh interval: 10 minutes while ON.
-- Source is configurable between NDBC active stations and DART tsunami buoys.
-- Filter mode is configurable:
-  - visible map bounds;
-  - global;
-  - coastal-only best-effort filtering from real NOAA/NDBC station metadata.
-- Marker cap is configurable: 100, 500 or 1500 stations.
-- Clicking a station attempts to load its latest public realtime observation.
-- If no station exists in the visible area, the layer reports `NO_DATA`.
+- Uses NOAA/NDBC active station XML and DART filtering where available.
+- Can filter visible/global/coastal stations.
+- Clicking a station attempts to load latest public realtime observation.
+- If no station exists in the selected area, the layer reports `NO_DATA`.
 
 ## Map controls
 
-- `⚙` opens the map-layer settings popup.
-- `⛶` expands/collapses the map inside the app with a short local cockpit
-  transition sound when UI sounds are enabled.
-- `⌖` asks the browser/Electron geolocation API for current location. If
-  permission is unavailable or denied, the map shows `LOCATION PERMISSION
-  REQUIRED` / fallback status and centers on the configured local fallback
-  rather than storing or committing private coordinates.
-
-## Configuration
-
-Copy `.env.example` to `.env` for private local development:
-
-```sh
-cp .env.example .env
-```
-
-Optional map variables:
-
-```text
-AEGISUI_TOMTOM_API_KEY=
-OPENSKY_CLIENT_ID=
-OPENSKY_CLIENT_SECRET=
-OPENSKY_ACCESS_TOKEN=
-AISSTREAM_API_KEY=
-CELESTRAK_GROUP=stations
-```
-
-Do not commit `.env`, API keys, tokens, account sessions or exported private
-configuration.
-
-Layer toggle preferences are stored locally in app data as `map-layers.json`
-and mirrored in renderer localStorage. That file contains active/opacity/mode
-preferences only; it should not contain provider secrets.
+- `⚙` opens the map settings popup.
+- `⛶` expands/collapses the map inside the app.
+- `⌖` requests browser/Electron geolocation. If permission is unavailable or
+  denied, the app shows a clear location fallback state.
 
 ## Offline and fallback behavior
 
-- If the app is offline, online providers report `OFFLINE` or remain `OFF`.
-- Missing TomTom key reports `API_KEY_MISSING`.
-- Missing AISStream key reports `CONFIG_REQUIRED`.
-- OpenSky throttling reports `RATE_LIMITED`.
-- Provider outages report `SERVICE_UNAVAILABLE`.
-- Empty real results report `NO_DATA`.
-- Satellite catalog data does not become map markers unless local SGP4
-  propagation calculates real latitude/longitude positions.
-
-## Privacy and performance
-
-- Disabled layers do not call providers.
-- Provider data is not logged by default.
-- Refresh intervals are deliberately conservative.
-- AIS/OpenSky views can reveal regions of interest; export config carefully.
-- API keys are not exported or committed.
-- Public providers may be delayed, filtered, incomplete or rate-limited.
-
-## Adding another provider
-
-1. Add a provider file under `src/classes/map/providers/`.
-2. Implement `start()`, `stop()`, `refresh()`, `isConfigured()` and `getStatus()`.
-3. Register it in `mapLayerRegistry.js`.
-4. Add layer metadata in `EngineeringMapPanel.createLayerDefinitions()`.
-5. Define cache TTL, marker limit, fallback state and cleanup behavior.
-6. Ensure OFF performs no requests, sockets, polling or rendering.
-7. Update `.env.example`, `CONFIGURATION.md`, `INTEGRATIONS.md` and this file.
+- Base map: TomTom primary, OSM fallback, offline/error state if neither loads.
+- Traffic: TomTom-only; no fake fallback.
+- Radar: RainViewer precipitation only; no fake maritime radar.
+- AIS: requires key; otherwise `CONFIG_REQUIRED`.
+- Marine Weather: no key, real Open-Meteo Marine data or `NO_DATA`.
+- SAT: real CelesTrak/TLE + SGP4 only.
+- OCEAN: real NOAA/NDBC station data only.

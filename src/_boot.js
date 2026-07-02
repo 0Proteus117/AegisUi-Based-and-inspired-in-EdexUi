@@ -83,6 +83,7 @@ function defaultMapLayersConfig() {
             WEATHER_RADAR: {active: true, opacity: 0.55, mode: "live"},
             AIR_TRAFFIC: {active: false, opacity: 1, mode: "placeholder"},
             MARITIME_AIS: {active: false, opacity: 1, mode: "placeholder"},
+            MARINE_WEATHER: {active: false, opacity: 1, mode: "live"},
             SATELLITES: {active: false, opacity: 1, mode: "placeholder"},
             OCEAN_ALERTS: {active: false, opacity: 1, mode: "placeholder"}
         }
@@ -892,8 +893,36 @@ function loadLocalEnvFile() {
 
 loadLocalEnvFile();
 
+const TOMTOM_ENV_ALIASES = [
+    "TOMTOM_API_KEY",
+    "AEGISUI_TOMTOM_API_KEY",
+    "TOMTOM_KEY",
+    "VITE_TOMTOM_API_KEY",
+    "REACT_APP_TOMTOM_API_KEY"
+];
+
+function firstEnvValue(names = []) {
+    for (const name of names) {
+        const value = process.env[name];
+        if (typeof value === "string" && value.trim()) return value.trim();
+    }
+    return "";
+}
+
+function getTomTomApiKey() {
+    return firstEnvValue(TOMTOM_ENV_ALIASES);
+}
+
+function maskSecret(value) {
+    const text = String(value || "").trim();
+    if (!text) return "";
+    return `••••${text.slice(-4)}`;
+}
+
 ipc.handle("runtime-config", () => ({
-    tomtomApiKey: process.env.AEGISUI_TOMTOM_API_KEY || "",
+    tomtomApiKey: getTomTomApiKey(),
+    tomtomKeyStatus: getTomTomApiKey() ? "CONFIGURED" : "MISSING",
+    tomtomKeyLast4: maskSecret(getTomTomApiKey()),
     offlineMode: envFlag("AEGISUI_OFFLINE_MODE"),
     disableUpdateCheck: envFlag("AEGISUI_DISABLE_UPDATE_CHECK")
 }));
@@ -950,6 +979,73 @@ function getJSON(remoteUrl) {
         request.on("error", reject);
     });
 }
+
+function getHttpStatus(remoteUrl) {
+    return new Promise((resolve, reject) => {
+        const request = require("https").get(remoteUrl, response => {
+            let body = "";
+            response.on("data", chunk => {
+                if (body.length < 400) body += chunk;
+            });
+            response.on("end", () => {
+                resolve({
+                    statusCode: response.statusCode,
+                    statusMessage: response.statusMessage,
+                    body
+                });
+            });
+        });
+        request.setTimeout(8000, () => {
+            request.destroy(new Error("Remote service timeout"));
+        });
+        request.on("error", reject);
+    });
+}
+
+ipc.handle("tomtom-diagnostic", async (event, candidateKey = "") => {
+    const key = String(candidateKey || getTomTomApiKey() || "").trim();
+    if (!key) {
+        return {
+            ok: false,
+            keyStatus: "MISSING",
+            serviceStatus: "CONFIG_REQUIRED",
+            summary: "TomTom key missing"
+        };
+    }
+
+    const url = `https://api.tomtom.com/map/1/tile/basic/main/0/0/0.png?tileSize=256&key=${encodeURIComponent(key)}`;
+    try {
+        const response = await getHttpStatus(url);
+        if (response.statusCode >= 200 && response.statusCode < 300) {
+            return {
+                ok: true,
+                keyStatus: "CONFIGURED",
+                serviceStatus: "ONLINE",
+                last4: maskSecret(key),
+                httpStatus: response.statusCode,
+                summary: "TomTom base map endpoint reachable"
+            };
+        }
+
+        const invalid = response.statusCode === 401 || response.statusCode === 403;
+        return {
+            ok: false,
+            keyStatus: invalid ? "INVALID" : "CONFIGURED",
+            serviceStatus: invalid ? "INVALID" : "ERROR",
+            last4: maskSecret(key),
+            httpStatus: response.statusCode,
+            summary: `TomTom returned HTTP ${response.statusCode}`
+        };
+    } catch (error) {
+        return {
+            ok: false,
+            keyStatus: "CONFIGURED",
+            serviceStatus: "ERROR",
+            last4: maskSecret(key),
+            summary: error.message || "TomTom diagnostic failed"
+        };
+    }
+});
 
 ipc.handle("rainviewer-metadata", async () => {
     try {
@@ -1728,7 +1824,7 @@ if (!fs.existsSync(settingsFile)) {
         experimentalFeatures: false,
         offlineMode: envFlag("AEGISUI_OFFLINE_MODE"),
         disableUpdateCheck: envFlag("AEGISUI_DISABLE_UPDATE_CHECK"),
-        tomtomApiKey: process.env.AEGISUI_TOMTOM_API_KEY || ""
+        tomtomApiKey: getTomTomApiKey()
     }, "", 4));
     signale.info(`Default settings written to ${settingsFile}`);
 }
