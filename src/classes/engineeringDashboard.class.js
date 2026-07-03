@@ -2708,11 +2708,14 @@ class EngineeringMusicPanel {
     describeMusicFailure(response = {}) {
         const status = response.status || response.connectionStatus || "ERROR";
         const permissionTarget = response.permissionTarget || "";
-        if (status === "MUSIC_AUTOMATION_PERMISSION_REQUIRED" || permissionTarget === "Music") {
+        if (status === "PERMISSION_REQUIRED"
+            || response.permissionDenied
+            || status === "MUSIC_AUTOMATION_PERMISSION_REQUIRED"
+            || permissionTarget === "Music") {
             return {
-                state: "MUSIC PERMISSION REQUIRED",
-                message: "MUSIC AUTOMATION PERMISSION REQUIRED",
-                connectionStatus: "MUSIC PERMISSION REQUIRED"
+                state: "AUTOMATION BLOCKED",
+                message: "MUSIC AUTOMATION BLOCKED",
+                connectionStatus: "AUTOMATION BLOCKED"
             };
         }
         if (status === "SYSTEM_EVENTS_PERMISSION_REQUIRED" || permissionTarget === "System Events") {
@@ -2884,11 +2887,11 @@ class EngineeringMusicPanel {
     async loadPlaylists() {
         const container = document.getElementById("eng_playlists");
         if (!container) return;
-        container.innerHTML = `<h3>PLAYLISTS</h3><div class="eng-playlist-loading">READING LOCAL INDEX</div>`;
+        container.innerHTML = `<h3>PLAYLISTS <small>CACHED</small></h3><div class="eng-playlist-loading">READING LOCAL INDEX</div>`;
         const response = await this.ipc.invoke("music-playlists");
         const playlists = response.ok ? response.data : [];
         container.innerHTML = `
-            <h3>PLAYLISTS</h3>
+            <h3>PLAYLISTS <small>CACHED</small></h3>
             <div class="eng-playlist-list"></div>
             <footer>
                 <button id="eng_playlists_reload">↻</button>

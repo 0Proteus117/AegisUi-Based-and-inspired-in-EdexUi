@@ -1201,178 +1201,75 @@ ipc.handle("launch-application", async (e, applicationPath) => {
 });
 
 const musicStatusScript = `
-tell application "Music"
-    set pState to (player state as text)
-    set resultText to "running=true" & linefeed & "state=" & pState & linefeed & "appStatus=RUNNING" & linefeed & "connectionStatus=CONNECTED" & linefeed & "trackStatus=NO_TRACK" & linefeed & "lastError="
-    try
-        set resultText to resultText & linefeed & "shuffle=" & (shuffle enabled as text)
-    end try
-    try
-        set resultText to resultText & linefeed & "repeat=" & (song repeat as text)
-    end try
-    if pState is "stopped" then
-        set resultText to resultText & linefeed & "connectionStatus=CONNECTED_STOPPED"
-    else
-        try
-            set t to current track
-            set resultText to resultText & linefeed & "title=" & (name of t as text)
-            set resultText to resultText & linefeed & "artist=" & (artist of t as text)
-            set resultText to resultText & linefeed & "album=" & (album of t as text)
-            set resultText to resultText & linefeed & "duration=" & ((duration of t) as text)
-            set resultText to resultText & linefeed & "position=" & ((player position) as text)
-            try
-                set resultText to resultText & linefeed & "artworkId=" & (persistent ID of t as text)
-            end try
-            set resultText to resultText & linefeed & "trackStatus=OK"
-            set resultText to resultText & linefeed & "connectionStatus=CONNECTED"
-        on error errMsg number errNo
-            set resultText to resultText & linefeed & "trackStatus=NO_TRACK"
-            set resultText to resultText & linefeed & "connectionStatus=CONNECTED_NO_TRACK"
-            set resultText to resultText & linefeed & "trackError=" & (errNo as text) & " " & errMsg
-        end try
-    end if
-    return resultText
-end tell
-`;
-
-const musicArtworkScript = `
 const Music = Application("Music");
-let result = {running: true, artworkId: "", rawData: ""};
-try {
-    const track = Music.currentTrack();
-    const properties = track.properties();
-    result.artworkId = String(properties.persistentID || properties.databaseID || [
-        properties.name || "",
-        properties.artist || "",
-        properties.album || ""
-    ].join("|"));
-    const artworks = track.artworks();
-    if (artworks.length) result.rawData = String(artworks[0].rawData());
-} catch (error) {}
-JSON.stringify(result);
-`;
-
-function parseKeyValueOutput(output = "") {
-    const data = {};
-    String(output || "").split(/\r?\n/).forEach(line => {
-        const index = line.indexOf("=");
-        if (index <= 0) return;
-        const key = line.slice(0, index).trim();
-        const value = line.slice(index + 1);
-        data[key] = value;
-    });
-    return data;
-}
-
-function booleanFromText(value) {
-    return String(value || "").toLowerCase() === "true";
-}
-
 function normalizeRepeat(value) {
     const text = String(value || "").toLowerCase();
     if (text.includes("one")) return "one";
     if (text.includes("all")) return "all";
     return "off";
 }
-
-function classifyAutomationError(error, target = "Music") {
-    const message = (error && (error.stderr || error.message) || "").trim();
-    const permissionDenied = message.includes("-1743");
-    const targetName = target === "System Events" ? "System Events" : "Music";
-    return {
-        ok: false,
-        status: permissionDenied
-            ? (targetName === "System Events" ? "SYSTEM_EVENTS_PERMISSION_REQUIRED" : "MUSIC_AUTOMATION_PERMISSION_REQUIRED")
-            : "ERROR",
-        permissionDenied,
-        permissionTarget: permissionDenied ? targetName : "",
-        appStatus: targetName === "Music" ? "RUNNING" : "UNKNOWN",
-        connectionStatus: permissionDenied
-            ? (targetName === "System Events" ? "SYSTEM_EVENTS_PERMISSION_REQUIRED" : "MUSIC_PERMISSION_REQUIRED")
-            : "ERROR",
-        error: message || "Automation request failed."
-    };
-}
-
-async function isMusicRunning() {
-    if (process.platform !== "darwin") return false;
-    try {
-        await execFileAsync("/usr/bin/pgrep", ["-x", "Music"], {timeout: 3000, maxBuffer: 16 * 1024});
-        return true;
-    } catch (error) {
-        return false;
-    }
-}
-
-function normalizeMusicStatus(raw = {}) {
-    const running = booleanFromText(raw.running);
-    const state = String(raw.state || "stopped").toLowerCase();
-    const trackStatus = String(raw.trackStatus || (state === "stopped" ? "NO_TRACK" : "OK")).toUpperCase();
-    const connectionStatus = raw.connectionStatus
-        || (state === "stopped" ? "CONNECTED_STOPPED" : (trackStatus === "OK" ? "CONNECTED" : "CONNECTED_NO_TRACK"));
-    return {
-        running,
-        state,
-        appStatus: raw.appStatus || (running ? "RUNNING" : "NOT_RUNNING"),
-        connectionStatus,
-        trackStatus,
-        lastError: raw.lastError || "",
-        shuffle: booleanFromText(raw.shuffle),
-        repeat: normalizeRepeat(raw.repeat),
-        title: raw.title || "",
-        artist: raw.artist || "",
-        album: raw.album || "",
-        duration: Number(raw.duration || 0),
-        position: Number(raw.position || 0),
-        artworkId: raw.artworkId || ""
-    };
-}
-
-async function runAppleScript(script, timeout = 20000, maxBuffer = 1024 * 1024, target = "Music") {
-    if (process.platform !== "darwin") {
-        return {ok: false, status: "UNAVAILABLE", error: "This integration is available on macOS only."};
-    }
-    try {
-        const {stdout} = await execFileAsync("/usr/bin/osascript", [
-            "-e", script
-        ], {timeout, maxBuffer});
-        return {ok: true, stdout: stdout.trim()};
-    } catch (error) {
-        return classifyAutomationError(error, target);
-    }
-}
-
-async function getMusicStatus() {
-    if (process.platform !== "darwin") {
-        return {ok: false, status: "UNAVAILABLE", error: "Music.app is available on macOS only."};
-    }
-    const running = await isMusicRunning();
-    if (!running) {
-        return {
-            ok: true,
-            data: {
-                running: false,
-                state: "stopped",
-                appStatus: "NOT_RUNNING",
-                connectionStatus: "MUSIC_NOT_RUNNING",
-                trackStatus: "NO_TRACK",
-                lastError: ""
-            }
-        };
-    }
-    const response = await runAppleScript(musicStatusScript, 8000, 512 * 1024, "Music");
-    if (!response.ok) return {
-        ...response,
+if (!Music.running()) {
+    JSON.stringify({
+        running: false,
+        state: "stopped",
+        appStatus: "NOT_RUNNING",
+        connectionStatus: "NOT_RUNNING",
+        lastError: ""
+    });
+} else {
+    let result = {
+        running: true,
+        state: String(Music.playerState()),
         appStatus: "RUNNING",
-        data: {
-            running: true,
-            appStatus: "RUNNING",
-            connectionStatus: response.connectionStatus || response.status,
-            lastError: response.error || ""
-        }
+        connectionStatus: "CONNECTED",
+        lastError: ""
     };
-    return {ok: true, data: normalizeMusicStatus(parseKeyValueOutput(response.stdout))};
+    try {
+        result.shuffle = Boolean(Music.shuffleEnabled());
+    } catch (error) {}
+    try {
+        result.repeat = normalizeRepeat(Music.songRepeat());
+    } catch (error) {}
+    try {
+        const track = Music.currentTrack();
+        const properties = track.properties();
+        result = Object.assign(result, {
+            title: properties.name || "Unknown track",
+            artist: properties.artist || "Unknown artist",
+            album: properties.album || "",
+            duration: Number(properties.duration || 0),
+            position: Number(Music.playerPosition() || 0),
+            artworkId: String(properties.persistentID || properties.databaseID || [
+                properties.name || "",
+                properties.artist || "",
+                properties.album || ""
+            ].join("|"))
+        });
+    } catch (error) {}
+    JSON.stringify(result);
 }
+`;
+
+const musicArtworkScript = `
+const Music = Application("Music");
+if (!Music.running()) {
+    JSON.stringify({running: false});
+} else {
+    let result = {running: true, artworkId: "", rawData: ""};
+    try {
+        const track = Music.currentTrack();
+        const properties = track.properties();
+        result.artworkId = String(properties.persistentID || properties.databaseID || [
+            properties.name || "",
+            properties.artist || "",
+            properties.album || ""
+        ].join("|"));
+        const artworks = track.artworks();
+        if (artworks.length) result.rawData = String(artworks[0].rawData());
+    } catch (error) {}
+    JSON.stringify(result);
+}
+`;
 
 async function runAutomation(script, timeout = 20000, maxBuffer = 1024 * 1024) {
     if (process.platform !== "darwin") {
@@ -1384,7 +1281,14 @@ async function runAutomation(script, timeout = 20000, maxBuffer = 1024 * 1024) {
         ], {timeout, maxBuffer});
         return {ok: true, data: JSON.parse(stdout.trim() || "null")};
     } catch (error) {
-        return classifyAutomationError(error, "Music");
+        const message = (error.stderr || error.message || "").trim();
+        const permissionDenied = message.includes("-1743");
+        return {
+            ok: false,
+            status: permissionDenied ? "PERMISSION_REQUIRED" : "ERROR",
+            permissionDenied,
+            error: message || "Automation request failed."
+        };
     }
 }
 
@@ -1461,15 +1365,17 @@ ipc.handle("calendar-events", async (event, requestedRange = {}) => {
         } catch (error) {}
     }
 });
-ipc.handle("music-status", () => getMusicStatus());
+ipc.handle("music-status", () => runAutomation(musicStatusScript, 8000));
 ipc.handle("music-open", async () => {
     if (process.platform !== "darwin") return {ok: false, status: "UNAVAILABLE", error: "Music.app is available on macOS only."};
-    const response = await runAppleScript('tell application "Music" to activate\nreturn "opened=true"', 8000, 64 * 1024, "Music");
-    if (!response.ok) return response;
-    return {ok: true, status: "OPEN_REQUESTED", data: {appStatus: "RUNNING", connectionStatus: "OPEN_REQUESTED"}};
+    try {
+        await execFileAsync("/usr/bin/open", ["-a", "Music"], {timeout: 8000});
+        return {ok: true, status: "OPEN_REQUESTED"};
+    } catch (error) {
+        return {ok: false, status: "ERROR", error: (error.message || "Unable to open Music.app").slice(0, 180)};
+    }
 });
 ipc.handle("music-artwork", async (event, requestedArtworkId) => {
-    if (!await isMusicRunning()) return {ok: true, data: {running: false, artworkId: "", image: ""}};
     const artworkId = typeof requestedArtworkId === "string"
         ? requestedArtworkId.slice(0, 256)
         : "";
@@ -1734,55 +1640,53 @@ ipc.handle("music-play-playlist", async (e, playlistName) => {
     }
     const safeName = JSON.stringify(playlistName);
     const script = `
-set playlistName to ${safeName}
-tell application "Music"
-    if not (exists user playlist playlistName) then
-        return "played=false" & linefeed & "error=Playlist not found"
-    end if
-    play user playlist playlistName
-    return "played=true"
-end tell`;
-    const response = await runAppleScript(script, 12000, 128 * 1024, "Music");
-    if (!response.ok) return response;
-    const data = parseKeyValueOutput(response.stdout);
-    return {ok: true, data: {played: booleanFromText(data.played), error: data.error || ""}};
+const Music = Application("Music");
+const playlist = Music.userPlaylists.byName(${safeName});
+if (!playlist.exists()) {
+    JSON.stringify({played: false, error: "Playlist not found"});
+} else {
+    Music.play(playlist);
+    JSON.stringify({played: true});
+}`;
+    return runAutomation(script, 12000);
 });
 ipc.handle("music-control", async (e, command, options = {}) => {
     const simpleCommands = {
-        previous: "tell application \"Music\" to previous track\nreturn \"ok=true\"",
-        toggle: "tell application \"Music\" to playpause\nreturn \"ok=true\"",
-        next: "tell application \"Music\" to next track\nreturn \"ok=true\""
+        previous: "Application('Music').previousTrack(); JSON.stringify({ok:true});",
+        toggle: "Application('Music').playpause(); JSON.stringify({ok:true});",
+        next: "Application('Music').nextTrack(); JSON.stringify({ok:true});"
     };
-    if (simpleCommands[command]) {
-        const response = await runAppleScript(simpleCommands[command], 8000, 64 * 1024, "Music");
-        if (!response.ok) return response;
-        return {ok: true, data: {ok: true}};
-    }
+    if (simpleCommands[command]) return runAutomation(simpleCommands[command], 8000);
 
     if (command === "shuffle") {
         const enabled = Boolean(options && options.shuffle);
-        const response = await runAppleScript(`
-tell application "Music"
-    set shuffle enabled to ${enabled ? "true" : "false"}
-    return "ok=true" & linefeed & "shuffle=" & (shuffle enabled as text) & linefeed & "repeat=" & (song repeat as text)
-end tell`, 8000, 64 * 1024, "Music");
-        if (!response.ok) return response;
-        const data = parseKeyValueOutput(response.stdout);
-        return {ok: true, data: {ok: true, shuffle: booleanFromText(data.shuffle), repeat: normalizeRepeat(data.repeat)}};
+        return runAutomation(`
+const Music = Application("Music");
+Music.shuffleEnabled = ${enabled ? "true" : "false"};
+let shuffle = ${enabled ? "true" : "false"};
+try { shuffle = Boolean(Music.shuffleEnabled()); } catch (error) {}
+JSON.stringify({ok: true, shuffle});
+`, 8000);
     }
 
     if (command === "repeat") {
         const repeat = ["off", "all", "one"].includes(options && options.repeat)
             ? options.repeat
             : "off";
-        const response = await runAppleScript(`
-tell application "Music"
-    set song repeat to ${repeat}
-    return "ok=true" & linefeed & "repeat=" & (song repeat as text) & linefeed & "shuffle=" & (shuffle enabled as text)
-end tell`, 8000, 64 * 1024, "Music");
-        if (!response.ok) return response;
-        const data = parseKeyValueOutput(response.stdout);
-        return {ok: true, data: {ok: true, repeat: normalizeRepeat(data.repeat), shuffle: booleanFromText(data.shuffle)}};
+        const safeRepeat = JSON.stringify(repeat);
+        return runAutomation(`
+const Music = Application("Music");
+function normalizeRepeat(value) {
+    const text = String(value || "").toLowerCase();
+    if (text.includes("one")) return "one";
+    if (text.includes("all")) return "all";
+    return "off";
+}
+Music.songRepeat = ${safeRepeat};
+let repeat = ${safeRepeat};
+try { repeat = normalizeRepeat(Music.songRepeat()); } catch (error) {}
+JSON.stringify({ok: true, repeat});
+`, 8000);
     }
 
     return {ok: false, error: "Unknown music command"};

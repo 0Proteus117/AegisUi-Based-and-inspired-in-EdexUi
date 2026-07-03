@@ -1,5 +1,27 @@
 # Changelog
 
+## 2.1.4 - 2026-07-03
+
+### Fixed
+
+- Restored the Apple Music bridge to the last known good local macOS
+  JXA/osascript path for status, artwork, playlist launch and playback controls.
+- Added `scripts/test-apple-music-runtime.js` to validate the same Music.app
+  Automation mechanism used by the app.
+- Added `scripts/diagnose-macos-automation-identity.js` to check packaged app
+  bundle identity, bundle identifier and codesign validity when Automation/TCC
+  rejects Apple Events.
+- Marked the playlist sidebar as a cached local launcher index so cached
+  playlists are not confused with a live Music.app connection.
+- Re-signed the manual packaged app after resource injection while preserving
+  the stable bundle identifier.
+
+### Security
+
+- Apple Music remains local-only through macOS Music.app Automation.
+- No Apple Music cloud API, external service, token, audio capture, private
+  media data or System Events dependency is added.
+
 ## 2.1.3 - 2026-07-03
 
 ### Fixed

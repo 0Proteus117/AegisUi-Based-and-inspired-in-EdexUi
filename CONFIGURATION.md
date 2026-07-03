@@ -70,6 +70,26 @@ The app currently uses JSON files in the macOS application-data folder:
   Angie/Aphrodite microcopy. No assistant prompts, chat history, voice samples
   or API keys are stored there.
 
+## Apple Music local Automation
+
+Apple Music integration is local-only. It uses macOS Music.app Automation via
+`/usr/bin/osascript -l JavaScript` and direct `Application("Music")` calls.
+It does not use the Apple Music cloud API and does not depend on System Events.
+
+The playlist sidebar is a cached local launcher index from
+`music-playlists.json`. A live `CONNECTED` state is shown only after a Music.app
+Automation call succeeds in the current run.
+
+Packaged builds must keep a stable identity for macOS Automation/TCC:
+
+- Product name: `EdexUi-Eng`
+- Bundle identifier: `com.edex.ui.eng`
+
+When a manual package replaces files inside the `.app`, re-sign the app after
+resource injection. Otherwise macOS can reject Music.app Apple Events with
+`-1743` even when System Settings already shows Automation permission enabled.
+Use `scripts/diagnose-macos-automation-identity.js` to inspect a packaged app.
+
 Generated caches and helpers can also exist there, for example GeoIP data,
 application icons and the native Calendar helper. Do not share those by
 default.

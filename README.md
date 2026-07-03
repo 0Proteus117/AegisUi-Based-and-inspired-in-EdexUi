@@ -90,7 +90,9 @@ Calendar and Apple Music remain disconnected until their panel button is
 pressed. Calendar requests local read-only EventKit access; Music requests
 Automation access and reports whether Music.app is running, connected, blocked
 by permission or unavailable. Music control uses direct local Music.app
-Automation and does not depend on System Events. Weather radar and Marine
+Automation through the app's stable bundle identity and does not depend on
+System Events. The playlist column is a cached local launcher index; `CONNECTED`
+is shown only when a live Music.app call succeeds. Weather radar and Marine
 Weather need no key.
 Real-time road traffic can be enabled from the map's `API KEY` button with a
 TomTom key; the base map can fall back to OSM if TomTom is unavailable. Air,
