@@ -2,26 +2,32 @@ const {BaseMapProvider} = require("./baseProvider.js");
 const {MAP_LAYER_STATES, isOffline} = require("../utils/mapLayerState.js");
 
 const AISSTREAM_URL = "wss://stream.aisstream.io/v0/stream";
+const AIS_BUFFER_CAP = 1000;
+const AIS_STALE_TTL_MS = 15 * 60 * 1000;
+const AIS_RENDER_THROTTLE_MS = 7000;
+const AIS_DEFAULT_REFRESH_MS = 60 * 1000;
+
 const AIS_PRESET_BOUNDS = Object.freeze({
-    world: {south: -90, west: -180, north: 90, east: 180},
-    WORLD_SAMPLE: {south: -90, west: -180, north: 90, east: 180},
     CURRENT_VIEW: null,
-    ATLANTIC: {south: -45, west: -80, north: 70, east: 20},
     MEDITERRANEAN: {south: 30, west: -6, north: 46, east: 37},
+    GIBRALTAR: {south: 34.8, west: -6.8, north: 37.2, east: -3.5},
     NORTH_SEA: {south: 51, west: -5, north: 62, east: 10},
     ENGLISH_CHANNEL: {south: 48, west: -6, north: 52, east: 3},
-    GIBRALTAR: {south: 34.8, west: -6.8, north: 37.2, east: -3.5},
+    SINGAPORE_STRAIT: {south: 0.8, west: 103.2, north: 1.7, east: 104.5},
     CARIBBEAN: {south: 8, west: -90, north: 28, east: -58},
     US_EAST_COAST: {south: 24, west: -82, north: 46, east: -64},
     US_WEST_COAST: {south: 31, west: -128, north: 49, east: -116},
-    SINGAPORE_STRAIT: {south: 0.8, west: 103.2, north: 1.7, east: 104.5},
-    SOUTH_CHINA_SEA: {south: -1, west: 104, north: 23, east: 122},
     JAPAN: {south: 30, west: 128, north: 46, east: 146},
-    AUSTRALIA_EAST: {south: -44, west: 145, north: -10, east: 156},
-    mediterranean: {south: 30, west: -6, north: 46, east: 37},
-    atlantic: {south: -45, west: -80, north: 70, east: 20},
-    iberian: {south: 35, west: -12, north: 45, east: 6}
+    AUSTRALIA_EAST: {south: -44, west: 145, north: -10, east: 156}
 });
+
+const WORLD_SAMPLE_BOXES = Object.freeze([
+    AIS_PRESET_BOUNDS.GIBRALTAR,
+    AIS_PRESET_BOUNDS.ENGLISH_CHANNEL,
+    AIS_PRESET_BOUNDS.SINGAPORE_STRAIT,
+    AIS_PRESET_BOUNDS.US_EAST_COAST,
+    AIS_PRESET_BOUNDS.JAPAN
+]);
 
 function finiteNumber(value) {
     const number = Number(value);
@@ -83,7 +89,56 @@ function aisRawMessageToText(raw) {
     return String(raw);
 }
 
+function normalizeMode(mode) {
+    const next = String(mode || "CURRENT_VIEW").toUpperCase();
+    if (next === "VISIBLE") return "CURRENT_VIEW";
+    if (next === "WORLD") return "WORLD_SAMPLE";
+    if (next === "ATLANTIC") return "MEDITERRANEAN";
+    if (AIS_PRESET_BOUNDS[next] !== undefined || next === "WORLD_SAMPLE") return next;
+    return "CURRENT_VIEW";
+}
+
+function leafletBox(bounds) {
+    if (!bounds) return null;
+    return [
+        [bounds.south, bounds.west],
+        [bounds.north, bounds.east]
+    ];
+}
+
+function boundsContain(bounds, vessel) {
+    if (!bounds || !vessel) return true;
+    return vessel.latitude >= bounds.south
+        && vessel.latitude <= bounds.north
+        && vessel.longitude >= bounds.west
+        && vessel.longitude <= bounds.east;
+}
+
+function boundsArea(bounds) {
+    if (!bounds) return 0;
+    return Math.abs(bounds.north - bounds.south) * Math.abs(bounds.east - bounds.west);
+}
+
 class AISProvider extends BaseMapProvider {
+    constructor(definition) {
+        super(definition);
+        this.vessels = null;
+        this.markers = null;
+        this.layerGroup = null;
+        this.socket = null;
+        this.intentionalClose = false;
+        this.renderTimer = null;
+        this.subscriptionTimer = null;
+        this.lastRenderAt = 0;
+        this.lastSubscriptionAt = 0;
+        this.lastManualMode = "";
+        this.activeMode = normalizeMode(definition.areaMode);
+        this.activeBoxes = [];
+        this.visibleCount = 0;
+        this.bufferedCount = 0;
+        this.autoFallbackApplied = false;
+    }
+
     isConfigured(context = this.context) {
         return Boolean(this.getApiKey(context));
     }
@@ -115,42 +170,59 @@ class AISProvider extends BaseMapProvider {
         }
 
         this.vessels = new Map();
+        this.markers = new Map();
         this.layerGroup = context.L.layerGroup();
         this.autoFallbackApplied = false;
+        this.visibleCount = 0;
+        this.bufferedCount = 0;
         this.rememberLeafletLayer(this.layerGroup);
         this.layerGroup.addTo(context.map);
-        this.openSocket(context);
-        this.rememberTimer(setTimeout(() => {
-            if (!this.active || !this.vessels || this.vessels.size > 0) return;
-            const mode = String(this.definition.areaMode || "").toUpperCase();
-            if (!this.autoFallbackApplied && ["VISIBLE", "CURRENT_VIEW"].includes(mode)) {
-                this.autoFallbackApplied = true;
-                this.definition.areaMode = "WORLD_SAMPLE";
-                try {
-                    if (this.socket && this.socket.readyState <= 1) this.socket.close();
-                } catch (error) {}
-                this.openSocket(context);
-                return;
-            }
-            this.setStatus(MAP_LAYER_STATES.NO_DATA, {
-                summary: "AISStream online · no vessels received yet",
-                count: 0
-            });
-        }, 20000));
-        this.rememberTimer(setInterval(() => this.pruneStaleVessels(context), 60 * 1000));
+
+        this.rememberMapListener(context.map, "moveend", () => this.scheduleSubscriptionUpdate(context, "viewport"));
+        this.rememberMapListener(context.map, "zoomend", () => this.scheduleSubscriptionUpdate(context, "viewport"));
+        this.rememberTimer(setInterval(() => this.pruneStaleVessels(context), AIS_DEFAULT_REFRESH_MS));
+        this.rememberTimer(setInterval(() => this.updateStatusSummary(), 15 * 1000));
+
+        this.openSocket(context, {force: true, reason: "start"});
     }
 
     stop(context = this.context) {
         this.intentionalClose = true;
-        super.stop(context);
-        this.intentionalClose = false;
+        this.closeSocket();
+        if (this.renderTimer) clearTimeout(this.renderTimer);
+        if (this.subscriptionTimer) clearTimeout(this.subscriptionTimer);
+        this.renderTimer = null;
+        this.subscriptionTimer = null;
+        this.markers = null;
         this.vessels = null;
         this.layerGroup = null;
+        this.intentionalClose = false;
+        super.stop(context);
     }
 
-    openSocket(context) {
-        const bounds = this.getSubscriptionBounds(context);
-        if (!bounds) {
+    refresh(context = this.context) {
+        this.openSocket(context, {force: true, reason: "manual refresh"});
+    }
+
+    scheduleSubscriptionUpdate(context, reason = "viewport") {
+        if (!this.active || normalizeMode(this.definition.areaMode) !== "CURRENT_VIEW") return;
+        const refreshMs = this.refreshIntervalMs();
+        const elapsed = Date.now() - this.lastSubscriptionAt;
+        if (elapsed >= refreshMs) {
+            this.openSocket(context, {force: true, reason});
+            return;
+        }
+        if (this.subscriptionTimer) clearTimeout(this.subscriptionTimer);
+        this.subscriptionTimer = this.rememberTimer(setTimeout(() => {
+            this.subscriptionTimer = null;
+            if (this.active) this.openSocket(context, {force: true, reason: "debounced viewport"});
+        }, Math.max(1000, refreshMs - elapsed)));
+    }
+
+    openSocket(context, options = {}) {
+        const mode = normalizeMode(this.definition.areaMode);
+        const boxes = this.getSubscriptionBoxes(context, mode);
+        if (!boxes.length) {
             this.setStatus(MAP_LAYER_STATES.ERROR, {
                 error: "Map bounds unavailable",
                 summary: "Cannot subscribe to AIS without map bounds"
@@ -158,8 +230,20 @@ class AISProvider extends BaseMapProvider {
             return;
         }
 
+        const refreshMs = this.refreshIntervalMs();
+        const elapsed = Date.now() - this.lastSubscriptionAt;
+        const modeUnchanged = this.lastManualMode === `${mode}:${JSON.stringify(boxes)}`;
+        if (!options.force && modeUnchanged && elapsed < refreshMs) return;
+
+        this.closeSocket();
+        this.activeMode = mode;
+        this.activeBoxes = boxes;
+        this.lastManualMode = `${mode}:${JSON.stringify(boxes)}`;
+        this.lastSubscriptionAt = Date.now();
+
         this.setStatus(MAP_LAYER_STATES.CONNECTING, {
-            summary: "Connecting to AISStream"
+            error: "",
+            summary: `AISStream reconnecting · ${this.areaModeLabel(mode)}`
         });
 
         const WebSocketClient = loadNodeWebSocket()
@@ -171,18 +255,15 @@ class AISProvider extends BaseMapProvider {
             });
             return;
         }
+
         const socket = new WebSocketClient(AISSTREAM_URL);
         this.socket = this.rememberSocket(socket);
-        this.lastClose = null;
 
         const handleOpen = () => {
-            if (!this.active) return;
+            if (!this.active || socket !== this.socket) return;
             socket.send(JSON.stringify({
                 APIKey: this.getApiKey(context),
-                BoundingBoxes: [[
-                    [bounds.south, bounds.west],
-                    [bounds.north, bounds.east]
-                ]],
+                BoundingBoxes: boxes.map(leafletBox),
                 FilterMessageTypes: [
                     "PositionReport",
                     "StandardClassBPositionReport",
@@ -191,23 +272,25 @@ class AISProvider extends BaseMapProvider {
                 ]
             }));
             this.setStatus(MAP_LAYER_STATES.ONLINE, {
-                summary: `AISStream global live · ${this.areaModeLabel()} · waiting for vessel messages`,
-                count: this.vessels ? this.vessels.size : 0
+                error: "",
+                summary: this.statusSummary("waiting for vessel messages"),
+                count: this.visibleCount
             });
         };
+
         const isNodeSocket = typeof socket.on === "function";
         if (isNodeSocket) socket.on("open", handleOpen);
         else socket.onopen = handleOpen;
 
         const handleMessage = data => {
-            if (!this.active) return;
+            if (!this.active || socket !== this.socket) return;
             this.handleMessage(context, data && data.data !== undefined ? data.data : data);
         };
         if (isNodeSocket) socket.on("message", handleMessage);
         else socket.onmessage = handleMessage;
 
         const handleError = error => {
-            if (!this.active) return;
+            if (!this.active || socket !== this.socket) return;
             this.setStatus(MAP_LAYER_STATES.SERVICE_UNAVAILABLE, {
                 error: error && error.message ? error.message : "AISStream socket error",
                 summary: "AIS provider unavailable"
@@ -217,30 +300,59 @@ class AISProvider extends BaseMapProvider {
         else socket.onerror = handleError;
 
         const handleClose = (code, reason) => {
-            if (!this.active || this.intentionalClose) return;
-            this.lastClose = {
-                code,
-                reason: reason ? String(reason).slice(0, 120) : ""
-            };
-            this.setStatus(MAP_LAYER_STATES.OFFLINE, {
-                error: "AISStream socket closed",
-                summary: `AIS provider disconnected${code ? ` · ${code}` : ""}`
+            if (!this.active || this.intentionalClose || socket !== this.socket) return;
+            this.socket = null;
+            const hasBuffer = this.vessels && this.vessels.size > 0;
+            this.setStatus(hasBuffer ? MAP_LAYER_STATES.ONLINE : MAP_LAYER_STATES.OFFLINE, {
+                error: hasBuffer ? "" : "AISStream socket closed",
+                summary: hasBuffer
+                    ? this.statusSummary(`socket closed${code ? ` · ${code}` : ""}`)
+                    : `AIS provider disconnected${code ? ` · ${code}` : ""}${reason ? ` · ${String(reason).slice(0, 60)}` : ""}`,
+                count: this.visibleCount
             });
         };
         if (isNodeSocket) socket.on("close", handleClose);
         else socket.onclose = event => handleClose(event && event.code, event && event.reason);
     }
 
-    getSubscriptionBounds(context) {
-        const mode = String(this.definition.areaMode || "WORLD_SAMPLE").toUpperCase();
-        if (mode === "CURRENT_VIEW" || mode === "VISIBLE") return this.getMapBounds(context) || AIS_PRESET_BOUNDS.WORLD_SAMPLE;
-        if (AIS_PRESET_BOUNDS[mode]) return AIS_PRESET_BOUNDS[mode];
-        if (AIS_PRESET_BOUNDS[this.definition.areaMode]) return AIS_PRESET_BOUNDS[this.definition.areaMode];
-        return this.getMapBounds(context);
+    closeSocket() {
+        const socket = this.socket;
+        if (!socket) return;
+        this.intentionalClose = true;
+        try {
+            if (typeof socket.removeAllListeners === "function") socket.removeAllListeners();
+        } catch (error) {}
+        try {
+            if (socket.readyState <= 1) socket.close();
+        } catch (error) {}
+        this.intentionalClose = false;
+        this.socket = null;
+        this.resources.sockets = this.resources.sockets.filter(item => item !== socket);
     }
 
-    areaModeLabel() {
-        return String(this.definition.areaMode || "WORLD_SAMPLE").toUpperCase().replace(/_/g, " ");
+    getSubscriptionBoxes(context, mode = normalizeMode(this.definition.areaMode)) {
+        if (mode === "WORLD_SAMPLE") return WORLD_SAMPLE_BOXES.slice();
+        if (mode === "CURRENT_VIEW") {
+            const bounds = this.getMapBounds(context);
+            if (!bounds) return [AIS_PRESET_BOUNDS.GIBRALTAR];
+            if (boundsArea(bounds) > 1400) return WORLD_SAMPLE_BOXES.slice(0, 3);
+            return [bounds];
+        }
+        return [AIS_PRESET_BOUNDS[mode] || AIS_PRESET_BOUNDS.GIBRALTAR].filter(Boolean);
+    }
+
+    refreshIntervalMs() {
+        const value = Number(this.definition.refreshIntervalMs);
+        return Number.isFinite(value) ? Math.max(AIS_DEFAULT_REFRESH_MS, value) : AIS_DEFAULT_REFRESH_MS;
+    }
+
+    maxVisibleVessels() {
+        const value = Number(this.definition.maxMarkers);
+        return Number.isFinite(value) ? Math.max(50, Math.min(250, value)) : 150;
+    }
+
+    areaModeLabel(mode = this.activeMode || this.definition.areaMode) {
+        return normalizeMode(mode).replace(/_/g, " ");
     }
 
     handleMessage(context, raw) {
@@ -261,76 +373,174 @@ class AISProvider extends BaseMapProvider {
                     ...identity,
                     updatedAt: Date.now()
                 });
-                this.renderVessels(context);
+                this.scheduleRender(context);
             }
             return;
         }
 
-        if (!identity.mmsi) return;
-        const key = identity.mmsi;
-        const existing = this.vessels.get(key) || {};
-        const vessel = {
+        if (!identity.mmsi || !this.vessels) return;
+        const existing = this.vessels.get(identity.mmsi) || {};
+        this.vessels.set(identity.mmsi, {
             ...existing,
             ...identity,
             ...position,
             updatedAt: Date.now()
-        };
-        this.vessels.set(key, vessel);
+        });
 
-        if (this.vessels.size > this.definition.maxMarkers) {
-            const oldest = Array.from(this.vessels.entries())
-                .sort((a, b) => a[1].updatedAt - b[1].updatedAt)
-                .slice(0, this.vessels.size - this.definition.maxMarkers);
-            oldest.forEach(([mmsi]) => this.vessels.delete(mmsi));
-        }
-
-        this.renderVessels(context);
+        this.enforceBufferCap();
+        this.scheduleRender(context);
     }
 
-    renderVessels(context) {
-        if (!this.layerGroup) return;
-        this.layerGroup.clearLayers();
-        this.vessels.forEach(vessel => {
-            const heading = Number.isFinite(Number(vessel.heading))
-                ? Number(vessel.heading)
-                : (Number.isFinite(Number(vessel.course)) ? Number(vessel.course) : 0);
-            const marker = context.L.marker([vessel.latitude, vessel.longitude], {
-                icon: context.L.divIcon({
-                    className: "eng-ais-vessel-marker",
-                    html: `<span style="transform: rotate(${Math.round(heading)}deg)"></span>`,
-                    iconSize: [18, 18],
-                    iconAnchor: [9, 9]
-                }),
-                keyboard: false
-            });
-            marker.bindTooltip(this.escapeHtml(vessel.name || vessel.mmsi || "VESSEL"), {
-                direction: "top",
-                className: "eng-map-provider-tooltip"
-            });
-            marker.bindPopup(`
-                <strong>${this.escapeHtml(vessel.name || "Unknown vessel")}</strong>
-                <span>MMSI ${this.escapeHtml(vessel.mmsi || "n/a")}</span>
-                <span>SOG ${vessel.speed == null ? "n/a" : this.escapeHtml(`${vessel.speed} kn`)}</span>
-                <span>COG ${vessel.course == null ? "n/a" : this.escapeHtml(`${vessel.course}°`)}</span>
-                <span>HDG ${vessel.heading == null ? "n/a" : this.escapeHtml(`${vessel.heading}°`)}</span>
-                <span>${this.escapeHtml(vessel.timestamp || "")}</span>
-                <span>SRC AISStream</span>
-            `, {className: "eng-map-provider-popup"});
-            marker.addTo(this.layerGroup);
+    enforceBufferCap() {
+        if (!this.vessels || this.vessels.size <= AIS_BUFFER_CAP) return;
+        const overflow = this.vessels.size - AIS_BUFFER_CAP;
+        Array.from(this.vessels.entries())
+            .sort((a, b) => a[1].updatedAt - b[1].updatedAt)
+            .slice(0, overflow)
+            .forEach(([mmsi]) => this.vessels.delete(mmsi));
+    }
+
+    scheduleRender(context) {
+        if (!this.active) return;
+        const elapsed = Date.now() - this.lastRenderAt;
+        if (elapsed >= AIS_RENDER_THROTTLE_MS) {
+            this.renderVessels(context);
+            return;
+        }
+        if (this.renderTimer) return;
+        this.renderTimer = this.rememberTimer(setTimeout(() => {
+            this.renderTimer = null;
+            if (this.active) this.renderVessels(context);
+        }, AIS_RENDER_THROTTLE_MS - elapsed));
+    }
+
+    visibleVessels(context = this.context) {
+        if (!this.vessels) return [];
+        const mode = normalizeMode(this.activeMode);
+        const mapBounds = mode === "CURRENT_VIEW" ? this.getMapBounds(context) : null;
+        return Array.from(this.vessels.values())
+            .filter(vessel => boundsContain(mapBounds, vessel))
+            .sort((a, b) => b.updatedAt - a.updatedAt)
+            .slice(0, this.maxVisibleVessels());
+    }
+
+    renderVessels(context = this.context) {
+        if (!this.layerGroup || !this.vessels || !this.markers) return;
+        this.lastRenderAt = Date.now();
+        const visible = this.visibleVessels(context);
+        const visibleIds = new Set(visible.map(vessel => vessel.mmsi));
+
+        Array.from(this.markers.entries()).forEach(([mmsi, marker]) => {
+            if (!visibleIds.has(mmsi)) {
+                try {
+                    this.layerGroup.removeLayer(marker);
+                } catch (error) {}
+                this.markers.delete(mmsi);
+            }
         });
+
+        visible.forEach(vessel => this.upsertMarker(context, vessel));
+        this.visibleCount = visible.length;
+        this.bufferedCount = this.vessels.size;
+
+        if (!this.visibleCount && this.bufferedCount && normalizeMode(this.activeMode) === "CURRENT_VIEW") {
+            this.setStatus(MAP_LAYER_STATES.NO_DATA, {
+                summary: this.statusSummary("NO VESSELS IN CURRENT VIEW"),
+                count: 0
+            });
+            return;
+        }
+
+        if (!this.visibleCount && !this.bufferedCount) {
+            this.setStatus(MAP_LAYER_STATES.NO_DATA, {
+                summary: this.statusSummary("waiting for vessel messages"),
+                count: 0
+            });
+            return;
+        }
+
         this.setStatus(MAP_LAYER_STATES.ONLINE, {
-            summary: `AISStream global live · ${this.vessels.size} real vessels`,
-            count: this.vessels.size
+            error: "",
+            summary: this.statusSummary(),
+            count: this.visibleCount
+        });
+    }
+
+    upsertMarker(context, vessel) {
+        const heading = Number.isFinite(Number(vessel.heading))
+            ? Number(vessel.heading)
+            : (Number.isFinite(Number(vessel.course)) ? Number(vessel.course) : 0);
+        const html = `<span class="eng-ais-vessel-icon" style="transform: rotate(${Math.round(heading)}deg)"><b></b><i></i></span>`;
+        const icon = context.L.divIcon({
+            className: "eng-ais-vessel-marker",
+            html,
+            iconSize: [24, 24],
+            iconAnchor: [12, 12]
+        });
+        const existing = this.markers.get(vessel.mmsi);
+        if (existing) {
+            existing.setLatLng([vessel.latitude, vessel.longitude]);
+            existing.setIcon(icon);
+            existing.setPopupContent(this.popupHtml(vessel));
+            return;
+        }
+
+        const marker = context.L.marker([vessel.latitude, vessel.longitude], {
+            icon,
+            keyboard: false
+        });
+        marker.bindTooltip(this.escapeHtml(vessel.name || vessel.mmsi || "VESSEL"), {
+            direction: "top",
+            className: "eng-map-provider-tooltip"
+        });
+        marker.bindPopup(this.popupHtml(vessel), {className: "eng-map-provider-popup"});
+        marker.addTo(this.layerGroup);
+        this.markers.set(vessel.mmsi, marker);
+    }
+
+    popupHtml(vessel) {
+        return `
+            <strong>${this.escapeHtml(vessel.name || "Unknown vessel")}</strong>
+            <span>MMSI ${this.escapeHtml(vessel.mmsi || "n/a")}</span>
+            <span>SOG ${vessel.speed == null ? "n/a" : this.escapeHtml(`${vessel.speed} kn`)}</span>
+            <span>COG ${vessel.course == null ? "n/a" : this.escapeHtml(`${vessel.course}°`)}</span>
+            <span>HDG ${vessel.heading == null ? "n/a" : this.escapeHtml(`${vessel.heading}°`)}</span>
+            <span>LAT ${this.escapeHtml(Number(vessel.latitude).toFixed(4))}</span>
+            <span>LON ${this.escapeHtml(Number(vessel.longitude).toFixed(4))}</span>
+            <span>${this.escapeHtml(vessel.timestamp || "")}</span>
+            <span>SRC AISStream</span>
+        `;
+    }
+
+    statusSummary(suffix = "") {
+        const base = `AISStream · ${this.areaModeLabel()} · ${this.visibleCount} visible / ${this.bufferedCount} buffered`;
+        return suffix ? `${base} · ${suffix}` : base;
+    }
+
+    updateStatusSummary() {
+        if (!this.active || !this.vessels) return;
+        const status = this.visibleCount || this.bufferedCount ? MAP_LAYER_STATES.ONLINE : MAP_LAYER_STATES.NO_DATA;
+        this.setStatus(status, {
+            error: "",
+            summary: this.statusSummary(this.socket ? "" : "socket idle"),
+            count: this.visibleCount
         });
     }
 
     pruneStaleVessels(context) {
         if (!this.active || !this.vessels) return;
-        const cutoff = Date.now() - 15 * 60 * 1000;
+        const cutoff = Date.now() - AIS_STALE_TTL_MS;
         Array.from(this.vessels.entries()).forEach(([mmsi, vessel]) => {
             if (vessel.updatedAt < cutoff) this.vessels.delete(mmsi);
         });
+        this.enforceBufferCap();
         this.renderVessels(context);
+
+        if (!this.bufferedCount && !this.autoFallbackApplied && normalizeMode(this.definition.areaMode) === "CURRENT_VIEW") {
+            this.autoFallbackApplied = true;
+            this.definition.areaMode = "GIBRALTAR";
+            this.openSocket(context, {force: true, reason: "no current-view vessels"});
+        }
     }
 }
 

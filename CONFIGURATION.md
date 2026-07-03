@@ -118,9 +118,11 @@ Current map providers:
 - RainViewer precipitation radar: optional, no key.
 - OpenSky air traffic: optional, can run anonymously with rate limits; OAuth or
   bearer token can be supplied through the OpenSky variables.
-- AISStream maritime AIS: optional, requires `AISSTREAM_API_KEY`. v2.0.7 uses
-  AISStream global live WebSocket data and never draws vessel markers without
-  MMSI and real latitude/longitude.
+- AISStream maritime AIS: optional, requires `AISSTREAM_API_KEY`. v2.1.2 uses
+  AISStream live WebSocket data through current-view or named maritime presets
+  rather than a normal whole-world subscription. It buffers and deduplicates by
+  MMSI, throttles rendering, expires stale vessels and never draws markers
+  without real latitude/longitude.
 - Open-Meteo Marine: optional, no key. This provides real sea-state conditions,
   not vessel positions; inland map views can fall back to configured sea
   presets so the MARINE layer can still show real ocean cells.
@@ -142,7 +144,8 @@ are stored in renderer localStorage on the same Mac and are not committed:
 - SAT density: `LOW`, `MEDIUM`, `HIGH` or `CUSTOM`;
 - selected base-map provider/fallback mode;
 - AIR marker cap, refresh interval and visible/wide bounds mode;
-- SEA AIS marker cap and area preset;
+- SEA AIS marker cap, current-view/preset mode, refresh interval, clustering,
+  label and wake preferences;
 - Marine Weather mode/preset/marker cap;
 - OCEAN source/filter/max station count;
 - radar provider, radar opacity and traffic opacity;

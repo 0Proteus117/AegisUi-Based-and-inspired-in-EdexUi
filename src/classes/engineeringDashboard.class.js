@@ -219,8 +219,12 @@ class EngineeringMapPanel {
             },
             sea: {
                 provider: "AISStream",
-                areaMode: "WORLD_SAMPLE",
-                maxVessels: 100
+                areaMode: "CURRENT_VIEW",
+                maxVessels: 150,
+                refreshIntervalMs: 60 * 1000,
+                clusterVessels: false,
+                showLabels: false,
+                showWake: true
             },
             marineWeather: {
                 active: false,
@@ -314,28 +318,33 @@ class EngineeringMapPanel {
                 areaMode: selectMapOption(
                     sea.areaMode,
                     [
-                        "WORLD_SAMPLE",
                         "CURRENT_VIEW",
-                        "ATLANTIC",
                         "MEDITERRANEAN",
+                        "GIBRALTAR",
                         "NORTH_SEA",
                         "ENGLISH_CHANNEL",
-                        "GIBRALTAR",
+                        "SINGAPORE_STRAIT",
                         "CARIBBEAN",
                         "US_EAST_COAST",
                         "US_WEST_COAST",
-                        "SINGAPORE_STRAIT",
-                        "SOUTH_CHINA_SEA",
                         "JAPAN",
                         "AUSTRALIA_EAST",
+                        "WORLD_SAMPLE",
                         "visible",
-                        "iberian",
-                        "mediterranean",
-                        "atlantic"
+                        "mediterranean"
                     ],
                     defaults.sea.areaMode
                 ),
-                maxVessels: clampMapNumber(sea.maxVessels, defaults.sea.maxVessels, 50, 250)
+                maxVessels: clampMapNumber(sea.maxVessels, defaults.sea.maxVessels, 50, 250),
+                refreshIntervalMs: clampMapNumber(
+                    sea.refreshIntervalMs,
+                    defaults.sea.refreshIntervalMs,
+                    60 * 1000,
+                    300 * 1000
+                ),
+                clusterVessels: typeof sea.clusterVessels === "boolean" ? sea.clusterVessels : defaults.sea.clusterVessels,
+                showLabels: typeof sea.showLabels === "boolean" ? sea.showLabels : defaults.sea.showLabels,
+                showWake: typeof sea.showWake === "boolean" ? sea.showWake : defaults.sea.showWake
             },
             marineWeather: {
                 active: typeof marineWeather.active === "boolean"
@@ -607,6 +616,10 @@ class EngineeringMapPanel {
                 cacheTtlMs: 0,
                 maxMarkers: this.mapSettings.sea.maxVessels,
                 areaMode: this.mapSettings.sea.areaMode,
+                refreshIntervalMs: this.mapSettings.sea.refreshIntervalMs,
+                clusterVessels: this.mapSettings.sea.clusterVessels,
+                showLabels: this.mapSettings.sea.showLabels,
+                showWake: this.mapSettings.sea.showWake,
                 zIndex: 42,
                 fallbackVisual: "CONFIG_REQUIRED until AISSTREAM_API_KEY is configured.",
                 mode: "live"
@@ -745,7 +758,11 @@ class EngineeringMapPanel {
             MARITIME_AIS: {
                 definition: {
                     maxMarkers: this.mapSettings.sea.maxVessels,
-                    areaMode: this.mapSettings.sea.areaMode
+                    areaMode: this.mapSettings.sea.areaMode,
+                    refreshIntervalMs: this.mapSettings.sea.refreshIntervalMs,
+                    clusterVessels: this.mapSettings.sea.clusterVessels,
+                    showLabels: this.mapSettings.sea.showLabels,
+                    showWake: this.mapSettings.sea.showWake
                 }
             },
             MARINE_WEATHER: {
@@ -1147,25 +1164,43 @@ class EngineeringMapPanel {
                         <label>
                             <span>Area mode</span>
                             ${this.renderCockpitSelect("eng_setting_sea_area", [
-                                {value: "WORLD_SAMPLE", label: "World Sample"},
                                 {value: "CURRENT_VIEW", label: "Current View"},
-                                {value: "ATLANTIC", label: "Atlantic"},
                                 {value: "MEDITERRANEAN", label: "Mediterranean"},
+                                {value: "GIBRALTAR", label: "Gibraltar"},
                                 {value: "NORTH_SEA", label: "North Sea"},
                                 {value: "ENGLISH_CHANNEL", label: "English Channel"},
-                                {value: "GIBRALTAR", label: "Gibraltar"},
+                                {value: "SINGAPORE_STRAIT", label: "Singapore Strait"},
                                 {value: "CARIBBEAN", label: "Caribbean"},
                                 {value: "US_EAST_COAST", label: "US East Coast"},
                                 {value: "US_WEST_COAST", label: "US West Coast"},
-                                {value: "SINGAPORE_STRAIT", label: "Singapore Strait"},
-                                {value: "SOUTH_CHINA_SEA", label: "South China Sea"},
                                 {value: "JAPAN", label: "Japan"},
-                                {value: "AUSTRALIA_EAST", label: "Australia East"}
+                                {value: "AUSTRALIA_EAST", label: "Australia East"},
+                                {value: "WORLD_SAMPLE", label: "World Sample"}
                             ], settings.sea.areaMode)}
                         </label>
                         <label>
-                            <span>Max vessels</span>
-                            ${this.renderCockpitSelect("eng_setting_sea_max", ["50", "100", "250"], String(settings.sea.maxVessels))}
+                            <span>Max visible vessels</span>
+                            ${this.renderCockpitSelect("eng_setting_sea_max", ["50", "100", "150", "250"], String(settings.sea.maxVessels))}
+                        </label>
+                        <label>
+                            <span>Refresh interval</span>
+                            ${this.renderCockpitSelect("eng_setting_sea_refresh", [
+                                {value: "60000", label: "60s"},
+                                {value: "120000", label: "120s"},
+                                {value: "300000", label: "300s"}
+                            ], String(settings.sea.refreshIntervalMs))}
+                        </label>
+                        <label class="eng-map-checkbox">
+                            <input type="checkbox" id="eng_setting_sea_cluster" ${settings.sea.clusterVessels ? "checked" : ""}>
+                            <span>Cluster vessels</span>
+                        </label>
+                        <label class="eng-map-checkbox">
+                            <input type="checkbox" id="eng_setting_sea_labels" ${settings.sea.showLabels ? "checked" : ""}>
+                            <span>Show vessel labels</span>
+                        </label>
+                        <label class="eng-map-checkbox">
+                            <input type="checkbox" id="eng_setting_sea_wake" ${settings.sea.showWake ? "checked" : ""}>
+                            <span>Show heading wake</span>
                         </label>
                         <button type="button" id="eng_setting_sea_test">TEST CONNECTION</button>
                         <small id="eng_setting_sea_test_result">No WebSocket is opened unless SEA is enabled.</small>
@@ -1397,7 +1432,11 @@ class EngineeringMapPanel {
             },
             sea: {
                 areaMode: this.settingValue(overlay, "eng_setting_sea_area"),
-                maxVessels: this.settingValue(overlay, "eng_setting_sea_max")
+                maxVessels: this.settingValue(overlay, "eng_setting_sea_max"),
+                refreshIntervalMs: this.settingValue(overlay, "eng_setting_sea_refresh"),
+                clusterVessels: Boolean(overlay.querySelector("#eng_setting_sea_cluster") && overlay.querySelector("#eng_setting_sea_cluster").checked),
+                showLabels: Boolean(overlay.querySelector("#eng_setting_sea_labels") && overlay.querySelector("#eng_setting_sea_labels").checked),
+                showWake: Boolean(overlay.querySelector("#eng_setting_sea_wake") && overlay.querySelector("#eng_setting_sea_wake").checked)
             },
             marineWeather: {
                 active: Boolean(requestedActive.MARINE_WEATHER),
@@ -1570,7 +1609,12 @@ class EngineeringMapPanel {
                 if (/tile/i.test(summary)) return "ONLINE / TILES";
                 return "ONLINE";
             }
-            if (layer.definition.id === "MARITIME_AIS") return "ONLINE / AISSTREAM";
+            if (layer.definition.id === "MARITIME_AIS") {
+                if (/current view/i.test(summary)) return "ONLINE / CURRENT VIEW";
+                if (/world sample/i.test(summary)) return "ONLINE / WORLD SAMPLE";
+                if (/visible/i.test(summary) || /buffered/i.test(summary)) return "ONLINE / AISSTREAM";
+                return "ONLINE / AISSTREAM";
+            }
             if (layer.definition.id === "WEATHER_RADAR") return "ONLINE / RAINVIEWER";
             if (layer.definition.id === "MARINE_WEATHER") return "ONLINE / OPEN-METEO";
         }
@@ -2613,19 +2657,33 @@ class EngineeringMusicPanel {
         this.artworkTrackId = "";
         this.artworkRequestId = "";
         this.failedArtworkId = "";
+        this.lastMusicStatus = null;
         this.renderConnect();
         this.startVisualizer();
         if (localStorage.getItem("edexui-eng-music-connected") === "true") this.connect();
     }
 
-    renderConnect(message = "NATIVE MUSIC LINK IS OFF") {
+    renderConnect(message = "NATIVE MUSIC LINK IS OFF", status = {}) {
+        const diagnostic = status || {};
+        const appStatus = diagnostic.appStatus || (diagnostic.running ? "RUNNING" : "NOT RUNNING");
+        const connectionStatus = diagnostic.connectionStatus || diagnostic.status || "NOT CONNECTED";
+        const lastError = diagnostic.lastError || diagnostic.error || "";
         this.content.innerHTML = `
             <div class="eng-music-main">
                 <div class="eng-music-connect">
                     <div class="eng-record"><span></span></div>
                     <div>
                         <p>${message}</p>
-                        <button id="eng_music_connect">CONNECT APPLE MUSIC</button>
+                        <div class="eng-music-diagnostics">
+                            <span>MUSIC APP</span><strong>${window._escapeHtml(String(appStatus).replace(/_/g, " "))}</strong>
+                            <span>APPLE MUSIC</span><strong>${window._escapeHtml(String(connectionStatus).replace(/_/g, " "))}</strong>
+                            <span>LAST ERROR</span><strong>${window._escapeHtml(lastError || "none")}</strong>
+                        </div>
+                        <div class="eng-music-connect-actions">
+                            <button id="eng_music_connect">CONNECT APPLE MUSIC</button>
+                            <button id="eng_music_open">OPEN MUSIC</button>
+                            <button id="eng_music_refresh">REFRESH</button>
+                        </div>
                         <div class="eng-music-controls eng-music-controls-fallback">
                             <button class="eng-music-toggle ${this.shuffleEnabled ? "active" : ""}" disabled>SHUF</button>
                             <button class="eng-music-toggle ${this.repeatMode !== "off" ? "active" : ""}" disabled>${this.repeatButtonLabel()}</button>
@@ -2639,6 +2697,12 @@ class EngineeringMusicPanel {
         this.createBars();
         this.loadPlaylists();
         document.getElementById("eng_music_connect").addEventListener("click", () => this.connect(true));
+        document.getElementById("eng_music_open").addEventListener("click", async () => {
+            this.stateLabel.innerText = "OPENING";
+            await this.ipc.invoke("music-open");
+            setTimeout(() => this.connect(true), 1000);
+        });
+        document.getElementById("eng_music_refresh").addEventListener("click", () => this.connect(false));
     }
 
     async connect(userInitiated = false) {
@@ -2646,14 +2710,29 @@ class EngineeringMusicPanel {
         const response = await this.ipc.invoke("music-status");
         if (!response.ok) {
             localStorage.removeItem("edexui-eng-music-connected");
-            this.stateLabel.innerText = "DISCONNECTED";
-            this.renderConnect(response.permissionDenied ? "MUSIC PERMISSION DENIED" : "MUSIC LINK UNAVAILABLE");
+            this.stateLabel.innerText = response.permissionDenied ? "PERMISSION REQUIRED" : "ERROR";
+            this.renderConnect(
+                response.permissionDenied ? "APPLE MUSIC PERMISSION REQUIRED" : "MUSIC LINK ERROR",
+                {
+                    appStatus: "UNKNOWN",
+                    connectionStatus: response.permissionDenied ? "PERMISSION_REQUIRED" : "ERROR",
+                    lastError: response.error || ""
+                }
+            );
+            return;
+        }
+
+        const data = response.data || {};
+        if (!data.running) {
+            localStorage.removeItem("edexui-eng-music-connected");
+            this.stateLabel.innerText = "NOT RUNNING";
+            this.renderConnect("MUSIC APP IS NOT RUNNING", data);
             return;
         }
 
         localStorage.setItem("edexui-eng-music-connected", "true");
         this.renderPlayer();
-        this.applyStatus(response.data || {});
+        this.applyStatus(data);
         clearInterval(this.pollTimer);
         this.pollTimer = setInterval(() => this.updateStatus(), 2000);
         if (userInitiated) window.audioManager.scan.play();
@@ -2675,6 +2754,8 @@ class EngineeringMusicPanel {
                         <p id="eng_track_album"></p>
                         <div class="eng-progress"><span id="eng_music_progress"></span></div>
                         <div class="eng-music-controls">
+                            <button data-command="open">OPEN MUSIC</button>
+                            <button data-command="refresh">REFRESH</button>
                             <button data-command="shuffle" class="eng-music-toggle" id="eng_music_shuffle">SHUF</button>
                             <button data-command="previous">◀◀</button>
                             <button data-command="toggle" class="primary" id="eng_music_toggle">▶</button>
@@ -2690,7 +2771,12 @@ class EngineeringMusicPanel {
         this.loadPlaylists();
         this.content.querySelectorAll("[data-command]").forEach(button => {
             button.addEventListener("click", async () => {
-                if (button.dataset.command === "shuffle") {
+                if (button.dataset.command === "open") {
+                    await this.ipc.invoke("music-open");
+                    setTimeout(() => this.updateStatus(), 1000);
+                } else if (button.dataset.command === "refresh") {
+                    await this.updateStatus();
+                } else if (button.dataset.command === "shuffle") {
                     await this.toggleShuffle();
                 } else if (button.dataset.command === "repeat") {
                     await this.cycleRepeat();
@@ -2839,12 +2925,27 @@ class EngineeringMusicPanel {
 
     async updateStatus() {
         const response = await this.ipc.invoke("music-status");
-        if (response.ok) this.applyStatus(response.data || {});
+        if (response.ok) {
+            const data = response.data || {};
+            if (!data.running) {
+                localStorage.removeItem("edexui-eng-music-connected");
+                clearInterval(this.pollTimer);
+                this.stateLabel.innerText = "NOT RUNNING";
+                this.renderConnect("MUSIC APP IS NOT RUNNING", data);
+                return;
+            }
+            this.applyStatus(data);
+            return;
+        }
+        this.stateLabel.innerText = response.permissionDenied ? "PERMISSION REQUIRED" : "ERROR";
     }
 
     applyStatus(status) {
+        this.lastMusicStatus = status;
         this.playing = status.state === "playing";
-        this.stateLabel.innerText = status.running ? status.state.toUpperCase() : "MUSIC APP IDLE";
+        this.stateLabel.innerText = status.running
+            ? (status.connectionStatus === "CONNECTED" ? status.state.toUpperCase() : status.connectionStatus || "CONNECTED")
+            : "NOT RUNNING";
         this.applyAdvancedControls(status);
         const equalizer = document.getElementById("eng_equalizer");
         if (equalizer) equalizer.classList.toggle("idle", !this.playing);

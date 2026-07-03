@@ -1209,9 +1209,21 @@ function normalizeRepeat(value) {
     return "off";
 }
 if (!Music.running()) {
-    JSON.stringify({running: false, state: "stopped"});
+    JSON.stringify({
+        running: false,
+        state: "stopped",
+        appStatus: "NOT_RUNNING",
+        connectionStatus: "NOT_RUNNING",
+        lastError: ""
+    });
 } else {
-    let result = {running: true, state: String(Music.playerState())};
+    let result = {
+        running: true,
+        state: String(Music.playerState()),
+        appStatus: "RUNNING",
+        connectionStatus: "CONNECTED",
+        lastError: ""
+    };
     try {
         result.shuffle = Boolean(Music.shuffleEnabled());
     } catch (error) {}
@@ -1261,7 +1273,7 @@ if (!Music.running()) {
 
 async function runAutomation(script, timeout = 20000, maxBuffer = 1024 * 1024) {
     if (process.platform !== "darwin") {
-        return {ok: false, error: "This integration is available on macOS only."};
+        return {ok: false, status: "UNAVAILABLE", error: "This integration is available on macOS only."};
     }
     try {
         const {stdout} = await execFileAsync("/usr/bin/osascript", [
@@ -1270,9 +1282,11 @@ async function runAutomation(script, timeout = 20000, maxBuffer = 1024 * 1024) {
         return {ok: true, data: JSON.parse(stdout.trim() || "null")};
     } catch (error) {
         const message = (error.stderr || error.message || "").trim();
+        const permissionDenied = message.includes("-1743");
         return {
             ok: false,
-            permissionDenied: message.includes("-1743"),
+            status: permissionDenied ? "PERMISSION_REQUIRED" : "ERROR",
+            permissionDenied,
             error: message || "Automation request failed."
         };
     }
@@ -1352,6 +1366,15 @@ ipc.handle("calendar-events", async (event, requestedRange = {}) => {
     }
 });
 ipc.handle("music-status", () => runAutomation(musicStatusScript, 8000));
+ipc.handle("music-open", async () => {
+    if (process.platform !== "darwin") return {ok: false, status: "UNAVAILABLE", error: "Music.app is available on macOS only."};
+    try {
+        await execFileAsync("/usr/bin/open", ["-a", "Music"], {timeout: 8000});
+        return {ok: true, status: "OPEN_REQUESTED"};
+    } catch (error) {
+        return {ok: false, status: "ERROR", error: (error.message || "Unable to open Music.app").slice(0, 180)};
+    }
+});
 ipc.handle("music-artwork", async (event, requestedArtworkId) => {
     const artworkId = typeof requestedArtworkId === "string"
         ? requestedArtworkId.slice(0, 256)

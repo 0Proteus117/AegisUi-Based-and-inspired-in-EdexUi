@@ -88,12 +88,15 @@ in [WORKSPACE_RESEARCH.md](WORKSPACE_RESEARCH.md).
 
 Calendar and Apple Music remain disconnected until their panel button is
 pressed. Calendar requests local read-only EventKit access; Music requests
-Automation access. Weather radar and Marine Weather need no key. Real-time
-road traffic can be enabled from the map's `API KEY` button with a TomTom key;
-the base map can fall back to OSM if TomTom is unavailable. Air, maritime AIS,
-marine weather, satellite and ocean map layers stay fully idle until their
-toggles are enabled. The map's `⚙` settings button controls layer toggles, SAT
-CelesTrak groups, density caps, provider limits, base-map fallback, radar
+Automation access and reports whether Music.app is running, connected, blocked
+by permission or unavailable. Weather radar and Marine Weather need no key.
+Real-time road traffic can be enabled from the map's `API KEY` button with a
+TomTom key; the base map can fall back to OSM if TomTom is unavailable. Air,
+maritime AIS, marine weather, satellite and ocean map layers stay fully idle
+until their toggles are enabled. SEA/AISStream now defaults to current-view or
+controlled maritime presets instead of a normal global firehose. The map's `⚙`
+settings button controls layer toggles, SAT CelesTrak groups, density caps,
+provider limits, SEA refresh/marker preferences, base-map fallback, radar
 opacity, expanded-map behavior, local UI sounds and location fallback behavior
 without storing API keys.
 

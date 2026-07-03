@@ -1,5 +1,29 @@
 # Changelog
 
+## 2.1.2 - 2026-07-03
+
+### Fixed
+
+- Stabilized AISStream SEA rendering by replacing the normal global
+  subscription with current-view and preset-controlled bounding boxes.
+- Added AIS buffering, MMSI deduplication, stale-vessel cleanup and throttled
+  marker updates so live vessels do not flicker or rebuild every message.
+- Changed SEA to default to `CURRENT_VIEW`, with controlled presets such as
+  Gibraltar, Mediterranean and Singapore Strait for reliable live checks.
+- Replaced the generic SEA triangle with a distinct teal hull/wake marker so
+  vessels are visually separate from aircraft.
+- Improved Apple Music local diagnostics for `CONNECTED`, `NOT RUNNING`,
+  `PERMISSION REQUIRED`, `ERROR` and `UNAVAILABLE` states.
+- Added `OPEN MUSIC` and `REFRESH` actions to the cockpit music panel while
+  keeping local macOS Music.app Automation as the only integration path.
+
+### Security
+
+- No Apple Music cloud API, assistant backend, voice provider, LLM, STT or TTS
+  service is connected in this phase.
+- No vessel data, music data, API key, token, audio sample or model file is
+  added to Git.
+
 ## 2.1.1 - 2026-07-03
 
 ### Changed

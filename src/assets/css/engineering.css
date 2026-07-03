@@ -548,6 +548,22 @@ body.eng-map-expanded-active {
     accent-color: var(--eng-blue);
 }
 
+.engineering-mode .eng-map-settings-section label.eng-map-checkbox {
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    gap: .55vh;
+    padding: .48vh .58vh;
+    border: .08vh solid rgba(36, 68, 95, .7);
+    background: rgba(2, 6, 10, .42);
+}
+
+.engineering-mode .eng-map-settings-section label.eng-map-checkbox input {
+    width: 1.05vh;
+    height: 1.05vh;
+    margin: 0;
+    accent-color: var(--eng-blue);
+}
+
 .engineering-mode .eng-map-settings-section small,
 .engineering-mode .eng-map-settings-section p {
     margin: 0;
@@ -692,23 +708,44 @@ body.eng-map-expanded-active {
 }
 
 .engineering-mode .eng-ais-vessel-marker {
-    width: 1.8vh;
-    height: 1.8vh;
+    width: 2.4vh;
+    height: 2.4vh;
 }
 
-.engineering-mode .eng-ais-vessel-marker span {
+.engineering-mode .eng-ais-vessel-icon {
+    position: relative;
     display: block;
-    width: 0;
-    height: 0;
-    margin: .2vh auto 0;
-    border-left: .48vh solid transparent;
-    border-right: .48vh solid transparent;
-    border-bottom: 1.25vh solid var(--eng-blue-soft);
+    width: 2.2vh;
+    height: 2.2vh;
+    transform-origin: 50% 50%;
     filter:
-        drop-shadow(0 0 .45vh rgba(124, 203, 255, .82))
-        drop-shadow(0 0 .9vh rgba(59, 167, 255, .35));
+        drop-shadow(0 0 .45vh rgba(102, 245, 224, .82))
+        drop-shadow(0 0 .9vh rgba(59, 167, 255, .28));
     opacity: .95;
-    transform-origin: 50% 62%;
+}
+
+.engineering-mode .eng-ais-vessel-icon b {
+    position: absolute;
+    left: 50%;
+    top: .22vh;
+    width: .95vh;
+    height: 1.38vh;
+    transform: translateX(-50%);
+    background: linear-gradient(180deg, rgba(161, 255, 240, .98), rgba(39, 191, 184, .88));
+    clip-path: polygon(50% 0, 92% 28%, 74% 100%, 26% 100%, 8% 28%);
+    border: .05vh solid rgba(214, 255, 248, .8);
+}
+
+.engineering-mode .eng-ais-vessel-icon i {
+    position: absolute;
+    left: 50%;
+    top: 1.52vh;
+    width: 1.55vh;
+    height: .45vh;
+    transform: translateX(-50%);
+    background: rgba(102, 245, 224, .48);
+    clip-path: polygon(0 0, 100% 0, 78% 100%, 22% 100%);
+    box-shadow: 0 .22vh .6vh rgba(102, 245, 224, .32);
 }
 
 .engineering-mode .eng-satellite-div-icon {
@@ -848,6 +885,36 @@ body.eng-map-expanded-active {
     margin-top: .9vh;
     font: .78vh var(--font_main_light);
     opacity: .55;
+}
+
+.engineering-mode .eng-music-diagnostics {
+    display: grid;
+    grid-template-columns: auto minmax(12vh, 1fr);
+    gap: .35vh .75vh;
+    margin: .75vh 0;
+    padding: .65vh;
+    border: .08vh solid rgba(36, 68, 95, .8);
+    background: rgba(2, 6, 10, .5);
+    font: .72vh var(--font_mono);
+    text-align: left;
+}
+
+.engineering-mode .eng-music-diagnostics span {
+    color: rgba(124, 203, 255, .55);
+}
+
+.engineering-mode .eng-music-diagnostics strong {
+    color: rgba(221, 244, 255, .86);
+    font-weight: normal;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.engineering-mode .eng-music-connect-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .55vh;
 }
 
 .engineering-mode .eng-calendar-glyph {

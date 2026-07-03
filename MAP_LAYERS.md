@@ -122,7 +122,13 @@ OFF providers do not poll, open sockets or draw markers.
 - Uses AISStream over secure WebSocket.
 - Requires `AISSTREAM_API_KEY`.
 - Missing key reports `CONFIG_REQUIRED` and opens no socket.
-- Supports visible bounds plus Iberian, Mediterranean and Atlantic presets.
+- Defaults to `CURRENT_VIEW` and supports controlled maritime presets such as
+  Gibraltar, Mediterranean, North Sea, English Channel, Singapore Strait,
+  Caribbean, US coasts, Japan and Australia East.
+- Does not use the whole world as the normal subscription. The optional
+  `WORLD_SAMPLE` mode is limited to selected high-traffic boxes.
+- Buffers up to 1000 vessels, deduplicates by MMSI, throttles render batches,
+  expires stale vessels and caps visible markers from local settings.
 - Markers are created only from live AIS messages.
 
 ### `MARINE_WEATHER`
