@@ -2705,20 +2705,51 @@ class EngineeringMusicPanel {
         document.getElementById("eng_music_refresh").addEventListener("click", () => this.connect(false));
     }
 
+    describeMusicFailure(response = {}) {
+        const status = response.status || response.connectionStatus || "ERROR";
+        const permissionTarget = response.permissionTarget || "";
+        if (status === "MUSIC_AUTOMATION_PERMISSION_REQUIRED" || permissionTarget === "Music") {
+            return {
+                state: "MUSIC PERMISSION REQUIRED",
+                message: "MUSIC AUTOMATION PERMISSION REQUIRED",
+                connectionStatus: "MUSIC PERMISSION REQUIRED"
+            };
+        }
+        if (status === "SYSTEM_EVENTS_PERMISSION_REQUIRED" || permissionTarget === "System Events") {
+            return {
+                state: "SYSTEM EVENTS REQUIRED",
+                message: "SYSTEM EVENTS PERMISSION REQUIRED",
+                connectionStatus: "SYSTEM EVENTS PERMISSION REQUIRED"
+            };
+        }
+        if (status === "UNAVAILABLE") {
+            return {
+                state: "UNAVAILABLE",
+                message: "APPLE MUSIC UNAVAILABLE",
+                connectionStatus: "UNAVAILABLE"
+            };
+        }
+        return {
+            state: "ERROR",
+            message: "MUSIC LINK ERROR",
+            connectionStatus: status
+        };
+    }
+
     async connect(userInitiated = false) {
         this.stateLabel.innerText = "CONNECTING";
         const response = await this.ipc.invoke("music-status");
         if (!response.ok) {
+            const failure = this.describeMusicFailure(response);
+            const data = response.data || {};
             localStorage.removeItem("edexui-eng-music-connected");
-            this.stateLabel.innerText = response.permissionDenied ? "PERMISSION REQUIRED" : "ERROR";
-            this.renderConnect(
-                response.permissionDenied ? "APPLE MUSIC PERMISSION REQUIRED" : "MUSIC LINK ERROR",
-                {
-                    appStatus: "UNKNOWN",
-                    connectionStatus: response.permissionDenied ? "PERMISSION_REQUIRED" : "ERROR",
-                    lastError: response.error || ""
-                }
-            );
+            this.stateLabel.innerText = failure.state;
+            this.renderConnect(failure.message, {
+                ...data,
+                appStatus: data.appStatus || response.appStatus || (response.permissionTarget === "Music" ? "RUNNING" : "UNKNOWN"),
+                connectionStatus: data.connectionStatus || response.connectionStatus || failure.connectionStatus,
+                lastError: data.lastError || response.error || ""
+            });
             return;
         }
 
@@ -2937,24 +2968,34 @@ class EngineeringMusicPanel {
             this.applyStatus(data);
             return;
         }
-        this.stateLabel.innerText = response.permissionDenied ? "PERMISSION REQUIRED" : "ERROR";
+        const failure = this.describeMusicFailure(response);
+        this.stateLabel.innerText = failure.state;
+        this.renderConnect(failure.message, {
+            ...(response.data || {}),
+            appStatus: response.appStatus || (response.permissionTarget === "Music" ? "RUNNING" : "UNKNOWN"),
+            connectionStatus: response.connectionStatus || failure.connectionStatus,
+            lastError: response.error || ""
+        });
     }
 
     applyStatus(status) {
         this.lastMusicStatus = status;
         this.playing = status.state === "playing";
-        this.stateLabel.innerText = status.running
-            ? (status.connectionStatus === "CONNECTED" ? status.state.toUpperCase() : status.connectionStatus || "CONNECTED")
-            : "NOT RUNNING";
+        if (!status.running) this.stateLabel.innerText = "NOT RUNNING";
+        else if (status.connectionStatus === "CONNECTED_STOPPED") this.stateLabel.innerText = "STOPPED";
+        else if (status.connectionStatus === "CONNECTED_NO_TRACK") this.stateLabel.innerText = "NO TRACK";
+        else this.stateLabel.innerText = status.connectionStatus === "CONNECTED"
+            ? status.state.toUpperCase()
+            : (status.connectionStatus || "CONNECTED");
         this.applyAdvancedControls(status);
         const equalizer = document.getElementById("eng_equalizer");
         if (equalizer) equalizer.classList.toggle("idle", !this.playing);
 
         const title = document.getElementById("eng_track_title");
         if (!title) return;
-        title.innerText = status.title || "APPLE MUSIC";
+        title.innerText = status.title || (status.trackStatus === "NO_TRACK" ? "NO ACTIVE TRACK" : "APPLE MUSIC");
         document.getElementById("eng_track_artist").innerText = status.artist
-            || (status.running ? "NO ACTIVE TRACK" : "OPEN THE MUSIC APP");
+            || (status.running ? (status.state === "stopped" ? "PLAYBACK STOPPED" : "NO ACTIVE TRACK") : "OPEN THE MUSIC APP");
         document.getElementById("eng_track_album").innerText = status.album || "";
         document.getElementById("eng_album_initial").innerText =
             (status.album || status.title || "M").slice(0, 1).toUpperCase();

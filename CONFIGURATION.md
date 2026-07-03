@@ -163,7 +163,8 @@ need API keys. You can set its initial project with
 `AEGISUI_DEVELOPER_PROJECT` or later through the local `developer-deck.json`
 file. Agent Command does not connect to AI providers in v1.8.0 and does not
 need API keys. Calendar and Apple Music use local macOS permissions rather than
-storing account passwords in the project.
+storing account passwords in the project. In v2.1.3, Apple Music status and
+controls talk directly to Music.app and do not require System Events.
 
 Assistant voice provider roadmap is local-only in v2.1.1:
 

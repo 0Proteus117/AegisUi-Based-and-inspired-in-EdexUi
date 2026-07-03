@@ -1,5 +1,25 @@
 # Changelog
 
+## 2.1.3 - 2026-07-03
+
+### Fixed
+
+- Fixed an Apple Music regression where a failing `Music.running()` bridge call
+  could show `PERMISSION REQUIRED` and `Music app: UNKNOWN` even when local
+  Music Automation permission was already granted.
+- Replaced Music.app status, open, playlist launch and playback controls with
+  direct AppleScript `tell application "Music"` commands.
+- Added a non-Automation process check for Music.app and clearer states for
+  `CONNECTED`, `CONNECTED / STOPPED`, `NO TRACK`, `MUSIC NOT RUNNING`,
+  `MUSIC PERMISSION REQUIRED`, `SYSTEM EVENTS PERMISSION REQUIRED` and `ERROR`.
+- Added `scripts/test-apple-music.js` for local direct Music.app validation.
+
+### Security
+
+- Apple Music remains a local macOS Music.app integration only.
+- No Apple Music cloud API, external provider, token, audio capture or private
+  media data is added.
+
 ## 2.1.2 - 2026-07-03
 
 ### Fixed
