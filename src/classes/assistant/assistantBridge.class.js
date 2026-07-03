@@ -6,20 +6,26 @@
 
         async sendText(message = "") {
             const text = String(message || "").trim();
+            const settings = this.settings ? this.settings.settings : {};
             return {
                 ok: false,
                 status: "OFFLINE",
                 input: text,
-                response: "Assistant backend not connected yet.",
+                response: window.AssistantMicrocopy
+                    ? window.AssistantMicrocopy.placeholderResponse(settings)
+                    : "Assistant backend not connected yet.",
                 source: "local-placeholder"
             };
         }
 
         async startListening() {
+            const settings = this.settings ? this.settings.settings : {};
             return {
                 ok: false,
                 status: "OFFLINE",
-                response: "Speech-to-text backend not connected yet."
+                response: window.AssistantMicrocopy
+                    ? window.AssistantMicrocopy.state(settings, "LISTENING")
+                    : "Speech-to-text backend not connected yet."
             };
         }
 
@@ -32,27 +38,36 @@
         }
 
         async speak(text = "") {
+            const settings = this.settings ? this.settings.settings : {};
             return {
                 ok: false,
                 status: "OFFLINE",
                 text: String(text || ""),
-                response: "Voice backend not connected yet."
+                response: window.AssistantMicrocopy
+                    ? window.AssistantMicrocopy.voiceNotConfigured(settings)
+                    : "Voice backend not connected yet."
             };
         }
 
         async checkBackendHealth() {
+            const settings = this.settings ? this.settings.settings : {};
             return {
                 ok: false,
                 status: "OFFLINE",
-                summary: "Assistant backend not connected yet."
+                summary: window.AssistantMicrocopy
+                    ? window.AssistantMicrocopy.backendOffline(settings)
+                    : "Assistant backend not connected yet."
             };
         }
 
         async checkVoiceHealth() {
+            const settings = this.settings ? this.settings.settings : {};
             return {
                 ok: false,
                 status: "OFFLINE",
-                summary: "Voice backend not connected yet."
+                summary: window.AssistantMicrocopy
+                    ? window.AssistantMicrocopy.voiceNotConfigured(settings)
+                    : "Voice backend not connected yet."
             };
         }
     }

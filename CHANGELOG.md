@@ -1,5 +1,34 @@
 # Changelog
 
+## 2.1.1 - 2026-07-03
+
+### Changed
+
+- Polished the Assistant Presence orb visuals while keeping the lower-left
+  cockpit placement, central sphere and orbiting point cloud.
+- Refined state visuals for `IDLE`, `LISTENING`, `THINKING`, `SPEAKING`,
+  `MUTED`, `OFFLINE` and `ERROR`, including reduced-motion support.
+- Polished the assistant HUD panel with clearer status, response, settings,
+  backend, voice and test-state sections.
+- Added local personality microcopy:
+  - Gustav/Ares: dry, technical and command-oriented.
+  - Angie/Aphrodite: warm, present and soft without becoming childish.
+
+### Added
+
+- Added `src/classes/assistant/assistantMicrocopy.class.js`.
+- Added `ASSISTANT_PERSONALITY.md`.
+- Added `ASSISTANT_POLISH_REPORT.md`.
+- Added a planned Future Voice Providers section for Default Robotic, Local
+  Custom Voice and optional Google Emotional TTS.
+
+### Security
+
+- No Ollama, FastAPI, Chatterbox, OpenVoice, Google TTS, STT, LLM or external
+  API is connected in this phase.
+- No assistant voice sample, private profile, model weight or API key is added
+  to Git.
+
 ## 2.1.0 - 2026-07-02
 
 ### Added

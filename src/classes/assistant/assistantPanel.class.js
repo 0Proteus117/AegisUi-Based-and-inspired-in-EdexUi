@@ -10,7 +10,7 @@
             this.stateMachine = options.stateMachine;
             this.bridge = options.bridge;
             this.root = null;
-            this.lastResponse = "Assistant backend not connected yet.";
+            this.lastResponse = "";
             this.settingsVisible = false;
         }
 
@@ -52,6 +52,15 @@
             const publicName = this.settings.publicName();
             const state = this.stateMachine.getState();
             const muted = config.muted;
+            const microcopy = window.AssistantMicrocopy;
+            const stateLine = microcopy ? microcopy.state(config, state) : "Assistant backend not connected yet.";
+            const backendLine = microcopy ? microcopy.backendOffline(config) : "Assistant backend not connected yet.";
+            const voiceStatusLine = microcopy ? microcopy.voiceNotConfigured(config) : "Voice backend not connected yet.";
+            const lastResponse = this.lastResponse || (microcopy ? microcopy.placeholderResponse(config) : "Assistant backend not connected yet.");
+            const inputPlaceholder = microcopy ? microcopy.inputPlaceholder(config) : "Type a local prompt…";
+            const toneLabel = this.settings.toneLabel();
+            const aresOption = config.mode === "private" ? "Gustav / Ares core" : "Ares";
+            const aphroditeOption = config.mode === "private" ? "Angie / Aphrodite core" : "Aphrodite";
             const voiceLabel = {
                 "default-robotic": "Default Robotic",
                 "local-custom": "Local Custom Voice",
@@ -63,24 +72,24 @@
                     <div>
                         <small>ASSISTANT PRESENCE</small>
                         <h1>${assistantEscape(name)}</h1>
-                        <span>${assistantEscape(publicName)} · ${assistantEscape(config.mode.toUpperCase())}</span>
+                        <span>${assistantEscape(publicName)} · ${assistantEscape(config.mode.toUpperCase())} · ${assistantEscape(toneLabel.toUpperCase())}</span>
                     </div>
                     <button type="button" class="assistant-panel-close" aria-label="Close assistant panel">×</button>
                 </header>
 
                 <section class="assistant-panel-status" data-state="${assistantEscape(state)}">
                     <strong>${assistantEscape(state)}</strong>
-                    <span>Assistant backend not connected yet</span>
+                    <span>${assistantEscape(stateLine)}</span>
                 </section>
 
                 <section class="assistant-panel-response">
                     <small>LAST RESPONSE</small>
-                    <p>${assistantEscape(this.lastResponse)}</p>
+                    <p>${assistantEscape(lastResponse)}</p>
                 </section>
 
                 <form class="assistant-panel-input">
                     <label for="assistant_manual_input">Manual input</label>
-                    <textarea id="assistant_manual_input" rows="3" spellcheck="false" placeholder="Type a local prompt…"></textarea>
+                    <textarea id="assistant_manual_input" rows="3" spellcheck="false" placeholder="${assistantEscape(inputPlaceholder)}"></textarea>
                     <div>
                         <button type="submit" class="primary">SEND</button>
                         <button type="button" data-action="mute">${muted ? "UNMUTE" : "MUTE"}</button>
@@ -101,8 +110,8 @@
                     <label>
                         <span>Default active assistant</span>
                         <select id="assistant_setting_active">
-                            <option value="ares" ${config.activeAssistant === "ares" ? "selected" : ""}>Ares / Gustav</option>
-                            <option value="aphrodite" ${config.activeAssistant === "aphrodite" ? "selected" : ""}>Aphrodite / Angie</option>
+                            <option value="ares" ${config.activeAssistant === "ares" ? "selected" : ""}>${assistantEscape(aresOption)}</option>
+                            <option value="aphrodite" ${config.activeAssistant === "aphrodite" ? "selected" : ""}>${assistantEscape(aphroditeOption)}</option>
                         </select>
                     </label>
                     <div class="assistant-panel-pair">
@@ -129,6 +138,20 @@
                         <span>Voice backend</span><strong>${assistantEscape(config.backend.voice)}</strong>
                         <span>Voice shell</span><strong>${assistantEscape(voiceLabel)}</strong>
                     </div>
+                    <div class="assistant-panel-health">
+                        <span>Backend</span><strong>${assistantEscape(backendLine)}</strong>
+                        <span>Voice</span><strong>${assistantEscape(voiceStatusLine)}</strong>
+                    </div>
+                    <section class="assistant-future-voice">
+                        <small>FUTURE VOICE PROVIDERS</small>
+                        <ul>
+                            <li><span>Default Robotic</span><em>planned local/public shell</em></li>
+                            <li><span>Local Custom Voice</span><em>BYOV / local only</em></li>
+                            <li><span>Google Emotional TTS</span><em>optional future cloud provider</em></li>
+                        </ul>
+                        <p>Google Emotional TTS is planned as an optional cloud provider. It is not connected in this build.</p>
+                    </section>
+                    <h2>TEST STATES</h2>
                     <div class="assistant-state-test" aria-label="Assistant state visual test">
                         ${Object.keys(window.ASSISTANT_STATES || {}).map(key => `
                             <button type="button" data-state-test="${assistantEscape(key)}">${assistantEscape(key)}</button>
@@ -179,7 +202,9 @@
 
             this.presence.setState("THINKING");
             const result = await this.bridge.sendText(message);
-            this.lastResponse = result.response || "Assistant backend not connected yet.";
+            this.lastResponse = result.response || (window.AssistantMicrocopy
+                ? window.AssistantMicrocopy.placeholderResponse(this.settings.settings)
+                : "Assistant backend not connected yet.");
             if (input) input.value = "";
             this.presence.setState("SPEAKING");
             this.render();
@@ -196,7 +221,7 @@
         }
 
         clear() {
-            this.lastResponse = "Assistant backend not connected yet.";
+            this.lastResponse = "";
             this.render();
         }
 

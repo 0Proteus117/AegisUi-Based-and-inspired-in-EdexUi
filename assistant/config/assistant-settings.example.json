@@ -8,6 +8,11 @@
   },
   "muted": false,
   "voiceMode": "default-robotic",
+  "voiceRoadmap": {
+    "defaultRobotic": "planned",
+    "localCustomVoice": "planned-local",
+    "googleEmotionalTts": "planned-optional-cloud-not-connected"
+  },
   "panelOpen": false,
   "backend": {
     "assistant": "OFFLINE",

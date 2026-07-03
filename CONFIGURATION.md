@@ -66,6 +66,9 @@ The app currently uses JSON files in the macOS application-data folder:
 - Assistant Presence settings are stored in renderer localStorage under
   `aegisui-assistant-settings-v1`. They contain only visual preferences,
   aliases, active assistant, muted state and backend status placeholders.
+  v2.1.1 also uses these local settings to select Gustav/Ares or
+  Angie/Aphrodite microcopy. No assistant prompts, chat history, voice samples
+  or API keys are stored there.
 
 Generated caches and helpers can also exist there, for example GeoIP data,
 application icons and the native Calendar helper. Do not share those by
@@ -158,6 +161,13 @@ need API keys. You can set its initial project with
 file. Agent Command does not connect to AI providers in v1.8.0 and does not
 need API keys. Calendar and Apple Music use local macOS permissions rather than
 storing account passwords in the project.
+
+Assistant voice provider roadmap is local-only in v2.1.1:
+
+- Default Robotic: planned shell, not connected.
+- Local Custom Voice: future BYOV/local-only route.
+- Google Emotional TTS: optional future cloud route, not connected and never
+  required.
 
 ## Export and import
 

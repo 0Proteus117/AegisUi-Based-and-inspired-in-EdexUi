@@ -1,7 +1,8 @@
 # Assistant Presence Core
 
-`v2.1.0` introduces the first visual core for the future Angie / Gustav
-assistant system inside AegisUi.
+`v2.1.0` introduced the first visual core for the future Angie / Gustav
+assistant system inside AegisUi. `v2.1.1` polishes the orb, panel and local
+microcopy without connecting any backend.
 
 This phase is intentionally local and visual only:
 
@@ -11,6 +12,8 @@ This phase is intentionally local and visual only:
 - no external API is called;
 - no commands, files, commits, pushes or messages are executed by the
   assistant.
+- no Ollama, FastAPI, Chatterbox, OpenVoice, Google TTS, STT or external API is
+  connected in `v2.1.1`.
 
 ## Visual presence
 
@@ -56,7 +59,16 @@ Clicking the orb opens a compact cockpit panel. The panel includes:
 - honest backend placeholder: `Assistant backend not connected yet.`
 
 Sending text does not call an AI model. It only exercises the local state
-machine and returns the placeholder response.
+machine and returns a personality-aware placeholder response.
+
+`v2.1.1` adds:
+
+- Gustav/Ares dry technical microcopy;
+- Angie/Aphrodite warm local microcopy;
+- a cleaner HUD settings panel;
+- a planned voice-provider section that is not functional yet;
+- refined state visuals for `IDLE`, `LISTENING`, `THINKING`, `SPEAKING`,
+  `MUTED`, `OFFLINE` and `ERROR`.
 
 ## Names and aliases
 
@@ -107,6 +119,17 @@ for future integration:
 
 All methods are currently local and non-external.
 
+## Voice provider roadmap
+
+Planned providers:
+
+1. Default Robotic — future base/local/public shell.
+2. Local Custom Voice — bring-your-own-voice/local assets.
+3. Google Emotional TTS — optional future cloud provider.
+
+Google Emotional TTS is not connected in `v2.1.1`, is never required, and must
+only be used later with the user’s own API key.
+
 ## Voice safety
 
 The settings panel includes this warning:
@@ -128,6 +151,7 @@ Core files:
 - `src/classes/assistant/assistantPresence.class.js`
 - `src/classes/assistant/assistantState.class.js`
 - `src/classes/assistant/assistantSettings.class.js`
+- `src/classes/assistant/assistantMicrocopy.class.js`
 - `src/classes/assistant/assistantPanel.class.js`
 - `src/classes/assistant/assistantBridge.class.js`
 - `src/classes/assistant/assistantPermissions.class.js`

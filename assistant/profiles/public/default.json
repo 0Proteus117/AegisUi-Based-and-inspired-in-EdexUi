@@ -6,6 +6,7 @@
       "publicName": "Ares",
       "privateAlias": "Gustav",
       "role": "Operational systems assistant",
+      "tone": "dry, technical, sober, command-oriented",
       "status": "visual-only"
     },
     {
@@ -13,8 +14,9 @@
       "publicName": "Aphrodite",
       "privateAlias": "Angie",
       "role": "Creative conversational assistant",
+      "tone": "warm, present, soft, not childish",
       "status": "visual-only"
     }
   ],
-  "note": "Assistant Presence Core does not connect an LLM, speech-to-text or voice model yet."
+  "note": "Assistant Presence does not connect an LLM, speech-to-text or voice model yet."
 }

@@ -23,6 +23,7 @@
             this.container.id = "assistant_presence";
             this.container.className = "assistant-presence";
             this.container.dataset.state = this.stateMachine.getState();
+            this.container.dataset.profile = this.settings.microcopyProfile();
             this.container.innerHTML = this.renderOrb();
             document.body.appendChild(this.container);
             this.panel.mount();
@@ -37,7 +38,10 @@
             const points = Array.from({length: 18}).map((_, index) => {
                 const angle = Math.round(index * (360 / 18));
                 const delay = (index * -0.18).toFixed(2);
-                return `<span class="assistant-orbit-point" style="--i:${index}; --angle:${angle}deg; --delay:${delay}s"></span>`;
+                const size = (0.72 + ((index % 5) * 0.09)).toFixed(2);
+                const opacity = (0.42 + ((index % 4) * 0.12)).toFixed(2);
+                const orbit = (3.05 + ((index % 3) * 0.12)).toFixed(2);
+                return `<span class="assistant-orbit-point" style="--i:${index}; --angle:${angle}deg; --delay:${delay}s; --scale:${size}; --alpha:${opacity}; --orbit:${orbit}vh"></span>`;
             }).join("");
             return `
                 <button type="button" class="assistant-orb-button" aria-label="Open assistant presence panel">
@@ -105,6 +109,7 @@
         applyState(state) {
             if (!this.container) return;
             this.container.dataset.state = state;
+            this.container.dataset.profile = this.settings.microcopyProfile();
             const label = this.container.querySelector(".assistant-orb-status em");
             if (label) label.innerText = state;
             if (this.panel && this.panel.root) {
@@ -113,14 +118,20 @@
                     status.dataset.state = state;
                     const strong = status.querySelector("strong");
                     if (strong) strong.innerText = state;
+                    const span = status.querySelector("span");
+                    if (span && window.AssistantMicrocopy) {
+                        span.innerText = window.AssistantMicrocopy.state(this.settings.settings, state);
+                    }
                 }
             }
         }
 
         refreshLabels() {
             if (!this.container) return;
+            this.container.dataset.profile = this.settings.microcopyProfile();
             const name = this.container.querySelector(".assistant-orb-status strong");
             if (name) name.innerText = this.settings.displayName();
+            this.panel.render();
         }
 
         escape(value) {

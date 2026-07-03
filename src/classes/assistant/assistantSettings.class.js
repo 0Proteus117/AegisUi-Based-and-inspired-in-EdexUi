@@ -101,6 +101,16 @@
         publicName(profileId = this.settings.activeAssistant) {
             return String(profileId || "ares").toLowerCase() === "aphrodite" ? "Aphrodite" : "Ares";
         }
+
+        microcopyProfile(profileId = this.settings.activeAssistant) {
+            return String(profileId || "ares").toLowerCase() === "aphrodite" ? "angie" : "gustav";
+        }
+
+        toneLabel(profileId = this.settings.activeAssistant) {
+            return this.microcopyProfile(profileId) === "angie"
+                ? "warm presence"
+                : "technical command";
+        }
     }
 
     window.AssistantSettings = AssistantSettings;
