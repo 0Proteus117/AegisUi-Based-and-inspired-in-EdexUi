@@ -90,8 +90,43 @@ node scripts/test-assistant-memory-bootstrap.js
 ```
 
 The source folder `assistant/memory/private/` is ignored by Git. The app only
-shows memory status and title previews in `v2.1.6`; no LLM, embeddings,
-retrieval or command router is connected.
+shows memory status and title previews. In `v2.1.7`, written Assistant chat can
+use this memory as capped local context for Ollama. No embeddings, retrieval or
+command router is connected.
+
+Assistant local AI configuration is stored outside Git at:
+
+```text
+~/Library/Application Support/EdexUi-Eng/assistant/config/assistant-ai.json
+```
+
+The safe committed example is:
+
+```text
+assistant/config/assistant-ai.example.json
+```
+
+Default provider:
+
+```text
+Ollama at http://127.0.0.1:11434
+```
+
+Recommended model:
+
+```text
+llama3.2:3b
+```
+
+Commands:
+
+```sh
+ollama pull llama3.2:3b
+node scripts/test-assistant-ollama.js
+```
+
+Local written chat does not enable voice, STT, TTS, file writes, shell commands
+or system actions.
 
 ## Apple Music local Automation
 

@@ -16,6 +16,8 @@
             this.lastResponse = "";
             this.settingsVisible = false;
             this.lastMemoryStatus = null;
+            this.localAIStatus = null;
+            this.transcript = [];
         }
 
         mount() {
@@ -38,6 +40,7 @@
             if (open) {
                 const input = this.root.querySelector("#assistant_manual_input");
                 if (input) setTimeout(() => input.focus(), 120);
+                this.checkLocalAI({silent: true});
             }
         }
 
@@ -65,6 +68,8 @@
             const inputPlaceholder = microcopy ? microcopy.inputPlaceholder(config) : "Type a local prompt…";
             const toneLabel = this.settings.toneLabel();
             const memoryStatus = this.readMemoryStatus();
+            const localAIConfig = this.bridge && this.bridge.localAIConfig ? this.bridge.localAIConfig() : null;
+            const localAIStatus = this.localAIStatus || this.defaultLocalAIStatus(localAIConfig, memoryStatus);
             const aresOption = config.mode === "private" ? "Gustav (Ares public)" : "Ares";
             const aphroditeOption = config.mode === "private" ? "Angie (Aphrodite public)" : "Aphrodite";
             const voiceLabel = {
@@ -97,8 +102,13 @@
                     <p>${assistantEscape(lastResponse)}</p>
                 </section>
 
+                <section class="assistant-chat-transcript">
+                    <small>WRITTEN CHAT</small>
+                    <div>${this.renderTranscript()}</div>
+                </section>
+
                 <form class="assistant-panel-input">
-                    <label for="assistant_manual_input">Manual input</label>
+                    <label for="assistant_manual_input">Manual input · local text only</label>
                     <textarea id="assistant_manual_input" rows="3" spellcheck="false" placeholder="${assistantEscape(inputPlaceholder)}"></textarea>
                     <div>
                         <button type="submit" class="primary">SEND</button>
@@ -155,6 +165,44 @@
                         <span>Backend</span><strong>${assistantEscape(backendLine)}</strong>
                         <span>Voice</span><strong>${assistantEscape(voiceStatusLine)}</strong>
                     </div>
+                    <section class="assistant-local-ai-status" data-status="${assistantEscape(localAIStatus.status)}">
+                        <div>
+                            <small>LOCAL AI</small>
+                            <strong>${assistantEscape(this.localAIStatusLabel(localAIStatus))}</strong>
+                        </div>
+                        <dl>
+                            <dt>Provider</dt><dd>${assistantEscape(localAIStatus.provider || "Ollama")}</dd>
+                            <dt>Status</dt><dd>${assistantEscape(localAIStatus.status || "DISABLED")}</dd>
+                            <dt>Endpoint</dt><dd>${assistantEscape(localAIStatus.endpoint || (localAIConfig && localAIConfig.endpoint) || "127.0.0.1:11434")}</dd>
+                            <dt>Model</dt><dd>${assistantEscape(localAIStatus.model || (localAIConfig && localAIConfig.model) || "llama3.2:3b")}</dd>
+                            <dt>Memory bootstrap</dt><dd>${assistantEscape(localAIStatus.memory || memoryStatus.status || "NOT_READY")}</dd>
+                            <dt>Chat</dt><dd>${assistantEscape(localAIStatus.enabled ? "ENABLED" : "DISABLED")}</dd>
+                            <dt>Command router</dt><dd>OFFLINE</dd>
+                            <dt>Voice</dt><dd>OFFLINE</dd>
+                        </dl>
+                        <p>${assistantEscape(localAIStatus.summary || "Local text chat can use Ollama when enabled. Voice and commands stay offline.")}</p>
+                        <div class="assistant-local-ai-actions">
+                            <button type="button" data-action="check-ai">CHECK OLLAMA</button>
+                            <button type="button" data-action="refresh-models">REFRESH MODELS</button>
+                            <button type="button" data-action="${localAIStatus.enabled ? "disable-local-ai" : "enable-local-ai"}">${localAIStatus.enabled ? "DISABLE LOCAL TEXT CHAT" : "ENABLE LOCAL TEXT CHAT"}</button>
+                        </div>
+                    </section>
+                    <section class="assistant-local-ai-config">
+                        <h2>LOCAL AI</h2>
+                        <label>
+                            <span>Endpoint</span>
+                            <input id="assistant_ai_endpoint" value="${assistantEscape((localAIConfig && localAIConfig.endpoint) || "http://127.0.0.1:11434")}" spellcheck="false">
+                        </label>
+                        <label>
+                            <span>Model</span>
+                            <input id="assistant_ai_model" value="${assistantEscape((localAIConfig && localAIConfig.model) || "llama3.2:3b")}" spellcheck="false">
+                        </label>
+                        <label class="assistant-checkbox-row">
+                            <span>Use bootstrap memory</span>
+                            <input id="assistant_ai_memory" type="checkbox" ${(localAIConfig && localAIConfig.memory && localAIConfig.memory.useBootstrap) !== false ? "checked" : ""}>
+                        </label>
+                        <p>Written chat only. No voice, no command router, no system actions.</p>
+                    </section>
                     <section class="assistant-memory-status" data-status="${assistantEscape(memoryStatus.status)}">
                         <div>
                             <small>MEMORY</small>
@@ -221,6 +269,10 @@
                     if (action === "refresh-memory") this.refreshMemory();
                     if (action === "open-memory") this.openMemoryFolder();
                     if (action === "install-memory") this.installMemory();
+                    if (action === "check-ai") this.checkLocalAI({force: true});
+                    if (action === "refresh-models") this.checkLocalAI({force: true});
+                    if (action === "enable-local-ai") this.setLocalAIEnabled(true);
+                    if (action === "disable-local-ai") this.setLocalAIEnabled(false);
                 });
             });
 
@@ -237,13 +289,13 @@
             const message = input ? input.value.trim() : "";
             if (!message) return;
 
-            this.presence.setState("THINKING");
+            this.addTranscript("user", message);
             const result = await this.bridge.sendText(message);
             this.lastResponse = result.response || (window.AssistantMicrocopy
                 ? window.AssistantMicrocopy.placeholderResponse(this.settings.settings)
                 : "Assistant backend not connected yet.");
+            this.addTranscript("assistant", this.lastResponse);
             if (input) input.value = "";
-            this.presence.setState("SPEAKING");
             this.render();
             setTimeout(() => {
                 if (!this.settings.settings.muted) this.presence.setState("IDLE");
@@ -259,7 +311,31 @@
 
         clear() {
             this.lastResponse = "";
+            this.transcript = [];
             this.render();
+        }
+
+        addTranscript(role, text) {
+            const item = {
+                role,
+                text: String(text || "").trim(),
+                time: new Date().toLocaleTimeString([], {hour: "2-digit", minute: "2-digit"})
+            };
+            if (!item.text) return;
+            this.transcript.push(item);
+            this.transcript = this.transcript.slice(-8);
+        }
+
+        renderTranscript() {
+            if (!this.transcript.length) {
+                return `<p class="assistant-chat-empty">No local messages yet.</p>`;
+            }
+            return this.transcript.map(item => `
+                <article data-role="${assistantEscape(item.role)}">
+                    <header><strong>${assistantEscape(item.role === "user" ? "YOU" : this.settings.displayName())}</strong><span>${assistantEscape(item.time)}</span></header>
+                    <p>${assistantEscape(item.text)}</p>
+                </article>
+            `).join("");
         }
 
         readMemoryStatus() {
@@ -309,12 +385,82 @@
             this.refreshMemory();
         }
 
+        defaultLocalAIStatus(config = {}, memoryStatus = {}) {
+            return {
+                ok: false,
+                enabled: Boolean(config && config.enabled),
+                status: config && config.enabled ? "UNKNOWN" : "DISABLED",
+                provider: "Ollama",
+                endpoint: config && config.endpoint ? config.endpoint : "http://127.0.0.1:11434",
+                model: config && config.model ? config.model : "llama3.2:3b",
+                memory: memoryStatus && memoryStatus.status === "READY" ? "READY" : "NOT_READY",
+                commandRouter: "OFFLINE",
+                voice: "OFFLINE",
+                summary: config && config.enabled ? "Local AI status not checked yet." : "Local text chat disabled."
+            };
+        }
+
+        localAIStatusLabel(status = {}) {
+            if (status.status === "READY") return "LOCAL AI READY";
+            if (status.status === "OLLAMA_OFFLINE") return "OLLAMA OFFLINE";
+            if (status.status === "MODEL_NOT_FOUND") return "MODEL NOT FOUND";
+            if (status.status === "DISABLED") return "DISABLED";
+            return status.status || "UNKNOWN";
+        }
+
+        async checkLocalAI(options = {}) {
+            if (!this.bridge || !this.bridge.checkLocalAIStatus) return;
+            const status = await this.bridge.checkLocalAIStatus({force: Boolean(options.force)});
+            this.localAIStatus = status;
+            if (!options.silent) {
+                this.lastResponse = status.summary || this.localAIStatusLabel(status);
+                this.render();
+            }
+        }
+
+        setLocalAIEnabled(enabled) {
+            if (!this.bridge || !this.bridge.saveLocalAIConfig) return;
+            const endpoint = this.root.querySelector("#assistant_ai_endpoint");
+            const model = this.root.querySelector("#assistant_ai_model");
+            const memory = this.root.querySelector("#assistant_ai_memory");
+            this.bridge.saveLocalAIConfig({
+                enabled: Boolean(enabled),
+                endpoint: endpoint ? endpoint.value : undefined,
+                model: model ? model.value : undefined,
+                memory: {
+                    useBootstrap: memory ? memory.checked : true
+                },
+                commandRouter: {enabled: false},
+                voice: {enabled: false}
+            });
+            this.localAIStatus = null;
+            this.checkLocalAI({force: true});
+            this.render();
+        }
+
         saveSettings() {
             const mode = this.root.querySelector("#assistant_setting_mode");
             const active = this.root.querySelector("#assistant_setting_active");
             const ares = this.root.querySelector("#assistant_alias_ares");
             const aphrodite = this.root.querySelector("#assistant_alias_aphrodite");
             const voice = this.root.querySelector("#assistant_setting_voice");
+            const endpoint = this.root.querySelector("#assistant_ai_endpoint");
+            const model = this.root.querySelector("#assistant_ai_model");
+            const memory = this.root.querySelector("#assistant_ai_memory");
+            if (this.bridge && this.bridge.saveLocalAIConfig) {
+                const current = this.bridge.localAIConfig ? this.bridge.localAIConfig() : {};
+                this.bridge.saveLocalAIConfig({
+                    enabled: Boolean(current && current.enabled),
+                    endpoint: endpoint ? endpoint.value : undefined,
+                    model: model ? model.value : undefined,
+                    memory: {
+                        useBootstrap: memory ? memory.checked : true
+                    },
+                    commandRouter: {enabled: false},
+                    voice: {enabled: false}
+                });
+                this.localAIStatus = null;
+            }
             this.settings.patch({
                 mode: mode ? mode.value : this.settings.settings.mode,
                 activeAssistant: active ? active.value : this.settings.settings.activeAssistant,

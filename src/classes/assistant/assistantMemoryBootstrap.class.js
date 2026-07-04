@@ -133,6 +133,50 @@
             return {files, characters, titles};
         }
 
+        readContext(maxChars = 18000) {
+            if (!this.fs || !this.path) {
+                return {status: "ERROR", text: "", files: 0, characters: 0, error: "Filesystem access unavailable"};
+            }
+
+            const status = this.status();
+            if (!status || !status.path || !status.files) {
+                return {
+                    status: status && status.status ? status.status : "NOT_CONFIGURED",
+                    text: "",
+                    files: 0,
+                    characters: 0
+                };
+            }
+
+            const limit = Math.max(1000, Math.min(Number(maxChars || 18000), 30000));
+            const files = this.memoryFiles(status.path);
+            const chunks = [];
+            let characters = 0;
+
+            for (const file of files) {
+                if (characters >= limit) break;
+                try {
+                    const filePath = this.path.join(status.path, file);
+                    let text = this.fs.readFileSync(filePath, "utf8").trim();
+                    const remaining = limit - characters;
+                    if (text.length > remaining) text = `${text.slice(0, Math.max(0, remaining - 24)).trim()}\n[TRUNCATED]`;
+                    const chunk = `\n--- ${file} ---\n${text}`;
+                    chunks.push(chunk);
+                    characters += chunk.length;
+                } catch (error) {}
+            }
+
+            return {
+                status: status.status,
+                source: status.source,
+                path: status.path,
+                text: chunks.join("\n").trim(),
+                files: files.length,
+                characters,
+                truncated: characters >= limit
+            };
+        }
+
         status() {
             if (!this.fs || !this.path) {
                 return {

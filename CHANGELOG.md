@@ -1,5 +1,31 @@
 # Changelog
 
+## 2.1.7 - 2026-07-04
+
+### Added
+
+- Added local written Assistant chat through Ollama.
+- Added `AssistantOllamaClient` for local `/api/tags` and `/api/chat`.
+- Added `AssistantLocalChat` to combine active personality prompts with private
+  bootstrap memory context.
+- Added `assistant/config/assistant-ai.example.json`.
+- Added local userData config creation at
+  `~/Library/Application Support/EdexUi-Eng/assistant/config/assistant-ai.json`.
+- Added Assistant panel written-chat transcript.
+- Added Assistant Settings `LOCAL AI` status/config section.
+- Added `scripts/test-assistant-ollama.js`.
+- Added `scripts/pull-assistant-model.js`.
+- Added `ASSISTANT_LOCAL_AI.md`.
+
+### Security
+
+- Local AI uses only `http://127.0.0.1:11434` by default.
+- Voice, STT, TTS, command router and system actions remain disabled.
+- Private memory is capped before being sent to local Ollama and is not shown
+  fully in the UI.
+- No private memory, `.env`, `.env.local`, voice samples, model weights or API
+  keys are committed.
+
 ## 2.1.6 - 2026-07-04
 
 ### Added

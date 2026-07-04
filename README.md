@@ -47,9 +47,9 @@ keyboard and large terminal with:
   agent roles, prompt templates, permission levels and a central task board;
 - a global Assistant Presence orb for the future Angie / Gustav assistant
   system, with local-only visual states, Ares/Aphrodite public profiles,
-  Gustav/Angie private aliases, personality-aware placeholder responses,
-  private local memory bootstrap status, panel settings and no AI or voice
-  backend connected yet;
+  Gustav/Angie private aliases, private local memory bootstrap status, panel
+  settings and optional local written chat through Ollama. Voice, STT, TTS and
+  the command router remain offline;
 - editable project timelines for engineering work, with a visual Project
   Control popup for creating projects, managing milestones, changing status,
   reordering steps and saving without manually editing JSON;
@@ -164,7 +164,9 @@ Security/offline documentation:
   room, roles, permissions, task board, approval flow and future AI integration
   boundaries.
 - [ASSISTANT_SYSTEM.md](ASSISTANT_SYSTEM.md) documents the Assistant Presence
-  orb, states, aliases, local settings, voice safety and future backend bridge.
+  orb, states, aliases, local settings, voice safety and local text bridge.
+- [ASSISTANT_LOCAL_AI.md](ASSISTANT_LOCAL_AI.md) documents the local Ollama
+  written-chat setup, model check and safety boundaries.
 - [ASSISTANT_PERSONALITY.md](ASSISTANT_PERSONALITY.md) documents the local
   Gustav/Angie and Ares/Aphrodite personality split.
 - [ASSISTANT_AUTHORITY_MATRIX.md](ASSISTANT_AUTHORITY_MATRIX.md) defines the

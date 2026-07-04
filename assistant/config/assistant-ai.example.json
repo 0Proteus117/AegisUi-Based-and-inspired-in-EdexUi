@@ -1,0 +1,23 @@
+{
+  "provider": "ollama",
+  "enabled": false,
+  "endpoint": "http://127.0.0.1:11434",
+  "model": "llama3.2:3b",
+  "timeoutMs": 60000,
+  "temperature": {
+    "gustav": 0.35,
+    "angie": 0.65,
+    "ares": 0.4,
+    "aphrodite": 0.6
+  },
+  "memory": {
+    "useBootstrap": true,
+    "maxChars": 18000
+  },
+  "commandRouter": {
+    "enabled": false
+  },
+  "voice": {
+    "enabled": false
+  }
+}

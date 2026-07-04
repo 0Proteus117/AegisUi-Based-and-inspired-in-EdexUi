@@ -2,10 +2,9 @@
 
 `v2.1.6` adds the first local private memory bootstrap for AegisUi Assistant.
 
-This phase is intentionally offline and local:
+This memory system is intentionally offline and local:
 
-- no LLM is connected;
-- no Ollama is connected;
+- v2.1.7 can pass a limited memory context to local Ollama written chat;
 - no FastAPI service is connected;
 - no embeddings are generated;
 - no ChromaDB/vector database is connected;
@@ -87,9 +86,14 @@ The UI does not display the full private memory content.
 
 ## Future phases
 
-Planned, not implemented in `v2.1.6`:
+Added in `v2.1.7`:
 
-- local written chat;
+- local written chat through Ollama;
+- optional bootstrap memory injection into the local system prompt;
+- no embeddings, indexing or retrieval yet.
+
+Planned, not implemented yet:
+
 - local memory index;
 - retrieval;
 - embeddings;

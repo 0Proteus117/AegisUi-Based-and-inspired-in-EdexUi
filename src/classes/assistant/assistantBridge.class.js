@@ -2,20 +2,66 @@
     class AssistantBridge {
         constructor(options = {}) {
             this.settings = options.settings || null;
+            this.setState = typeof options.setState === "function" ? options.setState : () => {};
+            this.localChat = options.localChat || (window.AssistantLocalChat ? new window.AssistantLocalChat() : null);
         }
 
         async sendText(message = "") {
             const text = String(message || "").trim();
             const settings = this.settings ? this.settings.settings : {};
+            if (!text) return {ok: false, status: "EMPTY", input: "", response: ""};
+
+            if (!this.localChat) {
+                return {
+                    ok: false,
+                    status: "OFFLINE",
+                    input: text,
+                    response: window.AssistantMicrocopy
+                        ? window.AssistantMicrocopy.placeholderResponse(settings)
+                        : "Assistant backend not connected yet.",
+                    source: "local-placeholder"
+                };
+            }
+
+            this.setState("THINKING");
+            const result = await this.localChat.sendMessage({
+                text,
+                assistantId: settings.activeAssistant,
+                mode: settings.mode
+            });
+            this.setState("SPEAKING");
             return {
-                ok: false,
-                status: "OFFLINE",
+                ...result,
                 input: text,
-                response: window.AssistantMicrocopy
-                    ? window.AssistantMicrocopy.placeholderResponse(settings)
-                    : "Assistant backend not connected yet.",
-                source: "local-placeholder"
+                source: result.ok ? "ollama-local" : "local-ai-status"
             };
+        }
+
+        async checkLocalAIStatus(options = {}) {
+            if (!this.localChat) {
+                return {
+                    ok: false,
+                    status: "ERROR",
+                    provider: "Ollama",
+                    endpoint: "127.0.0.1:11434",
+                    model: "",
+                    memory: "NOT_READY",
+                    commandRouter: "OFFLINE",
+                    voice: "OFFLINE",
+                    summary: "Local AI bridge unavailable."
+                };
+            }
+            return this.localChat.checkLocalAIStatus(options);
+        }
+
+        localAIConfig() {
+            return this.localChat ? this.localChat.loadConfig() : null;
+        }
+
+        saveLocalAIConfig(partial = {}) {
+            return this.localChat
+                ? this.localChat.saveConfig(partial)
+                : {ok: false, status: "ERROR", error: "Local AI bridge unavailable"};
         }
 
         async startListening() {

@@ -158,6 +158,71 @@
     gap: .35vh;
 }
 
+.assistant-chat-transcript {
+    display: grid;
+    gap: .4vh;
+}
+
+.assistant-chat-transcript small {
+    color: rgba(124, 203, 255, .65);
+    font: .68vh var(--font_mono);
+    letter-spacing: .16vh;
+}
+
+.assistant-chat-transcript > div {
+    display: grid;
+    gap: .45vh;
+    max-height: 13vh;
+    overflow: auto;
+    padding-right: .25vh;
+}
+
+.assistant-chat-transcript article {
+    padding: .55vh;
+    border: .08vh solid rgba(36, 68, 95, .64);
+    background: rgba(0, 0, 0, .22);
+    box-shadow: inset .14vh 0 0 rgba(59, 167, 255, .26);
+}
+
+.assistant-chat-transcript article[data-role="user"] {
+    box-shadow: inset .14vh 0 0 rgba(255, 198, 83, .38);
+}
+
+.assistant-chat-transcript header {
+    display: flex;
+    justify-content: space-between;
+    gap: .6vh;
+    margin-bottom: .28vh;
+    font: .62vh var(--font_mono);
+    letter-spacing: .08vh;
+}
+
+.assistant-chat-transcript header strong {
+    color: var(--eng-blue-main, #3BA7FF);
+    font-weight: normal;
+}
+
+.assistant-chat-transcript article[data-role="user"] header strong {
+    color: rgba(255, 215, 122, .9);
+}
+
+.assistant-chat-transcript header span {
+    color: rgba(124, 203, 255, .45);
+}
+
+.assistant-chat-transcript p {
+    margin: 0;
+    color: rgba(221, 244, 255, .82);
+    font: .76vh var(--font_main_light);
+    line-height: 1.34;
+}
+
+.assistant-chat-empty {
+    padding: .55vh;
+    border: .08vh dashed rgba(36, 68, 95, .58);
+    color: rgba(124, 203, 255, .48) !important;
+}
+
 .assistant-panel-response p {
     min-height: 3.2vh;
     margin: 0;
@@ -268,6 +333,102 @@
     background:
         radial-gradient(circle at 0 0, rgba(59, 167, 255, .1), transparent 45%),
         rgba(0, 0, 0, .24);
+}
+
+.assistant-local-ai-status,
+.assistant-local-ai-config {
+    display: grid;
+    gap: .55vh;
+    padding: .65vh;
+    border: .08vh solid rgba(124, 203, 255, .22);
+    background:
+        radial-gradient(circle at 0 0, rgba(59, 167, 255, .1), transparent 45%),
+        rgba(0, 0, 0, .24);
+}
+
+.assistant-local-ai-status > div {
+    display: flex;
+    justify-content: space-between;
+    gap: .8vh;
+    align-items: baseline;
+}
+
+.assistant-local-ai-status small {
+    color: rgba(124, 203, 255, .68);
+    font: .66vh var(--font_mono);
+    letter-spacing: .14vh;
+}
+
+.assistant-local-ai-status strong {
+    color: var(--eng-blue-main, #3BA7FF);
+    font: .78vh var(--font_mono);
+    letter-spacing: .1vh;
+}
+
+.assistant-local-ai-status[data-status="READY"] strong {
+    color: rgba(126, 232, 174, .9);
+}
+
+.assistant-local-ai-status[data-status="MODEL_NOT_FOUND"] strong,
+.assistant-local-ai-status[data-status="OLLAMA_OFFLINE"] strong {
+    color: rgba(255, 222, 143, .9);
+}
+
+.assistant-local-ai-status[data-status="ERROR"] strong {
+    color: #ff8a62;
+}
+
+.assistant-local-ai-status dl {
+    display: grid;
+    grid-template-columns: 1fr 1.4fr;
+    gap: .28vh .55vh;
+    margin: 0;
+    font: .68vh var(--font_mono);
+}
+
+.assistant-local-ai-status dt {
+    color: rgba(124, 203, 255, .55);
+}
+
+.assistant-local-ai-status dd {
+    margin: 0;
+    color: rgba(221, 244, 255, .82);
+    word-break: break-word;
+}
+
+.assistant-local-ai-status p,
+.assistant-local-ai-config p {
+    margin: 0;
+    color: rgba(221, 244, 255, .72);
+    font: .7vh var(--font_main_light);
+    line-height: 1.35;
+}
+
+.assistant-local-ai-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: .35vh;
+}
+
+.assistant-local-ai-actions button {
+    font-size: .62vh;
+}
+
+.assistant-local-ai-config h2 {
+    margin: 0;
+    color: var(--eng-blue-main, #3BA7FF);
+    font: .86vh var(--font_main);
+    letter-spacing: .12vh;
+}
+
+.assistant-checkbox-row {
+    grid-template-columns: 1fr auto;
+    align-items: center;
+}
+
+.assistant-checkbox-row input {
+    width: auto;
+    justify-self: end;
 }
 
 .assistant-memory-status > div {

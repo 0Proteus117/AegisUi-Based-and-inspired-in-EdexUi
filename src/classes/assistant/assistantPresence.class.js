@@ -5,7 +5,10 @@
             this.settings = new AssistantSettings();
             this.stateMachine = new AssistantState(this.settings.settings.muted ? "MUTED" : "IDLE");
             this.permissions = new AssistantPermissions();
-            this.bridge = new AssistantBridge({settings: this.settings});
+            this.bridge = new AssistantBridge({
+                settings: this.settings,
+                setState: state => this.setState(state)
+            });
             this.panel = new AssistantPanel({
                 presence: this,
                 settings: this.settings,

@@ -3,20 +3,20 @@
 `v2.1.0` introduced the first visual core for the future Angie / Gustav
 assistant system inside AegisUi. `v2.1.5` adds a local personality layer for
 Gustav, Angie, Ares and Aphrodite. `v2.1.6` adds a private local memory
-bootstrap without connecting any LLM, retrieval backend or command router.
+bootstrap. `v2.1.7` connects written panel input to local Ollama text chat.
 
 This phase is intentionally local and visual only:
 
-- no LLM is connected;
+- written LLM chat is local-only through Ollama in `v2.1.7`;
 - no speech-to-text is connected;
 - no custom voice model is connected;
 - no external API is called;
 - no commands, files, commits, pushes or messages are executed by the
   assistant.
-- no Ollama, FastAPI, Chatterbox, OpenVoice, Google TTS, STT or external API is
-  connected in `v2.1.5`.
-- private memory can be installed locally, but it is not indexed, embedded,
-  retrieved or sent anywhere in `v2.1.6`.
+- no FastAPI, Chatterbox, OpenVoice, Google TTS, STT or external API is
+  connected.
+- private memory can be installed locally and used as limited local Ollama
+  context, but it is not indexed, embedded or retrieved in `v2.1.7`.
 
 ## Visual presence
 
@@ -61,8 +61,9 @@ Clicking the orb opens a compact cockpit panel. The panel includes:
 - clear;
 - honest backend placeholder: `Assistant backend not connected yet.`
 
-Sending text does not call an AI model. It only exercises the local state
-machine and returns a personality-aware placeholder response.
+Sending text can call the local Ollama model when `LOCAL AI` is enabled in
+Assistant Settings. If Ollama is disabled, offline or missing the configured
+model, the panel returns an honest local status message.
 
 `v2.1.5` keeps the Assistant local-only and adds:
 
@@ -82,6 +83,16 @@ machine and returns a personality-aware placeholder response.
 - Assistant Settings `MEMORY` status panel;
 - userData installation at
   `~/Library/Application Support/EdexUi-Eng/assistant/memory/bootstrap/`.
+
+`v2.1.7` adds:
+
+- `AssistantOllamaClient` for local `/api/tags` and `/api/chat`;
+- `AssistantLocalChat` to build personality prompts and local memory context;
+- Assistant Settings `LOCAL AI` panel;
+- written chat transcript in the Assistant panel;
+- local config at
+  `~/Library/Application Support/EdexUi-Eng/assistant/config/assistant-ai.json`;
+- diagnostics scripts for Ollama and model pulls.
 
 ## Names and aliases
 
@@ -122,10 +133,22 @@ read locally for status only in `v2.1.6`.
 
 No API keys, tokens, voice samples, model weights or private memory are stored.
 
+Local AI configuration is stored outside Git at:
+
+```text
+~/Library/Application Support/EdexUi-Eng/assistant/config/assistant-ai.json
+```
+
+The committed example is:
+
+```text
+assistant/config/assistant-ai.example.json
+```
+
 ## Future bridge
 
-`src/classes/assistant/assistantBridge.class.js` exposes placeholder methods
-for future integration:
+`src/classes/assistant/assistantBridge.class.js` exposes methods for current
+local text chat and future integrations:
 
 - `sendText(message)`
 - `startListening()`
@@ -134,7 +157,8 @@ for future integration:
 - `checkBackendHealth()`
 - `checkVoiceHealth()`
 
-All methods are currently local and non-external.
+`sendText(message)` can call local Ollama only. Listening, speech and voice
+remain local placeholders. Command execution remains disabled.
 
 ## Voice provider roadmap
 
@@ -171,6 +195,8 @@ Core files:
 - `src/classes/assistant/assistantSettings.class.js`
 - `src/classes/assistant/assistantMicrocopy.class.js`
 - `src/classes/assistant/assistantMemoryBootstrap.class.js`
+- `src/classes/assistant/assistantOllamaClient.class.js`
+- `src/classes/assistant/assistantLocalChat.class.js`
 - `src/classes/assistant/assistantPanel.class.js`
 - `src/classes/assistant/assistantBridge.class.js`
 - `src/classes/assistant/assistantPermissions.class.js`
