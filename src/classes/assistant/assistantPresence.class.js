@@ -24,6 +24,7 @@
             this.container.className = "assistant-presence";
             this.container.dataset.state = this.stateMachine.getState();
             this.container.dataset.profile = this.settings.microcopyProfile();
+            this.container.dataset.mode = this.settings.settings.mode;
             this.container.innerHTML = this.renderOrb();
             document.body.appendChild(this.container);
             this.panel.mount();
@@ -110,6 +111,7 @@
             if (!this.container) return;
             this.container.dataset.state = state;
             this.container.dataset.profile = this.settings.microcopyProfile();
+            this.container.dataset.mode = this.settings.settings.mode;
             const label = this.container.querySelector(".assistant-orb-status em");
             if (label) label.innerText = state;
             if (this.panel && this.panel.root) {
@@ -129,6 +131,7 @@
         refreshLabels() {
             if (!this.container) return;
             this.container.dataset.profile = this.settings.microcopyProfile();
+            this.container.dataset.mode = this.settings.settings.mode;
             const name = this.container.querySelector(".assistant-orb-status strong");
             if (name) name.innerText = this.settings.displayName();
             this.panel.render();

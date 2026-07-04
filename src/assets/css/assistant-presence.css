@@ -13,6 +13,18 @@
     --assistant-alert: rgba(255, 119, 91, .82);
 }
 
+.assistant-presence[data-profile="gustav"],
+.assistant-presence[data-profile="ares"] {
+    --assistant-accent: rgba(124, 203, 255, .95);
+    --assistant-accent-soft: rgba(59, 167, 255, .38);
+}
+
+.assistant-presence[data-profile="angie"],
+.assistant-presence[data-profile="aphrodite"] {
+    --assistant-accent: rgba(142, 218, 255, .96);
+    --assistant-accent-soft: rgba(96, 195, 255, .34);
+}
+
 .assistant-orb-button {
     position: relative;
     width: 8.4vh;
@@ -32,6 +44,27 @@
     cursor: pointer;
     pointer-events: auto;
     overflow: visible;
+}
+
+.assistant-presence[data-profile="gustav"] .assistant-orb-button,
+.assistant-presence[data-profile="ares"] .assistant-orb-button {
+    background:
+        radial-gradient(circle at 45% 38%, rgba(226, 247, 255, .62), rgba(124, 203, 255, .2) 18%, transparent 40%),
+        radial-gradient(circle at 50% 54%, rgba(59, 167, 255, .28), rgba(19, 38, 58, .24) 36%, rgba(7, 11, 16, .9) 68%),
+        linear-gradient(135deg, rgba(59, 167, 255, .1), rgba(0, 0, 0, .9));
+}
+
+.assistant-presence[data-profile="angie"] .assistant-orb-button,
+.assistant-presence[data-profile="aphrodite"] .assistant-orb-button {
+    border-color: rgba(142, 218, 255, .5);
+    background:
+        radial-gradient(circle at 44% 36%, rgba(235, 250, 255, .72), rgba(142, 218, 255, .26) 22%, transparent 45%),
+        radial-gradient(circle at 50% 55%, rgba(96, 195, 255, .34), rgba(19, 44, 64, .2) 38%, rgba(7, 11, 16, .86) 70%),
+        linear-gradient(135deg, rgba(96, 195, 255, .14), rgba(0, 0, 0, .86));
+    box-shadow:
+        0 0 1.45vh rgba(96, 195, 255, .28),
+        inset 0 0 1.9vh rgba(142, 218, 255, .14),
+        inset 0 -.8vh 1.8vh rgba(0, 0, 0, .38);
 }
 
 .assistant-orb-button:hover {
@@ -63,6 +96,17 @@
     animation: assistant-core-breathe 5.8s ease-in-out infinite;
 }
 
+.assistant-presence[data-profile="gustav"] .assistant-orb-core,
+.assistant-presence[data-profile="ares"] .assistant-orb-core {
+    animation-duration: 5.4s;
+}
+
+.assistant-presence[data-profile="angie"] .assistant-orb-core,
+.assistant-presence[data-profile="aphrodite"] .assistant-orb-core {
+    animation-duration: 6.8s;
+    background: radial-gradient(circle, rgba(142, 218, 255, .86), rgba(96, 195, 255, .2) 58%, transparent 72%);
+}
+
 .assistant-orb-ring {
     position: absolute;
     inset: 1.05vh;
@@ -77,6 +121,16 @@
     inset: 0;
     border-radius: 50%;
     animation: assistant-cloud-spin 19s linear infinite;
+}
+
+.assistant-presence[data-profile="gustav"] .assistant-orbit-cloud,
+.assistant-presence[data-profile="ares"] .assistant-orbit-cloud {
+    animation-duration: 18s;
+}
+
+.assistant-presence[data-profile="angie"] .assistant-orbit-cloud,
+.assistant-presence[data-profile="aphrodite"] .assistant-orbit-cloud {
+    animation-duration: 24s;
 }
 
 .assistant-orbit-point {
@@ -122,11 +176,29 @@
     letter-spacing: .12vh;
 }
 
+.assistant-presence[data-profile="angie"] .assistant-orb-status,
+.assistant-presence[data-profile="aphrodite"] .assistant-orb-status {
+    border-color: rgba(50, 93, 126, .82);
+    background: rgba(7, 13, 18, .86);
+}
+
 .assistant-presence[data-state="LISTENING"] .assistant-orbit-point:nth-child(3n) {
     height: .9vh;
     background: rgba(238, 184, 86, .95);
     box-shadow: 0 0 .65vh rgba(238, 184, 86, .68);
     animation-name: assistant-eq-listen;
+}
+
+.assistant-presence[data-profile="gustav"][data-state="LISTENING"] .assistant-orbit-point:nth-child(3n),
+.assistant-presence[data-profile="ares"][data-state="LISTENING"] .assistant-orbit-point:nth-child(3n) {
+    animation-duration: 2.1s;
+}
+
+.assistant-presence[data-profile="angie"][data-state="LISTENING"] .assistant-orbit-point:nth-child(3n),
+.assistant-presence[data-profile="aphrodite"][data-state="LISTENING"] .assistant-orbit-point:nth-child(3n) {
+    background: rgba(238, 190, 102, .92);
+    box-shadow: 0 0 .72vh rgba(238, 190, 102, .54);
+    animation-duration: 2.9s;
 }
 
 .assistant-presence[data-state="LISTENING"] .assistant-orb-core {
@@ -135,6 +207,16 @@
 
 .assistant-presence[data-state="THINKING"] .assistant-orbit-cloud {
     animation-duration: 8s;
+}
+
+.assistant-presence[data-profile="gustav"][data-state="THINKING"] .assistant-orbit-cloud,
+.assistant-presence[data-profile="ares"][data-state="THINKING"] .assistant-orbit-cloud {
+    animation-duration: 7s;
+}
+
+.assistant-presence[data-profile="angie"][data-state="THINKING"] .assistant-orbit-cloud,
+.assistant-presence[data-profile="aphrodite"][data-state="THINKING"] .assistant-orbit-cloud {
+    animation-duration: 9.5s;
 }
 
 .assistant-presence[data-state="THINKING"] .assistant-orbit-point {

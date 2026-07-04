@@ -24,6 +24,20 @@
     backdrop-filter: blur(.35vh);
 }
 
+.assistant-panel[data-profile="gustav"],
+.assistant-panel[data-profile="ares"] {
+    box-shadow: 0 0 2.2vh rgba(0, 0, 0, .7), 0 0 1vh rgba(59, 167, 255, .16);
+}
+
+.assistant-panel[data-profile="angie"],
+.assistant-panel[data-profile="aphrodite"] {
+    border-color: rgba(142, 218, 255, .38);
+    box-shadow: 0 0 2.2vh rgba(0, 0, 0, .66), 0 0 1.35vh rgba(96, 195, 255, .18);
+    background:
+        linear-gradient(180deg, rgba(16, 24, 32, .96), rgba(7, 11, 16, .96)),
+        radial-gradient(circle at 18% 0, rgba(96, 195, 255, .15), transparent 42%);
+}
+
 .assistant-panel::before,
 .assistant-panel::after {
     content: "";
@@ -77,6 +91,11 @@
     font: .78vh var(--font_main_light);
 }
 
+.assistant-panel[data-profile="angie"] .assistant-panel-header span,
+.assistant-panel[data-profile="aphrodite"] .assistant-panel-header span {
+    color: rgba(142, 218, 255, .76);
+}
+
 .assistant-panel-close {
     width: 2.4vh;
     height: 2.4vh;
@@ -99,6 +118,11 @@
         linear-gradient(90deg, rgba(59, 167, 255, .08), transparent 42%),
         rgba(0, 0, 0, .32);
     box-shadow: inset .18vh 0 0 rgba(59, 167, 255, .38);
+}
+
+.assistant-panel[data-profile="angie"] .assistant-panel-status,
+.assistant-panel[data-profile="aphrodite"] .assistant-panel-status {
+    box-shadow: inset .18vh 0 0 rgba(96, 195, 255, .34);
 }
 
 .assistant-panel-status strong {

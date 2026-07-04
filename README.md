@@ -46,7 +46,8 @@ keyboard and large terminal with:
 - an Agent Command deck for human-controlled AI-agent coordination, with local
   agent roles, prompt templates, permission levels and a central task board;
 - a global Assistant Presence orb for the future Angie / Gustav assistant
-  system, with local-only visual states, Gustav/Angie microcopy, aliases,
+  system, with local-only visual states, Ares/Aphrodite public profiles,
+  Gustav/Angie private aliases, personality-aware placeholder responses,
   panel settings and no AI or voice backend connected yet;
 - editable project timelines for engineering work, with a visual Project
   Control popup for creating projects, managing milestones, changing status,

@@ -49,30 +49,35 @@
             if (!this.root) return;
             const config = this.settings.settings;
             const name = this.settings.displayName();
-            const publicName = this.settings.publicName();
+            const subtitle = this.settings.subtitle();
             const state = this.stateMachine.getState();
             const muted = config.muted;
             const microcopy = window.AssistantMicrocopy;
+            const profile = this.settings.microcopyProfile();
             const stateLine = microcopy ? microcopy.state(config, state) : "Assistant backend not connected yet.";
             const backendLine = microcopy ? microcopy.backendOffline(config) : "Assistant backend not connected yet.";
             const voiceStatusLine = microcopy ? microcopy.voiceNotConfigured(config) : "Voice backend not connected yet.";
             const lastResponse = this.lastResponse || (microcopy ? microcopy.placeholderResponse(config) : "Assistant backend not connected yet.");
             const inputPlaceholder = microcopy ? microcopy.inputPlaceholder(config) : "Type a local prompt…";
             const toneLabel = this.settings.toneLabel();
-            const aresOption = config.mode === "private" ? "Gustav / Ares core" : "Ares";
-            const aphroditeOption = config.mode === "private" ? "Angie / Aphrodite core" : "Aphrodite";
+            const aresOption = config.mode === "private" ? "Gustav (Ares public)" : "Ares";
+            const aphroditeOption = config.mode === "private" ? "Angie (Aphrodite public)" : "Aphrodite";
             const voiceLabel = {
+                "not-configured": "Not configured",
                 "default-robotic": "Default Robotic",
                 "local-custom": "Local Custom Voice",
-                "not-configured": "Not configured"
-            }[config.voiceMode] || "Default Robotic";
+                "google-emotional-planned": "Google Emotional TTS · planned"
+            }[config.voiceMode] || "Not configured";
+
+            this.root.dataset.profile = profile;
+            this.root.dataset.mode = config.mode;
 
             this.root.innerHTML = `
                 <header class="assistant-panel-header">
                     <div>
                         <small>ASSISTANT PRESENCE</small>
                         <h1>${assistantEscape(name)}</h1>
-                        <span>${assistantEscape(publicName)} · ${assistantEscape(config.mode.toUpperCase())} · ${assistantEscape(toneLabel.toUpperCase())}</span>
+                        <span>${assistantEscape(subtitle)} · ${assistantEscape(toneLabel.toUpperCase())}</span>
                     </div>
                     <button type="button" class="assistant-panel-close" aria-label="Close assistant panel">×</button>
                 </header>
@@ -127,15 +132,18 @@
                     <label>
                         <span>Voice</span>
                         <select id="assistant_setting_voice">
+                            <option value="not-configured" ${config.voiceMode === "not-configured" ? "selected" : ""}>Not configured</option>
                             <option value="default-robotic" ${config.voiceMode === "default-robotic" ? "selected" : ""}>Default Robotic</option>
                             <option value="local-custom" ${config.voiceMode === "local-custom" ? "selected" : ""}>Local Custom Voice</option>
-                            <option value="not-configured" ${config.voiceMode === "not-configured" ? "selected" : ""}>Not configured</option>
+                            <option value="google-emotional-planned" ${config.voiceMode === "google-emotional-planned" ? "selected" : ""}>Google Emotional TTS · planned</option>
                         </select>
                     </label>
-                    <p class="assistant-voice-warning">Only use voices you own or have explicit permission to use.</p>
+                    <p class="assistant-voice-warning">Voice is not connected in this build. Only use voices you own or have explicit permission to use.</p>
                     <div class="assistant-backend-grid">
                         <span>Assistant backend</span><strong>${assistantEscape(config.backend.assistant)}</strong>
                         <span>Voice backend</span><strong>${assistantEscape(config.backend.voice)}</strong>
+                        <span>Command router</span><strong>${assistantEscape(config.backend.commandRouter)}</strong>
+                        <span>Memory</span><strong>${assistantEscape(config.backend.memory)}</strong>
                         <span>Voice shell</span><strong>${assistantEscape(voiceLabel)}</strong>
                     </div>
                     <div class="assistant-panel-health">
@@ -190,6 +198,7 @@
 
             this.root.querySelectorAll("[data-state-test]").forEach(button => {
                 button.addEventListener("click", () => {
+                    this.settings.patch({lastState: button.dataset.stateTest});
                     this.presence.setState(button.dataset.stateTest);
                 });
             });

@@ -1,8 +1,8 @@
 # Assistant Presence Core
 
 `v2.1.0` introduced the first visual core for the future Angie / Gustav
-assistant system inside AegisUi. `v2.1.1` polishes the orb, panel and local
-microcopy without connecting any backend.
+assistant system inside AegisUi. `v2.1.5` adds a local personality layer for
+Gustav, Angie, Ares and Aphrodite without connecting any backend.
 
 This phase is intentionally local and visual only:
 
@@ -13,7 +13,7 @@ This phase is intentionally local and visual only:
 - no commands, files, commits, pushes or messages are executed by the
   assistant.
 - no Ollama, FastAPI, Chatterbox, OpenVoice, Google TTS, STT or external API is
-  connected in `v2.1.1`.
+  connected in `v2.1.5`.
 
 ## Visual presence
 
@@ -61,14 +61,15 @@ Clicking the orb opens a compact cockpit panel. The panel includes:
 Sending text does not call an AI model. It only exercises the local state
 machine and returns a personality-aware placeholder response.
 
-`v2.1.1` adds:
+`v2.1.5` keeps the Assistant local-only and adds:
 
-- Gustav/Ares dry technical microcopy;
-- Angie/Aphrodite warm local microcopy;
-- a cleaner HUD settings panel;
-- a planned voice-provider section that is not functional yet;
-- refined state visuals for `IDLE`, `LISTENING`, `THINKING`, `SPEAKING`,
-  `MUTED`, `OFFLINE` and `ERROR`.
+- a dedicated `AssistantPersonality` module;
+- public profiles for Ares and Aphrodite;
+- example private profiles for Gustav and Angie;
+- stricter public/private name separation;
+- personality-specific placeholder responses;
+- refined state visuals and panel styling by profile;
+- backend, voice, command-router and memory statuses that remain offline.
 
 ## Names and aliases
 
@@ -101,6 +102,7 @@ Persisted fields:
 - muted;
 - voice mode;
 - panel open/closed;
+- last selected test state;
 - backend status placeholders.
 
 No API keys, tokens, voice samples, model weights or private memory are stored.
@@ -150,6 +152,7 @@ Core files:
 
 - `src/classes/assistant/assistantPresence.class.js`
 - `src/classes/assistant/assistantState.class.js`
+- `src/classes/assistant/assistantPersonality.class.js`
 - `src/classes/assistant/assistantSettings.class.js`
 - `src/classes/assistant/assistantMicrocopy.class.js`
 - `src/classes/assistant/assistantPanel.class.js`
@@ -162,6 +165,10 @@ Public examples:
 
 - `assistant/config/assistant-settings.example.json`
 - `assistant/profiles/public/default.json`
+- `assistant/profiles/public/ares.json`
+- `assistant/profiles/public/aphrodite.json`
+- `assistant/profiles/private/gustav.example.json`
+- `assistant/profiles/private/angie.example.json`
 
 Ignored private folders:
 

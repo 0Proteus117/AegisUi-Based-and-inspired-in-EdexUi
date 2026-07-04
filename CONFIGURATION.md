@@ -66,9 +66,10 @@ The app currently uses JSON files in the macOS application-data folder:
 - Assistant Presence settings are stored in renderer localStorage under
   `aegisui-assistant-settings-v1`. They contain only visual preferences,
   aliases, active assistant, muted state and backend status placeholders.
-  v2.1.1 also uses these local settings to select Gustav/Ares or
-  Angie/Aphrodite microcopy. No assistant prompts, chat history, voice samples
-  or API keys are stored there.
+  v2.1.5 uses these local settings to select public mode
+  (`Ares`/`Aphrodite`) or private mode (`Gustav`/`Angie`), voice-provider shell
+  selection and offline backend placeholders. No assistant prompts, chat
+  history, voice samples or API keys are stored there.
 
 ## Apple Music local Automation
 

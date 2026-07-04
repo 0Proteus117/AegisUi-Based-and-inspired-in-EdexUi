@@ -1,91 +1,62 @@
 (function() {
-    const MICROCOPY = Object.freeze({
-        gustav: {
-            tone: "technical",
-            style: "dry / command-oriented",
-            state: {
-                IDLE: "Standing by.",
-                LISTENING: "Input channel armed. No speech backend connected.",
-                THINKING: "Processing locally.",
-                SPEAKING: "Output channel simulated.",
-                MUTED: "Muted.",
-                OFFLINE: "Assistant backend offline. Command channel unavailable.",
-                ERROR: "Fault detected. Awaiting correction."
-            },
-            backendOffline: "Assistant backend offline. Command channel unavailable.",
-            voiceNotConfigured: "Voice provider not configured.",
-            placeholderResponse: "Backend offline. No command executed.",
-            inputPlaceholder: "Enter command draft…"
-        },
-        angie: {
-            tone: "warm",
-            style: "soft / present",
-            state: {
-                IDLE: "Estoy aquí.",
-                LISTENING: "Te presto atención, aunque aún no tengo oído real.",
-                THINKING: "Lo pienso contigo desde aquí.",
-                SPEAKING: "Salida simulada. Todavía no tengo voz.",
-                MUTED: "Me quedo en silencio.",
-                OFFLINE: "Aún no tengo el backend despierto, pero sigo contigo.",
-                ERROR: "Algo no ha salido bien. Lo revisamos despacio."
-            },
-            backendOffline: "Aún no tengo el backend despierto, pero sigo contigo.",
-            voiceNotConfigured: "Todavía no tengo voz configurada.",
-            placeholderResponse: "Todavía no puedo ejecutar eso, pero ya estoy en mi sitio.",
-            inputPlaceholder: "Cuéntame qué quieres preparar…"
-        }
-    });
-
     class AssistantMicrocopy {
         static profile(settings = {}) {
-            const mode = String(settings.mode || "private").toLowerCase();
-            const active = String(settings.activeAssistant || "ares").toLowerCase();
-            if (active === "aphrodite") {
-                return mode === "private" ? "angie" : "angie";
-            }
-            return "gustav";
+            return window.AssistantPersonality
+                ? window.AssistantPersonality.getActivePersonality(settings).id
+                : "gustav";
         }
 
         static publicRole(settings = {}) {
-            return String(settings.activeAssistant || "ares").toLowerCase() === "aphrodite"
-                ? "Aphrodite"
+            return window.AssistantPersonality
+                ? window.AssistantPersonality.getPublicName(settings)
                 : "Ares";
         }
 
         static tone(settings = {}) {
-            return MICROCOPY[this.profile(settings)] || MICROCOPY.gustav;
+            return window.AssistantPersonality
+                ? window.AssistantPersonality.getActivePersonality(settings)
+                : {style: "command-oriented"};
         }
 
         static state(settings = {}, state = "IDLE") {
-            const copy = this.tone(settings);
-            return copy.state[String(state || "IDLE").toUpperCase()] || copy.state.IDLE;
+            return window.AssistantPersonality
+                ? window.AssistantPersonality.getMicrocopy(settings, state)
+                : "Assistant backend offline.";
         }
 
         static backendOffline(settings = {}) {
-            return this.tone(settings).backendOffline;
+            return window.AssistantPersonality
+                ? window.AssistantPersonality.getMicrocopy(settings, "BACKEND_OFFLINE")
+                : "Assistant backend offline.";
         }
 
         static voiceNotConfigured(settings = {}) {
-            return this.tone(settings).voiceNotConfigured;
+            return window.AssistantPersonality
+                ? window.AssistantPersonality.getMicrocopy(settings, "VOICE_NOT_CONFIGURED")
+                : "Voice provider not configured.";
         }
 
         static placeholderResponse(settings = {}) {
-            return this.tone(settings).placeholderResponse;
+            return window.AssistantPersonality
+                ? window.AssistantPersonality.getMicrocopy(settings, "PLACEHOLDER_RESPONSE")
+                : "Backend offline. No action executed.";
         }
 
         static inputPlaceholder(settings = {}) {
-            return this.tone(settings).inputPlaceholder;
+            return window.AssistantPersonality
+                ? window.AssistantPersonality.getInputPlaceholder(settings)
+                : "Type a local prompt…";
         }
 
         static style(settings = {}) {
-            return this.tone(settings).style;
+            return this.tone(settings).style || "command-oriented";
         }
 
         static all() {
-            return MICROCOPY;
+            return window.AssistantPersonality ? window.AssistantPersonality.all() : {};
         }
     }
 
     window.AssistantMicrocopy = AssistantMicrocopy;
-    window.ASSISTANT_MICROCOPY = MICROCOPY;
+    window.ASSISTANT_MICROCOPY = window.AssistantPersonality ? window.AssistantPersonality.all() : {};
 })();

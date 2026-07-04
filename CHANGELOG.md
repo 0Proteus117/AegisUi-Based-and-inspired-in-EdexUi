@@ -1,5 +1,34 @@
 # Changelog
 
+## 2.1.5 - 2026-07-04
+
+### Changed
+
+- Added a local `AssistantPersonality` layer for Gustav, Angie, Ares and
+  Aphrodite.
+- Separated public mode (`Ares` / `Aphrodite`) from private mode
+  (`Ares / Gustav` and `Aphrodite / Angie`) so private names are not shown in
+  public mode.
+- Updated Assistant panel microcopy, manual-input placeholders and offline
+  responses by personality.
+- Refined Assistant orb and panel styling by profile while keeping the cockpit
+  HUD visual language.
+- Expanded Assistant settings with offline command-router and memory status
+  placeholders plus a planned Google Emotional TTS shell.
+
+### Added
+
+- Added public Assistant profile examples for Ares and Aphrodite.
+- Added private `.example.json` profile templates for Gustav and Angie.
+- Added `ASSISTANT_PERSONALITY_POLISH_REPORT.md`.
+
+### Security
+
+- No LLM, STT, TTS, Ollama, FastAPI, Chatterbox, OpenVoice, Google TTS or
+  external API is connected.
+- No private profiles, voice samples, models, API keys, `.env` or `.env.local`
+  files are added.
+
 ## 2.1.4 - 2026-07-03
 
 ### Fixed

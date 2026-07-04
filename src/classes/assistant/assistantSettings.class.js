@@ -8,11 +8,14 @@
             aphrodite: "Angie"
         },
         muted: false,
-        voiceMode: "default-robotic",
+        voiceMode: "not-configured",
         panelOpen: false,
+        lastState: "IDLE",
         backend: {
             assistant: "OFFLINE",
-            voice: "OFFLINE"
+            voice: "OFFLINE",
+            commandRouter: "OFFLINE",
+            memory: "OFFLINE"
         }
     });
 
@@ -48,13 +51,18 @@
                     aphrodite: String(aliases.aphrodite || defaults.aliases.aphrodite).slice(0, 32)
                 },
                 muted: typeof source.muted === "boolean" ? source.muted : defaults.muted,
-                voiceMode: ["default-robotic", "local-custom", "not-configured"].includes(String(source.voiceMode || ""))
+                voiceMode: ["not-configured", "default-robotic", "local-custom", "google-emotional-planned"].includes(String(source.voiceMode || ""))
                     ? String(source.voiceMode)
                     : defaults.voiceMode,
                 panelOpen: Boolean(source.panelOpen),
+                lastState: ["IDLE", "LISTENING", "THINKING", "SPEAKING", "MUTED", "OFFLINE", "ERROR"].includes(String(source.lastState || "").toUpperCase())
+                    ? String(source.lastState).toUpperCase()
+                    : defaults.lastState,
                 backend: {
                     assistant: cleanStatus(backend.assistant),
-                    voice: cleanStatus(backend.voice)
+                    voice: cleanStatus(backend.voice),
+                    commandRouter: cleanStatus(backend.commandRouter),
+                    memory: cleanStatus(backend.memory)
                 }
             };
         }
@@ -91,24 +99,37 @@
         }
 
         displayName(profileId = this.settings.activeAssistant) {
-            const id = String(profileId || "ares").toLowerCase();
-            if (this.settings.mode === "private") {
-                return id === "aphrodite" ? this.settings.aliases.aphrodite : this.settings.aliases.ares;
-            }
-            return id === "aphrodite" ? "Aphrodite" : "Ares";
+            const settings = {...this.settings, activeAssistant: profileId};
+            return window.AssistantPersonality
+                ? window.AssistantPersonality.getDisplayName(settings)
+                : "Ares";
         }
 
         publicName(profileId = this.settings.activeAssistant) {
-            return String(profileId || "ares").toLowerCase() === "aphrodite" ? "Aphrodite" : "Ares";
+            const settings = {...this.settings, activeAssistant: profileId};
+            return window.AssistantPersonality
+                ? window.AssistantPersonality.getPublicName(settings)
+                : "Ares";
+        }
+
+        subtitle(profileId = this.settings.activeAssistant) {
+            const settings = {...this.settings, activeAssistant: profileId};
+            return window.AssistantPersonality
+                ? window.AssistantPersonality.getSubtitle(settings)
+                : `${this.publicName(profileId)} · ${this.settings.mode.toUpperCase()}`;
         }
 
         microcopyProfile(profileId = this.settings.activeAssistant) {
-            return String(profileId || "ares").toLowerCase() === "aphrodite" ? "angie" : "gustav";
+            const settings = {...this.settings, activeAssistant: profileId};
+            return window.AssistantPersonality
+                ? window.AssistantPersonality.getActivePersonality(settings).id
+                : "gustav";
         }
 
         toneLabel(profileId = this.settings.activeAssistant) {
-            return this.microcopyProfile(profileId) === "angie"
-                ? "warm presence"
+            const settings = {...this.settings, activeAssistant: profileId};
+            return window.AssistantPersonality
+                ? window.AssistantPersonality.getToneLabel(settings)
                 : "technical command";
         }
     }
