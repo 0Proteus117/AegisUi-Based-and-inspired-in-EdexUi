@@ -260,6 +260,77 @@
     gap: .55vh;
 }
 
+.assistant-memory-status {
+    display: grid;
+    gap: .55vh;
+    padding: .65vh;
+    border: .08vh solid rgba(124, 203, 255, .22);
+    background:
+        radial-gradient(circle at 0 0, rgba(59, 167, 255, .1), transparent 45%),
+        rgba(0, 0, 0, .24);
+}
+
+.assistant-memory-status > div {
+    display: flex;
+    justify-content: space-between;
+    gap: .8vh;
+    align-items: baseline;
+}
+
+.assistant-memory-status small {
+    color: rgba(124, 203, 255, .68);
+    font: .66vh var(--font_mono);
+    letter-spacing: .14vh;
+}
+
+.assistant-memory-status strong {
+    color: var(--eng-blue-main, #3BA7FF);
+    font: .78vh var(--font_mono);
+    letter-spacing: .1vh;
+}
+
+.assistant-memory-status[data-status="READY"] strong {
+    color: rgba(126, 232, 174, .9);
+}
+
+.assistant-memory-status[data-status="ERROR"] strong {
+    color: #ff8a62;
+}
+
+.assistant-memory-status dl {
+    display: grid;
+    grid-template-columns: 1fr 1.4fr;
+    gap: .28vh .55vh;
+    margin: 0;
+    font: .68vh var(--font_mono);
+}
+
+.assistant-memory-status dt {
+    color: rgba(124, 203, 255, .55);
+}
+
+.assistant-memory-status dd {
+    margin: 0;
+    color: rgba(221, 244, 255, .82);
+}
+
+.assistant-memory-status p {
+    margin: 0;
+    color: rgba(221, 244, 255, .72);
+    font: .7vh var(--font_main_light);
+    line-height: 1.35;
+}
+
+.assistant-memory-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: .35vh;
+}
+
+.assistant-memory-actions button {
+    font-size: .62vh;
+}
+
 .assistant-voice-warning {
     margin: 0;
     padding: .55vh;

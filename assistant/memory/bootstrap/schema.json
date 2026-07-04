@@ -1,0 +1,22 @@
+{
+  "version": "1.0.0",
+  "type": "aegisui_private_memory_bootstrap",
+  "description": "Local private memory seed for AegisUi Assistant.",
+  "files": [
+    "00_index.md",
+    "01_gabriel_profile.md",
+    "02_communication_preferences.md",
+    "03_aegisui_project_state.md",
+    "04_technical_projects.md",
+    "05_current_roadmap.md",
+    "06_assistant_identity.md",
+    "07_codex_workflow_rules.md",
+    "08_safety_authority.md",
+    "09_sensitive_boundaries.md"
+  ],
+  "privacy": {
+    "private_files_gitignored": true,
+    "commit_private_memory": false,
+    "requires_user_review": true
+  }
+}

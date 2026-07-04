@@ -1,5 +1,26 @@
 # Changelog
 
+## 2.1.6 - 2026-07-04
+
+### Added
+
+- Added private local Assistant memory bootstrap structure.
+- Added public memory schema and redacted examples.
+- Added `AssistantMemoryBootstrap` local loader for status-only memory checks.
+- Added `scripts/install-assistant-bootstrap-memory.js`.
+- Added `scripts/test-assistant-memory-bootstrap.js`.
+- Added Assistant Settings `MEMORY` panel with status, source, file count,
+  bootstrap install status and non-sensitive title preview.
+- Added `ASSISTANT_MEMORY.md`.
+
+### Security
+
+- Real private memory remains in `assistant/memory/private/`, which is ignored
+  by Git.
+- No LLM, Ollama, FastAPI, ChromaDB, embeddings, retrieval, STT, TTS, Google
+  TTS or command router is connected.
+- No private memory content is included in public documentation.
+
 ## 2.1.5 - 2026-07-04
 
 ### Changed

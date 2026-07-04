@@ -9,9 +9,13 @@
             this.settings = options.settings;
             this.stateMachine = options.stateMachine;
             this.bridge = options.bridge;
+            this.memory = options.memory || (window.AssistantMemoryBootstrap
+                ? new window.AssistantMemoryBootstrap()
+                : null);
             this.root = null;
             this.lastResponse = "";
             this.settingsVisible = false;
+            this.lastMemoryStatus = null;
         }
 
         mount() {
@@ -60,6 +64,7 @@
             const lastResponse = this.lastResponse || (microcopy ? microcopy.placeholderResponse(config) : "Assistant backend not connected yet.");
             const inputPlaceholder = microcopy ? microcopy.inputPlaceholder(config) : "Type a local prompt…";
             const toneLabel = this.settings.toneLabel();
+            const memoryStatus = this.readMemoryStatus();
             const aresOption = config.mode === "private" ? "Gustav (Ares public)" : "Ares";
             const aphroditeOption = config.mode === "private" ? "Angie (Aphrodite public)" : "Aphrodite";
             const voiceLabel = {
@@ -150,6 +155,26 @@
                         <span>Backend</span><strong>${assistantEscape(backendLine)}</strong>
                         <span>Voice</span><strong>${assistantEscape(voiceStatusLine)}</strong>
                     </div>
+                    <section class="assistant-memory-status" data-status="${assistantEscape(memoryStatus.status)}">
+                        <div>
+                            <small>MEMORY</small>
+                            <strong>${assistantEscape(memoryStatus.status)}</strong>
+                        </div>
+                        <dl>
+                            <dt>Source</dt><dd>${assistantEscape(memoryStatus.source)}</dd>
+                            <dt>Files</dt><dd>${assistantEscape(memoryStatus.files)}</dd>
+                            <dt>Bootstrap</dt><dd>${assistantEscape(memoryStatus.installed ? "Installed" : "Not installed")}</dd>
+                            <dt>Index</dt><dd>${assistantEscape(memoryStatus.index || "NOT_INDEXED")}</dd>
+                            <dt>Embeddings</dt><dd>${assistantEscape(memoryStatus.embeddings || "NOT_CONNECTED")}</dd>
+                            <dt>Retrieval</dt><dd>${assistantEscape(memoryStatus.retrieval || "NOT_CONNECTED")}</dd>
+                        </dl>
+                        <p>${assistantEscape(this.memoryPreview(memoryStatus))}</p>
+                        <div class="assistant-memory-actions">
+                            <button type="button" data-action="refresh-memory">REFRESH MEMORY STATUS</button>
+                            <button type="button" data-action="open-memory">OPEN MEMORY FOLDER</button>
+                            <button type="button" data-action="install-memory">INSTALL LOCAL BOOTSTRAP</button>
+                        </div>
+                    </section>
                     <section class="assistant-future-voice">
                         <small>FUTURE VOICE PROVIDERS</small>
                         <ul>
@@ -193,6 +218,9 @@
                     }
                     if (action === "clear") this.clear();
                     if (action === "save-settings") this.saveSettings();
+                    if (action === "refresh-memory") this.refreshMemory();
+                    if (action === "open-memory") this.openMemoryFolder();
+                    if (action === "install-memory") this.installMemory();
                 });
             });
 
@@ -232,6 +260,53 @@
         clear() {
             this.lastResponse = "";
             this.render();
+        }
+
+        readMemoryStatus() {
+            if (!this.memory) {
+                return {
+                    status: "ERROR",
+                    source: "None",
+                    files: 0,
+                    titles: [],
+                    installed: false,
+                    index: "NOT_INDEXED",
+                    embeddings: "NOT_CONNECTED",
+                    retrieval: "NOT_CONNECTED",
+                    error: "Memory loader unavailable"
+                };
+            }
+            this.lastMemoryStatus = this.memory.status();
+            return this.lastMemoryStatus;
+        }
+
+        memoryPreview(status = {}) {
+            if (status.error) return status.error;
+            const titles = Array.isArray(status.titles) ? status.titles : [];
+            if (!titles.length) return "No private bootstrap memory loaded.";
+            const names = titles.slice(0, 3).map(item => item.title || item.file).join(" · ");
+            const suffix = titles.length > 3 ? ` · +${titles.length - 3} more` : "";
+            return `${names}${suffix}`;
+        }
+
+        refreshMemory() {
+            this.readMemoryStatus();
+            this.render();
+        }
+
+        async openMemoryFolder() {
+            if (!this.memory) return;
+            await this.memory.openFolder();
+            this.refreshMemory();
+        }
+
+        installMemory() {
+            if (!this.memory) return;
+            const result = this.memory.install();
+            this.lastResponse = result.ok
+                ? `Private memory bootstrap installed locally. Files copied: ${result.filesCopied}.`
+                : `Memory install failed: ${result.error || result.status || "unknown error"}`;
+            this.refreshMemory();
         }
 
         saveSettings() {

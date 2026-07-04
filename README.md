@@ -48,7 +48,8 @@ keyboard and large terminal with:
 - a global Assistant Presence orb for the future Angie / Gustav assistant
   system, with local-only visual states, Ares/Aphrodite public profiles,
   Gustav/Angie private aliases, personality-aware placeholder responses,
-  panel settings and no AI or voice backend connected yet;
+  private local memory bootstrap status, panel settings and no AI or voice
+  backend connected yet;
 - editable project timelines for engineering work, with a visual Project
   Control popup for creating projects, managing milestones, changing status,
   reordering steps and saving without manually editing JSON;

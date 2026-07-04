@@ -2,7 +2,8 @@
 
 `v2.1.0` introduced the first visual core for the future Angie / Gustav
 assistant system inside AegisUi. `v2.1.5` adds a local personality layer for
-Gustav, Angie, Ares and Aphrodite without connecting any backend.
+Gustav, Angie, Ares and Aphrodite. `v2.1.6` adds a private local memory
+bootstrap without connecting any LLM, retrieval backend or command router.
 
 This phase is intentionally local and visual only:
 
@@ -14,6 +15,8 @@ This phase is intentionally local and visual only:
   assistant.
 - no Ollama, FastAPI, Chatterbox, OpenVoice, Google TTS, STT or external API is
   connected in `v2.1.5`.
+- private memory can be installed locally, but it is not indexed, embedded,
+  retrieved or sent anywhere in `v2.1.6`.
 
 ## Visual presence
 
@@ -71,6 +74,15 @@ machine and returns a personality-aware placeholder response.
 - refined state visuals and panel styling by profile;
 - backend, voice, command-router and memory statuses that remain offline.
 
+`v2.1.6` adds:
+
+- `AssistantMemoryBootstrap` local loader;
+- private bootstrap memory structure;
+- install and test scripts;
+- Assistant Settings `MEMORY` status panel;
+- userData installation at
+  `~/Library/Application Support/EdexUi-Eng/assistant/memory/bootstrap/`.
+
 ## Names and aliases
 
 Public names:
@@ -104,6 +116,9 @@ Persisted fields:
 - panel open/closed;
 - last selected test state;
 - backend status placeholders.
+
+Installed private memory is stored outside Git in the app data folder. It is
+read locally for status only in `v2.1.6`.
 
 No API keys, tokens, voice samples, model weights or private memory are stored.
 
@@ -155,6 +170,7 @@ Core files:
 - `src/classes/assistant/assistantPersonality.class.js`
 - `src/classes/assistant/assistantSettings.class.js`
 - `src/classes/assistant/assistantMicrocopy.class.js`
+- `src/classes/assistant/assistantMemoryBootstrap.class.js`
 - `src/classes/assistant/assistantPanel.class.js`
 - `src/classes/assistant/assistantBridge.class.js`
 - `src/classes/assistant/assistantPermissions.class.js`
@@ -169,6 +185,9 @@ Public examples:
 - `assistant/profiles/public/aphrodite.json`
 - `assistant/profiles/private/gustav.example.json`
 - `assistant/profiles/private/angie.example.json`
+- `assistant/memory/README.md`
+- `assistant/memory/bootstrap/schema.json`
+- `assistant/memory/bootstrap/public_examples/*.redacted.md`
 
 Ignored private folders:
 

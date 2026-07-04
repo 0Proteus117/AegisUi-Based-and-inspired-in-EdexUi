@@ -71,6 +71,28 @@ The app currently uses JSON files in the macOS application-data folder:
   selection and offline backend placeholders. No assistant prompts, chat
   history, voice samples or API keys are stored there.
 
+Assistant private memory bootstrap can be installed locally into:
+
+```text
+~/Library/Application Support/EdexUi-Eng/assistant/memory/bootstrap/
+```
+
+Install with:
+
+```sh
+node scripts/install-assistant-bootstrap-memory.js
+```
+
+Validate with:
+
+```sh
+node scripts/test-assistant-memory-bootstrap.js
+```
+
+The source folder `assistant/memory/private/` is ignored by Git. The app only
+shows memory status and title previews in `v2.1.6`; no LLM, embeddings,
+retrieval or command router is connected.
+
 ## Apple Music local Automation
 
 Apple Music integration is local-only. It uses macOS Music.app Automation via
