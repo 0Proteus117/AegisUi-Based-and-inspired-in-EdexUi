@@ -166,7 +166,8 @@ Security/offline documentation:
 - [ASSISTANT_SYSTEM.md](ASSISTANT_SYSTEM.md) documents the Assistant Presence
   orb, states, aliases, local settings, voice safety and local text bridge.
 - [ASSISTANT_LOCAL_AI.md](ASSISTANT_LOCAL_AI.md) documents the local Ollama
-  written-chat setup, model check and safety boundaries.
+  written-chat setup, model check, reliability diagnostics and safety
+  boundaries.
 - [ASSISTANT_PERSONALITY.md](ASSISTANT_PERSONALITY.md) documents the local
   Gustav/Angie and Ares/Aphrodite personality split.
 - [ASSISTANT_AUTHORITY_MATRIX.md](ASSISTANT_AUTHORITY_MATRIX.md) defines the

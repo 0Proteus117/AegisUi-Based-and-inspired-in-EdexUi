@@ -125,6 +125,14 @@ ollama pull llama3.2:3b
 node scripts/test-assistant-ollama.js
 ```
 
+If Ollama was installed with Homebrew and the app shows `OLLAMA_OFFLINE`, start
+the local service:
+
+```sh
+brew services start ollama
+node scripts/diagnose-assistant-local-ai.js
+```
+
 Local written chat does not enable voice, STT, TTS, file writes, shell commands
 or system actions.
 

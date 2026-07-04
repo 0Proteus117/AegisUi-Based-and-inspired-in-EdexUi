@@ -11,11 +11,27 @@
     }
 
     function normalizeEndpoint(endpoint = "") {
-        return String(endpoint || "http://127.0.0.1:11434").replace(/\/+$/, "");
+        return String(endpoint || "http://127.0.0.1:11434")
+            .trim()
+            .replace(/[,\s]+$/g, "")
+            .replace(/\/+$/, "");
+    }
+
+    function validateEndpoint(endpoint = "") {
+        const normalized = normalizeEndpoint(endpoint);
+        try {
+            const parsed = new URL(normalized);
+            if (!["http:", "https:"].includes(parsed.protocol)) return {ok: false, status: "INVALID_ENDPOINT", endpoint: normalized};
+            if (!parsed.hostname) return {ok: false, status: "INVALID_ENDPOINT", endpoint: normalized};
+            return {ok: true, status: "OK", endpoint: normalized};
+        } catch (error) {
+            return {ok: false, status: "INVALID_ENDPOINT", endpoint: normalized, error: error.message || String(error)};
+        }
     }
 
     function normalizeError(error, fallback = "ERROR") {
-        const message = String((error && (error.message || error.code)) || error || fallback);
+        const message = String((error && (error.code || error.message)) || error || fallback);
+        if (/INVALID_ENDPOINT/i.test(message)) return "INVALID_ENDPOINT";
         if (/ECONNREFUSED|ENOTFOUND|EHOSTUNREACH|fetch failed|Failed to fetch|network/i.test(message)) return "OLLAMA_OFFLINE";
         if (/aborted|timeout|ETIMEDOUT/i.test(message)) return "TIMEOUT";
         return fallback;
@@ -34,10 +50,20 @@
             this.endpoint = normalizeEndpoint(endpoint);
         }
 
+        validateEndpoint(endpoint = this.endpoint) {
+            return validateEndpoint(endpoint);
+        }
+
         request(path = "/", options = {}) {
             const method = options.method || "GET";
             const body = options.body ? JSON.stringify(options.body) : null;
             const timeoutMs = Number(options.timeoutMs || this.timeoutMs || 60000);
+            const endpoint = validateEndpoint(this.endpoint);
+            if (!endpoint.ok) {
+                const error = new Error("INVALID_ENDPOINT");
+                error.code = "INVALID_ENDPOINT";
+                return Promise.reject(error);
+            }
             const url = `${this.endpoint}${path}`;
 
             if (this.http && this.https && this.URL) {
@@ -120,12 +146,32 @@
         }
 
         async checkHealth() {
+            const checkedAt = new Date().toISOString();
+            const endpoint = validateEndpoint(this.endpoint);
+            if (!endpoint.ok) {
+                return {
+                    ok: false,
+                    status: "INVALID_ENDPOINT",
+                    endpoint: endpoint.endpoint,
+                    checkedAt,
+                    error: endpoint.error || "Invalid Ollama endpoint",
+                    models: []
+                };
+            }
+
             try {
-                const data = await this.request("/api/tags", {method: "GET"});
+                const data = await this.request("/api/tags", {method: "GET", timeoutMs: 5000});
                 const models = Array.isArray(data.models) ? data.models.map(model => model.name).filter(Boolean) : [];
-                return {ok: true, status: "READY", models};
+                return {ok: true, status: "READY", endpoint: endpoint.endpoint, checkedAt, models};
             } catch (error) {
-                return {ok: false, status: normalizeError(error, "OLLAMA_OFFLINE"), error: error.message || String(error), models: []};
+                return {
+                    ok: false,
+                    status: normalizeError(error, "OLLAMA_OFFLINE"),
+                    endpoint: endpoint.endpoint,
+                    checkedAt,
+                    error: error.message || String(error),
+                    models: []
+                };
             }
         }
 

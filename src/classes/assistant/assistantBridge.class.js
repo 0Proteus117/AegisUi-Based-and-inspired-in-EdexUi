@@ -29,7 +29,7 @@
                 assistantId: settings.activeAssistant,
                 mode: settings.mode
             });
-            this.setState("SPEAKING");
+            this.setState(result.ok ? "SPEAKING" : "ERROR");
             return {
                 ...result,
                 input: text,

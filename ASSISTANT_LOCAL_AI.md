@@ -56,6 +56,12 @@ If Ollama is not running, the app shows:
 Local AI offline. Start Ollama and install the configured model.
 ```
 
+Recommended persistent service on macOS when installed with Homebrew:
+
+```sh
+brew services start ollama
+```
+
 ## Local configuration
 
 The committed example lives at:
@@ -129,6 +135,20 @@ Checks:
 - configured model;
 - private memory bootstrap;
 - one local chat response.
+
+```sh
+node scripts/diagnose-assistant-local-ai.js
+```
+
+Prints:
+
+- local config path;
+- chat enabled state;
+- endpoint/model;
+- reachable/not reachable;
+- available models;
+- memory status;
+- last technical error.
 
 ```sh
 node scripts/pull-assistant-model.js

@@ -82,8 +82,9 @@
 
         handleOutsideClick(event) {
             if (!this.panel || !this.panel.isOpen()) return;
-            if (this.container && this.container.contains(event.target)) return;
-            if (this.panel.root && this.panel.root.contains(event.target)) return;
+            const path = typeof event.composedPath === "function" ? event.composedPath() : [];
+            if (this.container && (this.container.contains(event.target) || path.includes(this.container))) return;
+            if (this.panel.root && (this.panel.root.contains(event.target) || path.includes(this.panel.root))) return;
             this.panel.close();
         }
 

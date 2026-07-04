@@ -94,6 +94,14 @@ model, the panel returns an honest local status message.
   `~/Library/Application Support/EdexUi-Eng/assistant/config/assistant-ai.json`;
 - diagnostics scripts for Ollama and model pulls.
 
+`v2.1.8` hardens local AI UX:
+
+- robust endpoint validation and `INVALID_ENDPOINT` status;
+- faster `/api/tags` health checks;
+- visible last-check and last-error fields;
+- Enter-to-send and Shift+Enter newline behavior;
+- stable panel click handling so settings/dropdowns do not close the panel.
+
 ## Names and aliases
 
 Public names:

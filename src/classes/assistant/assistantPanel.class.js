@@ -18,6 +18,7 @@
             this.lastMemoryStatus = null;
             this.localAIStatus = null;
             this.transcript = [];
+            this.isSending = false;
         }
 
         mount() {
@@ -27,6 +28,8 @@
             this.root.className = "assistant-panel";
             this.root.setAttribute("aria-live", "polite");
             this.root.setAttribute("aria-label", "Assistant presence panel");
+            this.root.addEventListener("click", event => event.stopPropagation());
+            this.root.addEventListener("mousedown", event => event.stopPropagation());
             document.body.appendChild(this.root);
             this.render();
             return this.root;
@@ -65,6 +68,9 @@
             const backendLine = microcopy ? microcopy.backendOffline(config) : "Assistant backend not connected yet.";
             const voiceStatusLine = microcopy ? microcopy.voiceNotConfigured(config) : "Voice backend not connected yet.";
             const lastResponse = this.lastResponse || (microcopy ? microcopy.placeholderResponse(config) : "Assistant backend not connected yet.");
+            const defaultResponse = this.localAIStatus && this.localAIStatus.status === "READY"
+                ? "Local written chat ready."
+                : lastResponse;
             const inputPlaceholder = microcopy ? microcopy.inputPlaceholder(config) : "Type a local prompt…";
             const toneLabel = this.settings.toneLabel();
             const memoryStatus = this.readMemoryStatus();
@@ -99,7 +105,7 @@
 
                 <section class="assistant-panel-response">
                     <small>LAST RESPONSE</small>
-                    <p>${assistantEscape(lastResponse)}</p>
+                    <p>${assistantEscape(defaultResponse)}</p>
                 </section>
 
                 <section class="assistant-chat-transcript">
@@ -177,6 +183,8 @@
                             <dt>Model</dt><dd>${assistantEscape(localAIStatus.model || (localAIConfig && localAIConfig.model) || "llama3.2:3b")}</dd>
                             <dt>Memory bootstrap</dt><dd>${assistantEscape(localAIStatus.memory || memoryStatus.status || "NOT_READY")}</dd>
                             <dt>Chat</dt><dd>${assistantEscape(localAIStatus.enabled ? "ENABLED" : "DISABLED")}</dd>
+                            <dt>Last check</dt><dd>${assistantEscape(localAIStatus.checkedAt ? new Date(localAIStatus.checkedAt).toLocaleTimeString([], {hour: "2-digit", minute: "2-digit"}) : "Never")}</dd>
+                            <dt>Last error</dt><dd>${assistantEscape(localAIStatus.lastError || "None")}</dd>
                             <dt>Command router</dt><dd>OFFLINE</dd>
                             <dt>Voice</dt><dd>OFFLINE</dd>
                         </dl>
@@ -256,8 +264,22 @@
                 });
             }
 
+            const input = this.root.querySelector("#assistant_manual_input");
+            if (input) {
+                input.addEventListener("keydown", event => {
+                    if (event.key !== "Enter") return;
+                    if (event.shiftKey) return;
+                    if (event.metaKey || !event.altKey) {
+                        event.preventDefault();
+                        this.handleSend();
+                    }
+                });
+            }
+
             this.root.querySelectorAll("[data-action]").forEach(button => {
-                button.addEventListener("click", () => {
+                button.addEventListener("click", event => {
+                    event.preventDefault();
+                    event.stopPropagation();
                     const action = button.dataset.action;
                     if (action === "mute") this.toggleMute();
                     if (action === "settings") {
@@ -277,7 +299,9 @@
             });
 
             this.root.querySelectorAll("[data-state-test]").forEach(button => {
-                button.addEventListener("click", () => {
+                button.addEventListener("click", event => {
+                    event.preventDefault();
+                    event.stopPropagation();
                     this.settings.patch({lastState: button.dataset.stateTest});
                     this.presence.setState(button.dataset.stateTest);
                 });
@@ -285,21 +309,41 @@
         }
 
         async handleSend() {
+            if (this.isSending) return;
             const input = this.root.querySelector("#assistant_manual_input");
             const message = input ? input.value.trim() : "";
             if (!message) return;
 
+            this.isSending = true;
             this.addTranscript("user", message);
-            const result = await this.bridge.sendText(message);
-            this.lastResponse = result.response || (window.AssistantMicrocopy
-                ? window.AssistantMicrocopy.placeholderResponse(this.settings.settings)
-                : "Assistant backend not connected yet.");
-            this.addTranscript("assistant", this.lastResponse);
-            if (input) input.value = "";
-            this.render();
-            setTimeout(() => {
-                if (!this.settings.settings.muted) this.presence.setState("IDLE");
-            }, 900);
+            try {
+                const result = await this.bridge.sendText(message);
+                this.lastResponse = result.response || (window.AssistantMicrocopy
+                    ? window.AssistantMicrocopy.placeholderResponse(this.settings.settings)
+                    : "Assistant backend not connected yet.");
+                if (result.lastError) {
+                    this.localAIStatus = {
+                        ...(this.localAIStatus || {}),
+                        status: result.status,
+                        lastError: result.lastError,
+                        checkedAt: new Date().toISOString()
+                    };
+                }
+                this.addTranscript("assistant", this.lastResponse);
+                if (input) input.value = "";
+            } catch (error) {
+                this.lastResponse = `Local AI error: ${error.message || error}`;
+                this.addTranscript("assistant", this.lastResponse);
+                this.presence.setState("ERROR");
+            } finally {
+                this.isSending = false;
+                this.render();
+                const nextInput = this.root.querySelector("#assistant_manual_input");
+                if (nextInput) setTimeout(() => nextInput.focus(), 40);
+                setTimeout(() => {
+                    if (!this.settings.settings.muted) this.presence.setState("IDLE");
+                }, 900);
+            }
         }
 
         toggleMute() {
@@ -403,7 +447,9 @@
         localAIStatusLabel(status = {}) {
             if (status.status === "READY") return "LOCAL AI READY";
             if (status.status === "OLLAMA_OFFLINE") return "OLLAMA OFFLINE";
+            if (status.status === "INVALID_ENDPOINT") return "INVALID ENDPOINT";
             if (status.status === "MODEL_NOT_FOUND") return "MODEL NOT FOUND";
+            if (status.status === "TIMEOUT") return "TIMEOUT";
             if (status.status === "DISABLED") return "DISABLED";
             return status.status || "UNKNOWN";
         }

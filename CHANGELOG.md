@@ -1,5 +1,28 @@
 # Changelog
 
+## 2.1.8 - 2026-07-04
+
+### Fixed
+
+- Fixed Assistant panel click handling so settings, dropdowns, input, memory
+  and Local AI controls no longer close the panel.
+- Added Enter-to-send for the Assistant textarea.
+- Added Shift+Enter newline behavior.
+- Added duplicate-send guard while Ollama is processing.
+- Improved focus restoration after sending.
+- Improved Local AI health checks with endpoint validation, 5s `/api/tags`
+  health timeout, last-check timestamp and last-error diagnostics.
+- Clarified `Assistant backend` vs `Local AI` status so a ready local chat no
+  longer looks like a generic backend-offline placeholder.
+- Added `scripts/diagnose-assistant-local-ai.js`.
+
+### Security
+
+- Voice, STT, TTS and command router remain offline.
+- No Apple Music, map provider, AIS, satellite or runtime module is changed.
+- No private memory, `.env`, `.env.local`, model weights, audio samples or API
+  keys are committed.
+
 ## 2.1.7 - 2026-07-04
 
 ### Added

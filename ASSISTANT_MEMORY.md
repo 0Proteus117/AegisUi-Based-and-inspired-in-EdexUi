@@ -92,6 +92,9 @@ Added in `v2.1.7`:
 - optional bootstrap memory injection into the local system prompt;
 - no embeddings, indexing or retrieval yet.
 
+`v2.1.8` does not change the private memory format. It only improves the
+Local AI status/UX around Ollama availability and panel input handling.
+
 Planned, not implemented yet:
 
 - local memory index;

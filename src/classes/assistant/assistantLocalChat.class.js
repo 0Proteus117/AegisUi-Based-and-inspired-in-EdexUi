@@ -123,7 +123,7 @@
             return {
                 provider: "ollama",
                 enabled: typeof source.enabled === "boolean" ? source.enabled : defaults.enabled,
-                endpoint: String(source.endpoint || defaults.endpoint).replace(/\/+$/, ""),
+                endpoint: String(source.endpoint || defaults.endpoint).trim().replace(/[,\s]+$/g, "").replace(/\/+$/, ""),
                 model: String(source.model || defaults.model).trim() || defaults.model,
                 timeoutMs: Math.max(5000, Math.min(Number(source.timeoutMs || defaults.timeoutMs), 180000)),
                 temperature: {
@@ -249,14 +249,33 @@
 
             const model = await this.client.ensureModelAvailable(config.model);
             if (!model.ok) {
-                const summary = model.status === "MODEL_NOT_FOUND"
-                    ? `Model not found. Run: ollama pull ${config.model}`
-                    : "Local AI offline. Start Ollama and install the configured model.";
-                this.lastStatus = {...base, ok: false, status: model.status, summary, models: model.models || []};
+                const summary = {
+                    INVALID_ENDPOINT: "Invalid Ollama endpoint. Use http://127.0.0.1:11434 or http://localhost:11434.",
+                    MODEL_NOT_FOUND: `Model not found. Run: ollama pull ${config.model}`,
+                    TIMEOUT: "Ollama health check timed out. Start Ollama, then press Check Ollama.",
+                    OLLAMA_OFFLINE: "Local AI offline. Start Ollama, then press Check Ollama."
+                }[model.status] || "Local AI error. Check the configured endpoint/model.";
+                this.lastStatus = {
+                    ...base,
+                    ok: false,
+                    status: model.status,
+                    summary,
+                    models: model.models || [],
+                    lastError: model.error || "",
+                    checkedAt: model.checkedAt || new Date().toISOString()
+                };
                 return this.lastStatus;
             }
 
-            this.lastStatus = {...base, ok: true, status: "READY", summary: "Local AI ready.", models: model.models || []};
+            this.lastStatus = {
+                ...base,
+                ok: true,
+                status: "READY",
+                summary: "Local AI ready.",
+                models: model.models || [],
+                lastError: "",
+                checkedAt: model.checkedAt || new Date().toISOString()
+            };
             return this.lastStatus;
         }
 
@@ -278,7 +297,8 @@
                 return {
                     ok: false,
                     status: status.status,
-                    response: status.summary || "Local AI is not ready."
+                    response: status.summary || "Local AI is not ready.",
+                    lastError: status.lastError || ""
                 };
             }
 

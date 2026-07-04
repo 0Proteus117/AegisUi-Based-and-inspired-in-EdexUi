@@ -28,10 +28,13 @@ async function main() {
     const chat = new AssistantLocalChat({projectRoot, userDataPath, memory});
     const config = chat.sanitizeConfig(readConfig());
 
+    print("OLLAMA_ENDPOINT", config.endpoint);
     const health = await chat.client.checkHealth();
     print("OLLAMA_HEALTH", health.ok ? "OK" : "FAIL");
+    print("OLLAMA_MODELS", health.models && health.models.length ? health.models.join(",") : "NONE");
     if (!health.ok) {
         print("OLLAMA_STATUS", health.status);
+        print("LAST_ERROR", health.error || "NONE");
         print("READY_FOR_WRITTEN_CHAT", "NO");
         process.exit(1);
     }
@@ -40,6 +43,7 @@ async function main() {
     print("OLLAMA_MODEL", model.ok ? "OK" : "MISSING");
     print("OLLAMA_MODEL_NAME", config.model);
     if (!model.ok) {
+        print("LAST_ERROR", model.error || model.status || "MODEL_NOT_FOUND");
         print("READY_FOR_WRITTEN_CHAT", "NO");
         process.exit(1);
     }
@@ -63,6 +67,7 @@ async function main() {
 
     print("LOCAL_CHAT", result.ok && result.response ? "OK" : "FAIL");
     if (result.response) print("LOCAL_CHAT_RESPONSE", result.response.replace(/\s+/g, " ").slice(0, 160));
+    print("LAST_ERROR", result.lastError || result.error || "NONE");
     print("READY_FOR_WRITTEN_CHAT", result.ok ? "YES" : "NO");
     if (!result.ok) process.exit(1);
 }
@@ -70,6 +75,7 @@ async function main() {
 main().catch(error => {
     print("LOCAL_CHAT", "FAIL");
     print("RAW_ERROR", error.message || String(error));
+    print("LAST_ERROR", error.message || String(error));
     print("READY_FOR_WRITTEN_CHAT", "NO");
     process.exit(1);
 });
