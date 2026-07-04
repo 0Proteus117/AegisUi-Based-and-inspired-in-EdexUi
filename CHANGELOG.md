@@ -1,5 +1,23 @@
 # Changelog
 
+## 2.1.9 - 2026-07-04
+
+### Changed
+
+- Converted `Build packaged binaries` to a manual GitHub Actions workflow.
+- Added automatic lightweight `Repo health` workflow for push/PR checks.
+- Added `scripts/release-health-check.js`.
+- Added `scripts/run-regression-checks.js`.
+- Added GitHub workflow documentation and weekly stability-freeze notes.
+- Closed obsolete v1.x PRs superseded by `feature/systems-online-pass`.
+
+### Security
+
+- No app runtime, map provider, Apple Music, Calendar, Project Timeline,
+  Assistant Local AI, voice or command-router code is changed.
+- No tags, published releases, private memory, chat exports, `.env`,
+  `.env.local`, API keys, audio samples or model files are deleted or staged.
+
 ## 2.1.8 - 2026-07-04
 
 ### Fixed

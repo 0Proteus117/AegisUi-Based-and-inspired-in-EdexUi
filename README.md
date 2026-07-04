@@ -81,6 +81,11 @@ Changing workspace never recreates the HUB: its map, Calendar, Music and
 project state remain alive in the background. Non-HUB views are rendered only
 when first opened.
 
+GitHub hygiene note: automatic GitHub Actions now use the lightweight
+`Repo health` workflow. macOS DMG packaging remains a manual/local release
+step because Apple Silicon packaging, ad-hoc signing and Music.app Automation
+identity are environment-sensitive. See [GITHUB_WORKFLOWS.md](GITHUB_WORKFLOWS.md).
+
 Workspace content is defined in
 `src/config/workspaces.config.js`, while rendering and navigation live in
 `src/classes/workspaceManager.class.js`. This keeps profile configuration out

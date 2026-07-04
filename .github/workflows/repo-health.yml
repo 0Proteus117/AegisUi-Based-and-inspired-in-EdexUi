@@ -1,0 +1,42 @@
+name: Repo health
+
+on:
+  push:
+    branches:
+      - master
+      - feature/systems-online-pass
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  health:
+    name: Repository health
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Lint if present
+        run: npm run lint --if-present
+
+      - name: Run safe release health check
+        run: node scripts/release-health-check.js
+
+      - name: Legacy test note
+        run: |
+          echo "Skipping root npm test in automatic Repo health."
+          echo "The legacy test script performs a full prebuild plus Snyk scan,"
+          echo "which is not a lightweight repository health signal and can create"
+          echo "false red checks without local packaging credentials or Snyk auth."

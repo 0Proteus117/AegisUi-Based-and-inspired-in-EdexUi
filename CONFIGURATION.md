@@ -136,6 +136,23 @@ node scripts/diagnose-assistant-local-ai.js
 Local written chat does not enable voice, STT, TTS, file writes, shell commands
 or system actions.
 
+## GitHub workflow configuration
+
+Automatic GitHub Actions use `Repo health` for lightweight repository checks.
+The old packaged-binary workflow is manual-only to avoid false red checks on
+normal pushes.
+
+Useful local commands:
+
+```sh
+node scripts/release-health-check.js
+node scripts/run-regression-checks.js
+```
+
+DMGs are generated locally for now because macOS packaging, signing identity
+and Music.app Automation permissions are tied to the validated Mac environment.
+See `GITHUB_WORKFLOWS.md` for the current workflow policy.
+
 ## Apple Music local Automation
 
 Apple Music integration is local-only. It uses macOS Music.app Automation via
