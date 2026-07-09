@@ -189,6 +189,31 @@ class WorkspaceManager {
         return this.activeId;
     }
 
+    setActiveWorkspace(workspaceId) {
+        const aliases = {
+            HUB: "hub",
+            ENGINEER: "engineer",
+            ENG: "engineer",
+            OSINT: "osint",
+            STUDENT: "student",
+            STUD: "student",
+            ARTIST: "artist",
+            ART: "artist",
+            BUSINESS: "business",
+            BUS: "business",
+            COMMS: "comms",
+            LAUNCH_BAY: "launch-bay",
+            BAY: "launch-bay",
+            DEVELOPER: "developer",
+            DEV: "developer",
+            AGENT_COMMAND: "agent-command",
+            AGENT: "agent-command"
+        };
+        const requested = String(workspaceId || "");
+        const normalized = aliases[requested] || aliases[requested.toUpperCase()] || requested;
+        if (this.byId.has(normalized)) this.activate(normalized);
+    }
+
     restoreWorkspace(workspaceId) {
         if (!workspaceId || !this.byId.has(workspaceId) || this.activeId === workspaceId) return;
         this.activate(workspaceId, false);
@@ -236,22 +261,454 @@ class WorkspaceManager {
 
     renderEngineer(view, definition) {
         const grid = view.querySelector(".workspace-grid");
-        const projectWidget = definition.widgets.find(widget => widget.type === "project-status");
-        const sourceWidget = definition.widgets.find(widget => widget.id === "engineering-sector-pulse");
-        const researchWidget = definition.widgets.find(widget => widget.id === "engineering-research");
-        const standardsWidget = definition.widgets.find(widget => widget.id === "engineering-standards");
-        const roadmapWidget = definition.widgets.find(widget => widget.type === "roadmap");
+        view.classList.add("engineer-command-deck");
+        grid.classList.add("engineer-command-grid");
+        this.engineeringView = view;
+        this.engineeringRegistry = window.EngineeringToolsRegistry;
+        this.engineeringTools = (this.engineeringRegistry ? this.engineeringRegistry.TOOLS : []).map(tool => ({...tool}));
+        this.engineeringAppIndex = null;
 
-        grid.classList.add("engineer-workspace-grid");
-        grid.appendChild(this.createPanel(projectWidget, "workspace-projects"));
-        grid.appendChild(this.createToolPanel(definition, view));
-        grid.appendChild(this.createListPanel(sourceWidget, view));
-        grid.appendChild(this.createListPanel(researchWidget, view));
-        grid.appendChild(this.createListPanel(standardsWidget, view));
-        grid.appendChild(this.createRoadmapPanel(roadmapWidget));
+        const categoryTiles = (this.engineeringRegistry ? this.engineeringRegistry.CATEGORIES : []).map(category => `
+            <button type="button" class="eng-category-tile" data-eng-category="${this.escape(category.id)}">
+                <span>${this.escape(category.icon)}</span>
+                <strong>${this.escape(category.title)}</strong>
+                <small>${this.escape(category.description)}</small>
+            </button>`).join("");
 
-        const projectPanel = grid.querySelector(".workspace-projects .workspace-panel-content");
-        this.loadEngineeringProjects(projectPanel, view);
+        grid.innerHTML = `
+            <section class="eng-command-hero workspace-panel">
+                <div class="eng-command-title">
+                    <small>ENG / SPECIALIZED COMMAND DECK</small>
+                    <h2>ENGINEERING COMMAND DECK</h2>
+                    <p>CAD/CAM, CAE, manufacturing, calculators, materials, research and live project context.</p>
+                </div>
+                <div class="eng-command-stats">
+                    <div><small>APPS</small><strong data-eng-stat="apps">DETECTING</strong></div>
+                    <div><small>WEB</small><strong data-eng-stat="web">0</strong></div>
+                    <div><small>TOOLS</small><strong data-eng-stat="internal">0</strong></div>
+                    <div><small>PROJECTS</small><strong data-eng-stat="projects">HUB</strong></div>
+                </div>
+            </section>
+            <section class="eng-category-strip">${categoryTiles}</section>
+            <section class="eng-projects-card workspace-panel">
+                <header><h2>ENGINEERING PROJECTS</h2><span>HUB LINK</span></header>
+                <div class="workspace-panel-content"><div class="workspace-loading">READING HUB PROJECTS</div></div>
+            </section>
+            <section class="eng-calculators-card workspace-panel">
+                <header><h2>QUICK CALCULATORS</h2><span>LOCAL</span></header>
+                <div class="workspace-panel-content" data-eng-section="calculators"></div>
+            </section>
+            <section class="eng-tools-card workspace-panel">
+                <header><h2>CAD / CAM / CAE</h2><span>DETECTING</span></header>
+                <div class="workspace-panel-content" data-eng-section="cad-simulation"></div>
+            </section>
+            <section class="eng-manufacturing-card workspace-panel">
+                <header><h2>MANUFACTURING / 3D PRINT</h2><span>ACTIVE</span></header>
+                <div class="workspace-panel-content" data-eng-section="manufacturing"></div>
+            </section>
+            <section class="eng-materials-card workspace-panel">
+                <header><h2>MATERIALS / REFERENCES</h2><span>READY</span></header>
+                <div class="workspace-panel-content" data-eng-section="materials"></div>
+            </section>
+            <section class="eng-research-card workspace-panel">
+                <header><h2>RESEARCH / STANDARDS</h2><span>WEB</span></header>
+                <div class="workspace-panel-content" data-eng-section="research-standards"></div>
+            </section>`;
+
+        this.renderEngineeringToolSections(view);
+        this.loadEngineeringProjects(grid.querySelector(".eng-projects-card .workspace-panel-content"), view);
+        this.bindEngineeringDeck(view);
+        this.detectEngineeringApps(view);
+        this.updateEngineeringStats(view);
+    }
+
+    bindEngineeringDeck(view) {
+        view.querySelectorAll("[data-eng-category]").forEach(button => {
+            button.addEventListener("click", () => this.openEngineeringCategory(button.dataset.engCategory));
+        });
+        view.querySelectorAll("[data-eng-tool]").forEach(button => {
+            button.addEventListener("click", event => {
+                const action = event.target && event.target.dataset ? event.target.dataset.engAction : "";
+                const toolId = button.dataset.engTool;
+                if (action === "open") this.executeEngineeringTool(toolId, view);
+                else this.openEngineeringToolById(toolId);
+            });
+        });
+    }
+
+    renderEngineeringToolSections(view) {
+        const buckets = {
+            "calculators": ["calculators"],
+            "cad-simulation": ["cad", "simulation"],
+            "manufacturing": ["manufacturing"],
+            "materials": ["materials"],
+            "research-standards": ["research", "standards"]
+        };
+        Object.entries(buckets).forEach(([sectionId, categories]) => {
+            const container = view.querySelector(`[data-eng-section="${sectionId}"]`);
+            if (!container) return;
+            const tools = this.engineeringTools.filter(tool => categories.includes(tool.category));
+            container.innerHTML = `<div class="eng-tool-grid">${tools.map(tool => this.engineeringToolCard(tool)).join("")}</div>`;
+        });
+    }
+
+    engineeringToolCard(tool) {
+        const status = this.engineeringToolStatus(tool);
+        const actionLabel = tool.type === "app"
+            ? (status === "INSTALLED" ? "OPEN" : "INFO")
+            : (tool.type === "web" ? "OPEN WEB" : (tool.type === "planned" ? "PLANNED" : "OPEN"));
+        return `
+            <button type="button" class="eng-tool-card" data-eng-tool="${this.escape(tool.id)}" data-type="${this.escape(tool.type)}">
+                <span class="eng-tool-icon">${this.escape(tool.icon || "▧")}</span>
+                <em class="${this.statusClass(status)}">${this.escape(status)}</em>
+                <strong>${this.escape(tool.title)}</strong>
+                <small>${this.escape(tool.description || "")}</small>
+                <i>
+                    <b data-eng-action="open">${this.escape(actionLabel)}</b>
+                    <b data-eng-action="expand">EXPAND</b>
+                </i>
+            </button>`;
+    }
+
+    engineeringToolStatus(tool) {
+        if (!tool) return "UNKNOWN";
+        if (tool.type === "app") return tool.installed ? "INSTALLED" : "NOT FOUND";
+        if (tool.type === "web") return "WEB";
+        if (tool.type === "internal") return "READY";
+        return String(tool.status || "PLANNED").toUpperCase();
+    }
+
+    async detectEngineeringApps(view = this.engineeringView) {
+        try {
+            if (!this.applicationIndex) this.applicationIndex = this.ipc.invoke("applications-list");
+            const applications = await this.applicationIndex;
+            const list = Array.isArray(applications) ? applications : [];
+            this.engineeringAppIndex = list;
+            this.engineeringTools = this.engineeringTools.map(tool => {
+                if (tool.type !== "app") return tool;
+                const aliases = (tool.aliases || [tool.appName || tool.title]).map(alias => String(alias).toLowerCase());
+                const match = list.find(candidate => {
+                    const name = String(candidate.name || "").toLowerCase();
+                    return aliases.some(alias => name === alias || name.includes(alias));
+                });
+                return {...tool, installed: Boolean(match), applicationPath: match && match.path, detectedName: match && match.name};
+            });
+            if (view) {
+                this.renderEngineeringToolSections(view);
+                this.bindEngineeringDeck(view);
+                this.updateEngineeringStats(view);
+            }
+        } catch (error) {
+            this.showToast(view, "APP DETECTION UNAVAILABLE");
+        }
+    }
+
+    updateEngineeringStats(view = this.engineeringView) {
+        if (!view || !this.engineeringTools) return;
+        const installed = this.engineeringTools.filter(tool => tool.type === "app" && tool.installed).length;
+        const apps = this.engineeringTools.filter(tool => tool.type === "app").length;
+        const web = this.engineeringTools.filter(tool => tool.type === "web").length;
+        const internal = this.engineeringTools.filter(tool => tool.type === "internal").length;
+        const set = (key, value) => {
+            const node = view.querySelector(`[data-eng-stat="${key}"]`);
+            if (node) node.innerText = value;
+        };
+        set("apps", `${installed}/${apps}`);
+        set("web", String(web));
+        set("internal", String(internal));
+    }
+
+    openEngineeringCategory(categoryId) {
+        const view = this.engineeringView || document.getElementById("workspace_engineer");
+        if (!view || !this.engineeringRegistry) return;
+        if (this.activeId !== "engineer") this.activate("engineer", false);
+        const category = this.engineeringRegistry.CATEGORIES.find(item => item.id === categoryId);
+        const tools = this.engineeringTools.filter(tool => tool.category === categoryId);
+        this.openEngineeringDetail({
+            title: category ? category.title : "Engineering category",
+            icon: category ? category.icon : "▧",
+            status: "ACTIVE",
+            body: `
+                <p>${this.escape(category ? category.description : "Engineering category tools.")}</p>
+                <div class="eng-detail-tool-list">${tools.map(tool => this.engineeringToolCard(tool)).join("")}</div>`
+        });
+        this.bindEngineeringDetailToolActions();
+    }
+
+    openEngineeringToolById(toolId) {
+        if (this.activeId !== "engineer") this.activate("engineer", false);
+        const tool = this.engineeringTools && this.engineeringTools.find(item => item.id === toolId);
+        if (!tool) return;
+        const status = this.engineeringToolStatus(tool);
+        const actions = `
+            <button type="button" data-eng-detail-action="execute" data-tool-id="${this.escape(tool.id)}">${tool.type === "web" ? "OPEN WEB" : tool.type === "app" ? "OPEN / INFO" : "RUN TOOL"}</button>
+            <button type="button" data-eng-detail-action="close">CLOSE</button>`;
+        this.openEngineeringDetail({
+            title: tool.title,
+            icon: tool.icon,
+            status,
+            body: this.engineeringToolDetailBody(tool),
+            actions
+        });
+        this.bindEngineeringDetailControls(tool);
+    }
+
+    openEngineeringCalculator(calculatorId) {
+        const tool = this.engineeringTools.find(item => item.actionId === calculatorId || item.id === calculatorId);
+        if (tool) this.openEngineeringToolById(tool.id);
+    }
+
+    engineeringToolDetailBody(tool) {
+        if (tool.type === "internal") return this.engineeringInternalToolBody(tool);
+        if (tool.type === "app") {
+            const status = this.engineeringToolStatus(tool);
+            return `
+                <div class="eng-detail-readout">
+                    <div><small>TYPE</small><strong>APPLICATION</strong></div>
+                    <div><small>STATUS</small><strong>${this.escape(status)}</strong></div>
+                    <div><small>DETECTED</small><strong>${this.escape(tool.detectedName || "NOT FOUND")}</strong></div>
+                    <div><small>PATH</small><strong>${this.escape(tool.applicationPath || "UNAVAILABLE")}</strong></div>
+                </div>
+                <p>${this.escape(tool.description || "")}</p>
+                ${tool.url ? `<p class="eng-detail-url">${this.escape(tool.url)}</p>` : ""}`;
+        }
+        if (tool.type === "web") {
+            return `<p>${this.escape(tool.description || "")}</p><p class="eng-detail-url">${this.escape(tool.url || "")}</p>`;
+        }
+        return `<p>${this.escape(tool.description || "Planned engineering integration.")}</p>`;
+    }
+
+    engineeringInternalToolBody(tool) {
+        const registry = this.engineeringRegistry;
+        if (!registry) return `<p>Registry unavailable.</p>`;
+        if (tool.actionId === "unit_converter") {
+            const familyOptions = Object.entries(registry.unitFamilies).map(([id, family]) => `<option value="${this.escape(id)}">${this.escape(family.label)}</option>`).join("");
+            return `
+                <form class="eng-calc-form" data-calc="unit_converter">
+                    <label>Family<select name="family">${familyOptions}</select></label>
+                    <label>Value<input name="value" type="number" step="any" value="1000"></label>
+                    <label>From<select name="from"></select></label>
+                    <label>To<select name="to"></select></label>
+                    <output></output>
+                </form>`;
+        }
+        if (tool.actionId === "torque_power_rpm") {
+            return `
+                <form class="eng-calc-form" data-calc="torque_power_rpm">
+                    <label>Torque Nm<input name="torqueNm" type="number" step="any" value="250"></label>
+                    <label>Power kW<input name="powerKw" type="number" step="any"></label>
+                    <label>RPM<input name="rpm" type="number" step="any" value="3000"></label>
+                    <small>Enter any two values. P = τω.</small>
+                    <output></output>
+                </form>`;
+        }
+        if (tool.actionId === "material_mass") {
+            const materials = Object.entries(registry.MATERIALS).map(([id, item]) => `<option value="${this.escape(id)}">${this.escape(item.label)}</option>`).join("");
+            return `
+                <form class="eng-calc-form" data-calc="material_mass">
+                    <label>Material<select name="materialId">${materials}</select></label>
+                    <label>Density kg/m³<input name="density" type="number" step="any"></label>
+                    <label>Volume cm³<input name="volumeCm3" type="number" step="any" value="100"></label>
+                    <label>Length mm<input name="lengthMm" type="number" step="any"></label>
+                    <label>Width mm<input name="widthMm" type="number" step="any"></label>
+                    <label>Height mm<input name="heightMm" type="number" step="any"></label>
+                    <output></output>
+                </form>`;
+        }
+        if (tool.actionId === "gear_ratio") {
+            return `
+                <form class="eng-calc-form" data-calc="gear_ratio">
+                    <label>Driver teeth<input name="driverTeeth" type="number" step="1" value="20"></label>
+                    <label>Driven teeth<input name="drivenTeeth" type="number" step="1" value="60"></label>
+                    <label>Input RPM<input name="inputRpm" type="number" step="any" value="3000"></label>
+                    <output></output>
+                </form>`;
+        }
+        if (tool.actionId === "beam_deflection") {
+            return `
+                <form class="eng-calc-form" data-calc="beam_deflection">
+                    <label>Length mm<input name="lengthMm" type="number" step="any" value="500"></label>
+                    <label>Center force N<input name="forceN" type="number" step="any" value="100"></label>
+                    <label>E GPa<input name="elasticModulusGPa" type="number" step="any" value="69"></label>
+                    <label>I mm⁴<input name="secondMomentMm4" type="number" step="any" value="10000"></label>
+                    <small>Approximate simply supported beam with center point load.</small>
+                    <output></output>
+                </form>`;
+        }
+        if (tool.actionId === "thread_reference") {
+            return `<div class="eng-thread-table">${registry.THREAD_REFERENCES.map(row => `
+                <div><strong>${this.escape(row.thread)}</strong><span>Tap ${this.escape(row.tapDrill)}</span><span>Clear ${this.escape(row.clearance)}</span></div>`).join("")}</div>`;
+        }
+        if (tool.actionId === "material_card") {
+            const material = registry.MATERIALS[tool.materialId] || {};
+            return `
+                <div class="eng-material-card-detail">
+                    <strong>${this.escape(material.label || tool.title)}</strong>
+                    <span>${this.escape(String(material.density || tool.density || "UNKNOWN"))} kg/m³</span>
+                    <p>${this.escape(material.note || tool.description || "")}</p>
+                </div>`;
+        }
+        if (tool.actionId === "project_control") {
+            return `<p>Open the existing HUB Project Control without duplicating project logic.</p>`;
+        }
+        return `<p>${this.escape(tool.description || "Internal tool ready.")}</p>`;
+    }
+
+    openEngineeringDetail({title, icon, status, body, actions = ""}) {
+        let overlay = document.getElementById("eng_tool_detail_overlay");
+        if (!overlay) {
+            overlay = document.createElement("section");
+            overlay.id = "eng_tool_detail_overlay";
+            overlay.className = "eng-detail-overlay";
+            overlay.setAttribute("role", "dialog");
+            overlay.setAttribute("aria-modal", "true");
+            overlay.addEventListener("click", event => {
+                if (event.target === overlay) this.closeEngineeringDetail();
+            });
+            overlay.addEventListener("mousedown", event => {
+                if (event.target !== overlay) event.stopPropagation();
+            });
+            document.body.appendChild(overlay);
+        }
+        overlay.innerHTML = `
+            <article class="eng-detail-panel">
+                <header>
+                    <span>${this.escape(icon || "▧")}</span>
+                    <div><small>ENGINEERING DETAIL</small><h2>${this.escape(title || "Engineering tool")}</h2></div>
+                    <em class="${this.statusClass(status)}">${this.escape(status || "ACTIVE")}</em>
+                    <button type="button" class="eng-detail-close" aria-label="Close engineering detail">×</button>
+                </header>
+                <section class="eng-detail-body">${body || ""}</section>
+                <footer>${actions || `<button type="button" data-eng-detail-action="close">CLOSE</button>`}</footer>
+            </article>`;
+        overlay.classList.add("visible");
+        const close = overlay.querySelector(".eng-detail-close");
+        if (close) close.addEventListener("click", () => this.closeEngineeringDetail());
+        overlay.querySelectorAll('[data-eng-detail-action="close"]').forEach(button => {
+            button.addEventListener("click", () => this.closeEngineeringDetail());
+        });
+        this.bindEngineeringCalculators(overlay);
+        document.addEventListener("keydown", this.boundEngineeringDetailEscape = this.boundEngineeringDetailEscape || (event => {
+            if (event.key === "Escape") this.closeEngineeringDetail();
+        }));
+    }
+
+    closeEngineeringDetail() {
+        const overlay = document.getElementById("eng_tool_detail_overlay");
+        if (overlay) overlay.classList.remove("visible");
+    }
+
+    bindEngineeringDetailControls(tool) {
+        const overlay = document.getElementById("eng_tool_detail_overlay");
+        if (!overlay) return;
+        overlay.querySelectorAll('[data-eng-detail-action="execute"]').forEach(button => {
+            button.addEventListener("click", () => this.executeEngineeringTool(tool.id, this.engineeringView));
+        });
+    }
+
+    bindEngineeringDetailToolActions() {
+        const overlay = document.getElementById("eng_tool_detail_overlay");
+        if (!overlay) return;
+        overlay.querySelectorAll("[data-eng-tool]").forEach(button => {
+            button.addEventListener("click", event => {
+                const action = event.target && event.target.dataset ? event.target.dataset.engAction : "";
+                const toolId = button.dataset.engTool;
+                if (action === "open") this.executeEngineeringTool(toolId, this.engineeringView);
+                else this.openEngineeringToolById(toolId);
+            });
+        });
+    }
+
+    bindEngineeringCalculators(root) {
+        root.querySelectorAll(".eng-calc-form").forEach(form => {
+            const update = () => this.updateEngineeringCalculator(form);
+            form.addEventListener("input", update);
+            form.addEventListener("change", update);
+            if (form.dataset.calc === "unit_converter") this.syncUnitConverterSelects(form);
+            update();
+        });
+    }
+
+    syncUnitConverterSelects(form) {
+        const family = form.elements.family.value;
+        const registry = this.engineeringRegistry;
+        const units = registry && registry.unitFamilies[family] ? Object.keys(registry.unitFamilies[family].units) : [];
+        ["from", "to"].forEach((name, index) => {
+            const select = form.elements[name];
+            const previous = select.value;
+            select.innerHTML = units.map(unit => `<option value="${this.escape(unit)}">${this.escape(unit)}</option>`).join("");
+            select.value = units.includes(previous) ? previous : (units[index] || units[0] || "");
+        });
+    }
+
+    updateEngineeringCalculator(form) {
+        const registry = this.engineeringRegistry;
+        if (!registry) return;
+        const values = Object.fromEntries(Array.from(new FormData(form).entries()));
+        let result;
+        if (form.dataset.calc === "unit_converter") {
+            this.syncUnitConverterSelects(form);
+            result = registry.convertUnit(values);
+            form.querySelector("output").innerText = result.ok
+                ? `${registry.round(result.input, 5)} ${result.from} = ${registry.round(result.result, 5)} ${result.to}`
+                : result.error;
+        }
+        if (form.dataset.calc === "torque_power_rpm") {
+            result = registry.calculateTorquePowerRpm(values);
+            form.querySelector("output").innerText = result.ok
+                ? `${registry.round(result.torqueNm, 3)} Nm · ${registry.round(result.powerKw, 3)} kW · ${registry.round(result.rpm, 1)} rpm`
+                : result.error;
+        }
+        if (form.dataset.calc === "material_mass") {
+            const material = registry.MATERIALS[values.materialId] || {};
+            if (!values.density && material.density) form.elements.density.value = material.density;
+            result = registry.calculateMaterialMass({...values, density: form.elements.density.value});
+            form.querySelector("output").innerText = result.ok
+                ? `${registry.round(result.massKg, 4)} kg · ${registry.round(result.massKg * 1000, 1)} g`
+                : result.error;
+        }
+        if (form.dataset.calc === "gear_ratio") {
+            result = registry.calculateGearRatio(values);
+            form.querySelector("output").innerText = result.ok
+                ? `Ratio ${registry.round(result.ratio, 4)}:1 · Output ${registry.round(result.outputRpm, 1)} rpm · Torque ×${registry.round(result.torqueMultiplier, 3)}`
+                : result.error;
+        }
+        if (form.dataset.calc === "beam_deflection") {
+            result = registry.calculateBeamDeflection(values);
+            form.querySelector("output").innerText = result.ok
+                ? `Deflection ≈ ${registry.round(result.deflectionMm, 4)} mm`
+                : result.error;
+        }
+    }
+
+    async executeEngineeringTool(toolId, view = this.engineeringView) {
+        const tool = this.engineeringTools && this.engineeringTools.find(item => item.id === toolId);
+        if (!tool) return;
+        if (tool.type === "web" && tool.url) {
+            await this.openLink(tool.url, view);
+            return;
+        }
+        if (tool.type === "app") {
+            if (tool.installed && tool.applicationPath) {
+                const response = await this.ipc.invoke("launch-application", tool.applicationPath);
+                this.showToast(view, response.ok ? `LAUNCHING ${tool.detectedName || tool.title}` : response.error);
+                return;
+            }
+            if (tool.url) {
+                await this.openLink(tool.url, view);
+                this.showToast(view, `${tool.title} NOT FOUND · OPENED INFO`);
+                return;
+            }
+            this.showToast(view, `${tool.title} NOT FOUND`);
+            return;
+        }
+        if (tool.actionId === "project_control") {
+            if (window.engineeringDashboard && window.engineeringDashboard.projectsPanel) {
+                window.engineeringDashboard.projectsPanel.openEditor(0, {returnWorkspaceId: this.getActiveWorkspace()});
+            }
+            return;
+        }
+        this.openEngineeringToolById(tool.id);
     }
 
     renderFoundation(view, definition) {

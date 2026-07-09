@@ -19,6 +19,7 @@
         "switch_to_angie",
         "switch_to_ares",
         "switch_to_aphrodite",
+        "open_workspace_eng",
         "open_workspace_hub",
         "open_workspace_engineer",
         "open_workspace_osint",
@@ -43,7 +44,25 @@
         "map_my_location",
         "clear_current_conversation",
         "show_memory_status",
-        "show_local_ai_status"
+        "show_local_ai_status",
+        "open_eng_category_cad",
+        "open_eng_category_simulation",
+        "open_eng_category_manufacturing",
+        "open_eng_category_calculators",
+        "open_eng_category_materials",
+        "open_eng_category_research",
+        "open_eng_category_standards",
+        "open_eng_category_projects",
+        "open_eng_tool_fusion",
+        "open_eng_tool_freecad",
+        "open_eng_tool_blender",
+        "open_eng_tool_bambu_studio",
+        "open_eng_calculator_unit_converter",
+        "open_eng_calculator_torque_power_rpm",
+        "open_eng_calculator_mass_estimator",
+        "open_eng_calculator_gear_ratio",
+        "open_eng_calculator_beam_deflection",
+        "open_eng_calculator_thread_reference"
     ]);
 
     const BLOCKED_PATTERNS = [
@@ -66,7 +85,7 @@
         [/^(cambia|cambiar|pon|poner|switch).*(ares)\b/, "switch_to_ares"],
         [/^(cambia|cambiar|pon|poner|switch).*(aphrodite|afrodita)\b/, "switch_to_aphrodite"],
         [/^(abre|abrir|open|muestra|mostrar|show|ve a|ir a).*\bhub\b/, "open_workspace_hub"],
-        [/^(abre|abrir|open|muestra|mostrar|show|ve a|ir a).*(engineer|ingenier)/, "open_workspace_engineer"],
+        [/^(abre|abrir|open|muestra|mostrar|show|ve a|ir a).*(eng|engineer|engineering|ingenier|ingenieria|ingeniería)/, "open_workspace_eng"],
         [/^(abre|abrir|open|muestra|mostrar|show|ve a|ir a).*(osint|analyst|analista)/, "open_workspace_osint"],
         [/^(abre|abrir|open|muestra|mostrar|show|ve a|ir a).*(student|estudiante)/, "open_workspace_student"],
         [/^(abre|abrir|open|muestra|mostrar|show|ve a|ir a).*(artist|artista)/, "open_workspace_artist"],
@@ -89,7 +108,25 @@
         [/^(centra|centrar|ve a|ir a|my location|mi ubicacion|mi ubicación).*(ubicacion|ubicación|location)?/, "map_my_location"],
         [/^(limpia|limpiar|clear).*(conversacion|conversación|conversation)/, "clear_current_conversation"],
         [/^(muestra|mostrar|show).*(estado.*memoria|memory status)/, "show_memory_status"],
-        [/^(muestra|mostrar|show|comprueba|check).*(estado.*local ai|ollama|ia local)/, "show_local_ai_status"]
+        [/^(muestra|mostrar|show|comprueba|check).*(estado.*local ai|ollama|ia local)/, "show_local_ai_status"],
+        [/^(abre|abrir|open|muestra|mostrar|show).*(cad|cam|diseño|diseno)/, "open_eng_category_cad"],
+        [/^(abre|abrir|open|muestra|mostrar|show).*(simulacion|simulación|cae|cfd|ansys|openfoam)/, "open_eng_category_simulation"],
+        [/^(abre|abrir|open|muestra|mostrar|show).*(manufacturing|fabricacion|fabricación|impresion 3d|impresión 3d|3d print)/, "open_eng_category_manufacturing"],
+        [/^(abre|abrir|open|muestra|mostrar|show).*(calculadoras|calculators|calculator deck|herramientas de calculo|herramientas de cálculo)/, "open_eng_category_calculators"],
+        [/^(abre|abrir|open|muestra|mostrar|show).*(materiales|materials)/, "open_eng_category_materials"],
+        [/^(abre|abrir|open|muestra|mostrar|show).*(investigacion|investigación|research|documentacion|documentación)/, "open_eng_category_research"],
+        [/^(abre|abrir|open|muestra|mostrar|show).*(standards|estandares|estándares|normas|iso|asme)/, "open_eng_category_standards"],
+        [/^(abre|abrir|open|muestra|mostrar|show).*(proyectos|projects).*eng/, "open_eng_category_projects"],
+        [/^(abre|abrir|open|muestra|mostrar|show).*(fusion|autodesk fusion)/, "open_eng_tool_fusion"],
+        [/^(abre|abrir|open|muestra|mostrar|show).*(freecad)/, "open_eng_tool_freecad"],
+        [/^(abre|abrir|open|muestra|mostrar|show).*(blender)/, "open_eng_tool_blender"],
+        [/^(abre|abrir|open|muestra|mostrar|show).*(bambu studio|bambu)/, "open_eng_tool_bambu_studio"],
+        [/^(abre|abrir|open|muestra|mostrar|show).*(conversor|unit converter|unidades)/, "open_eng_calculator_unit_converter"],
+        [/^(abre|abrir|open|muestra|mostrar|show).*(torque|par|potencia|rpm)/, "open_eng_calculator_torque_power_rpm"],
+        [/^(abre|abrir|open|muestra|mostrar|show).*(masa|mass|densidad|density)/, "open_eng_calculator_mass_estimator"],
+        [/^(abre|abrir|open|muestra|mostrar|show).*(gear|engranaje|relacion|relación)/, "open_eng_calculator_gear_ratio"],
+        [/^(abre|abrir|open|muestra|mostrar|show).*(beam|viga|deflection|deflexion|deflexión)/, "open_eng_calculator_beam_deflection"],
+        [/^(abre|abrir|open|muestra|mostrar|show).*(thread|rosca|drill|tap)/, "open_eng_calculator_thread_reference"]
     ]);
 
     function normalize(text = "") {
@@ -191,6 +228,7 @@
                 };
 
                 const workspaceMap = {
+                    open_workspace_eng: "ENGINEER",
                     open_workspace_hub: "HUB",
                     open_workspace_engineer: "ENGINEER",
                     open_workspace_osint: "OSINT",
@@ -235,6 +273,42 @@
                 if (id === "show_local_ai_status" && presence && presence.panel) {
                     presence.panel.setOpen(true);
                     await presence.panel.checkLocalAI({force: true});
+                }
+                const engineeringCategoryMap = {
+                    open_eng_category_cad: "cad",
+                    open_eng_category_simulation: "simulation",
+                    open_eng_category_manufacturing: "manufacturing",
+                    open_eng_category_calculators: "calculators",
+                    open_eng_category_materials: "materials",
+                    open_eng_category_research: "research",
+                    open_eng_category_standards: "standards",
+                    open_eng_category_projects: "projects"
+                };
+                const engineeringToolMap = {
+                    open_eng_tool_fusion: "fusion",
+                    open_eng_tool_freecad: "freecad",
+                    open_eng_tool_blender: "blender",
+                    open_eng_tool_bambu_studio: "bambu-studio"
+                };
+                const engineeringCalculatorMap = {
+                    open_eng_calculator_unit_converter: "unit_converter",
+                    open_eng_calculator_torque_power_rpm: "torque_power_rpm",
+                    open_eng_calculator_mass_estimator: "material_mass",
+                    open_eng_calculator_gear_ratio: "gear_ratio",
+                    open_eng_calculator_beam_deflection: "beam_deflection",
+                    open_eng_calculator_thread_reference: "thread_reference"
+                };
+                if (engineeringCategoryMap[id] && workspace && workspace.openEngineeringCategory) {
+                    workspace.setActiveWorkspace && workspace.setActiveWorkspace("ENGINEER");
+                    setTimeout(() => workspace.openEngineeringCategory(engineeringCategoryMap[id]), 80);
+                }
+                if (engineeringToolMap[id] && workspace && workspace.openEngineeringToolById) {
+                    workspace.setActiveWorkspace && workspace.setActiveWorkspace("ENGINEER");
+                    setTimeout(() => workspace.openEngineeringToolById(engineeringToolMap[id]), 80);
+                }
+                if (engineeringCalculatorMap[id] && workspace && workspace.openEngineeringCalculator) {
+                    workspace.setActiveWorkspace && workspace.setActiveWorkspace("ENGINEER");
+                    setTimeout(() => workspace.openEngineeringCalculator(engineeringCalculatorMap[id]), 80);
                 }
 
                 this.status = STATES.READY;

@@ -42,7 +42,7 @@
             name: "Engineering Command Deck",
             description: "Mechanical engineering, CAD/CAE, simulation, manufacturing, research and project control.",
             status: "active",
-            implementation: "foundation",
+            implementation: "active",
             categories: ["design", "simulation", "manufacturing", "research", "standards", "projects"],
             quickActions: [
                 app("AUTODESK FUSION", ["Autodesk Fusion", "Fusion 360"], "CAD / CAM / CAE"),

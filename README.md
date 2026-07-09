@@ -45,6 +45,10 @@ keyboard and large terminal with:
   structure and dependency/runtime health;
 - an Agent Command deck for human-controlled AI-agent coordination, with local
   agent roles, prompt templates, permission levels and a central task board;
+- an ENG workspace specialized for engineering command work, with CAD/CAM,
+  CAE/simulation, manufacturing and 3D printing launchers, internal
+  calculators, material cards, research/standards references and Project
+  Timeline integration;
 - a global Assistant Presence orb for the future Angie / Gustav assistant
   system, with local-only visual states, Ares/Aphrodite public profiles,
   Gustav/Angie private aliases, private local memory bootstrap status, panel
@@ -59,8 +63,9 @@ keyboard and large terminal with:
 Version 1.8 adds a modular Command Deck with ten navigable workspaces:
 
 - `HUB` preserves this complete original dashboard;
-- `ENGINEER` adds project status, CAD/CAE/simulation launchers, research,
-  standards, technical sources and a future-tools roadmap;
+- `ENGINEER` / `ENG` provides a real engineering command deck with app
+  detection, CAD/CAM/CAE/manufacturing launchers, internal calculators,
+  materials, research, standards and Project Timeline status;
 - `OSINT / ANALYST`, `STUDENT`, `ARTIST` and `BUSINESS` provide structured
   foundations ready for profile-specific widgets and integrations.
 - `COMMS` centralizes safe launchers for WhatsApp Web, Slack, Teams, Discord,

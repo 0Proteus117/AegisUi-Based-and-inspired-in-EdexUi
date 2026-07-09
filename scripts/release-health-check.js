@@ -80,6 +80,10 @@ function main() {
         "src/classes/map/providers/openSkyProvider.js",
         "src/classes/map/providers/noaaOceanProvider.js"
     ].every(exists);
+    const engWorkspace = exists("src/classes/workspaces/engineeringTools.registry.js")
+        && exists("scripts/test-eng-workspace-registry.js")
+        && exists("scripts/test-eng-command-router.js")
+        && exists("scripts/test-eng-calculators.js");
 
     if (!versionsMatch) failures.push("package versions do not match");
     if (!privateTrackedNo) failures.push("private memory is tracked");
@@ -89,6 +93,7 @@ function main() {
     if (!assistantLocalAi) failures.push("assistant local AI files missing");
     if (!appleMusicBridge) failures.push("Apple Music bridge validation files missing");
     if (!mapProviders) failures.push("map provider files missing");
+    if (!engWorkspace) failures.push("ENG workspace files missing");
 
     print("PACKAGE_VERSION", pkg.version || "UNKNOWN");
     print("SRC_PACKAGE_VERSION", srcPkg.version || "UNKNOWN");
@@ -103,6 +108,7 @@ function main() {
     print("ASSISTANT_COMMAND_ROUTER", exists("src/classes/assistant/assistantCommandRouter.class.js") ? "PRESENT" : "MISSING");
     print("APPLE_MUSIC_BRIDGE", appleMusicBridge ? "PRESENT" : "MISSING");
     print("MAP_PROVIDERS", mapProviders ? "PRESENT" : "MISSING");
+    print("ENG_WORKSPACE", engWorkspace ? "PRESENT" : "MISSING");
     print("RELEASE_HEALTH", failures.length ? "FAIL" : "OK");
 
     if (failures.length) {

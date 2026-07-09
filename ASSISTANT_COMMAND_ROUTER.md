@@ -24,6 +24,10 @@ The router is not a shell. It is an allowlist of internal UI actions.
 - show memory status;
 - show Local AI status;
 - clear the current conversation.
+- open the ENG workspace;
+- open ENG categories such as CAD/CAM, simulation, manufacturing, calculators,
+  materials, research and standards;
+- open selected ENG tools and internal calculators.
 
 ## Blocked
 
@@ -58,6 +62,10 @@ The model can write a normal response or express an obvious safe intent such as:
 - “abre Apple Music”
 - “pausa la música”
 - “limpia esta conversación”
+- “abre ingeniería”
+- “abre calculadora de torque”
+- “abre materiales”
+- “abre Fusion”
 
 AegisUi validates the intent against the allowlist before execution.
 
@@ -71,3 +79,10 @@ warnings.
 ## Future
 
 Future router phases may add approval flows, scoped file operations, and test execution. They are not enabled in v2.2.0.
+
+## ENG actions
+
+v2.2.2 adds allowlisted ENG workspace actions only. The router can open the
+workspace, categories, app launchers, web references and local calculators. It
+cannot run arbitrary CAD scripts, simulation jobs, shell commands, file writes
+or manufacturing actions.

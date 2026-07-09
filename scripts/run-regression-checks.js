@@ -15,6 +15,9 @@ const CHECKS = [
     "scripts/test-assistant-chat-session.js",
     "scripts/test-assistant-command-router.js",
     "scripts/test-assistant-ai-provider.js",
+    "scripts/test-eng-workspace-registry.js",
+    "scripts/test-eng-command-router.js",
+    "scripts/test-eng-calculators.js",
     "scripts/test-apple-music-runtime.js",
     "scripts/test-map-providers.js",
     "scripts/test-sat-celestrak.js"

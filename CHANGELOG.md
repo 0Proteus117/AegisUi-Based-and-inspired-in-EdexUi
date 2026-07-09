@@ -1,5 +1,27 @@
 # Changelog
 
+## 2.2.2 - 2026-07-09
+
+### Added
+
+- Converted the ENG workspace into a specialized engineering command deck.
+- Added `EngineeringToolsRegistry` with CAD/CAM, CAE/simulation,
+  manufacturing, calculators, materials, research, standards and project
+  entries.
+- Added local ENG calculators for unit conversion, torque/power/RPM, material
+  mass, gear ratio, beam deflection and thread/drill lookup.
+- Added ENG detail/fullscreen overlay for tools, categories and calculators.
+- Added safe ENG command-router actions for opening the workspace, categories,
+  selected tools and calculators.
+- Added ENG registry, calculator and router tests.
+
+### Security
+
+- ENG app launchers use the existing safe application launcher path.
+- Web tools open through the existing external-link handler.
+- No shell execution, simulation runner, CAD automation or destructive action
+  is introduced.
+
 ## 2.2.1 - 2026-07-09
 
 ### Fixed
