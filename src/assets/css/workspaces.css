@@ -1039,6 +1039,453 @@
     gap: .25vh;
 }
 
+.aegis-calc-panel {
+    display: grid;
+    grid-template-columns: minmax(22vw, .9fr) minmax(28vw, 1.1fr);
+    grid-auto-rows: min-content;
+    gap: 1vh;
+    align-items: stretch;
+}
+
+.aegis-calc-diagram {
+    position: relative;
+    min-height: 26vh;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    border: .08vh solid rgba(59, 167, 255, .46);
+    background:
+        radial-gradient(circle at 50% 50%, rgba(59, 167, 255, .13), transparent 58%),
+        linear-gradient(135deg, rgba(59, 167, 255, .08), rgba(0, 0, 0, .08)),
+        rgba(3, 7, 11, .48);
+    box-shadow: inset 0 0 2.4vh rgba(59, 167, 255, .07);
+}
+
+.aegis-calc-diagram::before {
+    content: "";
+    position: absolute;
+    inset: 1.1vh;
+    pointer-events: none;
+    background:
+        linear-gradient(rgba(59, 167, 255, .08) .06vh, transparent .06vh),
+        linear-gradient(90deg, rgba(59, 167, 255, .06) .06vh, transparent .06vh);
+    background-size: 2vh 2vh;
+    mask-image: radial-gradient(circle, #000 0, transparent 74%);
+}
+
+.aegis-calc-controls {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .85vh;
+    align-content: start;
+}
+
+.aegis-calc-control,
+.aegis-field {
+    display: grid;
+    gap: .38vh;
+    min-width: 0;
+    padding: .72vh;
+    border: .08vh solid rgba(36, 68, 95, .82);
+    background: linear-gradient(180deg, rgba(13, 31, 46, .62), rgba(3, 7, 11, .58));
+}
+
+.aegis-calc-control label,
+.aegis-field {
+    color: rgba(124, 203, 255, .68);
+    font: .62vh var(--font_mono);
+    letter-spacing: .08vh;
+    text-transform: uppercase;
+}
+
+.aegis-calc-control label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .6vh;
+}
+
+.aegis-calc-control label em {
+    color: #d8f1ff;
+    font-style: normal;
+}
+
+.aegis-inline-input {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: .45vh;
+}
+
+.aegis-number-input,
+.aegis-select,
+.eng-calc-form input,
+.eng-calc-form select {
+    min-width: 0;
+    height: 2.45vh;
+    padding: 0 .62vh;
+    border: .08vh solid rgba(59, 167, 255, .46);
+    color: #d8f1ff;
+    background: rgba(2, 8, 14, .9);
+    box-shadow: inset 0 0 1.2vh rgba(0, 0, 0, .34);
+    font: .78vh var(--font_mono);
+    outline: none;
+}
+
+.aegis-number-input:focus,
+.aegis-select:focus,
+.eng-calc-form input:focus,
+.eng-calc-form select:focus {
+    border-color: rgba(124, 203, 255, .9);
+    box-shadow: 0 0 1.25vh rgba(59, 167, 255, .18), inset 0 0 1.2vh rgba(0, 0, 0, .34);
+}
+
+.aegis-inline-input b {
+    min-width: 2.9vh;
+    color: rgba(124, 203, 255, .58);
+    font: .62vh var(--font_mono);
+    text-transform: none;
+}
+
+.aegis-slider {
+    width: 100%;
+    height: 1.25vh;
+    padding: 0;
+    border: 0;
+    appearance: none;
+    -webkit-appearance: none;
+    background: transparent;
+}
+
+.aegis-slider::-webkit-slider-runnable-track {
+    height: .42vh;
+    border: .06vh solid rgba(59, 167, 255, .35);
+    background: linear-gradient(90deg, rgba(28, 106, 168, .76), rgba(124, 203, 255, .34));
+    box-shadow: 0 0 1.1vh rgba(59, 167, 255, .12);
+}
+
+.aegis-slider::-webkit-slider-thumb {
+    width: 1.25vh;
+    height: 1.25vh;
+    margin-top: -.46vh;
+    border: .08vh solid rgba(216, 241, 255, .88);
+    border-radius: 50%;
+    appearance: none;
+    -webkit-appearance: none;
+    background: radial-gradient(circle, #d8f1ff 0 28%, #3ba7ff 32% 66%, rgba(7, 11, 16, .95) 70%);
+    box-shadow: 0 0 1.1vh rgba(59, 167, 255, .54);
+}
+
+.aegis-result-readout {
+    grid-column: 1 / -1;
+    display: grid;
+    gap: .35vh;
+    padding: .9vh 1vh;
+    border: .08vh solid rgba(124, 255, 178, .52);
+    background:
+        linear-gradient(90deg, rgba(9, 43, 32, .72), rgba(6, 19, 18, .7)),
+        rgba(3, 7, 11, .72);
+}
+
+.aegis-result-readout small {
+    color: rgba(124, 255, 178, .62);
+    font: .58vh var(--font_mono);
+    letter-spacing: .12vh;
+}
+
+.aegis-result-readout output,
+.eng-calc-form output {
+    padding: 0;
+    border: 0;
+    color: #7CFFB2;
+    background: transparent;
+    font: 1.18vh var(--font_mono);
+}
+
+.aegis-calc-actions {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: flex-end;
+    gap: .65vh;
+}
+
+.aegis-calc-actions button {
+    min-width: 7.5vw;
+}
+
+.aegis-calc-note {
+    grid-column: 1 / -1;
+    color: rgba(124, 203, 255, .56);
+    font: .66vh var(--font_main_light);
+}
+
+.eng-diagram-unit {
+    grid-template-columns: minmax(0, 1fr) 3.6vh minmax(0, 1fr);
+    gap: .8vh;
+}
+
+.eng-unit-column {
+    width: 11vh;
+    height: 11vh;
+    display: grid;
+    place-items: center;
+    border: .08vh solid rgba(59, 167, 255, .46);
+    background: radial-gradient(circle, rgba(59, 167, 255, .18), rgba(3, 7, 11, .82) 68%);
+}
+
+.eng-unit-column span {
+    color: #d8f1ff;
+    font: 3vh var(--font_main);
+}
+
+.eng-unit-column strong,
+.eng-unit-column em,
+.eng-diagram-unit > i {
+    position: relative;
+    z-index: 1;
+    color: rgba(124, 203, 255, .7);
+    font: .75vh var(--font_mono);
+    font-style: normal;
+    letter-spacing: .1vh;
+}
+
+.eng-diagram-unit > i {
+    color: #7CFFB2;
+    font-size: 2.2vh;
+}
+
+.eng-diagram-torque {
+    grid-template-columns: 1fr;
+}
+
+.eng-rotor {
+    --rpm-speed: 3s;
+    --torque-angle: 65deg;
+    position: relative;
+    width: 14vh;
+    height: 14vh;
+    border: .12vh solid rgba(124, 203, 255, .48);
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(216, 241, 255, .26) 0 13%, rgba(59, 167, 255, .16) 14% 34%, transparent 35%);
+    animation: engRotorSpin var(--rpm-speed) linear infinite;
+}
+
+.eng-rotor span,
+.eng-rotor i {
+    position: absolute;
+    inset: 1.1vh;
+    border: .08vh dashed rgba(124, 203, 255, .35);
+    border-radius: 50%;
+}
+
+.eng-rotor i::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 5.2vh;
+    height: .22vh;
+    transform-origin: left center;
+    transform: rotate(var(--torque-angle));
+    background: linear-gradient(90deg, #7CFFB2, transparent);
+    box-shadow: 0 0 1.1vh rgba(124, 255, 178, .35);
+}
+
+@keyframes engRotorSpin {
+    to { transform: rotate(360deg); }
+}
+
+.eng-formula {
+    position: absolute;
+    right: 1.2vh;
+    bottom: 1.2vh;
+    display: grid;
+    gap: .2vh;
+    text-align: right;
+}
+
+.eng-formula strong {
+    color: #d8f1ff;
+    font: 1.25vh var(--font_mono);
+}
+
+.eng-formula small {
+    color: rgba(124, 203, 255, .58);
+    font: .62vh var(--font_mono);
+}
+
+.eng-diagram-gears {
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+}
+
+.eng-gear {
+    --gear-size: 5vh;
+    position: relative;
+    width: var(--gear-size);
+    height: var(--gear-size);
+    border: .4vh dashed rgba(124, 203, 255, .7);
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(216, 241, 255, .2) 0 18%, rgba(59, 167, 255, .13) 19% 50%, transparent 51%);
+    box-shadow: 0 0 1.6vh rgba(59, 167, 255, .18);
+}
+
+.eng-gear-driver { animation: engGearSpin 5s linear infinite; justify-self: end; }
+.eng-gear-driven { animation: engGearSpinReverse 7s linear infinite; justify-self: start; }
+
+.eng-gear span {
+    position: absolute;
+    inset: 28%;
+    border: .08vh solid rgba(216, 241, 255, .62);
+    border-radius: 50%;
+}
+
+.eng-diagram-gears small {
+    grid-column: 1 / -1;
+    align-self: end;
+    color: rgba(124, 203, 255, .58);
+    font: .66vh var(--font_mono);
+    letter-spacing: .12vh;
+}
+
+@keyframes engGearSpin { to { transform: rotate(360deg); } }
+@keyframes engGearSpinReverse { to { transform: rotate(-360deg); } }
+
+.eng-diagram-beam svg {
+    position: relative;
+    z-index: 1;
+    width: 94%;
+    height: 78%;
+}
+
+.beam-neutral {
+    stroke: rgba(124, 203, 255, .35);
+    stroke-width: 7;
+}
+
+.beam-deflected {
+    fill: none;
+    stroke: #7CFFB2;
+    stroke-width: 6;
+    stroke-linecap: round;
+    filter: drop-shadow(0 0 .6vh rgba(124, 255, 178, .38));
+}
+
+.beam-load,
+.beam-load-head {
+    fill: none;
+    stroke: #ffbf66;
+    stroke-width: 5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.beam-support {
+    fill: rgba(59, 167, 255, .18);
+    stroke: rgba(124, 203, 255, .72);
+    stroke-width: 3;
+}
+
+.eng-diagram-beam small {
+    position: absolute;
+    bottom: 1vh;
+    color: rgba(124, 203, 255, .58);
+    font: .62vh var(--font_mono);
+    letter-spacing: .1vh;
+}
+
+.eng-diagram-mass {
+    grid-template-rows: 1fr auto;
+}
+
+.eng-material-block {
+    --mass-scale: 1;
+    position: relative;
+    width: 10vh;
+    height: 8vh;
+    transform: scale(var(--mass-scale)) rotateX(58deg) rotateZ(38deg);
+    transform-style: preserve-3d;
+}
+
+.eng-material-block i,
+.eng-material-block span,
+.eng-material-block::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border: .08vh solid rgba(124, 203, 255, .62);
+    background: rgba(59, 167, 255, .12);
+    box-shadow: inset 0 0 1vh rgba(59, 167, 255, .08);
+}
+
+.eng-material-block i { transform: translateZ(2.5vh); }
+.eng-material-block span { transform: rotateY(90deg) translateZ(5vh); transform-origin: right center; }
+.eng-material-block::before { transform: rotateX(90deg) translateZ(4vh); transform-origin: top center; }
+
+.eng-material-meta {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    gap: .25vh;
+    text-align: center;
+}
+
+.eng-material-meta strong {
+    color: #d8f1ff;
+    font: .9vh var(--font_mono);
+}
+
+.eng-material-meta small {
+    color: rgba(124, 203, 255, .58);
+    font: .62vh var(--font_mono);
+}
+
+.eng-thread-panel {
+    grid-template-columns: 1fr;
+}
+
+.eng-diagram-thread {
+    min-height: 16vh;
+    grid-template-columns: 14vh minmax(0, 1fr);
+    gap: 1vh;
+    padding: 1vh;
+    place-items: center start;
+}
+
+.eng-thread-screw {
+    position: relative;
+    width: 12vh;
+    height: 2.6vh;
+    border: .08vh solid rgba(124, 203, 255, .62);
+    background:
+        repeating-linear-gradient(115deg, rgba(124, 203, 255, .68) 0 .12vh, transparent .12vh .72vh),
+        rgba(3, 7, 11, .82);
+    box-shadow: 0 0 1.4vh rgba(59, 167, 255, .14);
+}
+
+.eng-thread-screw::before {
+    content: "";
+    position: absolute;
+    left: -1.8vh;
+    top: -.5vh;
+    width: 2vh;
+    height: 3.6vh;
+    border: .08vh solid rgba(124, 203, 255, .62);
+    background: rgba(59, 167, 255, .14);
+}
+
+.eng-thread-table {
+    grid-column: 1 / -1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .eng-rotor,
+    .eng-gear-driver,
+    .eng-gear-driven {
+        animation: none;
+    }
+}
+
 .engineering-mode .workspace-panel {
     position: relative;
     min-width: 0;

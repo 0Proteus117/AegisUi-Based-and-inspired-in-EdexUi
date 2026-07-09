@@ -1,6 +1,6 @@
 # ENG Workspace — Engineering Command Deck
 
-Version: v2.2.2
+Version: v2.2.3
 
 The ENG workspace is a specialized engineering command deck for mechanical/product engineering work. It is a workspace tab, not a user account system.
 
@@ -55,9 +55,22 @@ Implemented local calculators:
 
 These run locally and do not require cloud services.
 
+In v2.2.3 the calculators use cockpit-styled controls:
+
+- dark AegisUi number inputs and selects;
+- synchronized sliders and numeric inputs;
+- live result readouts;
+- reset/copy controls;
+- representative diagrams for gears, beams, torque/RPM, mass estimation, unit
+  conversion and thread references.
+
 ## Detail / fullscreen
 
-Tool cards and categories support an ENG detail overlay. It closes with X, ESC, or outside click. Internal clicks do not close the overlay.
+Tool cards and categories support an ENG detail overlay. It closes with X, ESC,
+or outside click. Internal clicks do not close the overlay.
+
+Calculator detail views show the larger diagram, controls, formula/context and
+result readout in the same fullscreen/detail shell.
 
 ## Future expansion
 

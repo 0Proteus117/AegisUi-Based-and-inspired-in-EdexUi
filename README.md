@@ -49,6 +49,9 @@ keyboard and large terminal with:
   CAE/simulation, manufacturing and 3D printing launchers, internal
   calculators, material cards, research/standards references and Project
   Timeline integration;
+- ENG quick calculators use cockpit-styled sliders, precision numeric inputs
+  and lightweight technical diagrams for gear ratio, beam deflection,
+  torque/power/RPM, material mass, unit conversion and thread references;
 - a global Assistant Presence orb for the future Angie / Gustav assistant
   system, with local-only visual states, Ares/Aphrodite public profiles,
   Gustav/Angie private aliases, private local memory bootstrap status, panel
@@ -66,6 +69,8 @@ Version 1.8 adds a modular Command Deck with ten navigable workspaces:
 - `ENGINEER` / `ENG` provides a real engineering command deck with app
   detection, CAD/CAM/CAE/manufacturing launchers, internal calculators,
   materials, research, standards and Project Timeline status;
+- ENG calculator detail views include synchronized sliders, dark AegisUi inputs
+  and compact technical visuals instead of generic form controls.
 - `OSINT / ANALYST`, `STUDENT`, `ARTIST` and `BUSINESS` provide structured
   foundations ready for profile-specific widgets and integrations.
 - `COMMS` centralizes safe launchers for WhatsApp Web, Slack, Teams, Discord,

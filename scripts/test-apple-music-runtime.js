@@ -13,6 +13,20 @@ function isPermissionError(message = "") {
     return /-1743|not authorized|not authorised|no est[aá]s autorizado/i.test(message);
 }
 
+function recordResult(name, result, okDetail = "", rawErrors = []) {
+    if (result.ok) {
+        print(name, "OK", okDetail || result.stdout || "");
+        return false;
+    }
+    rawErrors.push(result.error);
+    if (result.permissionDenied) {
+        print(name, "AUTOMATION_BLOCKED", "macOS Automation permission required for EdexUi-Eng to control Music.");
+        return false;
+    }
+    print(name, "FAIL", result.error);
+    return true;
+}
+
 async function runJxa(script, timeout = 10000, maxBuffer = 1024 * 1024) {
     try {
         const {stdout} = await execFileAsync("/usr/bin/osascript", ["-l", "JavaScript", "-e", script], {
@@ -57,7 +71,7 @@ async function main() {
     }
 
     const state = await runJxa(`
-const Music = Application("Music");
+const Music = Application("com.apple.Music");
 JSON.stringify({state: String(Music.playerState())});
 `, 10000);
     if (state.ok) {
@@ -68,13 +82,11 @@ JSON.stringify({state: String(Music.playerState())});
             print("MUSIC_PLAYER_STATE", "OK", state.stdout || "unknown");
         }
     } else {
-        failed = true;
-        rawErrors.push(state.error);
-        print("MUSIC_PLAYER_STATE", "FAIL", state.error);
+        failed = recordResult("MUSIC_PLAYER_STATE", state, "", rawErrors) || failed;
     }
 
     const playlists = await runJxa(`
-const Music = Application("Music");
+const Music = Application("com.apple.Music");
 const names = Music.userPlaylists().map(playlist => playlist.name());
 JSON.stringify({count: names.length, sample: names.slice(0, 5)});
 `, 15000, 2 * 1024 * 1024);
@@ -86,13 +98,11 @@ JSON.stringify({count: names.length, sample: names.slice(0, 5)});
             print("MUSIC_PLAYLISTS_LIVE", "OK", "live playlist query returned data");
         }
     } else {
-        failed = true;
-        rawErrors.push(playlists.error);
-        print("MUSIC_PLAYLISTS_LIVE", "FAIL", playlists.error);
+        failed = recordResult("MUSIC_PLAYLISTS_LIVE", playlists, "", rawErrors) || failed;
     }
 
     const track = await runJxa(`
-const Music = Application("Music");
+const Music = Application("com.apple.Music");
 const state = String(Music.playerState());
 if (state === "stopped") {
     JSON.stringify({status: "STOPPED"});
@@ -119,35 +129,39 @@ if (state === "stopped") {
             print("MUSIC_TRACK", "OK", track.stdout || "");
         }
     } else {
-        failed = true;
-        rawErrors.push(track.error);
-        print("MUSIC_TRACK", "FAIL", track.error);
+        failed = recordResult("MUSIC_TRACK", track, "", rawErrors) || failed;
     }
 
-    const playPauseOne = await runJxa("Application('Music').playpause(); JSON.stringify({ok:true});", 10000);
+    const playPauseOne = await runJxa("Application('com.apple.Music').playpause(); JSON.stringify({ok:true});", 10000);
     let playPauseTwo = {ok: true};
     if (playPauseOne.ok) {
         await new Promise(resolve => setTimeout(resolve, 500));
-        playPauseTwo = await runJxa("Application('Music').playpause(); JSON.stringify({ok:true});", 10000);
+        playPauseTwo = await runJxa("Application('com.apple.Music').playpause(); JSON.stringify({ok:true});", 10000);
     }
     const playPauseOk = playPauseOne.ok && playPauseTwo.ok;
-    print("MUSIC_PLAYPAUSE", playPauseOk ? "OK" : "FAIL", playPauseOk ? "round-trip restored previous play state" : (playPauseOne.error || playPauseTwo.error || ""));
     if (!playPauseOk) {
-        failed = true;
+        const blocked = playPauseOne.permissionDenied || playPauseTwo.permissionDenied;
         rawErrors.push(playPauseOne.error || playPauseTwo.error);
+        print("MUSIC_PLAYPAUSE", blocked ? "AUTOMATION_BLOCKED" : "FAIL", blocked ? "macOS Automation permission required for EdexUi-Eng to control Music." : (playPauseOne.error || playPauseTwo.error || ""));
+        if (!blocked) failed = true;
+    } else {
+        print("MUSIC_PLAYPAUSE", "OK", "round-trip restored previous play state");
     }
 
-    const next = await runJxa("Application('Music').nextTrack(); JSON.stringify({ok:true});", 10000);
+    const next = await runJxa("Application('com.apple.Music').nextTrack(); JSON.stringify({ok:true});", 10000);
     let previous = {ok: true};
     if (next.ok) {
         await new Promise(resolve => setTimeout(resolve, 500));
-        previous = await runJxa("Application('Music').previousTrack(); JSON.stringify({ok:true});", 10000);
+        previous = await runJxa("Application('com.apple.Music').previousTrack(); JSON.stringify({ok:true});", 10000);
     }
     const prevNextOk = next.ok && previous.ok;
-    print("MUSIC_PREV_NEXT", prevNextOk ? "OK" : "FAIL", prevNextOk ? "next/previous commands accepted" : (next.error || previous.error || ""));
     if (!prevNextOk) {
-        failed = true;
+        const blocked = next.permissionDenied || previous.permissionDenied;
         rawErrors.push(next.error || previous.error);
+        print("MUSIC_PREV_NEXT", blocked ? "AUTOMATION_BLOCKED" : "FAIL", blocked ? "macOS Automation permission required for EdexUi-Eng to control Music." : (next.error || previous.error || ""));
+        if (!blocked) failed = true;
+    } else {
+        print("MUSIC_PREV_NEXT", "OK", "next/previous commands accepted");
     }
 
     if (rawErrors.length) {

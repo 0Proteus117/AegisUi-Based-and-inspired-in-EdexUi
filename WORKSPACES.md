@@ -20,3 +20,6 @@ Current workspace line:
 ENG is implemented as a specialized engineering workspace with CAD/CAM, CAE, manufacturing, calculators, materials, research, standards and project status.
 
 ENG reuses safe launcher and Project Timeline systems rather than duplicating HUB logic.
+
+As of v2.2.3, ENG quick calculators use visual cockpit controls with sliders,
+numeric precision inputs and representative technical diagrams.

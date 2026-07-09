@@ -2718,13 +2718,6 @@ class EngineeringMusicPanel {
                 connectionStatus: "AUTOMATION BLOCKED"
             };
         }
-        if (status === "SYSTEM_EVENTS_PERMISSION_REQUIRED" || permissionTarget === "System Events") {
-            return {
-                state: "SYSTEM EVENTS REQUIRED",
-                message: "SYSTEM EVENTS PERMISSION REQUIRED",
-                connectionStatus: "SYSTEM EVENTS PERMISSION REQUIRED"
-            };
-        }
         if (status === "UNAVAILABLE") {
             return {
                 state: "UNAVAILABLE",

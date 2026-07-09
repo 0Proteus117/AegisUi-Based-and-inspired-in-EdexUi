@@ -1201,7 +1201,7 @@ ipc.handle("launch-application", async (e, applicationPath) => {
 });
 
 const musicStatusScript = `
-const Music = Application("Music");
+const Music = Application("com.apple.Music");
 function normalizeRepeat(value) {
     const text = String(value || "").toLowerCase();
     if (text.includes("one")) return "one";
@@ -1251,7 +1251,7 @@ if (!Music.running()) {
 `;
 
 const musicArtworkScript = `
-const Music = Application("Music");
+const Music = Application("com.apple.Music");
 if (!Music.running()) {
     JSON.stringify({running: false});
 } else {
@@ -1271,6 +1271,38 @@ if (!Music.running()) {
 }
 `;
 
+async function isMusicAppRunning() {
+    if (process.platform !== "darwin") return false;
+    try {
+        await execFileAsync("/usr/bin/pgrep", ["-x", "Music"], {timeout: 3000});
+        return true;
+    } catch (error) {
+        return false;
+    }
+}
+
+function normalizeMusicAutomationError(message = "") {
+    const text = String(message || "");
+    if (/-1743|not authorized|not authorised|no est[aá]s autorizado|not permitted to send apple events/i.test(text)) {
+        return {
+            status: "AUTOMATION_BLOCKED",
+            connectionStatus: "AUTOMATION_BLOCKED",
+            permissionDenied: true,
+            permissionTarget: "Music",
+            technicalCode: "-1743",
+            safeMessage: "macOS Automation permission required for EdexUi-Eng to control Music."
+        };
+    }
+    return {
+        status: "ERROR",
+        connectionStatus: "ERROR",
+        permissionDenied: false,
+        permissionTarget: "",
+        technicalCode: "",
+        safeMessage: text || "Automation request failed."
+    };
+}
+
 async function runAutomation(script, timeout = 20000, maxBuffer = 1024 * 1024) {
     if (process.platform !== "darwin") {
         return {ok: false, status: "UNAVAILABLE", error: "This integration is available on macOS only."};
@@ -1279,15 +1311,18 @@ async function runAutomation(script, timeout = 20000, maxBuffer = 1024 * 1024) {
         const {stdout} = await execFileAsync("/usr/bin/osascript", [
             "-l", "JavaScript", "-e", script
         ], {timeout, maxBuffer});
-        return {ok: true, data: JSON.parse(stdout.trim() || "null")};
+        const data = JSON.parse(stdout.trim() || "null");
+        return {ok: true, data};
     } catch (error) {
         const message = (error.stderr || error.message || "").trim();
-        const permissionDenied = message.includes("-1743");
+        const normalized = normalizeMusicAutomationError(message);
+        const running = await isMusicAppRunning();
         return {
             ok: false,
-            status: permissionDenied ? "PERMISSION_REQUIRED" : "ERROR",
-            permissionDenied,
-            error: message || "Automation request failed."
+            ...normalized,
+            appStatus: running ? "RUNNING" : "NOT_RUNNING",
+            error: normalized.safeMessage,
+            rawError: message || "Automation request failed."
         };
     }
 }
@@ -1640,7 +1675,7 @@ ipc.handle("music-play-playlist", async (e, playlistName) => {
     }
     const safeName = JSON.stringify(playlistName);
     const script = `
-const Music = Application("Music");
+const Music = Application("com.apple.Music");
 const playlist = Music.userPlaylists.byName(${safeName});
 if (!playlist.exists()) {
     JSON.stringify({played: false, error: "Playlist not found"});
@@ -1652,16 +1687,16 @@ if (!playlist.exists()) {
 });
 ipc.handle("music-control", async (e, command, options = {}) => {
     const simpleCommands = {
-        previous: "Application('Music').previousTrack(); JSON.stringify({ok:true});",
-        toggle: "Application('Music').playpause(); JSON.stringify({ok:true});",
-        next: "Application('Music').nextTrack(); JSON.stringify({ok:true});"
+        previous: "Application('com.apple.Music').previousTrack(); JSON.stringify({ok:true});",
+        toggle: "Application('com.apple.Music').playpause(); JSON.stringify({ok:true});",
+        next: "Application('com.apple.Music').nextTrack(); JSON.stringify({ok:true});"
     };
     if (simpleCommands[command]) return runAutomation(simpleCommands[command], 8000);
 
     if (command === "shuffle") {
         const enabled = Boolean(options && options.shuffle);
         return runAutomation(`
-const Music = Application("Music");
+const Music = Application("com.apple.Music");
 Music.shuffleEnabled = ${enabled ? "true" : "false"};
 let shuffle = ${enabled ? "true" : "false"};
 try { shuffle = Boolean(Music.shuffleEnabled()); } catch (error) {}
@@ -1675,7 +1710,7 @@ JSON.stringify({ok: true, shuffle});
             : "off";
         const safeRepeat = JSON.stringify(repeat);
         return runAutomation(`
-const Music = Application("Music");
+const Music = Application("com.apple.Music");
 function normalizeRepeat(value) {
     const text = String(value || "").toLowerCase();
     if (text.includes("one")) return "one";

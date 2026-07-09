@@ -68,6 +68,7 @@ function main() {
         && exists("assistant/config/assistant-ai.example.json");
 
     const appleMusicBridge = exists("scripts/test-apple-music-runtime.js")
+        && exists("scripts/test-apple-music-bridge-static.js")
         && exists("scripts/diagnose-macos-automation-identity.js")
         && exists("src/classes/engineeringDashboard.class.js");
 

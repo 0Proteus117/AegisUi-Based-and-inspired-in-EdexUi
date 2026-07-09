@@ -1,5 +1,30 @@
 # Changelog
 
+## 2.2.3 - 2026-07-10
+
+### Fixed
+
+- Hardened the local Apple Music bridge against `-1743` Automation failures with
+  clearer `AUTOMATION_BLOCKED`, `MUSIC_NOT_RUNNING` and `ERROR` states.
+- Normalized Apple Music JXA calls to target `com.apple.Music` directly and
+  kept the bridge free of `System Events`.
+- Added Apple Music static/runtime tests for bridge safety and permission
+  diagnostics.
+
+### Improved
+
+- Upgraded ENG quick calculators with AegisUi-styled dark inputs, synchronized
+  sliders, result readouts, reset/copy controls and technical diagrams.
+- Added visual calculator diagrams for gear ratio, beam deflection,
+  torque/power/RPM, material mass estimation, unit conversion and thread
+  references.
+
+### Security
+
+- Apple Music remains local-only through macOS Music.app Automation.
+- No cloud Apple Music API, audio capture, secrets, private memory or chat logs
+  are added.
+
 ## 2.2.2 - 2026-07-09
 
 ### Added

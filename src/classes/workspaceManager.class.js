@@ -478,66 +478,132 @@ class WorkspaceManager {
         return `<p>${this.escape(tool.description || "Planned engineering integration.")}</p>`;
     }
 
+    engineeringSliderField(label, name, value, min, max, step, unit = "") {
+        const safeName = this.escape(name);
+        return `
+            <div class="aegis-calc-control">
+                <label for="eng_calc_${safeName}">
+                    <span>${this.escape(label)}</span>
+                    <em data-calc-live="${safeName}">${this.escape(String(value))}${unit ? ` ${this.escape(unit)}` : ""}</em>
+                </label>
+                <input class="aegis-slider" type="range" min="${this.escape(String(min))}" max="${this.escape(String(max))}" step="${this.escape(String(step))}" value="${this.escape(String(value))}" data-sync-input="${safeName}" data-default="${this.escape(String(value))}">
+                <div class="aegis-inline-input">
+                    <input id="eng_calc_${safeName}" class="aegis-number-input" name="${safeName}" type="number" step="${this.escape(String(step))}" value="${this.escape(String(value))}" data-default="${this.escape(String(value))}">
+                    ${unit ? `<b>${this.escape(unit)}</b>` : ""}
+                </div>
+            </div>`;
+    }
+
     engineeringInternalToolBody(tool) {
         const registry = this.engineeringRegistry;
         if (!registry) return `<p>Registry unavailable.</p>`;
         if (tool.actionId === "unit_converter") {
             const familyOptions = Object.entries(registry.unitFamilies).map(([id, family]) => `<option value="${this.escape(id)}">${this.escape(family.label)}</option>`).join("");
             return `
-                <form class="eng-calc-form" data-calc="unit_converter">
-                    <label>Family<select name="family">${familyOptions}</select></label>
-                    <label>Value<input name="value" type="number" step="any" value="1000"></label>
-                    <label>From<select name="from"></select></label>
-                    <label>To<select name="to"></select></label>
-                    <output></output>
+                <form class="eng-calc-form aegis-calc-panel" data-calc="unit_converter">
+                    <section class="aegis-calc-diagram eng-diagram-unit">
+                        <div class="eng-unit-column"><span data-unit-icon>↔</span><strong>SOURCE</strong><em data-unit-from>mm</em></div>
+                        <i>➜</i>
+                        <div class="eng-unit-column"><span data-unit-icon-target>↔</span><strong>TARGET</strong><em data-unit-to>cm</em></div>
+                    </section>
+                    <section class="aegis-calc-controls">
+                        <label class="aegis-field">Family<select class="aegis-select" name="family">${familyOptions}</select></label>
+                        ${this.engineeringSliderField("Value", "value", 1000, 0, 10000, 1)}
+                        <label class="aegis-field">From<select class="aegis-select" name="from"></select></label>
+                        <label class="aegis-field">To<select class="aegis-select" name="to"></select></label>
+                    </section>
+                    <section class="aegis-result-readout"><small>CONVERSION</small><output></output></section>
+                    <div class="aegis-calc-actions"><button type="button" data-calc-action="reset">RESET</button><button type="button" data-calc-action="copy">COPY RESULT</button></div>
                 </form>`;
         }
         if (tool.actionId === "torque_power_rpm") {
             return `
-                <form class="eng-calc-form" data-calc="torque_power_rpm">
-                    <label>Torque Nm<input name="torqueNm" type="number" step="any" value="250"></label>
-                    <label>Power kW<input name="powerKw" type="number" step="any"></label>
-                    <label>RPM<input name="rpm" type="number" step="any" value="3000"></label>
-                    <small>Enter any two values. P = τω.</small>
-                    <output></output>
+                <form class="eng-calc-form aegis-calc-panel" data-calc="torque_power_rpm">
+                    <section class="aegis-calc-diagram eng-diagram-torque">
+                        <div class="eng-rotor"><span></span><i></i></div>
+                        <div class="eng-formula"><strong>P = τω</strong><small>rpm → rad/s</small></div>
+                    </section>
+                    <section class="aegis-calc-controls">
+                        ${this.engineeringSliderField("Torque", "torqueNm", 250, 0, 1200, 1, "Nm")}
+                        ${this.engineeringSliderField("Power", "powerKw", 78.54, 0, 500, 0.01, "kW")}
+                        ${this.engineeringSliderField("RPM", "rpm", 3000, 0, 12000, 10, "rpm")}
+                    </section>
+                    <small class="aegis-calc-note">Enter any two values. Clear one numeric field to solve for it. P = τω.</small>
+                    <section class="aegis-result-readout"><small>POWERTRAIN RELATION</small><output></output></section>
+                    <div class="aegis-calc-actions"><button type="button" data-calc-action="reset">RESET</button><button type="button" data-calc-action="copy">COPY RESULT</button></div>
                 </form>`;
         }
         if (tool.actionId === "material_mass") {
             const materials = Object.entries(registry.MATERIALS).map(([id, item]) => `<option value="${this.escape(id)}">${this.escape(item.label)}</option>`).join("");
             return `
-                <form class="eng-calc-form" data-calc="material_mass">
-                    <label>Material<select name="materialId">${materials}</select></label>
-                    <label>Density kg/m³<input name="density" type="number" step="any"></label>
-                    <label>Volume cm³<input name="volumeCm3" type="number" step="any" value="100"></label>
-                    <label>Length mm<input name="lengthMm" type="number" step="any"></label>
-                    <label>Width mm<input name="widthMm" type="number" step="any"></label>
-                    <label>Height mm<input name="heightMm" type="number" step="any"></label>
-                    <output></output>
+                <form class="eng-calc-form aegis-calc-panel" data-calc="material_mass">
+                    <section class="aegis-calc-diagram eng-diagram-mass">
+                        <div class="eng-material-block"><i></i><span></span></div>
+                        <div class="eng-material-meta"><strong data-material-label>ALUMINIUM</strong><small data-material-density>2700 kg/m³</small></div>
+                    </section>
+                    <section class="aegis-calc-controls">
+                        <label class="aegis-field">Material<select class="aegis-select" name="materialId">${materials}</select></label>
+                        ${this.engineeringSliderField("Density", "density", 2700, 100, 9000, 1, "kg/m³")}
+                        ${this.engineeringSliderField("Volume", "volumeCm3", 100, 0, 20000, 1, "cm³")}
+                        ${this.engineeringSliderField("Length", "lengthMm", 0, 0, 1000, 1, "mm")}
+                        ${this.engineeringSliderField("Width", "widthMm", 0, 0, 1000, 1, "mm")}
+                        ${this.engineeringSliderField("Height", "heightMm", 0, 0, 1000, 1, "mm")}
+                    </section>
+                    <section class="aegis-result-readout"><small>MASS ESTIMATE</small><output></output></section>
+                    <div class="aegis-calc-actions"><button type="button" data-calc-action="reset">RESET</button><button type="button" data-calc-action="copy">COPY RESULT</button></div>
                 </form>`;
         }
         if (tool.actionId === "gear_ratio") {
             return `
-                <form class="eng-calc-form" data-calc="gear_ratio">
-                    <label>Driver teeth<input name="driverTeeth" type="number" step="1" value="20"></label>
-                    <label>Driven teeth<input name="drivenTeeth" type="number" step="1" value="60"></label>
-                    <label>Input RPM<input name="inputRpm" type="number" step="any" value="3000"></label>
-                    <output></output>
+                <form class="eng-calc-form aegis-calc-panel" data-calc="gear_ratio">
+                    <section class="aegis-calc-diagram eng-diagram-gears">
+                        <div class="eng-gear eng-gear-driver"><span></span></div>
+                        <div class="eng-gear eng-gear-driven"><span></span></div>
+                        <small>DRIVER → DRIVEN</small>
+                    </section>
+                    <section class="aegis-calc-controls">
+                        ${this.engineeringSliderField("Driver Teeth", "driverTeeth", 20, 5, 120, 1)}
+                        ${this.engineeringSliderField("Driven Teeth", "drivenTeeth", 60, 5, 160, 1)}
+                        ${this.engineeringSliderField("Input RPM", "inputRpm", 3000, 0, 16000, 10, "rpm")}
+                    </section>
+                    <section class="aegis-result-readout"><small>GEAR TRAIN OUTPUT</small><output></output></section>
+                    <div class="aegis-calc-actions"><button type="button" data-calc-action="reset">RESET</button><button type="button" data-calc-action="copy">COPY RESULT</button></div>
                 </form>`;
         }
         if (tool.actionId === "beam_deflection") {
             return `
-                <form class="eng-calc-form" data-calc="beam_deflection">
-                    <label>Length mm<input name="lengthMm" type="number" step="any" value="500"></label>
-                    <label>Center force N<input name="forceN" type="number" step="any" value="100"></label>
-                    <label>E GPa<input name="elasticModulusGPa" type="number" step="any" value="69"></label>
-                    <label>I mm⁴<input name="secondMomentMm4" type="number" step="any" value="10000"></label>
-                    <small>Approximate simply supported beam with center point load.</small>
-                    <output></output>
+                <form class="eng-calc-form aegis-calc-panel" data-calc="beam_deflection">
+                    <section class="aegis-calc-diagram eng-diagram-beam">
+                        <svg viewBox="0 0 420 150" role="img" aria-label="Simply supported beam center load">
+                            <path class="beam-neutral" d="M35 82 H385"></path>
+                            <path class="beam-deflected" data-beam-path d="M35 82 Q210 100 385 82"></path>
+                            <path class="beam-load" d="M210 18 V74"></path>
+                            <path class="beam-load-head" d="M198 62 L210 78 L222 62"></path>
+                            <path class="beam-support" d="M52 92 L30 125 H74 Z M368 92 L346 125 H390 Z"></path>
+                        </svg>
+                        <small>SIMPLY SUPPORTED · CENTER LOAD · APPROXIMATE</small>
+                    </section>
+                    <section class="aegis-calc-controls">
+                        ${this.engineeringSliderField("Length", "lengthMm", 500, 50, 5000, 1, "mm")}
+                        ${this.engineeringSliderField("Center Force", "forceN", 100, 0, 5000, 1, "N")}
+                        ${this.engineeringSliderField("E", "elasticModulusGPa", 69, 1, 250, 0.1, "GPa")}
+                        ${this.engineeringSliderField("I", "secondMomentMm4", 10000, 100, 1000000, 10, "mm⁴")}
+                    </section>
+                    <small class="aegis-calc-note">Approximate simply supported beam with center point load.</small>
+                    <section class="aegis-result-readout"><small>DEFLECTION</small><output></output></section>
+                    <div class="aegis-calc-actions"><button type="button" data-calc-action="reset">RESET</button><button type="button" data-calc-action="copy">COPY RESULT</button></div>
                 </form>`;
         }
         if (tool.actionId === "thread_reference") {
-            return `<div class="eng-thread-table">${registry.THREAD_REFERENCES.map(row => `
-                <div><strong>${this.escape(row.thread)}</strong><span>Tap ${this.escape(row.tapDrill)}</span><span>Clear ${this.escape(row.clearance)}</span></div>`).join("")}</div>`;
+            return `
+                <section class="aegis-calc-panel eng-thread-panel">
+                    <div class="aegis-calc-diagram eng-diagram-thread">
+                        <div class="eng-thread-screw"><i></i><span></span></div>
+                        <div><strong>METRIC THREAD QUICK REFERENCE</strong><small>Tap drill / clearance · workshop reference</small></div>
+                    </div>
+                    <div class="eng-thread-table">${registry.THREAD_REFERENCES.map(row => `
+                        <div><strong>${this.escape(row.thread)}</strong><span>Tap ${this.escape(row.tapDrill)}</span><span>Clear ${this.escape(row.clearance)}</span></div>`).join("")}</div>
+                </section>`;
         }
         if (tool.actionId === "material_card") {
             const material = registry.MATERIALS[tool.materialId] || {};
@@ -621,11 +687,66 @@ class WorkspaceManager {
 
     bindEngineeringCalculators(root) {
         root.querySelectorAll(".eng-calc-form").forEach(form => {
-            const update = () => this.updateEngineeringCalculator(form);
+            const update = event => {
+                this.syncEngineeringCalcControls(form, event && event.target);
+                this.updateEngineeringCalculator(form);
+            };
             form.addEventListener("input", update);
             form.addEventListener("change", update);
+            form.querySelectorAll('[data-calc-action="reset"]').forEach(button => {
+                button.addEventListener("click", () => {
+                    form.querySelectorAll("[data-default]").forEach(input => {
+                        input.value = input.dataset.default || "";
+                    });
+                    this.syncEngineeringCalcControls(form);
+                    this.updateEngineeringCalculator(form);
+                });
+            });
+            form.querySelectorAll('[data-calc-action="copy"]').forEach(button => {
+                button.addEventListener("click", async () => {
+                    const text = form.querySelector("output") ? form.querySelector("output").innerText : "";
+                    if (!text) return;
+                    try {
+                        await navigator.clipboard.writeText(text);
+                        button.innerText = "COPIED";
+                        setTimeout(() => button.innerText = "COPY RESULT", 900);
+                    } catch (error) {
+                        button.innerText = "COPY FAILED";
+                        setTimeout(() => button.innerText = "COPY RESULT", 900);
+                    }
+                });
+            });
             if (form.dataset.calc === "unit_converter") this.syncUnitConverterSelects(form);
             update();
+        });
+    }
+
+    syncEngineeringCalcControls(form, source = null) {
+        if (!form) return;
+        if (source && source.matches && source.matches(".aegis-slider[data-sync-input]")) {
+            const target = form.elements[source.dataset.syncInput];
+            if (target) target.value = source.value;
+        } else if (source && source.name) {
+            const slider = form.querySelector(`.aegis-slider[data-sync-input="${source.name}"]`);
+            if (slider && source.value !== "") {
+                const number = Number(source.value);
+                if (Number.isFinite(number)) {
+                    slider.value = String(Math.max(Number(slider.min), Math.min(Number(slider.max), number)));
+                }
+            }
+        } else {
+            form.querySelectorAll(".aegis-slider[data-sync-input]").forEach(slider => {
+                const target = form.elements[slider.dataset.syncInput];
+                if (target && target.value !== "") slider.value = target.value;
+            });
+        }
+        form.querySelectorAll(".aegis-slider[data-sync-input]").forEach(slider => {
+            const target = form.elements[slider.dataset.syncInput];
+            const live = form.querySelector(`[data-calc-live="${slider.dataset.syncInput}"]`);
+            if (live) {
+                const suffix = target && target.parentElement ? target.parentElement.querySelector("b") : null;
+                live.innerText = `${target ? target.value : slider.value}${suffix ? ` ${suffix.innerText}` : ""}`;
+            }
         });
     }
 
@@ -652,32 +773,96 @@ class WorkspaceManager {
             form.querySelector("output").innerText = result.ok
                 ? `${registry.round(result.input, 5)} ${result.from} = ${registry.round(result.result, 5)} ${result.to}`
                 : result.error;
+            this.updateEngineeringCalculatorVisual(form, result);
         }
         if (form.dataset.calc === "torque_power_rpm") {
             result = registry.calculateTorquePowerRpm(values);
             form.querySelector("output").innerText = result.ok
                 ? `${registry.round(result.torqueNm, 3)} Nm · ${registry.round(result.powerKw, 3)} kW · ${registry.round(result.rpm, 1)} rpm`
                 : result.error;
+            this.updateEngineeringCalculatorVisual(form, result);
         }
         if (form.dataset.calc === "material_mass") {
             const material = registry.MATERIALS[values.materialId] || {};
-            if (!values.density && material.density) form.elements.density.value = material.density;
+            if ((!values.density || Number(values.density) === 0) && material.density) {
+                form.elements.density.value = material.density;
+                this.syncEngineeringCalcControls(form, form.elements.density);
+            }
             result = registry.calculateMaterialMass({...values, density: form.elements.density.value});
             form.querySelector("output").innerText = result.ok
                 ? `${registry.round(result.massKg, 4)} kg · ${registry.round(result.massKg * 1000, 1)} g`
                 : result.error;
+            this.updateEngineeringCalculatorVisual(form, result);
         }
         if (form.dataset.calc === "gear_ratio") {
             result = registry.calculateGearRatio(values);
             form.querySelector("output").innerText = result.ok
                 ? `Ratio ${registry.round(result.ratio, 4)}:1 · Output ${registry.round(result.outputRpm, 1)} rpm · Torque ×${registry.round(result.torqueMultiplier, 3)}`
                 : result.error;
+            this.updateEngineeringCalculatorVisual(form, result);
         }
         if (form.dataset.calc === "beam_deflection") {
             result = registry.calculateBeamDeflection(values);
             form.querySelector("output").innerText = result.ok
                 ? `Deflection ≈ ${registry.round(result.deflectionMm, 4)} mm`
                 : result.error;
+            this.updateEngineeringCalculatorVisual(form, result);
+        }
+    }
+
+    updateEngineeringCalculatorVisual(form, result = {}) {
+        const values = Object.fromEntries(Array.from(new FormData(form).entries()));
+        if (form.dataset.calc === "unit_converter") {
+            const family = this.engineeringRegistry.unitFamilies[values.family] || {};
+            const icon = family.icon || "↔";
+            const from = form.querySelector("[data-unit-from]");
+            const to = form.querySelector("[data-unit-to]");
+            const sourceIcon = form.querySelector("[data-unit-icon]");
+            const targetIcon = form.querySelector("[data-unit-icon-target]");
+            if (from) from.innerText = values.from || "";
+            if (to) to.innerText = values.to || "";
+            if (sourceIcon) sourceIcon.innerText = icon;
+            if (targetIcon) targetIcon.innerText = icon;
+        }
+        if (form.dataset.calc === "torque_power_rpm") {
+            const rotor = form.querySelector(".eng-rotor");
+            if (rotor) {
+                const rpm = Math.max(0, Number(values.rpm || 0));
+                const torque = Math.max(0, Number(values.torqueNm || 0));
+                rotor.style.setProperty("--rpm-speed", `${Math.max(.65, 7 - Math.min(6, rpm / 1800))}s`);
+                rotor.style.setProperty("--torque-angle", `${Math.min(300, torque / 4)}deg`);
+            }
+        }
+        if (form.dataset.calc === "material_mass") {
+            const material = this.engineeringRegistry.MATERIALS[values.materialId] || {};
+            const label = form.querySelector("[data-material-label]");
+            const density = form.querySelector("[data-material-density]");
+            const block = form.querySelector(".eng-material-block");
+            if (label) label.innerText = (material.label || "MATERIAL").toUpperCase();
+            if (density) density.innerText = `${Number(form.elements.density.value || material.density || 0)} kg/m³`;
+            if (block) {
+                const length = Number(values.lengthMm || 0);
+                const width = Number(values.widthMm || 0);
+                const height = Number(values.heightMm || 0);
+                const volume = Number(values.volumeCm3 || 0);
+                const scale = Math.max(.72, Math.min(1.35, (length && width && height ? Math.cbrt(length * width * height) / 85 : Math.cbrt(Math.max(1, volume)) / 5)));
+                block.style.setProperty("--mass-scale", String(scale));
+            }
+        }
+        if (form.dataset.calc === "gear_ratio") {
+            const driver = Number(values.driverTeeth || 20);
+            const driven = Number(values.drivenTeeth || 60);
+            const driverNode = form.querySelector(".eng-gear-driver");
+            const drivenNode = form.querySelector(".eng-gear-driven");
+            if (driverNode) driverNode.style.setProperty("--gear-size", `${Math.max(3.2, Math.min(7.2, driver / 13))}vh`);
+            if (drivenNode) drivenNode.style.setProperty("--gear-size", `${Math.max(3.6, Math.min(9.2, driven / 13))}vh`);
+        }
+        if (form.dataset.calc === "beam_deflection") {
+            const path = form.querySelector("[data-beam-path]");
+            if (path) {
+                const deflection = result.ok ? Math.min(48, Math.max(10, Math.abs(Number(result.deflectionMm || 0)) * 2 + 10)) : 18;
+                path.setAttribute("d", `M35 82 Q210 ${82 + deflection} 385 82`);
+            }
         }
     }
 
