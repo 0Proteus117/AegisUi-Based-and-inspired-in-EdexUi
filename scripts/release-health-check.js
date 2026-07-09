@@ -64,6 +64,7 @@ function main() {
         && exists("src/classes/assistant/assistantAIProvider.class.js")
         && exists("src/classes/assistant/assistantChatSession.class.js")
         && exists("src/classes/assistant/assistantCommandRouter.class.js")
+        && exists("scripts/test-assistant-routing-classifier.js")
         && exists("assistant/config/assistant-ai.example.json");
 
     const appleMusicBridge = exists("scripts/test-apple-music-runtime.js")

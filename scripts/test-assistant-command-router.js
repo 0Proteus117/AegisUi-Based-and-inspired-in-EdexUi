@@ -34,12 +34,14 @@ async function main() {
     const switchProfile = await router.executeFromText("cambia a Angie");
     const blocked = await router.executeFromText("ejecuta rm -rf todo");
     const unknown = await router.executeFromText("cuéntame una historia corta");
+    const greeting = await router.executeFromText("Hola estrellita! El mundo te dice holaaaa");
 
     const ok = open.ok
         && switchProfile.ok
         && blocked.handled
         && !blocked.ok
         && unknown.handled === false
+        && greeting.handled === false
         && ASSISTANT_SAFE_ACTIONS.length >= 10
         && calls.includes("expanded:open");
 
@@ -49,6 +51,7 @@ async function main() {
     print("COMMAND_ROUTER_BLOCKED_ACTION", blocked.status === "BLOCKED" ? "OK" : "FAIL");
     print("COMMAND_ROUTER_NO_SHELL_ARBITRARY", blocked.status === "BLOCKED" ? "OK" : "FAIL");
     print("COMMAND_ROUTER_UNKNOWN_CHAT", unknown.handled === false ? "OK" : "FAIL");
+    print("COMMAND_ROUTER_GREETING_CHAT", greeting.handled === false ? "OK" : "FAIL");
     print("SECURITY", ok ? "OK" : "FAIL");
     print("COMMAND_ROUTER", ok ? "OK" : "FAIL");
     if (!ok) process.exit(1);

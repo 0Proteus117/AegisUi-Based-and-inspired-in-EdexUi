@@ -172,3 +172,10 @@ Still not connected:
 - TTS;
 - tools;
 - arbitrary system commands.
+
+## v2.2.1 hotfix
+
+- Expanded chat starts closed by default.
+- User messages render immediately before Ollama responds.
+- Router classification is restricted to clear system-action requests.
+- Harmless conversation is not blocked or answered as a command-router issue.

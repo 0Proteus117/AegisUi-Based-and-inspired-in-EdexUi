@@ -40,6 +40,17 @@ The router blocks:
 
 ## Chat integration
 
+Normal conversation is always treated as chat unless the message clearly
+matches an allowlisted system action.
+
+Examples treated as chat:
+
+- “hola”
+- “hola estrellita”
+- “el mundo te dice hola”
+- “cuéntame algo”
+- “dime algo bonito”
+
 The model can write a normal response or express an obvious safe intent such as:
 
 - “abre el chat grande”
@@ -53,6 +64,9 @@ AegisUi validates the intent against the allowlist before execution.
 If an action is not allowed, the UI returns:
 
 `Command blocked: action not allowed in current authority level.`
+
+The router must not contaminate harmless conversation with command-router
+warnings.
 
 ## Future
 

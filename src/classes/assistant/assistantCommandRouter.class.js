@@ -47,14 +47,50 @@
     ]);
 
     const BLOCKED_PATTERNS = [
-        /rm\s+-rf/i,
-        /borrar|elimina|delete|wipe|format/i,
-        /git\s+(push|reset|checkout|commit|merge|rebase)/i,
-        /terminal|shell|bash|zsh|script|comando arbitrario/i,
-        /contraseña|password|token|clave|secret/i,
-        /pago|payment|transferencia/i,
-        /envía|send message|email|correo|whatsapp/i
+        /\brm\s+-rf\b/i,
+        /\b(sudo|chmod|chown|curl|wget|osascript|python|node|npm|pnpm|yarn)\b.*\b(ejecuta|run|exec|shell|terminal|bash|zsh|script)\b/i,
+        /\b(ejecuta|run|exec|abre|open|usa|launch)\b.*\b(terminal|shell|bash|zsh|comando arbitrario)\b/i,
+        /\b(borra|borrar|elimina|delete|wipe|format|formatea|destruye)\b.*\b(archivo|archivos|file|files|carpeta|carpetas|folder|folders|todo|sistema|disk|disco|historial|datos)\b/i,
+        /\bgit\s+(push|reset|checkout|commit|merge|rebase|clean)\b/i,
+        /\b(contraseña|password|token|clave|secret|secreto|credencial)\b/i,
+        /\b(pago|payment|transferencia|bank|banco)\b/i,
+        /\b(envia|enviar|manda|mandar|send)\b.*\b(email|correo|whatsapp|mensaje|historial|datos)\b/i
     ];
+
+    const SAFE_COMMAND_PATTERNS = Object.freeze([
+        [/^(abre|abrir|open|muestra|mostrar|show|expand|expande|maximiza|maximizar).*(chat (grande|ampliado)|chat|asistente)/, "open_expanded_chat"],
+        [/^(cierra|cerrar|close).*(chat|asistente)/, "close_expanded_chat"],
+        [/^(abre|abrir|open|muestra|mostrar|show).*(panel.*asistente|asistente)/, "open_assistant_panel"],
+        [/^(cambia|cambiar|pon|poner|switch).*(angie)\b/, "switch_to_angie"],
+        [/^(cambia|cambiar|pon|poner|switch).*(gustav)\b/, "switch_to_gustav"],
+        [/^(cambia|cambiar|pon|poner|switch).*(ares)\b/, "switch_to_ares"],
+        [/^(cambia|cambiar|pon|poner|switch).*(aphrodite|afrodita)\b/, "switch_to_aphrodite"],
+        [/^(abre|abrir|open|muestra|mostrar|show|ve a|ir a).*\bhub\b/, "open_workspace_hub"],
+        [/^(abre|abrir|open|muestra|mostrar|show|ve a|ir a).*(engineer|ingenier)/, "open_workspace_engineer"],
+        [/^(abre|abrir|open|muestra|mostrar|show|ve a|ir a).*(osint|analyst|analista)/, "open_workspace_osint"],
+        [/^(abre|abrir|open|muestra|mostrar|show|ve a|ir a).*(student|estudiante)/, "open_workspace_student"],
+        [/^(abre|abrir|open|muestra|mostrar|show|ve a|ir a).*(artist|artista)/, "open_workspace_artist"],
+        [/^(abre|abrir|open|muestra|mostrar|show|ve a|ir a).*(business|negocio)/, "open_workspace_business"],
+        [/^(abre|abrir|open|muestra|mostrar|show|ve a|ir a).*(comms|comunicaciones)/, "open_workspace_comms"],
+        [/^(abre|abrir|open|muestra|mostrar|show|ve a|ir a).*(launch bay|gaming|juegos)/, "open_workspace_launch_bay"],
+        [/^(abre|abrir|open|muestra|mostrar|show|ve a|ir a).*(developer|desarrollador|programador)/, "open_workspace_developer"],
+        [/^(abre|abrir|open|muestra|mostrar|show|ve a|ir a).*(agent command|agentes)/, "open_workspace_agent_command"],
+        [/^(abre|abrir|open|muestra|mostrar|show).*(project control|control.*proyecto)/, "open_project_control"],
+        [/^(abre|abrir|open|muestra|mostrar|show).*(calendario|calendar)/, "open_calendar"],
+        [/^(abre|abrir|open|connect|conecta).*(apple music|music|musica|música)/, "open_apple_music"],
+        [/^(refresca|refrescar|actualiza|actualizar|refresh).*(apple music|music|musica|música)/, "refresh_apple_music"],
+        [/^(pausa|pausar|play|reanuda|reanudar|toggle).*(music|musica|música)/, "music_play_pause"],
+        [/^(refresca|refrescar|actualiza|actualizar|refresh).*(mapa|map)/, "refresh_map"],
+        [/^(activa|activar|desactiva|desactivar|toggle|muestra|mostrar).*(traffic|trafico|tráfico)/, "map_toggle_traffic"],
+        [/^(activa|activar|desactiva|desactivar|toggle|muestra|mostrar).*(radar)/, "map_toggle_radar"],
+        [/^(activa|activar|desactiva|desactivar|toggle|muestra|mostrar).*(barcos|sea|ais|maritimo|marítimo)/, "map_toggle_sea"],
+        [/^(activa|activar|desactiva|desactivar|toggle|muestra|mostrar).*(marine|marino|oleaje)/, "map_toggle_marine"],
+        [/^(activa|activar|desactiva|desactivar|toggle|muestra|mostrar).*(sat|satelite|satélite)/, "map_toggle_sat"],
+        [/^(centra|centrar|ve a|ir a|my location|mi ubicacion|mi ubicación).*(ubicacion|ubicación|location)?/, "map_my_location"],
+        [/^(limpia|limpiar|clear).*(conversacion|conversación|conversation)/, "clear_current_conversation"],
+        [/^(muestra|mostrar|show).*(estado.*memoria|memory status)/, "show_memory_status"],
+        [/^(muestra|mostrar|show|comprueba|check).*(estado.*local ai|ollama|ia local)/, "show_local_ai_status"]
+    ]);
 
     function normalize(text = "") {
         return String(text || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -83,51 +119,26 @@
             return Array.from(SAFE_ACTIONS);
         }
 
-        inferAction(text = "") {
-            const value = normalize(text);
-            if (!value) return null;
+        classifyMessage(text = "") {
+            const value = normalize(text).trim();
+            if (!value) return {type: "CHAT", action: null, reason: "empty"};
             if (BLOCKED_PATTERNS.some(pattern => pattern.test(value))) {
-                return {action: "blocked", reason: "unsafe_intent"};
+                return {type: "COMMAND_BLOCKED", action: "blocked", reason: "unsafe_intent"};
             }
+            const found = SAFE_COMMAND_PATTERNS.find(([pattern]) => pattern.test(value));
+            if (found) return {type: "COMMAND_SAFE", action: found[1], reason: "allowlist"};
+            return {type: "CHAT", action: null, reason: "no_system_command_intent"};
+        }
 
-            const checks = [
-                [/chat (grande|ampliado)|abre.*chat|expand.*chat|maximiza.*chat/, "open_expanded_chat"],
-                [/cierra.*chat|close.*chat/, "close_expanded_chat"],
-                [/abre.*asistente|open.*assistant/, "open_assistant_panel"],
-                [/cierra.*asistente|close.*assistant/, "close_assistant_panel"],
-                [/cambia.*angie|pon.*angie|switch.*angie/, "switch_to_angie"],
-                [/cambia.*gustav|pon.*gustav|switch.*gustav/, "switch_to_gustav"],
-                [/cambia.*ares|switch.*ares/, "switch_to_ares"],
-                [/cambia.*aphrodite|afrodita|switch.*aphrodite/, "switch_to_aphrodite"],
-                [/abre.*hub|workspace.*hub/, "open_workspace_hub"],
-                [/abre.*engineer|ingenier|workspace.*engineer/, "open_workspace_engineer"],
-                [/abre.*osint|analyst|analista/, "open_workspace_osint"],
-                [/abre.*student|estudiante/, "open_workspace_student"],
-                [/abre.*artist|artista/, "open_workspace_artist"],
-                [/abre.*business|negocio/, "open_workspace_business"],
-                [/abre.*comms|comunicaciones/, "open_workspace_comms"],
-                [/launch bay|gaming|juegos/, "open_workspace_launch_bay"],
-                [/developer|desarrollador|programador/, "open_workspace_developer"],
-                [/agent command|agentes/, "open_workspace_agent_command"],
-                [/project control|control.*proyecto/, "open_project_control"],
-                [/calendario|calendar/, "open_calendar"],
-                [/apple music|musica|música|abre.*music/, "open_apple_music"],
-                [/refresca.*music|actualiza.*music/, "refresh_apple_music"],
-                [/pausa.*musica|pausa.*música|play.?pause|reanuda.*musica/, "music_play_pause"],
-                [/refresca.*mapa|actualiza.*mapa/, "refresh_map"],
-                [/traffic|trafico|tráfico/, "map_toggle_traffic"],
-                [/radar/, "map_toggle_radar"],
-                [/barcos|sea|ais|maritimo|marítimo/, "map_toggle_sea"],
-                [/marine|marino|oleaje|mar/, "map_toggle_marine"],
-                [/sat|satelite|satélite/, "map_toggle_sat"],
-                [/mi ubicacion|mi ubicación|my location/, "map_my_location"],
-                [/limpia.*conversacion|clear.*conversation/, "clear_current_conversation"],
-                [/estado.*memoria|memory status/, "show_memory_status"],
-                [/estado.*local ai|ollama|ia local/, "show_local_ai_status"]
-            ];
+        isLikelySystemCommand(text = "") {
+            return this.classifyMessage(text).type === "COMMAND_SAFE";
+        }
 
-            const found = checks.find(([pattern]) => pattern.test(value));
-            return found ? {action: found[1], reason: "matched"} : null;
+        inferAction(text = "") {
+            const classified = this.classifyMessage(text);
+            if (classified.type === "CHAT") return null;
+            if (classified.type === "COMMAND_BLOCKED") return {action: "blocked", reason: classified.reason};
+            return {action: classified.action, reason: classified.reason};
         }
 
         async executeFromText(text = "") {

@@ -62,7 +62,7 @@
 
         render() {
             if (!this.root) return;
-            this.restoreTranscript();
+            if (!this.isSending) this.restoreTranscript();
             const config = this.settings.settings;
             const name = this.settings.displayName();
             const subtitle = this.settings.subtitle();
@@ -125,7 +125,7 @@
                     <label for="assistant_manual_input">Manual input · local text only</label>
                     <textarea id="assistant_manual_input" rows="3" spellcheck="false" placeholder="${assistantEscape(inputPlaceholder)}"></textarea>
                     <div>
-                        <button type="submit" class="primary">SEND</button>
+                        <button type="submit" class="primary" ${this.isSending ? "disabled" : ""}>${this.isSending ? "GENERATING" : "SEND"}</button>
                         <button type="button" data-action="mute">${muted ? "UNMUTE" : "MUTE"}</button>
                         <button type="button" data-action="expand-chat">EXPAND</button>
                         <button type="button" data-action="settings">SETTINGS</button>
@@ -372,6 +372,15 @@
 
             this.isSending = true;
             this.addTranscript("user", message);
+            if (input) input.value = "";
+            this.lastResponse = "Thinking…";
+            this.presence.setState("THINKING");
+            this.render();
+            if (this.expandedOpen) this.renderExpandedChat();
+            const activeInput = source === "expanded" && this.expandedRoot
+                ? this.expandedRoot.querySelector("#assistant_expanded_input")
+                : this.root.querySelector("#assistant_manual_input");
+            if (activeInput) setTimeout(() => activeInput.focus(), 20);
             try {
                 const result = await this.bridge.sendText(message);
                 this.lastResponse = result.response || (window.AssistantMicrocopy
@@ -386,7 +395,6 @@
                     };
                 }
                 this.addTranscript("assistant", this.lastResponse);
-                if (input) input.value = "";
                 this.refreshTranscriptFromSession();
             } catch (error) {
                 this.lastResponse = `Local AI error: ${error.message || error}`;
@@ -463,9 +471,11 @@
                 ? this.bridge.conversationMessages(80)
                 : this.transcript;
             if (!messages || !messages.length) {
-                return `<p class="assistant-chat-empty">No local messages yet.</p>`;
+                return this.isSending
+                    ? this.thinkingIndicatorHtml()
+                    : `<p class="assistant-chat-empty">No local messages yet.</p>`;
             }
-            return messages.map(item => {
+            return `${messages.map(item => {
                 const role = item.role === "assistant" ? "assistant" : "user";
                 const time = item.time ? new Date(item.time).toLocaleTimeString([], {hour: "2-digit", minute: "2-digit"}) : item.time || "";
                 return `
@@ -473,7 +483,7 @@
                         <header><strong>${assistantEscape(role === "user" ? "YOU" : this.settings.displayName())}</strong><span>${assistantEscape(time)}</span></header>
                         <p>${assistantEscape(item.text || "")}</p>
                     </article>`;
-            }).join("");
+            }).join("")}${this.isSending ? this.thinkingIndicatorHtml() : ""}`;
         }
 
         openExpandedChat() {
@@ -539,7 +549,7 @@
                     <form class="assistant-chat-expanded-input">
                         <textarea id="assistant_expanded_input" rows="4" spellcheck="false" placeholder="${assistantEscape(window.AssistantMicrocopy ? window.AssistantMicrocopy.inputPlaceholder(config) : "Type a local prompt…")}"></textarea>
                         <div>
-                            <button type="submit" class="primary">SEND</button>
+                            <button type="submit" class="primary" ${this.isSending ? "disabled" : ""}>${this.isSending ? "GENERATING" : "SEND"}</button>
                             <button type="button" data-expanded-action="clear">CLEAR CURRENT</button>
                             <button type="button" data-expanded-action="export">EXPORT</button>
                             <button type="button" data-expanded-action="folder">OPEN FOLDER</button>
@@ -619,14 +629,24 @@
 
         renderTranscript() {
             if (!this.transcript.length) {
-                return `<p class="assistant-chat-empty">No local messages yet.</p>`;
+                return this.isSending
+                    ? this.thinkingIndicatorHtml()
+                    : `<p class="assistant-chat-empty">No local messages yet.</p>`;
             }
-            return this.transcript.map(item => `
+            return `${this.transcript.map(item => `
                 <article data-role="${assistantEscape(item.role)}">
                     <header><strong>${assistantEscape(item.role === "user" ? "YOU" : this.settings.displayName())}</strong><span>${assistantEscape(item.time)}</span></header>
                     <p>${assistantEscape(item.text)}</p>
                 </article>
-            `).join("");
+            `).join("")}${this.isSending ? this.thinkingIndicatorHtml() : ""}`;
+        }
+
+        thinkingIndicatorHtml() {
+            return `
+                <article class="assistant-thinking-indicator" data-role="assistant">
+                    <header><strong>${assistantEscape(this.settings.displayName())}</strong><span>GENERATING</span></header>
+                    <p><span class="assistant-typing-dots"><i></i><i></i><i></i></span> Thinking…</p>
+                </article>`;
         }
 
         readMemoryStatus() {

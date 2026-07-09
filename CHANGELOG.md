@@ -1,5 +1,24 @@
 # Changelog
 
+## 2.2.1 - 2026-07-09
+
+### Fixed
+
+- Expanded Assistant chat no longer auto-opens after relaunch by default.
+- User messages now appear immediately while Ollama is generating.
+- Added visible cockpit-style `Thinking…` indicator and disabled send state
+  while a response is pending.
+- Tightened command-router classification so normal conversation is not
+  intercepted by router safety rules.
+- Updated Angie/Aphrodite prompts so harmless warm conversation is answered
+  naturally and does not mention command-router limits.
+
+### Security
+
+- Command router remains allowlist-only.
+- Destructive, shell, Git, credential, payment and external-message intents
+  remain blocked.
+
 ## 2.2.0 - 2026-07-09
 
 ### Added

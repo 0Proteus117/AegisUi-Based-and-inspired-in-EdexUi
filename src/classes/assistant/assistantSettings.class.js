@@ -11,6 +11,7 @@
         voiceMode: "not-configured",
         panelOpen: false,
         expandedChatOpen: false,
+        restoreExpandedChat: false,
         lastState: "IDLE",
         backend: {
             assistant: "OFFLINE",
@@ -57,6 +58,7 @@
                     : defaults.voiceMode,
                 panelOpen: Boolean(source.panelOpen),
                 expandedChatOpen: Boolean(source.expandedChatOpen),
+                restoreExpandedChat: Boolean(source.restoreExpandedChat),
                 lastState: ["IDLE", "LISTENING", "THINKING", "SPEAKING", "MUTED", "OFFLINE", "ERROR"].includes(String(source.lastState || "").toUpperCase())
                     ? String(source.lastState).toUpperCase()
                     : defaults.lastState,

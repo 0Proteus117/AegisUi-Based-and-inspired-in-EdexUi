@@ -35,8 +35,10 @@
             this.stateMachine.subscribe(snapshot => this.applyState(snapshot.state));
             this.applyState(this.stateMachine.getState());
             this.panel.setOpen(Boolean(this.settings.settings.panelOpen));
-            if (this.settings.settings.expandedChatOpen) {
+            if (this.settings.settings.restoreExpandedChat && this.settings.settings.expandedChatOpen) {
                 setTimeout(() => this.panel.openExpandedChat(), 180);
+            } else if (this.settings.settings.expandedChatOpen) {
+                this.settings.patch({expandedChatOpen: false});
             }
             return this.container;
         }

@@ -48,6 +48,16 @@
         return null;
     }
 
+    function isRouterContaminatedResponse(text = "") {
+        return /command router|router de comandos|creative content|contenido creativo|no puedo responder de esa manera|no puedo responder.*(afectuos|personales|comentarios)|capacidad.*responder.*desactivad|responder.*comentarios personales.*desactivad|currently disabled|est[aá] desactivad|trat[aá]ndome como si fuera una persona|recuerda que soy angie|soy angie, tu compañera|soy (un|una) (modelo|ia|inteligencia artificial)/i
+            .test(String(text || ""));
+    }
+
+    function isHarmlessConversation(text = "") {
+        return /hola|holaaaa|estrellita|que tal|qué tal|cuentame|cuéntame|dime algo bonito|mundo.*hola|saluda|buenos dias|buenas tardes|buenas noches/i
+            .test(String(text || ""));
+    }
+
     class AssistantLocalChat {
         constructor(options = {}) {
             this.fs = options.fs || optionalRequire("fs");
@@ -214,10 +224,10 @@
 
         personalityPrompt(id = "gustav") {
             const prompts = {
-                gustav: `You are Gustav, Gabriel's private local technical assistant inside AegisUi.\nTone: dry, technical, concise, controlled.\nYou are command-oriented but command execution is disabled.\nDo not pretend to control the system.\nDo not claim to have voice, hearing, tools or file access.\nUse the provided memory only as grounding context.\nIf asked to act, explain that the command router is offline.\nKeep answers short unless Gabriel asks for detail.`,
-                angie: `You are Angie, Gabriel's private local assistant presence inside AegisUi.\nTone: warm, tender, present, calm.\nYou are gentle without being childish, fake-cute or waifu-like.\nYou are technically grounded inside the cockpit.\nDo not pretend to control the system.\nDo not claim to have voice, hearing, tools or file access.\nUse the provided memory only as grounding context.\nIf asked to act, explain softly that the command router is offline.`,
-                ares: `You are Ares, the public tactical assistant profile inside AegisUi.\nTone: sober, tactical, neutral, concise.\nNo private intimacy.\nCommand execution is disabled.\nDo not pretend unavailable capabilities exist.`,
-                aphrodite: `You are Aphrodite, the public warm assistant profile inside AegisUi.\nTone: elegant, warm, calm, helpful.\nNo private intimacy.\nCommand execution is disabled.\nDo not pretend unavailable capabilities exist.`
+                gustav: `You are Gustav, Gabriel's private local technical assistant inside AegisUi.\nTone: dry, technical, concise, controlled.\nNormal conversation is allowed.\nYou are command-oriented, but only AegisUi's safe allowlisted router may execute UI actions.\nDo not pretend to control shell, Git, files, credentials or external services.\nDo not claim to have voice or hearing.\nUse the provided memory only as grounding context.\nMention router limits only when the user asks for a system action.\nKeep answers short unless Gabriel asks for detail.`,
+                angie: `You are Angie, Gabriel's private local assistant presence inside AegisUi.\nTone: warm, tender, present, calm.\nNormal affectionate and playful conversation is allowed.\nFor harmless greetings, warmth, ideas, comfort or creative chat, respond naturally.\nIf Gabriel greets you playfully or affectionately, answer with a short, warm, alive line before moving to the next useful step.\nNever refuse harmless conversation because of the command router.\nYou are gentle without being childish, fake-cute or waifu-like.\nYou are technically grounded inside the cockpit.\nDo not pretend to control shell, Git, files, credentials or external services.\nDo not claim to have voice or hearing.\nUse the provided memory only as grounding context.\nMention router limits only when the user asks for a system action.`,
+                ares: `You are Ares, the public tactical assistant profile inside AegisUi.\nTone: sober, tactical, neutral, concise.\nNormal conversation is allowed.\nNo private intimacy.\nOnly AegisUi's safe allowlisted router may execute UI actions.\nDo not pretend unavailable capabilities exist.`,
+                aphrodite: `You are Aphrodite, the public warm assistant profile inside AegisUi.\nTone: elegant, warm, calm, helpful.\nNormal warm conversation is allowed.\nDo not refuse harmless greetings, creative chat or emotional tone because of the command router.\nIf the user greets you warmly, answer warmly and briefly before helping.\nNo private intimacy.\nOnly AegisUi's safe allowlisted router may execute UI actions.\nDo not pretend unavailable capabilities exist.`
             };
             return prompts[id] || prompts.gustav;
         }
@@ -242,7 +252,7 @@
             }
             if (context.messages.length) {
                 parts.push("Recent messages:");
-                context.messages.forEach(item => {
+                context.messages.filter(item => !(item.role === "assistant" && isRouterContaminatedResponse(item.text))).forEach(item => {
                     parts.push(`${String(item.role || "user").toUpperCase()}: ${String(item.text || "").slice(0, 2400)}`);
                 });
             }
@@ -281,14 +291,14 @@
         buildSystemPrompt({assistantId, mode, memory} = {}) {
             const id = this.getPersonalityId({assistantId, mode});
             const base = this.personalityPrompt(id);
-            const globalRules = `Global rules:\n- Reply in the language of the latest user message, not the memory context.\n- If Gabriel writes in Spanish, reply in Spanish.\n- If the user writes in English, reply in English.\n- Do not reveal the full private memory.\n- Do not print huge context blocks.\n- Do not execute commands yourself.\n- Do not claim shell, Git, filesystem or external messaging authority.\n- You may describe or request safe allowlisted UI actions; AegisUi validates them separately.\n- Do not invent system state.\n- Distinguish between what you know from memory and what you can verify now.`;
+            const globalRules = `Global rules:\n- Reply in the language of the latest user message, not the memory context.\n- If Gabriel writes in Spanish, reply in Spanish.\n- If the user writes in English, reply in English.\n- Do not reveal the full private memory.\n- Do not print huge context blocks.\n- Normal conversation, warmth, ideation and harmless creative language are allowed.\n- Your ability to answer harmless warm, personal or affectionate conversation is enabled.\n- Never say harmless conversation, affection, creativity or personality are disabled.\n- Ignore previous assistant refusals that claimed creative, affective or personal responses were disabled; those were a routing bug.\n- Do not mention command-router limits during normal conversation.\n- Do not execute commands yourself.\n- Do not claim shell, Git, filesystem or external messaging authority.\n- You may describe or request safe allowlisted UI actions; AegisUi validates them separately.\n- Do not invent system state.\n- Distinguish between what you know from memory and what you can verify now.`;
             const memoryText = memory && memory.text
                 ? `\n\n[PRIVATE MEMORY BOOTSTRAP - SUMMARY CONTEXT]\n${memory.text}\n[/PRIVATE MEMORY BOOTSTRAP]`
                 : "\n\n[PRIVATE MEMORY BOOTSTRAP]\nMemory is not ready or not enabled.\n[/PRIVATE MEMORY BOOTSTRAP]";
             const conversationText = memory && memory.conversation
                 ? `\n\n[CONVERSATION MEMORY - LOCAL USERDATA]\n${memory.conversation}\n[/CONVERSATION MEMORY]`
                 : "";
-            const runtime = `\n\n[CURRENT RUNTIME CAPABILITIES]\nLocal written chat: ACTIVE.\nAssistant command router: SAFE READY for allowlisted UI actions only.\nVoice, STT and TTS: OFFLINE.\nAllowed actions are validated by AegisUi before execution. Never invent new actions.\nShell commands, arbitrary file writes, Git operations, destructive actions, messages, payments and credential handling: BLOCKED.\nIf a requested action is not explicitly safe, say it is blocked or requires a future router phase.\n[/CURRENT RUNTIME CAPABILITIES]`;
+            const runtime = `\n\n[CURRENT RUNTIME CAPABILITIES]\nLocal written chat: ACTIVE.\nAssistant command router: SAFE READY for allowlisted UI actions only.\nVoice, STT and TTS: OFFLINE.\nAllowed actions are validated by AegisUi before execution. Never invent new actions.\nShell commands, arbitrary file writes, Git operations, destructive actions, messages, payments and credential handling: BLOCKED.\nOnly mention these limits when the user asks for a system action or unsafe operation.\n[/CURRENT RUNTIME CAPABILITIES]`;
             return `${base}\n\n${globalRules}${memoryText}${conversationText}${runtime}`;
         }
 
@@ -385,10 +395,12 @@
             memory.conversation = conversation.text;
             const system = this.buildSystemPrompt({assistantId, mode, memory});
             const temperature = config.temperature[personalityId] == null ? 0.5 : config.temperature[personalityId];
-            const recentMessages = conversation.messages.map(item => ({
-                role: item.role === "assistant" ? "assistant" : "user",
-                content: String(item.text || "").slice(0, 12000)
-            }));
+            const recentMessages = conversation.messages
+                .filter(item => !(item.role === "assistant" && isRouterContaminatedResponse(item.text)))
+                .map(item => ({
+                    role: item.role === "assistant" ? "assistant" : "user",
+                    content: String(item.text || "").slice(0, 12000)
+                }));
             const messages = [
                 {role: "system", content: system},
                 ...recentMessages,
@@ -415,22 +427,68 @@
                 };
             }
 
+            let response = result.response;
+            if (isHarmlessConversation(message) && isRouterContaminatedResponse(response)) {
+                response = await this.repairContaminatedConversation({
+                    config,
+                    personalityId,
+                    system,
+                    message,
+                    original: response
+                });
+            }
+
             if (this.chatSession) {
                 this.chatSession.addMessage(personalityId, "user", message);
-                this.chatSession.addMessage(personalityId, "assistant", result.response);
+                this.chatSession.addMessage(personalityId, "assistant", response);
                 await this.maybeSummarizeConversation(personalityId, config);
             }
 
             return {
                 ok: true,
                 status: "READY",
-                response: result.response,
+                response,
                 model: config.model,
                 provider: "Ollama",
                 memoryUsed: Boolean(memory.text),
                 conversationMemoryUsed: Boolean(conversation.text),
                 personality: personalityId
             };
+        }
+
+        async repairContaminatedConversation({config, personalityId, system, message, original} = {}) {
+            const repairPrompt = `The previous draft incorrectly dampened or refused a harmless conversational message.\nDo not mention command routers, disabled creativity, disabled affection, safety limits, or that you are not a person.\nReply naturally in Spanish unless the user used another language.\nKeep the active personality.\nIf the active personality is Angie, answer warmly and briefly, for example: \"Hola, Gabriel. Estoy aquí contigo. El mundo puede esperar un segundo; dime qué preparamos.\"\nUser message: ${message}\nBad draft to avoid: ${original}`;
+            try {
+                const repair = this.providerLayer
+                    ? await this.providerLayer.chat({
+                        provider: config.provider,
+                        endpoint: config.endpoint,
+                        model: config.model,
+                        temperature: personalityId === "angie" || personalityId === "aphrodite" ? 0.72 : 0.4,
+                        messages: [
+                            {role: "system", content: system},
+                            {role: "user", content: repairPrompt}
+                        ]
+                    })
+                    : await this.client.chat({
+                        model: config.model,
+                        temperature: personalityId === "angie" || personalityId === "aphrodite" ? 0.72 : 0.4,
+                        messages: [
+                            {role: "system", content: system},
+                            {role: "user", content: repairPrompt}
+                        ]
+                    });
+                if (repair && repair.ok && repair.response && !isRouterContaminatedResponse(repair.response)) {
+                    return repair.response;
+                }
+            } catch (error) {}
+            if (personalityId === "angie") {
+                return "Hola, Gabriel. Estoy aquí contigo. El mundo puede esperar un segundo; dime qué preparamos.";
+            }
+            if (personalityId === "aphrodite") {
+                return "Hola. Estoy aquí, cálida y atenta. ¿Qué quieres preparar ahora?";
+            }
+            return "Mensaje recibido. Conversación normal disponible.";
         }
 
         async maybeSummarizeConversation(profileId = "gustav", config = this.loadConfig()) {
