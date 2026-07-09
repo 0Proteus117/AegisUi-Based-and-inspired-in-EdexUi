@@ -48,8 +48,9 @@ keyboard and large terminal with:
 - a global Assistant Presence orb for the future Angie / Gustav assistant
   system, with local-only visual states, Ares/Aphrodite public profiles,
   Gustav/Angie private aliases, private local memory bootstrap status, panel
-  settings and optional local written chat through Ollama. Voice, STT, TTS and
-  the command router remain offline;
+  settings, expanded local written chat through Ollama, local conversational
+  memory and a safe allowlisted command router for reversible UI actions.
+  Voice, STT and TTS remain offline;
 - editable project timelines for engineering work, with a visual Project
   Control popup for creating projects, managing milestones, changing status,
   reordering steps and saving without manually editing JSON;

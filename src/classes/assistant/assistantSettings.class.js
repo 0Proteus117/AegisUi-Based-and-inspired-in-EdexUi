@@ -10,12 +10,13 @@
         muted: false,
         voiceMode: "not-configured",
         panelOpen: false,
+        expandedChatOpen: false,
         lastState: "IDLE",
         backend: {
             assistant: "OFFLINE",
             voice: "OFFLINE",
-            commandRouter: "OFFLINE",
-            memory: "OFFLINE"
+            commandRouter: "SAFE_READY",
+            memory: "READY"
         }
     });
 
@@ -34,7 +35,7 @@
             const source = input && typeof input === "object" ? input : {};
             const aliases = source.aliases && typeof source.aliases === "object" ? source.aliases : {};
             const backend = source.backend && typeof source.backend === "object" ? source.backend : {};
-            const cleanStatus = value => ["OFFLINE", "READY", "ERROR"].includes(String(value || "").toUpperCase())
+            const cleanStatus = value => ["OFFLINE", "READY", "SAFE_READY", "ERROR"].includes(String(value || "").toUpperCase())
                 ? String(value).toUpperCase()
                 : "OFFLINE";
 
@@ -55,6 +56,7 @@
                     ? String(source.voiceMode)
                     : defaults.voiceMode,
                 panelOpen: Boolean(source.panelOpen),
+                expandedChatOpen: Boolean(source.expandedChatOpen),
                 lastState: ["IDLE", "LISTENING", "THINKING", "SPEAKING", "MUTED", "OFFLINE", "ERROR"].includes(String(source.lastState || "").toUpperCase())
                     ? String(source.lastState).toUpperCase()
                     : defaults.lastState,

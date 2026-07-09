@@ -1,5 +1,29 @@
 # Changelog
 
+## 2.2.0 - 2026-07-09
+
+### Added
+
+- Expanded Assistant chat view with cockpit HUD styling, preserved session
+  transcript, Enter-to-send, Shift+Enter newline and focus restoration.
+- Local conversational memory in userData, separated per Assistant profile.
+- Bounded Ollama context management using private bootstrap memory, optional
+  conversation summary and recent messages only.
+- Assistant AI Provider Layer with Ollama active and Apple Native marked as
+  planned/not connected.
+- Safe Assistant Command Router for allowlisted local UI actions only.
+- Angie/Aphrodite warm pink/cyan visual identity and Gustav/Ares cold tactical
+  identity.
+- Lightweight 3D swarm orb particles with reduced-motion handling.
+- Assistant tests for chat sessions, command router and provider layer.
+
+### Security
+
+- Voice, STT, TTS, Google TTS and Apple Native provider remain disconnected.
+- The command router does not expose shell, Git, destructive actions, external
+  messaging, payments or credential handling.
+- Conversation history is stored in userData and is not committed.
+
 ## 2.1.9 - 2026-07-04
 
 ### Changed

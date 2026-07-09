@@ -156,3 +156,19 @@ node scripts/pull-assistant-model.js
 
 Uses the local `ollama` CLI to pull the configured model. It does not install
 Ollama itself.
+
+## v2.2.0 additions
+
+- Expanded readable chat panel.
+- AI Provider Layer with Ollama active.
+- Apple Native provider placeholder marked as planned/not connected.
+- Conversational memory from userData can be included as bounded context.
+- Safe command router can execute allowlisted UI actions after validation.
+
+Still not connected:
+
+- voice;
+- STT;
+- TTS;
+- tools;
+- arbitrary system commands.

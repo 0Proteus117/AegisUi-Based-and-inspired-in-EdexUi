@@ -276,6 +276,21 @@ Assistant voice provider roadmap is local-only in v2.1.1:
 - Google Emotional TTS: optional future cloud route, not connected and never
   required.
 
+## Assistant v2.2.0 local AI settings
+
+The Assistant now has three local layers:
+
+- private bootstrap memory, installed in userData;
+- conversational memory, stored in `~/Library/Application Support/EdexUi-Eng/assistant/chat/`;
+- AI Provider Layer, with Ollama active and Apple Native planned.
+
+The safe command router is enabled for allowlisted UI actions only. It does
+not run shell commands, Git operations, destructive actions, external messages,
+payments or credential handling.
+
+Conversation exports stay in userData under the Assistant chat folder. Do not
+copy them into the repository unless you intentionally want to share them.
+
 ## Export and import
 
 Export a portable configuration bundle:

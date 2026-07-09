@@ -27,6 +27,8 @@ async function main() {
     const memory = new AssistantMemoryBootstrap({projectRoot, userDataPath});
     const chat = new AssistantLocalChat({projectRoot, userDataPath, memory});
     const config = chat.sanitizeConfig(readConfig());
+    chat.client.setEndpoint(config.endpoint);
+    chat.client.timeoutMs = config.timeoutMs;
 
     print("OLLAMA_ENDPOINT", config.endpoint);
     const health = await chat.client.checkHealth();

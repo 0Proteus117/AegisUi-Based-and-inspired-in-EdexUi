@@ -21,8 +21,9 @@
 
 .assistant-presence[data-profile="angie"],
 .assistant-presence[data-profile="aphrodite"] {
-    --assistant-accent: rgba(142, 218, 255, .96);
-    --assistant-accent-soft: rgba(96, 195, 255, .34);
+    --assistant-accent: rgba(255, 170, 218, .94);
+    --assistant-accent-soft: rgba(255, 122, 190, .3);
+    --assistant-warm-cyan: rgba(142, 226, 255, .62);
 }
 
 .assistant-orb-button {
@@ -56,14 +57,14 @@
 
 .assistant-presence[data-profile="angie"] .assistant-orb-button,
 .assistant-presence[data-profile="aphrodite"] .assistant-orb-button {
-    border-color: rgba(142, 218, 255, .5);
+    border-color: rgba(255, 170, 218, .46);
     background:
-        radial-gradient(circle at 44% 36%, rgba(235, 250, 255, .72), rgba(142, 218, 255, .26) 22%, transparent 45%),
-        radial-gradient(circle at 50% 55%, rgba(96, 195, 255, .34), rgba(19, 44, 64, .2) 38%, rgba(7, 11, 16, .86) 70%),
-        linear-gradient(135deg, rgba(96, 195, 255, .14), rgba(0, 0, 0, .86));
+        radial-gradient(circle at 43% 35%, rgba(255, 236, 246, .74), rgba(255, 170, 218, .24) 23%, transparent 47%),
+        radial-gradient(circle at 56% 58%, rgba(142, 226, 255, .22), rgba(44, 24, 42, .2) 38%, rgba(7, 11, 16, .86) 70%),
+        linear-gradient(135deg, rgba(255, 122, 190, .12), rgba(0, 0, 0, .87));
     box-shadow:
-        0 0 1.45vh rgba(96, 195, 255, .28),
-        inset 0 0 1.9vh rgba(142, 218, 255, .14),
+        0 0 1.55vh rgba(255, 122, 190, .22),
+        inset 0 0 1.9vh rgba(255, 170, 218, .12),
         inset 0 -.8vh 1.8vh rgba(0, 0, 0, .38);
 }
 
@@ -104,7 +105,7 @@
 .assistant-presence[data-profile="angie"] .assistant-orb-core,
 .assistant-presence[data-profile="aphrodite"] .assistant-orb-core {
     animation-duration: 6.8s;
-    background: radial-gradient(circle, rgba(142, 218, 255, .86), rgba(96, 195, 255, .2) 58%, transparent 72%);
+    background: radial-gradient(circle, rgba(255, 178, 224, .86), rgba(142, 226, 255, .16) 52%, rgba(255, 122, 190, .1) 64%, transparent 74%);
 }
 
 .assistant-orb-ring {
@@ -121,6 +122,8 @@
     inset: 0;
     border-radius: 50%;
     animation: assistant-cloud-spin 19s linear infinite;
+    perspective: 11vh;
+    transform-style: preserve-3d;
 }
 
 .assistant-presence[data-profile="gustav"] .assistant-orbit-cloud,
@@ -143,9 +146,21 @@
     border-radius: 50%;
     background: rgba(124, 203, 255, var(--alpha, .8));
     box-shadow: 0 0 .45vh rgba(124, 203, 255, .62);
-    transform: rotate(var(--angle)) translateX(var(--orbit, 3.15vh));
-    animation: assistant-point-pulse 3.2s ease-in-out infinite;
+    transform:
+        rotateZ(var(--angle))
+        rotateX(var(--tilt))
+        translate3d(var(--orbit, 3.15vh), 0, calc(var(--depth) * .035vh))
+        scale(calc(var(--scale, 1) * (1 + var(--depth) * .003)));
+    animation:
+        assistant-point-pulse 3.2s ease-in-out infinite,
+        assistant-point-orbit-3d var(--duration, 8.5s) ease-in-out infinite;
     animation-delay: var(--delay);
+}
+
+.assistant-presence[data-profile="angie"] .assistant-orbit-point,
+.assistant-presence[data-profile="aphrodite"] .assistant-orbit-point {
+    background: rgba(255, 170, 218, var(--alpha, .78));
+    box-shadow: 0 0 .48vh rgba(255, 122, 190, .42), 0 0 .25vh rgba(142, 226, 255, .32);
 }
 
 .assistant-orb-status {
@@ -297,16 +312,43 @@
     50% { opacity: .96; }
 }
 
+@keyframes assistant-point-orbit-3d {
+    0%, 100% {
+        transform:
+            rotateZ(var(--angle))
+            rotateX(var(--tilt))
+            rotateY(0deg)
+            translate3d(var(--orbit, 3.15vh), 0, calc(var(--depth) * .035vh))
+            scale(calc(var(--scale, 1) * (1 + var(--depth) * .003)));
+    }
+    35% {
+        transform:
+            rotateZ(calc(var(--angle) + 18deg))
+            rotateX(calc(var(--tilt) * -1))
+            rotateY(38deg)
+            translate3d(calc(var(--orbit, 3.15vh) * .94), .18vh, calc(var(--depth) * -.045vh))
+            scale(calc(var(--scale, 1) * (1.04 - var(--depth) * .002)));
+    }
+    72% {
+        transform:
+            rotateZ(calc(var(--angle) - 13deg))
+            rotateX(calc(var(--tilt) + 21deg))
+            rotateY(-28deg)
+            translate3d(calc(var(--orbit, 3.15vh) * 1.04), -.12vh, calc(var(--depth) * .04vh))
+            scale(calc(var(--scale, 1) * (1 + var(--depth) * .002)));
+    }
+}
+
 @keyframes assistant-eq-listen {
-    0%, 100% { transform: rotate(var(--angle)) translateX(var(--orbit, 3.15vh)) scaleY(.65); }
-    35% { transform: rotate(var(--angle)) translateX(var(--orbit, 3.15vh)) scaleY(1.35); }
-    62% { transform: rotate(var(--angle)) translateX(var(--orbit, 3.15vh)) scaleY(1.95); }
+    0%, 100% { transform: rotateZ(var(--angle)) rotateX(var(--tilt)) translate3d(var(--orbit, 3.15vh), 0, calc(var(--depth) * .035vh)) scaleY(.65); }
+    35% { transform: rotateZ(var(--angle)) rotateX(calc(var(--tilt) * -1)) translate3d(var(--orbit, 3.15vh), .1vh, calc(var(--depth) * -.035vh)) scaleY(1.35); }
+    62% { transform: rotateZ(var(--angle)) rotateX(var(--tilt)) translate3d(var(--orbit, 3.15vh), -.1vh, calc(var(--depth) * .035vh)) scaleY(1.95); }
 }
 
 @keyframes assistant-eq-speak {
-    0%, 100% { transform: rotate(var(--angle)) translateX(var(--orbit, 3.15vh)) scaleY(.7); }
-    42% { transform: rotate(var(--angle)) translateX(var(--orbit, 3.15vh)) scaleY(2.1); }
-    72% { transform: rotate(var(--angle)) translateX(var(--orbit, 3.15vh)) scaleY(1.15); }
+    0%, 100% { transform: rotateZ(var(--angle)) rotateX(var(--tilt)) translate3d(var(--orbit, 3.15vh), 0, calc(var(--depth) * .035vh)) scaleY(.7); }
+    42% { transform: rotateZ(calc(var(--angle) + 8deg)) rotateX(calc(var(--tilt) * -1)) translate3d(calc(var(--orbit, 3.15vh) * .98), .12vh, calc(var(--depth) * -.03vh)) scaleY(2.1); }
+    72% { transform: rotateZ(calc(var(--angle) - 6deg)) rotateX(var(--tilt)) translate3d(calc(var(--orbit, 3.15vh) * 1.02), -.08vh, calc(var(--depth) * .04vh)) scaleY(1.15); }
 }
 
 @keyframes assistant-hud-scan {

@@ -17,8 +17,12 @@
             this.settingsVisible = false;
             this.lastMemoryStatus = null;
             this.localAIStatus = null;
+            this.commandRouterStatus = null;
+            this.chatSessionStatus = null;
             this.transcript = [];
             this.isSending = false;
+            this.expandedRoot = null;
+            this.expandedOpen = false;
         }
 
         mount() {
@@ -41,6 +45,7 @@
             this.root.setAttribute("aria-hidden", open ? "false" : "true");
             this.settings.patch({panelOpen: Boolean(open)});
             if (open) {
+                this.restoreTranscript();
                 const input = this.root.querySelector("#assistant_manual_input");
                 if (input) setTimeout(() => input.focus(), 120);
                 this.checkLocalAI({silent: true});
@@ -57,6 +62,7 @@
 
         render() {
             if (!this.root) return;
+            this.restoreTranscript();
             const config = this.settings.settings;
             const name = this.settings.displayName();
             const subtitle = this.settings.subtitle();
@@ -76,6 +82,8 @@
             const memoryStatus = this.readMemoryStatus();
             const localAIConfig = this.bridge && this.bridge.localAIConfig ? this.bridge.localAIConfig() : null;
             const localAIStatus = this.localAIStatus || this.defaultLocalAIStatus(localAIConfig, memoryStatus);
+            const commandRouterStatus = this.readCommandRouterStatus();
+            const chatStatus = this.readConversationStatus();
             const aresOption = config.mode === "private" ? "Gustav (Ares public)" : "Ares";
             const aphroditeOption = config.mode === "private" ? "Angie (Aphrodite public)" : "Aphrodite";
             const voiceLabel = {
@@ -119,6 +127,7 @@
                     <div>
                         <button type="submit" class="primary">SEND</button>
                         <button type="button" data-action="mute">${muted ? "UNMUTE" : "MUTE"}</button>
+                        <button type="button" data-action="expand-chat">EXPAND</button>
                         <button type="button" data-action="settings">SETTINGS</button>
                         <button type="button" data-action="clear">CLEAR</button>
                     </div>
@@ -163,7 +172,7 @@
                     <div class="assistant-backend-grid">
                         <span>Assistant backend</span><strong>${assistantEscape(config.backend.assistant)}</strong>
                         <span>Voice backend</span><strong>${assistantEscape(config.backend.voice)}</strong>
-                        <span>Command router</span><strong>${assistantEscape(config.backend.commandRouter)}</strong>
+                        <span>Command router</span><strong>${assistantEscape(commandRouterStatus.status || config.backend.commandRouter)}</strong>
                         <span>Memory</span><strong>${assistantEscape(config.backend.memory)}</strong>
                         <span>Voice shell</span><strong>${assistantEscape(voiceLabel)}</strong>
                     </div>
@@ -185,7 +194,7 @@
                             <dt>Chat</dt><dd>${assistantEscape(localAIStatus.enabled ? "ENABLED" : "DISABLED")}</dd>
                             <dt>Last check</dt><dd>${assistantEscape(localAIStatus.checkedAt ? new Date(localAIStatus.checkedAt).toLocaleTimeString([], {hour: "2-digit", minute: "2-digit"}) : "Never")}</dd>
                             <dt>Last error</dt><dd>${assistantEscape(localAIStatus.lastError || "None")}</dd>
-                            <dt>Command router</dt><dd>OFFLINE</dd>
+                            <dt>Command router</dt><dd>${assistantEscape(localAIStatus.commandRouter || commandRouterStatus.status || "OFFLINE")}</dd>
                             <dt>Voice</dt><dd>OFFLINE</dd>
                         </dl>
                         <p>${assistantEscape(localAIStatus.summary || "Local text chat can use Ollama when enabled. Voice and commands stay offline.")}</p>
@@ -194,6 +203,18 @@
                             <button type="button" data-action="refresh-models">REFRESH MODELS</button>
                             <button type="button" data-action="${localAIStatus.enabled ? "disable-local-ai" : "enable-local-ai"}">${localAIStatus.enabled ? "DISABLE LOCAL TEXT CHAT" : "ENABLE LOCAL TEXT CHAT"}</button>
                         </div>
+                    </section>
+                    <section class="assistant-ai-provider-status">
+                        <div>
+                            <small>AI PROVIDER LAYER</small>
+                            <strong>${assistantEscape(localAIConfig && localAIConfig.provider === "apple-native" ? "APPLE NATIVE · PLANNED" : "OLLAMA · ACTIVE")}</strong>
+                        </div>
+                        <dl>
+                            <dt>Active provider</dt><dd>${assistantEscape((localAIConfig && localAIConfig.provider) || "ollama")}</dd>
+                            <dt>Ollama</dt><dd>${assistantEscape(localAIStatus.status === "READY" ? "READY" : localAIStatus.status || "DISABLED")}</dd>
+                            <dt>Apple Native</dt><dd>PLANNED / NOT CONNECTED</dd>
+                            <dt>Tools</dt><dd>DISABLED</dd>
+                        </dl>
                     </section>
                     <section class="assistant-local-ai-config">
                         <h2>LOCAL AI</h2>
@@ -209,7 +230,36 @@
                             <span>Use bootstrap memory</span>
                             <input id="assistant_ai_memory" type="checkbox" ${(localAIConfig && localAIConfig.memory && localAIConfig.memory.useBootstrap) !== false ? "checked" : ""}>
                         </label>
-                        <p>Written chat only. No voice, no command router, no system actions.</p>
+                        <p>Written chat plus safe allowlisted UI actions. No shell, no Git, no destructive actions, no voice.</p>
+                    </section>
+                    <section class="assistant-chat-memory-status">
+                        <div>
+                            <small>CONVERSATION MEMORY</small>
+                            <strong>${assistantEscape(chatStatus.status || "NOT_CONFIGURED")}</strong>
+                        </div>
+                        <dl>
+                            <dt>Profile</dt><dd>${assistantEscape(chatStatus.profile || "unknown")}</dd>
+                            <dt>Messages</dt><dd>${assistantEscape(chatStatus.messages || 0)}</dd>
+                            <dt>Summary</dt><dd>${assistantEscape(chatStatus.summary ? "READY" : "EMPTY")}</dd>
+                            <dt>Restore</dt><dd>${assistantEscape(chatStatus.restore || "EMPTY")}</dd>
+                        </dl>
+                        <div class="assistant-memory-actions">
+                            <button type="button" data-action="open-chat-folder">OPEN CHAT FOLDER</button>
+                            <button type="button" data-action="export-chat">EXPORT LOCAL MARKDOWN</button>
+                            <button type="button" data-action="clear-chat-memory">CLEAR ASSISTANT MEMORY</button>
+                        </div>
+                    </section>
+                    <section class="assistant-command-router-status" data-status="${assistantEscape(commandRouterStatus.status || "OFFLINE")}">
+                        <div>
+                            <small>COMMAND ROUTER</small>
+                            <strong>${assistantEscape(commandRouterStatus.status || "OFFLINE")}</strong>
+                        </div>
+                        <dl>
+                            <dt>Mode</dt><dd>${assistantEscape(commandRouterStatus.mode || "LOCAL / SAFE / CONTROLLED")}</dd>
+                            <dt>Authority</dt><dd>${assistantEscape(commandRouterStatus.authority || "LEVEL_2_SAFE")}</dd>
+                            <dt>Safe actions</dt><dd>${assistantEscape(commandRouterStatus.actions || 0)}</dd>
+                            <dt>Last action</dt><dd>${assistantEscape(commandRouterStatus.lastAction || "None")}</dd>
+                        </dl>
                     </section>
                     <section class="assistant-memory-status" data-status="${assistantEscape(memoryStatus.status)}">
                         <div>
@@ -282,6 +332,7 @@
                     event.stopPropagation();
                     const action = button.dataset.action;
                     if (action === "mute") this.toggleMute();
+                    if (action === "expand-chat") this.openExpandedChat();
                     if (action === "settings") {
                         this.settingsVisible = !this.settingsVisible;
                         this.render();
@@ -295,6 +346,9 @@
                     if (action === "refresh-models") this.checkLocalAI({force: true});
                     if (action === "enable-local-ai") this.setLocalAIEnabled(true);
                     if (action === "disable-local-ai") this.setLocalAIEnabled(false);
+                    if (action === "open-chat-folder") this.openChatFolder();
+                    if (action === "export-chat") this.exportChat();
+                    if (action === "clear-chat-memory") this.clearConversationMemory();
                 });
             });
 
@@ -308,9 +362,11 @@
             });
         }
 
-        async handleSend() {
+        async handleSend(source = "panel") {
             if (this.isSending) return;
-            const input = this.root.querySelector("#assistant_manual_input");
+            const input = source === "expanded" && this.expandedRoot
+                ? this.expandedRoot.querySelector("#assistant_expanded_input")
+                : this.root.querySelector("#assistant_manual_input");
             const message = input ? input.value.trim() : "";
             if (!message) return;
 
@@ -331,6 +387,7 @@
                 }
                 this.addTranscript("assistant", this.lastResponse);
                 if (input) input.value = "";
+                this.refreshTranscriptFromSession();
             } catch (error) {
                 this.lastResponse = `Local AI error: ${error.message || error}`;
                 this.addTranscript("assistant", this.lastResponse);
@@ -338,7 +395,10 @@
             } finally {
                 this.isSending = false;
                 this.render();
-                const nextInput = this.root.querySelector("#assistant_manual_input");
+                if (this.expandedOpen) this.renderExpandedChat();
+                const nextInput = source === "expanded" && this.expandedRoot
+                    ? this.expandedRoot.querySelector("#assistant_expanded_input")
+                    : this.root.querySelector("#assistant_manual_input");
                 if (nextInput) setTimeout(() => nextInput.focus(), 40);
                 setTimeout(() => {
                     if (!this.settings.settings.muted) this.presence.setState("IDLE");
@@ -356,7 +416,194 @@
         clear() {
             this.lastResponse = "";
             this.transcript = [];
+            if (this.bridge && this.bridge.clearConversation) this.bridge.clearConversation();
+            this.renderExpandedChat();
             this.render();
+        }
+
+        restoreTranscript() {
+            if (!this.bridge || !this.bridge.conversationMessages) return;
+            const messages = this.bridge.conversationMessages(18);
+            if (!messages || !messages.length) return;
+            this.transcript = messages.slice(-12).map(item => ({
+                role: item.role === "assistant" ? "assistant" : "user",
+                text: item.text,
+                time: item.time ? new Date(item.time).toLocaleTimeString([], {hour: "2-digit", minute: "2-digit"}) : ""
+            }));
+        }
+
+        refreshTranscriptFromSession() {
+            if (!this.bridge || !this.bridge.conversationMessages) return;
+            const messages = this.bridge.conversationMessages(40);
+            if (messages && messages.length) {
+                this.transcript = messages.slice(-12).map(item => ({
+                    role: item.role === "assistant" ? "assistant" : "user",
+                    text: item.text,
+                    time: item.time ? new Date(item.time).toLocaleTimeString([], {hour: "2-digit", minute: "2-digit"}) : ""
+                }));
+            }
+        }
+
+        readCommandRouterStatus() {
+            this.commandRouterStatus = this.bridge && this.bridge.commandRouterStatus
+                ? this.bridge.commandRouterStatus()
+                : {status: "OFFLINE", mode: "Unavailable", actions: 0};
+            return this.commandRouterStatus;
+        }
+
+        readConversationStatus() {
+            this.chatSessionStatus = this.bridge && this.bridge.conversationStatus
+                ? this.bridge.conversationStatus()
+                : {status: "NOT_CONFIGURED", messages: 0, summary: false, restore: "EMPTY"};
+            return this.chatSessionStatus;
+        }
+
+        expandedTranscriptHtml() {
+            const messages = this.bridge && this.bridge.conversationMessages
+                ? this.bridge.conversationMessages(80)
+                : this.transcript;
+            if (!messages || !messages.length) {
+                return `<p class="assistant-chat-empty">No local messages yet.</p>`;
+            }
+            return messages.map(item => {
+                const role = item.role === "assistant" ? "assistant" : "user";
+                const time = item.time ? new Date(item.time).toLocaleTimeString([], {hour: "2-digit", minute: "2-digit"}) : item.time || "";
+                return `
+                    <article data-role="${assistantEscape(role)}">
+                        <header><strong>${assistantEscape(role === "user" ? "YOU" : this.settings.displayName())}</strong><span>${assistantEscape(time)}</span></header>
+                        <p>${assistantEscape(item.text || "")}</p>
+                    </article>`;
+            }).join("");
+        }
+
+        openExpandedChat() {
+            this.expandedOpen = true;
+            if (!this.expandedRoot) {
+                this.expandedRoot = document.createElement("section");
+                this.expandedRoot.id = "assistant_expanded_chat";
+                this.expandedRoot.className = "assistant-chat-overlay";
+                this.expandedRoot.setAttribute("aria-modal", "true");
+                this.expandedRoot.setAttribute("role", "dialog");
+                this.expandedRoot.addEventListener("click", event => {
+                    if (event.target === this.expandedRoot) this.closeExpandedChat();
+                });
+                this.expandedRoot.addEventListener("mousedown", event => {
+                    if (event.target !== this.expandedRoot) event.stopPropagation();
+                });
+                document.body.appendChild(this.expandedRoot);
+            }
+            this.renderExpandedChat();
+            this.expandedRoot.classList.add("visible");
+            this.settings.patch({expandedChatOpen: true});
+            const input = this.expandedRoot.querySelector("#assistant_expanded_input");
+            if (input) setTimeout(() => input.focus(), 80);
+        }
+
+        closeExpandedChat() {
+            this.expandedOpen = false;
+            if (this.expandedRoot) {
+                this.expandedRoot.classList.remove("visible");
+            }
+            this.settings.patch({expandedChatOpen: false});
+        }
+
+        renderExpandedChat() {
+            if (!this.expandedRoot || !this.expandedOpen) return;
+            const config = this.settings.settings;
+            const localAIStatus = this.localAIStatus || this.defaultLocalAIStatus(this.bridge.localAIConfig ? this.bridge.localAIConfig() : {}, this.lastMemoryStatus || {});
+            const memoryStatus = this.readMemoryStatus();
+            const chatStatus = this.readConversationStatus();
+            const routerStatus = this.readCommandRouterStatus();
+            this.expandedRoot.dataset.profile = this.settings.microcopyProfile();
+            this.expandedRoot.innerHTML = `
+                <div class="assistant-chat-expanded" data-profile="${assistantEscape(this.settings.microcopyProfile())}">
+                    <header>
+                        <div>
+                            <small>AEGISUI ASSISTANT CHAT</small>
+                            <h1>${assistantEscape(this.settings.displayName())}</h1>
+                            <span>${assistantEscape(this.settings.subtitle())}</span>
+                        </div>
+                        <button type="button" class="assistant-expanded-close" aria-label="Close expanded assistant chat">×</button>
+                    </header>
+                    <section class="assistant-chat-expanded-status">
+                        <span>STATE <strong>${assistantEscape(this.stateMachine.getState())}</strong></span>
+                        <span>LOCAL AI <strong>${assistantEscape(localAIStatus.status || "UNKNOWN")}</strong></span>
+                        <span>MEMORY <strong>${assistantEscape(memoryStatus.status || "NOT_READY")}</strong></span>
+                        <span>SESSION <strong>${assistantEscape(chatStatus.restore || "EMPTY")}</strong></span>
+                        <span>ROUTER <strong>${assistantEscape(routerStatus.status || "OFFLINE")}</strong></span>
+                        <span>VOICE <strong>OFFLINE</strong></span>
+                    </section>
+                    <section class="assistant-chat-expanded-log" aria-label="Assistant conversation">
+                        ${this.expandedTranscriptHtml()}
+                    </section>
+                    <form class="assistant-chat-expanded-input">
+                        <textarea id="assistant_expanded_input" rows="4" spellcheck="false" placeholder="${assistantEscape(window.AssistantMicrocopy ? window.AssistantMicrocopy.inputPlaceholder(config) : "Type a local prompt…")}"></textarea>
+                        <div>
+                            <button type="submit" class="primary">SEND</button>
+                            <button type="button" data-expanded-action="clear">CLEAR CURRENT</button>
+                            <button type="button" data-expanded-action="export">EXPORT</button>
+                            <button type="button" data-expanded-action="folder">OPEN FOLDER</button>
+                        </div>
+                    </form>
+                </div>`;
+            this.bindExpandedEvents();
+            const log = this.expandedRoot.querySelector(".assistant-chat-expanded-log");
+            if (log) log.scrollTop = log.scrollHeight;
+        }
+
+        bindExpandedEvents() {
+            if (!this.expandedRoot) return;
+            const close = this.expandedRoot.querySelector(".assistant-expanded-close");
+            if (close) close.addEventListener("click", event => {
+                event.preventDefault();
+                event.stopPropagation();
+                this.closeExpandedChat();
+            });
+            const form = this.expandedRoot.querySelector(".assistant-chat-expanded-input");
+            if (form) form.addEventListener("submit", event => {
+                event.preventDefault();
+                event.stopPropagation();
+                this.handleSend("expanded");
+            });
+            const input = this.expandedRoot.querySelector("#assistant_expanded_input");
+            if (input) input.addEventListener("keydown", event => {
+                if (event.key !== "Enter") return;
+                if (event.shiftKey) return;
+                if (event.metaKey || !event.altKey) {
+                    event.preventDefault();
+                    this.handleSend("expanded");
+                }
+            });
+            this.expandedRoot.querySelectorAll("[data-expanded-action]").forEach(button => {
+                button.addEventListener("click", event => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    const action = button.dataset.expandedAction;
+                    if (action === "clear") this.clear();
+                    if (action === "export") this.exportChat();
+                    if (action === "folder") this.openChatFolder();
+                });
+            });
+        }
+
+        async openChatFolder() {
+            if (this.bridge && this.bridge.openChatFolder) await this.bridge.openChatFolder();
+        }
+
+        exportChat() {
+            if (!this.bridge || !this.bridge.exportConversation) return;
+            const result = this.bridge.exportConversation();
+            this.lastResponse = result && result.ok ? `Conversation exported locally: ${result.file}` : `Conversation export failed: ${result && result.error ? result.error : "unknown error"}`;
+            this.render();
+            this.renderExpandedChat();
+        }
+
+        clearConversationMemory() {
+            if (this.bridge && this.bridge.clearConversation) this.bridge.clearConversation();
+            this.transcript = [];
+            this.lastResponse = "Conversation memory cleared for the active assistant.";
+            this.render();
+            this.renderExpandedChat();
         }
 
         addTranscript(role, text) {
@@ -438,7 +685,7 @@
                 endpoint: config && config.endpoint ? config.endpoint : "http://127.0.0.1:11434",
                 model: config && config.model ? config.model : "llama3.2:3b",
                 memory: memoryStatus && memoryStatus.status === "READY" ? "READY" : "NOT_READY",
-                commandRouter: "OFFLINE",
+                commandRouter: "SAFE_READY",
                 voice: "OFFLINE",
                 summary: config && config.enabled ? "Local AI status not checked yet." : "Local text chat disabled."
             };
@@ -476,7 +723,7 @@
                 memory: {
                     useBootstrap: memory ? memory.checked : true
                 },
-                commandRouter: {enabled: false},
+                commandRouter: {enabled: true},
                 voice: {enabled: false}
             });
             this.localAIStatus = null;
@@ -502,7 +749,7 @@
                     memory: {
                         useBootstrap: memory ? memory.checked : true
                     },
-                    commandRouter: {enabled: false},
+                    commandRouter: {enabled: true},
                     voice: {enabled: false}
                 });
                 this.localAIStatus = null;

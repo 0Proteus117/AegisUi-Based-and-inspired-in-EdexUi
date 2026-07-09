@@ -95,10 +95,23 @@ Added in `v2.1.7`:
 `v2.1.8` does not change the private memory format. It only improves the
 Local AI status/UX around Ollama availability and panel input handling.
 
+Added in `v2.2.0`:
+
+- local conversation memory per profile;
+- session restore from userData;
+- local markdown export;
+- bounded context injection into Ollama;
+- optional summarization when conversations grow.
+
+Conversation memory lives in:
+
+`~/Library/Application Support/EdexUi-Eng/assistant/chat/`
+
+It is not committed to Git.
+
 Planned, not implemented yet:
 
 - local memory index;
 - retrieval;
 - embeddings;
-- safe command router;
 - voice shell.

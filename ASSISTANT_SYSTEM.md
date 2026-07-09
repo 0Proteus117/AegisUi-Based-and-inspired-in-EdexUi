@@ -204,12 +204,28 @@ Core files:
 - `src/classes/assistant/assistantMicrocopy.class.js`
 - `src/classes/assistant/assistantMemoryBootstrap.class.js`
 - `src/classes/assistant/assistantOllamaClient.class.js`
+- `src/classes/assistant/assistantAIProvider.class.js`
+- `src/classes/assistant/assistantChatSession.class.js`
+- `src/classes/assistant/assistantCommandRouter.class.js`
 - `src/classes/assistant/assistantLocalChat.class.js`
 - `src/classes/assistant/assistantPanel.class.js`
 - `src/classes/assistant/assistantBridge.class.js`
 - `src/classes/assistant/assistantPermissions.class.js`
 - `src/assets/css/assistant-presence.css`
 - `src/assets/css/assistant-panel.css`
+
+## v2.2.0 assistant control surface
+
+The Assistant now includes:
+
+- expanded written chat;
+- local conversation memory;
+- AI Provider Layer;
+- Ollama provider active;
+- Apple Native provider planned only;
+- safe command router for allowlisted UI actions.
+
+Voice, STT, TTS and dangerous command execution remain offline.
 
 Public examples:
 

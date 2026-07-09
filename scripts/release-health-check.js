@@ -61,6 +61,9 @@ function main() {
 
     const assistantLocalAi = exists("src/classes/assistant/assistantLocalChat.class.js")
         && exists("src/classes/assistant/assistantOllamaClient.class.js")
+        && exists("src/classes/assistant/assistantAIProvider.class.js")
+        && exists("src/classes/assistant/assistantChatSession.class.js")
+        && exists("src/classes/assistant/assistantCommandRouter.class.js")
         && exists("assistant/config/assistant-ai.example.json");
 
     const appleMusicBridge = exists("scripts/test-apple-music-runtime.js")
@@ -94,6 +97,9 @@ function main() {
     print("CHAT_EXPORTS_TRACKED", chatTrackedNo ? "NO" : "YES");
     print("SECRETS_STAGED", secretsStagedNo ? "NO" : "YES");
     print("ASSISTANT_LOCAL_AI", assistantLocalAi ? "PRESENT" : "MISSING");
+    print("ASSISTANT_AI_PROVIDER", exists("src/classes/assistant/assistantAIProvider.class.js") ? "PRESENT" : "MISSING");
+    print("ASSISTANT_CHAT_SESSION", exists("src/classes/assistant/assistantChatSession.class.js") ? "PRESENT" : "MISSING");
+    print("ASSISTANT_COMMAND_ROUTER", exists("src/classes/assistant/assistantCommandRouter.class.js") ? "PRESENT" : "MISSING");
     print("APPLE_MUSIC_BRIDGE", appleMusicBridge ? "PRESENT" : "MISSING");
     print("MAP_PROVIDERS", mapProviders ? "PRESENT" : "MISSING");
     print("RELEASE_HEALTH", failures.length ? "FAIL" : "OK");

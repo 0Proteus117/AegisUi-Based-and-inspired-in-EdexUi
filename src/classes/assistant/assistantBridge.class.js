@@ -4,6 +4,7 @@
             this.settings = options.settings || null;
             this.setState = typeof options.setState === "function" ? options.setState : () => {};
             this.localChat = options.localChat || (window.AssistantLocalChat ? new window.AssistantLocalChat() : null);
+            this.commandRouter = options.commandRouter || (window.AssistantCommandRouter ? new window.AssistantCommandRouter() : null);
         }
 
         async sendText(message = "") {
@@ -24,6 +25,20 @@
             }
 
             this.setState("THINKING");
+            if (this.commandRouter) {
+                const commandResult = await this.commandRouter.executeFromText(text);
+                if (commandResult && commandResult.handled) {
+                    this.setState(commandResult.ok ? "SPEAKING" : "ERROR");
+                    return {
+                        ok: Boolean(commandResult.ok),
+                        status: commandResult.status || (commandResult.ok ? "EXECUTED" : "BLOCKED"),
+                        input: text,
+                        response: commandResult.response,
+                        action: commandResult.action,
+                        source: "assistant-command-router"
+                    };
+                }
+            }
             const result = await this.localChat.sendMessage({
                 text,
                 assistantId: settings.activeAssistant,
@@ -56,6 +71,47 @@
 
         localAIConfig() {
             return this.localChat ? this.localChat.loadConfig() : null;
+        }
+
+        commandRouterStatus() {
+            return this.commandRouter
+                ? this.commandRouter.getStatus()
+                : {status: "OFFLINE", mode: "Unavailable", actions: 0};
+        }
+
+        safeActions() {
+            return this.commandRouter ? this.commandRouter.listActions() : [];
+        }
+
+        conversationProfileId() {
+            const settings = this.settings ? this.settings.settings : {};
+            return this.localChat
+                ? this.localChat.getPersonalityId({assistantId: settings.activeAssistant, mode: settings.mode})
+                : "gustav";
+        }
+
+        conversationStatus() {
+            return this.localChat
+                ? this.localChat.conversationStatus(this.conversationProfileId())
+                : {status: "NOT_CONFIGURED", messages: 0, summary: false};
+        }
+
+        conversationMessages(limit = 40) {
+            return this.localChat ? this.localChat.conversationMessages(this.conversationProfileId(), limit) : [];
+        }
+
+        clearConversation() {
+            return this.localChat ? this.localChat.clearConversation(this.conversationProfileId()) : null;
+        }
+
+        exportConversation() {
+            return this.localChat
+                ? this.localChat.exportConversation(this.conversationProfileId())
+                : {ok: false, error: "Conversation storage unavailable"};
+        }
+
+        openChatFolder() {
+            return this.localChat ? this.localChat.openChatFolder() : Promise.resolve(null);
         }
 
         saveLocalAIConfig(partial = {}) {

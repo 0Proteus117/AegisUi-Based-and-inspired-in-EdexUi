@@ -35,6 +35,7 @@ imports/
 assistant/profiles/private/
 assistant/voices/private/
 assistant/memory/private/
+assistant/chat/
 assistant/config/assistant-ai.json
 assistant/config/assistant-ai.local.json
 *.wav

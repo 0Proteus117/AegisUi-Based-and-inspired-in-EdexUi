@@ -35,17 +35,23 @@
             this.stateMachine.subscribe(snapshot => this.applyState(snapshot.state));
             this.applyState(this.stateMachine.getState());
             this.panel.setOpen(Boolean(this.settings.settings.panelOpen));
+            if (this.settings.settings.expandedChatOpen) {
+                setTimeout(() => this.panel.openExpandedChat(), 180);
+            }
             return this.container;
         }
 
         renderOrb() {
-            const points = Array.from({length: 18}).map((_, index) => {
-                const angle = Math.round(index * (360 / 18));
-                const delay = (index * -0.18).toFixed(2);
-                const size = (0.72 + ((index % 5) * 0.09)).toFixed(2);
-                const opacity = (0.42 + ((index % 4) * 0.12)).toFixed(2);
-                const orbit = (3.05 + ((index % 3) * 0.12)).toFixed(2);
-                return `<span class="assistant-orbit-point" style="--i:${index}; --angle:${angle}deg; --delay:${delay}s; --scale:${size}; --alpha:${opacity}; --orbit:${orbit}vh"></span>`;
+            const points = Array.from({length: 32}).map((_, index) => {
+                const angle = (index * 137.5) % 360;
+                const tilt = ((index * 47) % 100) - 50;
+                const depth = ((index * 29) % 100) - 50;
+                const delay = (index * -0.13).toFixed(2);
+                const size = (0.58 + ((index % 7) * 0.08)).toFixed(2);
+                const opacity = (0.34 + ((index % 6) * 0.09)).toFixed(2);
+                const orbit = (2.35 + ((index % 9) * 0.12)).toFixed(2);
+                const duration = (7.5 + ((index % 8) * 0.72)).toFixed(2);
+                return `<span class="assistant-orbit-point" style="--i:${index}; --angle:${angle.toFixed(1)}deg; --tilt:${tilt}deg; --depth:${depth}; --delay:${delay}s; --scale:${size}; --alpha:${opacity}; --orbit:${orbit}vh; --duration:${duration}s"></span>`;
             }).join("");
             return `
                 <button type="button" class="assistant-orb-button" aria-label="Open assistant presence panel">
@@ -85,11 +91,16 @@
             const path = typeof event.composedPath === "function" ? event.composedPath() : [];
             if (this.container && (this.container.contains(event.target) || path.includes(this.container))) return;
             if (this.panel.root && (this.panel.root.contains(event.target) || path.includes(this.panel.root))) return;
+            if (this.panel.expandedRoot && (this.panel.expandedRoot.contains(event.target) || path.includes(this.panel.expandedRoot))) return;
             this.panel.close();
         }
 
         handleKeydown(event) {
             if (event.key !== "Escape") return;
+            if (this.panel && this.panel.expandedOpen) {
+                this.panel.closeExpandedChat();
+                return;
+            }
             if (this.panel && this.panel.isOpen()) {
                 this.panel.close();
             }
