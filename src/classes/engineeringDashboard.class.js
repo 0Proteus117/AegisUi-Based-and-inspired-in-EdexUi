@@ -2668,6 +2668,15 @@ class EngineeringMusicPanel {
         const appStatus = diagnostic.appStatus || (diagnostic.running ? "RUNNING" : "NOT RUNNING");
         const connectionStatus = diagnostic.connectionStatus || diagnostic.status || "NOT CONNECTED";
         const lastError = diagnostic.lastError || diagnostic.error || "";
+        const isAutomationBlocked = String(connectionStatus).includes("AUTOMATION")
+            || String(message).includes("AUTOMATION")
+            || String(diagnostic.technicalCode || "").includes("-1743");
+        const bridge = diagnostic.bridge || "JXA_DIRECT_MUSIC";
+        const appVersion = diagnostic.appVersion || "";
+        const appPath = diagnostic.execPath || diagnostic.appPath || "";
+        const appPathLabel = appPath
+            ? (String(appPath).split("/").find(part => part.endsWith(".app")) || String(appPath).split("/").pop())
+            : "unknown";
         this.content.innerHTML = `
             <div class="eng-music-main">
                 <div class="eng-music-connect">
@@ -2678,11 +2687,25 @@ class EngineeringMusicPanel {
                             <span>MUSIC APP</span><strong>${window._escapeHtml(String(appStatus).replace(/_/g, " "))}</strong>
                             <span>APPLE MUSIC</span><strong>${window._escapeHtml(String(connectionStatus).replace(/_/g, " "))}</strong>
                             <span>LAST ERROR</span><strong>${window._escapeHtml(lastError || "none")}</strong>
+                            <span>BRIDGE</span><strong>${window._escapeHtml(bridge)}</strong>
+                            <span>APP VERSION</span><strong>${window._escapeHtml(appVersion || "unknown")}</strong>
+                            <span>APP PATH</span><strong title="${window._escapeHtml(appPath)}">${window._escapeHtml(appPathLabel)}</strong>
                         </div>
+                        ${isAutomationBlocked ? `
+                            <ol class="eng-music-permission-steps">
+                                <li>Open System Settings.</li>
+                                <li>Privacy & Security → Automation.</li>
+                                <li>Allow EdexUi-Eng to control Music.</li>
+                                <li>Restart EdexUi-Eng, then press Refresh.</li>
+                            </ol>
+                            <small class="eng-music-tcc-hint">Manual reset if macOS stays blocked: tccutil reset AppleEvents com.edex.ui.eng</small>
+                        ` : ""}
                         <div class="eng-music-connect-actions">
                             <button id="eng_music_connect">CONNECT APPLE MUSIC</button>
                             <button id="eng_music_open">OPEN MUSIC</button>
                             <button id="eng_music_refresh">REFRESH</button>
+                            <button id="eng_music_automation_settings">OPEN AUTOMATION SETTINGS</button>
+                            <button id="eng_music_reset_local">RESET LOCAL MUSIC STATE</button>
                         </div>
                         <div class="eng-music-controls eng-music-controls-fallback">
                             <button class="eng-music-toggle ${this.shuffleEnabled ? "active" : ""}" disabled>SHUF</button>
@@ -2703,6 +2726,17 @@ class EngineeringMusicPanel {
             setTimeout(() => this.connect(true), 1000);
         });
         document.getElementById("eng_music_refresh").addEventListener("click", () => this.connect(false));
+        document.getElementById("eng_music_automation_settings").addEventListener("click", () => {
+            this.ipc.invoke("music-open-automation-settings");
+        });
+        document.getElementById("eng_music_reset_local").addEventListener("click", () => {
+            localStorage.removeItem("edexui-eng-music-connected");
+            localStorage.removeItem("edexui-eng-music-shuffle");
+            localStorage.removeItem("edexui-eng-music-repeat");
+            this.shuffleEnabled = false;
+            this.repeatMode = "off";
+            this.renderConnect("LOCAL MUSIC STATE RESET", {connectionStatus: "NOT CONNECTED", appStatus});
+        });
     }
 
     describeMusicFailure(response = {}) {
@@ -2734,16 +2768,17 @@ class EngineeringMusicPanel {
 
     async connect(userInitiated = false) {
         this.stateLabel.innerText = "CONNECTING";
-        const response = await this.ipc.invoke("music-status");
+        const response = await this.ipc.invoke(userInitiated ? "music-connect" : "music-status");
         if (!response.ok) {
             const failure = this.describeMusicFailure(response);
-            const data = response.data || {};
+            const data = response.data || response.diagnostics || {};
             localStorage.removeItem("edexui-eng-music-connected");
             this.stateLabel.innerText = failure.state;
             this.renderConnect(failure.message, {
                 ...data,
                 appStatus: data.appStatus || response.appStatus || (response.permissionTarget === "Music" ? "RUNNING" : "UNKNOWN"),
                 connectionStatus: data.connectionStatus || response.connectionStatus || failure.connectionStatus,
+                technicalCode: data.technicalCode || response.technicalCode || "",
                 lastError: data.lastError || response.error || ""
             });
             return;

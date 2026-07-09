@@ -38,6 +38,9 @@ keyboard and large terminal with:
 - Apple Music metadata, controls, progress, a playback-driven visualizer and
   a local playlist launcher. The player also displays the current track
   artwork directly from Music, with the existing cockpit animation as fallback;
+- Apple Music Automation is validated against the final packaged app identity
+  (`com.edex.ui.eng`) so dev-only success is not treated as a final packaged
+  success;
 - a local-first Launch Bay game deck with a lightweight 3D carousel, hero
   backdrop, manual game configuration and safe launch URLs;
 - a Developer Classic Deck that preserves the original eDEX-UI programming
