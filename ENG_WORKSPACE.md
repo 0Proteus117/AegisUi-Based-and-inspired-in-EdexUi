@@ -1,6 +1,6 @@
 # ENG Workspace — Engineering Command Deck
 
-Version: v2.2.3
+Version: v2.2.6
 
 The ENG workspace is a specialized engineering command deck for mechanical/product engineering work. It is a workspace tab, not a user account system.
 
@@ -55,7 +55,7 @@ Implemented local calculators:
 
 These run locally and do not require cloud services.
 
-In v2.2.3 the calculators use cockpit-styled controls:
+The calculators use cockpit-styled controls:
 
 - dark AegisUi number inputs and selects;
 - synchronized sliders and numeric inputs;
@@ -63,6 +63,19 @@ In v2.2.3 the calculators use cockpit-styled controls:
 - reset/copy controls;
 - representative diagrams for gears, beams, torque/RPM, mass estimation, unit
   conversion and thread references.
+
+### v2.2.6 visual refinement
+
+- Gear Ratio uses centered proportional gears with visible teeth, opposite
+  rotation and RPM-scaled animation.
+- Torque / Power / RPM uses a live rotor, RPM arc, torque vector and power ring;
+  changing any input recalculates and identifies the solved third value.
+- Material Mass Estimator uses a pseudo-3D technical block with live length,
+  width and height dimensions, material density and dimension-derived volume.
+- Thread / Drill Chart provides a selectable metric table and a live thread
+  profile with pitch, tap-drill and clearance readouts.
+- Beam Deflection and Unit Converter retain their existing calculations with
+  clearer span/deflection and source-to-target instrumentation.
 
 ## Detail / fullscreen
 

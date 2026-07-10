@@ -27,12 +27,12 @@
     });
 
     const THREAD_REFERENCES = Object.freeze([
-        {thread: "M3 × 0.5", tapDrill: "2.5 mm", clearance: "3.4 mm"},
-        {thread: "M4 × 0.7", tapDrill: "3.3 mm", clearance: "4.5 mm"},
-        {thread: "M5 × 0.8", tapDrill: "4.2 mm", clearance: "5.5 mm"},
-        {thread: "M6 × 1.0", tapDrill: "5.0 mm", clearance: "6.6 mm"},
-        {thread: "M8 × 1.25", tapDrill: "6.8 mm", clearance: "9.0 mm"},
-        {thread: "M10 × 1.5", tapDrill: "8.5 mm", clearance: "11.0 mm"}
+        {thread: "M3 × 0.5", nominal: "M3", pitch: 0.5, tapDrill: 2.5, clearance: 3.4},
+        {thread: "M4 × 0.7", nominal: "M4", pitch: 0.7, tapDrill: 3.3, clearance: 4.5},
+        {thread: "M5 × 0.8", nominal: "M5", pitch: 0.8, tapDrill: 4.2, clearance: 5.5},
+        {thread: "M6 × 1.0", nominal: "M6", pitch: 1.0, tapDrill: 5.0, clearance: 6.6},
+        {thread: "M8 × 1.25", nominal: "M8", pitch: 1.25, tapDrill: 6.8, clearance: 9.0},
+        {thread: "M10 × 1.5", nominal: "M10", pitch: 1.5, tapDrill: 8.5, clearance: 11.0}
     ]);
 
     const unitFamilies = Object.freeze({
@@ -215,6 +215,7 @@
     }
 
     function number(value, fallback = 0) {
+        if (value === "" || value === null || typeof value === "undefined") return fallback;
         const parsed = Number(value);
         return Number.isFinite(parsed) ? parsed : fallback;
     }
@@ -279,18 +280,23 @@
     function calculateMaterialMass({materialId, density, volumeCm3, lengthMm, widthMm, heightMm}) {
         const material = MATERIALS[materialId] || {};
         const rho = number(density, material.density || 0);
-        let volumeM3 = number(volumeCm3) / 1000000;
         const l = number(lengthMm);
         const w = number(widthMm);
         const h = number(heightMm);
-        if (!volumeM3 && l > 0 && w > 0 && h > 0) volumeM3 = (l * w * h) / 1000000000;
+        const usesDimensions = l > 0 && w > 0 && h > 0;
+        const volumeM3 = usesDimensions
+            ? (l * w * h) / 1000000000
+            : number(volumeCm3) / 1000000;
         if (rho <= 0 || volumeM3 <= 0) return {ok: false, error: "INVALID_DENSITY_OR_VOLUME"};
         return {
             ok: true,
             density: rho,
             volumeM3,
+            volumeCm3: volumeM3 * 1000000,
             massKg: rho * volumeM3,
-            material: material.label || materialId || "Custom"
+            material: material.label || materialId || "Custom",
+            source: usesDimensions ? "DIMENSIONS" : "DIRECT_VOLUME",
+            dimensionsMm: usesDimensions ? {length: l, width: w, height: h} : null
         };
     }
 

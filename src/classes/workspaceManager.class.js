@@ -503,7 +503,7 @@ class WorkspaceManager {
                 <form class="eng-calc-form aegis-calc-panel" data-calc="unit_converter">
                     <section class="aegis-calc-diagram eng-diagram-unit">
                         <div class="eng-unit-column"><span data-unit-icon>↔</span><strong>SOURCE</strong><em data-unit-from>mm</em></div>
-                        <i>➜</i>
+                        <div class="eng-unit-transfer" aria-hidden="true"><span>CONVERT</span><i>→</i><b></b></div>
                         <div class="eng-unit-column"><span data-unit-icon-target>↔</span><strong>TARGET</strong><em data-unit-to>cm</em></div>
                     </section>
                     <section class="aegis-calc-controls">
@@ -520,8 +520,22 @@ class WorkspaceManager {
             return `
                 <form class="eng-calc-form aegis-calc-panel" data-calc="torque_power_rpm">
                     <section class="aegis-calc-diagram eng-diagram-torque">
-                        <div class="eng-rotor"><span></span><i></i></div>
-                        <div class="eng-formula"><strong>P = τω</strong><small>rpm → rad/s</small></div>
+                        <div class="eng-powertrain-stage">
+                            <svg class="eng-power-gauge" viewBox="0 0 240 240" aria-label="Powertrain RPM, torque and power gauge">
+                                <circle class="eng-gauge-track" cx="120" cy="120" r="94"></circle>
+                                <circle class="eng-power-ring" data-power-ring cx="120" cy="120" r="94"></circle>
+                                <circle class="eng-rpm-arc" data-rpm-arc cx="120" cy="120" r="78"></circle>
+                                <path class="eng-rpm-ticks" d="M120 25V38 M174 39L168 50 M213 78L202 84 M227 132H214 M207 185L196 178 M164 216L158 204 M76 213L82 201 M36 180L47 174 M14 128H28 M30 74L42 81 M72 37L79 50"></path>
+                            </svg>
+                            <div class="eng-rotor" data-rotor><span class="eng-rotor-shaft"></span><i class="eng-rotor-blades"></i></div>
+                            <div class="eng-torque-vector" data-torque-vector><span>τ</span><i></i></div>
+                            <div class="eng-powertrain-values">
+                                <span><small>RPM</small><strong data-rpm-readout>3000</strong></span>
+                                <span><small>TORQUE</small><strong data-torque-readout>250 Nm</strong></span>
+                                <span><small>POWER</small><strong data-power-readout>78.54 kW</strong></span>
+                            </div>
+                        </div>
+                        <div class="eng-formula"><strong>P = τω</strong><small data-torque-solved>INPUT: TORQUE + RPM</small></div>
                     </section>
                     <section class="aegis-calc-controls">
                         ${this.engineeringSliderField("Torque", "torqueNm", 250, 0, 1200, 1, "Nm")}
@@ -538,8 +552,30 @@ class WorkspaceManager {
             return `
                 <form class="eng-calc-form aegis-calc-panel" data-calc="material_mass">
                     <section class="aegis-calc-diagram eng-diagram-mass">
-                        <div class="eng-material-block"><i></i><span></span></div>
-                        <div class="eng-material-meta"><strong data-material-label>ALUMINIUM</strong><small data-material-density>2700 kg/m³</small></div>
+                        <svg class="eng-material-part" viewBox="0 0 430 245" role="img" aria-label="Technical material block with dimensions">
+                            <defs>
+                                <linearGradient id="engMaterialFront" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="currentColor" stop-opacity=".25"></stop><stop offset="1" stop-color="currentColor" stop-opacity=".08"></stop></linearGradient>
+                                <marker id="engDimensionArrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z"></path></marker>
+                            </defs>
+                            <g class="eng-material-shape" data-material-shape>
+                                <polygon class="eng-material-face eng-material-front" data-material-front points="105,92 292,92 292,188 105,188"></polygon>
+                                <polygon class="eng-material-face eng-material-top" data-material-top points="105,92 148,54 335,54 292,92"></polygon>
+                                <polygon class="eng-material-face eng-material-side" data-material-side points="292,92 335,54 335,150 292,188"></polygon>
+                            </g>
+                            <g class="eng-material-dimensions">
+                                <line data-material-length-line x1="105" y1="211" x2="292" y2="211"></line>
+                                <text data-material-length x="198" y="230">L 46.4 mm</text>
+                                <line data-material-height-line x1="78" y1="92" x2="78" y2="188"></line>
+                                <text data-material-height x="63" y="143">H 46.4 mm</text>
+                                <line data-material-width-line x1="307" y1="79" x2="350" y2="41"></line>
+                                <text data-material-width x="353" y="42">W 46.4 mm</text>
+                            </g>
+                        </svg>
+                        <div class="eng-material-meta">
+                            <strong data-material-label>ALUMINIUM 6061-T6</strong>
+                            <small data-material-density>2700 kg/m³</small>
+                            <span><b data-material-volume>100 cm³</b><em data-material-source>DIRECT VOLUME</em></span>
+                        </div>
                     </section>
                     <section class="aegis-calc-controls">
                         <label class="aegis-field">Material<select class="aegis-select" name="materialId">${materials}</select></label>
@@ -557,9 +593,18 @@ class WorkspaceManager {
             return `
                 <form class="eng-calc-form aegis-calc-panel" data-calc="gear_ratio">
                     <section class="aegis-calc-diagram eng-diagram-gears">
-                        <div class="eng-gear eng-gear-driver"><span></span></div>
-                        <div class="eng-gear eng-gear-driven"><span></span></div>
-                        <small>DRIVER → DRIVEN</small>
+                        <div class="eng-gear-node eng-gear-driver-node">
+                            <strong>DRIVER</strong>
+                            <div class="eng-gear eng-gear-driver"><span class="eng-gear-teeth" data-gear-teeth></span><i class="eng-gear-ring"></i><b class="eng-gear-hub"></b></div>
+                            <small><b data-driver-teeth>20T</b><em data-driver-rpm>3000 rpm</em></small>
+                        </div>
+                        <div class="eng-gear-transfer" aria-hidden="true"><strong>→</strong><small>OPPOSITE ROTATION</small></div>
+                        <div class="eng-gear-node eng-gear-driven-node">
+                            <strong>DRIVEN</strong>
+                            <div class="eng-gear eng-gear-driven"><span class="eng-gear-teeth" data-gear-teeth></span><i class="eng-gear-ring"></i><b class="eng-gear-hub"></b></div>
+                            <small><b data-driven-teeth>60T</b><em data-driven-rpm>1000 rpm</em></small>
+                        </div>
+                        <div class="eng-gear-ratio-strip"><span>DRIVER</span><i>MECHANICAL MESH</i><span>DRIVEN</span></div>
                     </section>
                     <section class="aegis-calc-controls">
                         ${this.engineeringSliderField("Driver Teeth", "driverTeeth", 20, 5, 120, 1)}
@@ -577,11 +622,13 @@ class WorkspaceManager {
                         <svg viewBox="0 0 420 150" role="img" aria-label="Simply supported beam center load">
                             <path class="beam-neutral" d="M35 82 H385"></path>
                             <path class="beam-deflected" data-beam-path d="M35 82 Q210 100 385 82"></path>
-                            <path class="beam-load" d="M210 18 V74"></path>
-                            <path class="beam-load-head" d="M198 62 L210 78 L222 62"></path>
+                            <path class="beam-load" data-beam-load d="M210 18 V74"></path>
+                            <path class="beam-load-head" data-beam-load-head d="M198 62 L210 78 L222 62"></path>
                             <path class="beam-support" d="M52 92 L30 125 H74 Z M368 92 L346 125 H390 Z"></path>
+                            <path class="beam-span" d="M52 135 H368 M52 130 V140 M368 130 V140"></path>
+                            <text class="beam-span-label" x="210" y="147" text-anchor="middle" data-beam-span>500 mm SPAN</text>
                         </svg>
-                        <small>SIMPLY SUPPORTED · CENTER LOAD · APPROXIMATE</small>
+                        <small>SIMPLY SUPPORTED · CENTER LOAD · <b data-beam-visual-deflection>0.0000 mm</b> · APPROXIMATE</small>
                     </section>
                     <section class="aegis-calc-controls">
                         ${this.engineeringSliderField("Length", "lengthMm", 500, 50, 5000, 1, "mm")}
@@ -596,13 +643,33 @@ class WorkspaceManager {
         }
         if (tool.actionId === "thread_reference") {
             return `
-                <section class="aegis-calc-panel eng-thread-panel">
+                <section class="aegis-calc-panel eng-thread-panel" data-thread-reference>
                     <div class="aegis-calc-diagram eng-diagram-thread">
-                        <div class="eng-thread-screw"><i></i><span></span></div>
-                        <div><strong>METRIC THREAD QUICK REFERENCE</strong><small>Tap drill / clearance · workshop reference</small></div>
+                        <svg class="eng-thread-technical" viewBox="0 0 440 190" role="img" aria-label="Metric screw thread technical profile">
+                            <defs><marker id="engThreadArrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z"></path></marker></defs>
+                            <rect class="eng-thread-shank" x="94" y="70" width="270" height="58" rx="4"></rect>
+                            <path class="eng-thread-head" d="M40 54H96V144H40L20 124V74Z"></path>
+                            <path class="eng-thread-profile" data-thread-profile-top d=""></path>
+                            <path class="eng-thread-profile" data-thread-profile-bottom d=""></path>
+                            <line class="eng-thread-axis" x1="18" y1="99" x2="394" y2="99"></line>
+                            <line class="eng-thread-pitch-line" data-thread-pitch-line x1="170" y1="42" x2="190" y2="42"></line>
+                            <text class="eng-thread-pitch-label" data-thread-pitch-label x="180" y="31" text-anchor="middle">PITCH 0.5 mm</text>
+                            <text class="eng-thread-size-label" data-thread-size-label x="230" y="104" text-anchor="middle">M3 × 0.5</text>
+                        </svg>
+                        <div class="eng-thread-readout">
+                            <strong data-thread-active>M3 × 0.5</strong>
+                            <span><small>PITCH</small><b data-thread-pitch>0.5 mm</b></span>
+                            <span><small>TAP DRILL</small><b data-thread-tap>2.5 mm</b></span>
+                            <span><small>CLEARANCE</small><b data-thread-clearance>3.4 mm</b></span>
+                        </div>
                     </div>
-                    <div class="eng-thread-table">${registry.THREAD_REFERENCES.map(row => `
-                        <div><strong>${this.escape(row.thread)}</strong><span>Tap ${this.escape(row.tapDrill)}</span><span>Clear ${this.escape(row.clearance)}</span></div>`).join("")}</div>
+                    <div class="eng-thread-table" role="table">
+                        <div class="eng-thread-row eng-thread-header" role="row"><strong>THREAD</strong><span>PITCH</span><span>TAP DRILL</span><span>CLEARANCE</span></div>
+                        ${registry.THREAD_REFERENCES.map((row, index) => `
+                            <button type="button" class="eng-thread-row${index === 0 ? " active" : ""}" data-thread-index="${index}" role="row">
+                                <strong>${this.escape(row.nominal)}</strong><span>${this.escape(String(row.pitch))} mm</span><span>${this.escape(String(row.tapDrill))} mm</span><span>${this.escape(String(row.clearance))} mm</span>
+                            </button>`).join("")}
+                    </div>
                 </section>`;
         }
         if (tool.actionId === "material_card") {
@@ -688,8 +755,9 @@ class WorkspaceManager {
     bindEngineeringCalculators(root) {
         root.querySelectorAll(".eng-calc-form").forEach(form => {
             const update = event => {
-                this.syncEngineeringCalcControls(form, event && event.target);
-                this.updateEngineeringCalculator(form);
+                const source = event && event.target;
+                this.syncEngineeringCalcControls(form, source);
+                this.updateEngineeringCalculator(form, source);
             };
             form.addEventListener("input", update);
             form.addEventListener("change", update);
@@ -699,7 +767,7 @@ class WorkspaceManager {
                         input.value = input.dataset.default || "";
                     });
                     this.syncEngineeringCalcControls(form);
-                    this.updateEngineeringCalculator(form);
+                    this.updateEngineeringCalculator(form, null);
                 });
             });
             form.querySelectorAll('[data-calc-action="copy"]').forEach(button => {
@@ -718,6 +786,14 @@ class WorkspaceManager {
             });
             if (form.dataset.calc === "unit_converter") this.syncUnitConverterSelects(form);
             update();
+        });
+        root.querySelectorAll("[data-thread-reference]").forEach(panel => {
+            if (panel.dataset.threadBound === "true") return;
+            panel.dataset.threadBound = "true";
+            panel.querySelectorAll("[data-thread-index]").forEach(button => {
+                button.addEventListener("click", () => this.updateEngineeringThreadReference(panel, Number(button.dataset.threadIndex || 0)));
+            });
+            this.updateEngineeringThreadReference(panel, 0);
         });
     }
 
@@ -762,7 +838,7 @@ class WorkspaceManager {
         });
     }
 
-    updateEngineeringCalculator(form) {
+    updateEngineeringCalculator(form, source = null) {
         const registry = this.engineeringRegistry;
         if (!registry) return;
         const values = Object.fromEntries(Array.from(new FormData(form).entries()));
@@ -776,7 +852,22 @@ class WorkspaceManager {
             this.updateEngineeringCalculatorVisual(form, result);
         }
         if (form.dataset.calc === "torque_power_rpm") {
-            result = registry.calculateTorquePowerRpm(values);
+            const missing = ["torqueNm", "powerKw", "rpm"].filter(name => values[name] === "");
+            let solvedField = missing.length === 1 ? missing[0] : null;
+            const calculationValues = {...values};
+            if (!solvedField) {
+                solvedField = source && source.name === "powerKw" ? "torqueNm" : "powerKw";
+                calculationValues[solvedField] = undefined;
+            } else {
+                calculationValues[solvedField] = undefined;
+            }
+            result = registry.calculateTorquePowerRpm(calculationValues);
+            if (result.ok && solvedField && form.elements[solvedField]) {
+                const resultKey = solvedField === "torqueNm" ? "torqueNm" : solvedField === "powerKw" ? "powerKw" : "rpm";
+                form.elements[solvedField].value = registry.round(result[resultKey], solvedField === "rpm" ? 1 : 3);
+                this.syncEngineeringCalcControls(form, form.elements[solvedField]);
+                form.dataset.solvedField = solvedField;
+            }
             form.querySelector("output").innerText = result.ok
                 ? `${registry.round(result.torqueNm, 3)} Nm · ${registry.round(result.powerKw, 3)} kW · ${registry.round(result.rpm, 1)} rpm`
                 : result.error;
@@ -784,11 +875,11 @@ class WorkspaceManager {
         }
         if (form.dataset.calc === "material_mass") {
             const material = registry.MATERIALS[values.materialId] || {};
-            if ((!values.density || Number(values.density) === 0) && material.density) {
+            if ((source && source.name === "materialId" && material.density) || ((!values.density || Number(values.density) === 0) && material.density)) {
                 form.elements.density.value = material.density;
                 this.syncEngineeringCalcControls(form, form.elements.density);
             }
-            result = registry.calculateMaterialMass({...values, density: form.elements.density.value});
+            result = registry.calculateMaterialMass({...Object.fromEntries(Array.from(new FormData(form).entries())), density: form.elements.density.value});
             form.querySelector("output").innerText = result.ok
                 ? `${registry.round(result.massKg, 4)} kg · ${registry.round(result.massKg * 1000, 1)} g`
                 : result.error;
@@ -825,45 +916,202 @@ class WorkspaceManager {
             if (targetIcon) targetIcon.innerText = icon;
         }
         if (form.dataset.calc === "torque_power_rpm") {
+            const diagram = form.querySelector(".eng-diagram-torque");
             const rotor = form.querySelector(".eng-rotor");
+            const rpm = Math.max(0, Number(result.rpm ?? values.rpm ?? 0));
+            const torque = Math.max(0, Number(result.torqueNm ?? values.torqueNm ?? 0));
+            const power = Math.max(0, Number(result.powerKw ?? values.powerKw ?? 0));
+            const rpmRatio = Math.min(1, rpm / 12000);
+            const torqueRatio = Math.min(1, torque / 1200);
+            const powerRatio = Math.min(1, power / 500);
             if (rotor) {
-                const rpm = Math.max(0, Number(values.rpm || 0));
-                const torque = Math.max(0, Number(values.torqueNm || 0));
-                rotor.style.setProperty("--rpm-speed", `${Math.max(.65, 7 - Math.min(6, rpm / 1800))}s`);
-                rotor.style.setProperty("--torque-angle", `${Math.min(300, torque / 4)}deg`);
+                rotor.style.setProperty("--rpm-speed", `${rpm > 0 ? Math.max(.65, Math.min(7, 9000 / Math.max(300, rpm))) : 0}s`);
+                rotor.classList.toggle("stationary", rpm <= 0);
+            }
+            if (diagram) {
+                diagram.style.setProperty("--rpm-ratio", String(rpmRatio));
+                diagram.style.setProperty("--torque-ratio", String(torqueRatio));
+                diagram.style.setProperty("--power-ratio", String(powerRatio));
+            }
+            const rpmArc = form.querySelector("[data-rpm-arc]");
+            const powerRing = form.querySelector("[data-power-ring]");
+            if (rpmArc) rpmArc.style.strokeDashoffset = String(490.09 * (1 - rpmRatio));
+            if (powerRing) powerRing.style.strokeDashoffset = String(590.62 * (1 - powerRatio));
+            const readouts = {
+                "[data-rpm-readout]": `${this.engineeringRegistry.round(rpm, 1)}`,
+                "[data-torque-readout]": `${this.engineeringRegistry.round(torque, 2)} Nm`,
+                "[data-power-readout]": `${this.engineeringRegistry.round(power, 3)} kW`
+            };
+            Object.entries(readouts).forEach(([selector, text]) => {
+                const node = form.querySelector(selector);
+                if (node) node.innerText = text;
+            });
+            const solved = form.querySelector("[data-torque-solved]");
+            if (solved) {
+                const labels = {torqueNm: "TORQUE", powerKw: "POWER", rpm: "RPM"};
+                solved.innerText = form.dataset.solvedField ? `SOLVED: ${labels[form.dataset.solvedField]}` : "INPUT: TORQUE + RPM";
             }
         }
         if (form.dataset.calc === "material_mass") {
             const material = this.engineeringRegistry.MATERIALS[values.materialId] || {};
             const label = form.querySelector("[data-material-label]");
             const density = form.querySelector("[data-material-density]");
-            const block = form.querySelector(".eng-material-block");
             if (label) label.innerText = (material.label || "MATERIAL").toUpperCase();
             if (density) density.innerText = `${Number(form.elements.density.value || material.density || 0)} kg/m³`;
-            if (block) {
-                const length = Number(values.lengthMm || 0);
-                const width = Number(values.widthMm || 0);
-                const height = Number(values.heightMm || 0);
-                const volume = Number(values.volumeCm3 || 0);
-                const scale = Math.max(.72, Math.min(1.35, (length && width && height ? Math.cbrt(length * width * height) / 85 : Math.cbrt(Math.max(1, volume)) / 5)));
-                block.style.setProperty("--mass-scale", String(scale));
-            }
+            const diagram = form.querySelector(".eng-diagram-mass");
+            const accent = {
+                aluminium: "#7ccfff", steel: "#a9c4d6", stainless: "#d8f1ff", titanium: "#a8bfff",
+                carbon_fiber: "#67cfc2", pla: "#7cffb2", petg: "#71d6ff", abs: "#ffbf66", pa_cf: "#8db9c8"
+            }[values.materialId] || "#7ccfff";
+            if (diagram) diagram.style.setProperty("--material-accent", accent);
+            const directVolume = Math.max(1, Number(values.volumeCm3 || 1));
+            const derivedSide = Math.cbrt(directVolume) * 10;
+            const dimensions = result.ok && result.dimensionsMm
+                ? result.dimensionsMm
+                : {length: derivedSide, width: derivedSide, height: derivedSide};
+            const maxDimension = Math.max(1, dimensions.length, dimensions.width, dimensions.height);
+            const frontWidth = 92 + 104 * dimensions.length / maxDimension;
+            const frontHeight = 52 + 58 * dimensions.height / maxDimension;
+            const depth = 28 + 46 * dimensions.width / maxDimension;
+            const left = 190 - frontWidth / 2;
+            const top = 92;
+            const right = left + frontWidth;
+            const bottom = top + frontHeight;
+            const offsetX = depth;
+            const offsetY = depth * .72;
+            const points = {
+                "[data-material-front]": `${left},${top} ${right},${top} ${right},${bottom} ${left},${bottom}`,
+                "[data-material-top]": `${left},${top} ${left + offsetX},${top - offsetY} ${right + offsetX},${top - offsetY} ${right},${top}`,
+                "[data-material-side]": `${right},${top} ${right + offsetX},${top - offsetY} ${right + offsetX},${bottom - offsetY} ${right},${bottom}`
+            };
+            Object.entries(points).forEach(([selector, value]) => {
+                const node = form.querySelector(selector);
+                if (node) node.setAttribute("points", value);
+            });
+            const lengthLine = form.querySelector("[data-material-length-line]");
+            const heightLine = form.querySelector("[data-material-height-line]");
+            const widthLine = form.querySelector("[data-material-width-line]");
+            if (lengthLine) { lengthLine.setAttribute("x1", left); lengthLine.setAttribute("x2", right); lengthLine.setAttribute("y1", bottom + 24); lengthLine.setAttribute("y2", bottom + 24); }
+            if (heightLine) { heightLine.setAttribute("x1", left - 24); heightLine.setAttribute("x2", left - 24); heightLine.setAttribute("y1", top); heightLine.setAttribute("y2", bottom); }
+            if (widthLine) { widthLine.setAttribute("x1", right + 10); widthLine.setAttribute("y1", top - 8); widthLine.setAttribute("x2", right + offsetX + 12); widthLine.setAttribute("y2", top - offsetY - 8); }
+            const dimensionText = {
+                "[data-material-length]": {text: `L ${this.engineeringRegistry.round(dimensions.length, 1)} mm`, x: (left + right) / 2, y: bottom + 43},
+                "[data-material-height]": {text: `H ${this.engineeringRegistry.round(dimensions.height, 1)} mm`, x: left - 39, y: (top + bottom) / 2},
+                "[data-material-width]": {text: `W ${this.engineeringRegistry.round(dimensions.width, 1)} mm`, x: right + offsetX + 18, y: top - offsetY - 6}
+            };
+            Object.entries(dimensionText).forEach(([selector, item]) => {
+                const node = form.querySelector(selector);
+                if (!node) return;
+                node.textContent = item.text;
+                node.setAttribute("x", item.x);
+                node.setAttribute("y", item.y);
+            });
+            const volume = form.querySelector("[data-material-volume]");
+            const source = form.querySelector("[data-material-source]");
+            if (volume) volume.innerText = `${this.engineeringRegistry.round(result.ok ? result.volumeCm3 : directVolume, 3)} cm³`;
+            if (source) source.innerText = result.ok && result.source === "DIMENSIONS" ? "DIMENSION-DERIVED" : "DIRECT VOLUME";
         }
         if (form.dataset.calc === "gear_ratio") {
-            const driver = Number(values.driverTeeth || 20);
-            const driven = Number(values.drivenTeeth || 60);
+            const driverTeeth = Math.max(5, Number(values.driverTeeth || 20));
+            const drivenTeeth = Math.max(5, Number(values.drivenTeeth || 60));
+            const inputRpm = Math.max(0, Number(values.inputRpm || 0));
+            const outputRpm = result.ok ? Math.max(0, Number(result.outputRpm || 0)) : 0;
+            const maxTeeth = Math.max(driverTeeth, drivenTeeth);
             const driverNode = form.querySelector(".eng-gear-driver");
             const drivenNode = form.querySelector(".eng-gear-driven");
-            if (driverNode) driverNode.style.setProperty("--gear-size", `${Math.max(3.2, Math.min(7.2, driver / 13))}vh`);
-            if (drivenNode) drivenNode.style.setProperty("--gear-size", `${Math.max(3.6, Math.min(9.2, driven / 13))}vh`);
+            const driverSize = 10 + 7 * driverTeeth / maxTeeth;
+            const drivenSize = 10 + 7 * drivenTeeth / maxTeeth;
+            const driverPeriod = inputRpm > 0 ? Math.max(.7, Math.min(7, 9000 / Math.max(300, inputRpm))) : 0;
+            const drivenPeriod = outputRpm > 0 ? Math.max(.7, Math.min(9, 9000 / Math.max(300, outputRpm))) : 0;
+            [[driverNode, driverTeeth, driverSize, driverPeriod], [drivenNode, drivenTeeth, drivenSize, drivenPeriod]].forEach(([node, teeth, size, period]) => {
+                if (!node) return;
+                node.style.setProperty("--gear-size", `${size}vh`);
+                node.style.setProperty("--gear-period", `${period}s`);
+                node.classList.toggle("stationary", period === 0);
+                this.renderEngineeringGearTeeth(node, teeth);
+            });
+            const labels = {
+                "[data-driver-teeth]": `${driverTeeth}T`,
+                "[data-driven-teeth]": `${drivenTeeth}T`,
+                "[data-driver-rpm]": `${this.engineeringRegistry.round(inputRpm, 1)} rpm`,
+                "[data-driven-rpm]": `${this.engineeringRegistry.round(outputRpm, 1)} rpm`
+            };
+            Object.entries(labels).forEach(([selector, text]) => {
+                const node = form.querySelector(selector);
+                if (node) node.innerText = text;
+            });
         }
         if (form.dataset.calc === "beam_deflection") {
             const path = form.querySelector("[data-beam-path]");
+            const load = form.querySelector("[data-beam-load]");
+            const loadHead = form.querySelector("[data-beam-load-head]");
+            const span = form.querySelector("[data-beam-span]");
+            const deflectionLabel = form.querySelector("[data-beam-visual-deflection]");
+            const deflectionMm = result.ok ? Math.abs(Number(result.deflectionMm || 0)) : 0;
+            const deflection = 7 + 45 * (1 - Math.exp(-deflectionMm / 4));
             if (path) {
-                const deflection = result.ok ? Math.min(48, Math.max(10, Math.abs(Number(result.deflectionMm || 0)) * 2 + 10)) : 18;
                 path.setAttribute("d", `M35 82 Q210 ${82 + deflection} 385 82`);
             }
+            const loadEnd = 74 + deflection * .48;
+            if (load) load.setAttribute("d", `M210 18 V${loadEnd}`);
+            if (loadHead) loadHead.setAttribute("d", `M198 ${loadEnd - 12} L210 ${loadEnd + 4} L222 ${loadEnd - 12}`);
+            if (span) span.textContent = `${this.engineeringRegistry.round(Number(values.lengthMm || 0), 1)} mm SPAN`;
+            if (deflectionLabel) deflectionLabel.innerText = `${this.engineeringRegistry.round(deflectionMm, 4)} mm`;
         }
+    }
+
+    renderEngineeringGearTeeth(gear, actualTeeth) {
+        const teethNode = gear && gear.querySelector("[data-gear-teeth]");
+        if (!teethNode) return;
+        const renderedTeeth = Math.max(12, Math.min(36, Math.round(Number(actualTeeth || 12) / 3)));
+        if (Number(teethNode.dataset.renderedTeeth) === renderedTeeth) return;
+        teethNode.dataset.renderedTeeth = String(renderedTeeth);
+        teethNode.innerHTML = Array.from({length: renderedTeeth}, (_, index) =>
+            `<i style="--tooth-angle:${index * 360 / renderedTeeth}deg"></i>`
+        ).join("");
+    }
+
+    updateEngineeringThreadReference(panel, index = 0) {
+        const rows = this.engineeringRegistry && this.engineeringRegistry.THREAD_REFERENCES;
+        const row = rows && rows[index];
+        if (!panel || !row) return;
+        panel.querySelectorAll("[data-thread-index]").forEach(button => {
+            button.classList.toggle("active", Number(button.dataset.threadIndex) === index);
+        });
+        const values = {
+            "[data-thread-active]": row.thread,
+            "[data-thread-pitch]": `${row.pitch} mm`,
+            "[data-thread-tap]": `${row.tapDrill} mm`,
+            "[data-thread-clearance]": `${row.clearance} mm`,
+            "[data-thread-size-label]": row.thread,
+            "[data-thread-pitch-label]": `PITCH ${row.pitch} mm`
+        };
+        Object.entries(values).forEach(([selector, text]) => {
+            const node = panel.querySelector(selector);
+            if (node) node.textContent = text;
+        });
+        const spacing = Math.max(11, Math.min(28, Number(row.pitch) * 18));
+        const start = 94;
+        const end = 364;
+        let topPath = `M${start} 70`;
+        let bottomPath = `M${start} 128`;
+        for (let x = start; x < end; x += spacing) {
+            const next = Math.min(end, x + spacing);
+            const middle = Math.min(end, x + spacing / 2);
+            topPath += ` L${middle} 60 L${next} 70`;
+            bottomPath += ` L${middle} 138 L${next} 128`;
+        }
+        const top = panel.querySelector("[data-thread-profile-top]");
+        const bottom = panel.querySelector("[data-thread-profile-bottom]");
+        if (top) top.setAttribute("d", topPath);
+        if (bottom) bottom.setAttribute("d", bottomPath);
+        const pitchLine = panel.querySelector("[data-thread-pitch-line]");
+        const pitchLabel = panel.querySelector("[data-thread-pitch-label]");
+        if (pitchLine) {
+            pitchLine.setAttribute("x1", start + 58);
+            pitchLine.setAttribute("x2", start + 58 + spacing);
+        }
+        if (pitchLabel) pitchLabel.setAttribute("x", start + 58 + spacing / 2);
     }
 
     async executeEngineeringTool(toolId, view = this.engineeringView) {

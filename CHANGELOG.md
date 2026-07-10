@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.2.6 - 2026-07-10
+
+### Improved
+
+- Improved Gear Ratio visualization with centered proportional animated gears.
+- Improved Torque/Power/RPM visualization with clearer rotor, torque arrow and power feedback.
+- Improved Material Mass Estimator visual with clearer technical block/dimension representation.
+- Improved Thread/Drill Chart with screw/thread visual and integrated table.
+- Preserved HUB, Apple Music, Assistant and ENG functionality.
+
 ## 2.2.5 - 2026-07-10
 
 ### Recovery
