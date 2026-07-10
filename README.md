@@ -49,10 +49,6 @@ keyboard and large terminal with:
   CAE/simulation, manufacturing and 3D printing launchers, internal
   calculators, material cards, research/standards references and Project
   Timeline integration;
-- Aegis GearLab, a local ENG tool backed by `tools/aegis-gearlab`, provides a
-  FastAPI/CadQuery gear-generation foundation with STEP-first exports, JSON
-  reports, validated parameters and warning/error separation. It runs on
-  `127.0.0.1:8765` when started and stays offline-safe when not running;
 - ENG quick calculators use cockpit-styled sliders, precision numeric inputs
   and lightweight technical diagrams for gear ratio, beam deflection,
   torque/power/RPM, material mass, unit conversion and thread references;

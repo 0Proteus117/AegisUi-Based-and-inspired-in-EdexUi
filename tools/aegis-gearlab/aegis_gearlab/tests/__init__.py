@@ -1,2 +1,0 @@
-"""Aegis GearLab tests."""
-

@@ -1,7 +1,7 @@
 {
   "name": "edex-ui-eng",
   "productName": "EdexUi-Eng",
-  "version": "2.2.7",
+  "version": "2.2.6",
   "description": "An engineering-focused eDEX-UI dashboard for Apple Silicon.",
   "keywords": [
     "desktop",
@@ -55,17 +55,6 @@
       {
         "from": "prebuild-src/native/EdexUiEngCalendar.app",
         "to": "EdexUiEngCalendar.app"
-      },
-      {
-        "from": "tools/aegis-gearlab",
-        "to": "aegis-gearlab",
-        "filter": [
-          "**/*",
-          "!.venv/**/*",
-          "!exports/**/*",
-          "!**/__pycache__/**/*",
-          "!**/*.pyc"
-        ]
       }
     ],
     "compression": "normal",
