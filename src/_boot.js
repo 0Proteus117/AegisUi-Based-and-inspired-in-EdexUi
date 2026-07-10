@@ -1271,32 +1271,6 @@ if (!Music.running()) {
 }
 `;
 
-const musicHandshakeScript = `
-const Music = Application("com.apple.Music");
-JSON.stringify({
-    running: Music.running(),
-    state: Music.running() ? String(Music.playerState()) : "stopped",
-    appStatus: Music.running() ? "RUNNING" : "NOT_RUNNING",
-    connectionStatus: Music.running() ? "CONNECTED" : "NOT_RUNNING",
-    bridge: "JXA_DIRECT_MUSIC"
-});
-`;
-
-function getMusicBridgeDiagnostics(extra = {}) {
-    return {
-        appPath: app.getAppPath(),
-        execPath: process.execPath,
-        appVersion: app.getVersion(),
-        isPackaged: app.isPackaged,
-        expectedBundleId: "com.edex.ui.eng",
-        productName: "EdexUi-Eng",
-        bridge: "JXA_DIRECT_MUSIC",
-        automationTarget: "com.apple.Music",
-        usesSystemEvents: false,
-        ...extra
-    };
-}
-
 async function isMusicAppRunning() {
     if (process.platform !== "darwin") return false;
     try {
@@ -1331,19 +1305,14 @@ function normalizeMusicAutomationError(message = "") {
 
 async function runAutomation(script, timeout = 20000, maxBuffer = 1024 * 1024) {
     if (process.platform !== "darwin") {
-        return {
-            ok: false,
-            status: "UNAVAILABLE",
-            error: "This integration is available on macOS only.",
-            diagnostics: getMusicBridgeDiagnostics({platform: process.platform})
-        };
+        return {ok: false, status: "UNAVAILABLE", error: "This integration is available on macOS only."};
     }
     try {
         const {stdout} = await execFileAsync("/usr/bin/osascript", [
             "-l", "JavaScript", "-e", script
         ], {timeout, maxBuffer});
         const data = JSON.parse(stdout.trim() || "null");
-        return {ok: true, data: {...(data || {}), ...getMusicBridgeDiagnostics()}};
+        return {ok: true, data};
     } catch (error) {
         const message = (error.stderr || error.message || "").trim();
         const normalized = normalizeMusicAutomationError(message);
@@ -1353,12 +1322,7 @@ async function runAutomation(script, timeout = 20000, maxBuffer = 1024 * 1024) {
             ...normalized,
             appStatus: running ? "RUNNING" : "NOT_RUNNING",
             error: normalized.safeMessage,
-            rawError: message || "Automation request failed.",
-            diagnostics: getMusicBridgeDiagnostics({
-                appStatus: running ? "RUNNING" : "NOT_RUNNING",
-                technicalCode: normalized.technicalCode,
-                rawError: message || "Automation request failed."
-            })
+            rawError: message || "Automation request failed."
         };
     }
 }
@@ -1437,32 +1401,6 @@ ipc.handle("calendar-events", async (event, requestedRange = {}) => {
     }
 });
 ipc.handle("music-status", () => runAutomation(musicStatusScript, 8000));
-ipc.handle("music-connect", async () => {
-    if (process.platform !== "darwin") {
-        return {
-            ok: false,
-            status: "UNAVAILABLE",
-            error: "Music.app is available on macOS only.",
-            diagnostics: getMusicBridgeDiagnostics({platform: process.platform})
-        };
-    }
-    try {
-        await execFileAsync("/usr/bin/open", ["-a", "Music"], {timeout: 8000});
-    } catch (error) {
-        return {
-            ok: false,
-            status: "ERROR",
-            connectionStatus: "ERROR",
-            appStatus: "NOT_RUNNING",
-            error: (error.message || "Unable to open Music.app").slice(0, 180),
-            diagnostics: getMusicBridgeDiagnostics({openError: error.message || "Unable to open Music.app"})
-        };
-    }
-    await new Promise(resolve => setTimeout(resolve, 650));
-    const handshake = await runAutomation(musicHandshakeScript, 10000);
-    if (!handshake.ok) return handshake;
-    return runAutomation(musicStatusScript, 10000);
-});
 ipc.handle("music-open", async () => {
     if (process.platform !== "darwin") return {ok: false, status: "UNAVAILABLE", error: "Music.app is available on macOS only."};
     try {
@@ -1470,17 +1408,6 @@ ipc.handle("music-open", async () => {
         return {ok: true, status: "OPEN_REQUESTED"};
     } catch (error) {
         return {ok: false, status: "ERROR", error: (error.message || "Unable to open Music.app").slice(0, 180)};
-    }
-});
-ipc.handle("music-open-automation-settings", async () => {
-    if (process.platform !== "darwin") {
-        return {ok: false, status: "UNAVAILABLE", error: "macOS settings are available on macOS only."};
-    }
-    try {
-        await shell.openExternal("x-apple.systempreferences:com.apple.preference.security?Privacy_Automation");
-        return {ok: true, status: "OPEN_REQUESTED"};
-    } catch (error) {
-        return {ok: false, status: "ERROR", error: (error.message || "Unable to open Automation settings").slice(0, 180)};
     }
 });
 ipc.handle("music-artwork", async (event, requestedArtworkId) => {

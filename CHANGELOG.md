@@ -1,31 +1,5 @@
 # Changelog
 
-## 2.2.4 - 2026-07-10
-
-### Fixed
-
-- Hardened Apple Music Automation for the final packaged app identity instead
-  of relying on dev/runtime-only validation.
-- Added a dedicated `music-connect` flow that opens Music.app and performs a
-  minimal direct JXA call to trigger macOS Automation permission from the app
-  itself.
-- Added UI actions for opening macOS Automation settings and resetting only
-  local music panel state.
-
-### Validation
-
-- Added `scripts/test-apple-music-packaged-final.js` to verify packaged app
-  bundle id, product name, version, DMG presence, bridge target and codesign
-  status.
-- Apple Music validation now distinguishes dev, packaged app and final DMG app
-  states so a dev-only success cannot be reported as final success.
-
-### Security
-
-- Apple Music remains direct JXA/osascript to Music.app.
-- `System Events` remains forbidden.
-- No TCC reset is executed automatically; reset command is documented only.
-
 ## 2.2.3 - 2026-07-10
 
 ### Fixed

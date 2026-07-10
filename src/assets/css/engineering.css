@@ -917,26 +917,6 @@ body.eng-map-expanded-active {
     gap: .55vh;
 }
 
-.engineering-mode .eng-music-permission-steps {
-    margin: .75vh 0;
-    padding: .75vh .9vh .75vh 2.1vh;
-    border: .08vh solid rgba(255, 191, 102, .42);
-    color: rgba(255, 215, 160, .9);
-    background: rgba(42, 24, 7, .36);
-    font: .72vh var(--font_mono);
-    line-height: 1.35;
-}
-
-.engineering-mode .eng-music-permission-steps li {
-    margin: .18vh 0;
-}
-
-.engineering-mode .eng-music-tcc-hint {
-    display: block;
-    max-width: 58vh;
-    color: rgba(255, 191, 102, .72);
-}
-
 .engineering-mode .eng-calendar-glyph {
     width: 8vh;
     height: 7.2vh;

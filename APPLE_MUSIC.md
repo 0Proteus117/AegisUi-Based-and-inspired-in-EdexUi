@@ -47,29 +47,3 @@ node scripts/test-apple-music-runtime.js
 
 The runtime test may report `AUTOMATION_BLOCKED` if macOS permission is missing;
 that is a diagnosable local permission state, not a silent bridge crash.
-
-## Packaged final validation
-
-Dev validation is not enough for Apple Music Automation. macOS TCC evaluates the
-real packaged app identity, so the final `.app` must keep:
-
-- `CFBundleIdentifier`: `com.edex.ui.eng`
-- Product name: `EdexUi-Eng`
-- a valid app signature after `app.asar` and `Info.plist` are updated
-- direct Music automation target: `com.apple.Music`
-
-Run:
-
-```bash
-node scripts/test-apple-music-packaged-final.js
-```
-
-If the final app still shows `AUTOMATION_BLOCKED`, do not mark Apple Music as
-connected. Use the manual TCC reset only if needed:
-
-```bash
-tccutil reset AppleEvents com.edex.ui.eng
-```
-
-Then close EdexUi-Eng and Music.app, open the final app from Finder, press
-`CONNECT APPLE MUSIC`, accept the macOS prompt and press `REFRESH`.

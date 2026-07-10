@@ -20,7 +20,6 @@ const CHECKS = [
     "scripts/test-eng-calculators.js",
     "scripts/test-apple-music-bridge-static.js",
     "scripts/test-apple-music-runtime.js",
-    "scripts/test-apple-music-packaged-final.js",
     "scripts/test-map-providers.js",
     "scripts/test-sat-celestrak.js"
 ];
