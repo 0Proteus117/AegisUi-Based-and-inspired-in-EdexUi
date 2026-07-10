@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.2.5 - 2026-07-10
+
+### Recovery
+
+- Reverted broken v2.2.4 changes.
+- Restored v2.2.3 stable HUB behavior.
+- Preserved ENG specialized workspace and visual calculators.
+- Apple Music failures are isolated to the Apple Music panel.
+- No new feature scope.
+
 ## 2.2.3 - 2026-07-10
 
 ### Fixed
