@@ -85,6 +85,11 @@ function main() {
         && exists("scripts/test-eng-workspace-registry.js")
         && exists("scripts/test-eng-command-router.js")
         && exists("scripts/test-eng-calculators.js");
+    const aegisGearLab = exists("tools/aegis-gearlab/aegis_gearlab/main.py")
+        && exists("tools/aegis-gearlab/aegis_gearlab/core/involute.py")
+        && exists("tools/aegis-gearlab/aegis_gearlab/cad/spur_external.py")
+        && exists("tools/aegis-gearlab/README.md")
+        && exists("scripts/test-aegis-gearlab-integration.js");
 
     if (!versionsMatch) failures.push("package versions do not match");
     if (!privateTrackedNo) failures.push("private memory is tracked");
@@ -95,6 +100,7 @@ function main() {
     if (!appleMusicBridge) failures.push("Apple Music bridge validation files missing");
     if (!mapProviders) failures.push("map provider files missing");
     if (!engWorkspace) failures.push("ENG workspace files missing");
+    if (!aegisGearLab) failures.push("Aegis GearLab files missing");
 
     print("PACKAGE_VERSION", pkg.version || "UNKNOWN");
     print("SRC_PACKAGE_VERSION", srcPkg.version || "UNKNOWN");
@@ -110,6 +116,7 @@ function main() {
     print("APPLE_MUSIC_BRIDGE", appleMusicBridge ? "PRESENT" : "MISSING");
     print("MAP_PROVIDERS", mapProviders ? "PRESENT" : "MISSING");
     print("ENG_WORKSPACE", engWorkspace ? "PRESENT" : "MISSING");
+    print("AEGIS_GEARLAB", aegisGearLab ? "PRESENT" : "MISSING");
     print("RELEASE_HEALTH", failures.length ? "FAIL" : "OK");
 
     if (failures.length) {

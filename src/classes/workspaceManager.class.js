@@ -267,6 +267,8 @@ class WorkspaceManager {
         this.engineeringRegistry = window.EngineeringToolsRegistry;
         this.engineeringTools = (this.engineeringRegistry ? this.engineeringRegistry.TOOLS : []).map(tool => ({...tool}));
         this.engineeringAppIndex = null;
+        this.gearLabStatus = this.gearLabStatus || "API OFFLINE";
+        this.gearLabBaseUrl = "http://127.0.0.1:8765";
 
         const categoryTiles = (this.engineeringRegistry ? this.engineeringRegistry.CATEGORIES : []).map(category => `
             <button type="button" class="eng-category-tile" data-eng-category="${this.escape(category.id)}">
@@ -320,6 +322,7 @@ class WorkspaceManager {
         this.bindEngineeringDeck(view);
         this.detectEngineeringApps(view);
         this.updateEngineeringStats(view);
+        setTimeout(() => this.checkGearLabHealth({silent: true}), 120);
     }
 
     bindEngineeringDeck(view) {
@@ -358,7 +361,7 @@ class WorkspaceManager {
             ? (status === "INSTALLED" ? "OPEN" : "INFO")
             : (tool.type === "web" ? "OPEN WEB" : (tool.type === "planned" ? "PLANNED" : "OPEN"));
         return `
-            <button type="button" class="eng-tool-card" data-eng-tool="${this.escape(tool.id)}" data-type="${this.escape(tool.type)}">
+            <button type="button" class="eng-tool-card${tool.id === "aegis-gearlab" ? " eng-tool-special" : ""}" data-eng-tool="${this.escape(tool.id)}" data-type="${this.escape(tool.type)}">
                 <span class="eng-tool-icon">${this.escape(tool.icon || "▧")}</span>
                 <em class="${this.statusClass(status)}">${this.escape(status)}</em>
                 <strong>${this.escape(tool.title)}</strong>
@@ -372,6 +375,7 @@ class WorkspaceManager {
 
     engineeringToolStatus(tool) {
         if (!tool) return "UNKNOWN";
+        if (tool.id === "aegis-gearlab") return this.gearLabStatus || "API OFFLINE";
         if (tool.type === "app") return tool.installed ? "INSTALLED" : "NOT FOUND";
         if (tool.type === "web") return "WEB";
         if (tool.type === "internal") return "READY";
@@ -440,7 +444,12 @@ class WorkspaceManager {
         const tool = this.engineeringTools && this.engineeringTools.find(item => item.id === toolId);
         if (!tool) return;
         const status = this.engineeringToolStatus(tool);
-        const actions = `
+        const actions = tool.id === "aegis-gearlab" ? `
+            <button type="button" data-gearlab-action="start">START API</button>
+            <button type="button" data-gearlab-action="health">HEALTH CHECK</button>
+            <button type="button" data-gearlab-action="exports">OPEN EXPORTS</button>
+            <button type="button" data-gearlab-action="docs">DOCS</button>
+            <button type="button" data-eng-detail-action="close">CLOSE</button>` : `
             <button type="button" data-eng-detail-action="execute" data-tool-id="${this.escape(tool.id)}">${tool.type === "web" ? "OPEN WEB" : tool.type === "app" ? "OPEN / INFO" : "RUN TOOL"}</button>
             <button type="button" data-eng-detail-action="close">CLOSE</button>`;
         this.openEngineeringDetail({
@@ -459,6 +468,7 @@ class WorkspaceManager {
     }
 
     engineeringToolDetailBody(tool) {
+        if (tool.id === "aegis-gearlab" || tool.actionId === "aegis_gearlab") return this.engineeringGearLabBody();
         if (tool.type === "internal") return this.engineeringInternalToolBody(tool);
         if (tool.type === "app") {
             const status = this.engineeringToolStatus(tool);
@@ -492,6 +502,365 @@ class WorkspaceManager {
                     ${unit ? `<b>${this.escape(unit)}</b>` : ""}
                 </div>
             </div>`;
+    }
+
+    engineeringGearLabBody() {
+        return `
+            <section class="gearlab-console" data-gearlab-console>
+                <aside class="gearlab-parameters">
+                    <div class="gearlab-section-title"><small>LOCAL API / CAD GENERATOR</small><strong>PARAMETERS</strong></div>
+                    <form data-gearlab-form>
+                        <label class="aegis-field">Gear type
+                            <select class="aegis-select" name="gearType">
+                                <option value="spur-external">Spur external</option>
+                                <option value="spur-internal">Spur internal</option>
+                                <option value="internal-gear-pair">Internal gear pair</option>
+                                <option value="helical-external">Helical external</option>
+                                <option value="herringbone-external">Herringbone external</option>
+                            </select>
+                        </label>
+                        <label class="aegis-field">Name<input class="aegis-input" name="gearName" value="aegis_pinion_01" maxlength="80"></label>
+                        <div class="gearlab-field-grid">
+                            <label class="aegis-field">Module<input class="aegis-number-input" name="moduleMm" type="number" min="0.1" max="20" step="0.1" value="2"><b>mm</b></label>
+                            <label class="aegis-field">Pressure angle<input class="aegis-number-input" name="pressureAngle" type="number" min="14.5" max="25" step="0.5" value="20"><b>deg</b></label>
+                            <label class="aegis-field">Face width<input class="aegis-number-input" name="faceWidth" type="number" min="1" max="200" step="1" value="12"><b>mm</b></label>
+                            <label class="aegis-field">Backlash<input class="aegis-number-input" name="backlash" type="number" min="0" max="2" step="0.01" value="0.08"><b>mm</b></label>
+                            <label class="aegis-field" data-gearlab-field="teeth">Teeth<input class="aegis-number-input" name="teeth" type="number" min="8" max="240" step="1" value="24"></label>
+                            <label class="aegis-field" data-gearlab-field="bore">Bore<input class="aegis-number-input" name="bore" type="number" min="0" max="200" step="0.5" value="8"><b>mm</b></label>
+                            <label class="aegis-field gearlab-hidden" data-gearlab-field="outer">Outer diameter<input class="aegis-number-input" name="outerDiameter" type="number" min="1" max="1000" step="1" value="140"><b>mm</b></label>
+                            <label class="aegis-field gearlab-hidden" data-gearlab-field="pinion-teeth">Pinion teeth<input class="aegis-number-input" name="pinionTeeth" type="number" min="8" max="120" step="1" value="20"></label>
+                            <label class="aegis-field gearlab-hidden" data-gearlab-field="ring-teeth">Ring teeth<input class="aegis-number-input" name="ringTeeth" type="number" min="16" max="300" step="1" value="60"></label>
+                            <label class="aegis-field gearlab-hidden" data-gearlab-field="ring-outer">Ring outer<input class="aegis-number-input" name="ringOuter" type="number" min="1" max="1000" step="1" value="140"><b>mm</b></label>
+                            <label class="aegis-field gearlab-hidden" data-gearlab-field="helix">Helix angle<input class="aegis-number-input" name="helixAngle" type="number" min="0.1" max="44" step="0.5" value="20"><b>deg</b></label>
+                            <label class="aegis-field gearlab-hidden" data-gearlab-field="hand">Helix hand<select class="aegis-select" name="helixHand"><option value="right">Right</option><option value="left">Left</option></select></label>
+                            <label class="aegis-field gearlab-hidden" data-gearlab-field="module-type">Module type<select class="aegis-select" name="moduleType"><option value="normal">Normal</option><option value="transverse">Transverse</option></select></label>
+                            <label class="aegis-field gearlab-hidden" data-gearlab-field="gap">Center gap<input class="aegis-number-input" name="centerGap" type="number" min="0" max="20" step="0.5" value="1"><b>mm</b></label>
+                            <label class="aegis-field">Profile points<input class="aegis-number-input" name="profilePoints" type="number" min="8" max="96" step="1" value="24"></label>
+                        </div>
+                        <div class="gearlab-export-formats">
+                            <small>EXPORTS</small>
+                            <label><input type="checkbox" name="format" value="step" checked> STEP</label>
+                            <label><input type="checkbox" name="format" value="stl"> STL</label>
+                            <label><input type="checkbox" name="format" value="dxf"> DXF</label>
+                            <label><input type="checkbox" name="format" value="json_report" checked> JSON REPORT</label>
+                        </div>
+                        <button type="submit" class="gearlab-generate">GENERATE CAD</button>
+                    </form>
+                </aside>
+                <main class="gearlab-preview">
+                    <div class="gearlab-section-title"><small>INVOLUTE PARAMETER VIEW</small><strong>TECHNICAL PREVIEW</strong></div>
+                    <div class="gearlab-gear-viewport" data-gearlab-preview>
+                        <div class="gearlab-preview-gear"><span data-gearlab-preview-teeth></span><i></i><b></b></div>
+                        <svg viewBox="0 0 400 400" aria-label="Gear reference circles">
+                            <circle class="gearlab-circle gearlab-addendum" cx="200" cy="200" r="145"></circle>
+                            <circle class="gearlab-circle gearlab-pitch" cx="200" cy="200" r="126"></circle>
+                            <circle class="gearlab-circle gearlab-base" cx="200" cy="200" r="118"></circle>
+                            <circle class="gearlab-circle gearlab-root" cx="200" cy="200" r="108"></circle>
+                            <path d="M40 200H360 M200 40V360"></path>
+                        </svg>
+                        <div class="gearlab-preview-readout">
+                            <span><small>TYPE</small><strong data-gearlab-preview-type>SPUR EXTERNAL</strong></span>
+                            <span><small>TEETH</small><strong data-gearlab-preview-count>24</strong></span>
+                            <span><small>PITCH Ø</small><strong data-gearlab-preview-pitch>48.00 mm</strong></span>
+                            <span><small>MODULE</small><strong data-gearlab-preview-module>2.00 mm</strong></span>
+                        </div>
+                    </div>
+                    <small class="gearlab-preview-note">VECTOR PARAMETER PREVIEW · CAD SURFACE IS GENERATED BY OPEN CASCADE</small>
+                </main>
+                <aside class="gearlab-output">
+                    <div class="gearlab-section-title"><small>127.0.0.1:8765</small><strong>STATUS / OUTPUT</strong></div>
+                    <div class="gearlab-api-state">
+                        <span data-gearlab-indicator></span>
+                        <div><small>GEARLAB API 0.1.0</small><strong data-gearlab-status>${this.escape(this.gearLabStatus || "API OFFLINE")}</strong></div>
+                    </div>
+                    <div class="gearlab-output-message" data-gearlab-message>Run HEALTH CHECK or START API. Offline state never blocks AegisUi.</div>
+                    <section class="gearlab-output-block"><header>CALCULATED GEOMETRY</header><div data-gearlab-geometry><small>NO GENERATION YET</small></div></section>
+                    <section class="gearlab-output-block"><header>WARNINGS / ERRORS</header><div data-gearlab-warnings><small>NONE</small></div></section>
+                    <section class="gearlab-output-block"><header>EXPORTS</header><div data-gearlab-files><small>NO FILES</small></div></section>
+                </aside>
+            </section>`;
+    }
+
+    bindEngineeringGearLab(root) {
+        const consoleNode = root && root.querySelector("[data-gearlab-console]");
+        if (!consoleNode || consoleNode.dataset.bound === "true") return;
+        consoleNode.dataset.bound = "true";
+        const form = consoleNode.querySelector("[data-gearlab-form]");
+        const typeSelect = form && form.elements.gearType;
+        const updatePreview = () => this.updateEngineeringGearLabPreview(consoleNode);
+        if (form) {
+            form.addEventListener("input", updatePreview);
+            form.addEventListener("change", updatePreview);
+            form.addEventListener("submit", event => {
+                event.preventDefault();
+                this.generateEngineeringGearLab(consoleNode, form);
+            });
+        }
+        root.querySelectorAll("[data-gearlab-action]").forEach(button => {
+            button.addEventListener("click", () => {
+                const action = button.dataset.gearlabAction;
+                if (action === "start") this.startGearLabApi(consoleNode);
+                if (action === "health") this.checkGearLabHealth({consoleNode});
+                if (action === "exports") this.openGearLabLocalTarget("exports", consoleNode);
+                if (action === "docs") this.openGearLabLocalTarget("docs", consoleNode);
+            });
+        });
+        if (typeSelect) typeSelect.addEventListener("change", updatePreview);
+        updatePreview();
+        this.checkGearLabHealth({consoleNode, silent: true});
+    }
+
+    updateEngineeringGearLabPreview(consoleNode) {
+        const form = consoleNode && consoleNode.querySelector("[data-gearlab-form]");
+        if (!form) return;
+        const type = form.elements.gearType.value;
+        const fieldsByType = {
+            "spur-external": ["teeth", "bore"],
+            "spur-internal": ["teeth", "outer"],
+            "internal-gear-pair": ["pinion-teeth", "ring-teeth", "bore", "ring-outer"],
+            "helical-external": ["teeth", "bore", "helix", "hand", "module-type"],
+            "herringbone-external": ["teeth", "bore", "helix", "hand", "module-type", "gap"]
+        };
+        const visible = new Set(fieldsByType[type] || []);
+        consoleNode.querySelectorAll("[data-gearlab-field]").forEach(field => {
+            field.classList.toggle("gearlab-hidden", !visible.has(field.dataset.gearlabField));
+        });
+        const moduleValue = Math.max(0, Number(form.elements.moduleMm.value || 0));
+        const teeth = type === "internal-gear-pair"
+            ? Number(form.elements.pinionTeeth.value || 0)
+            : Number(form.elements.teeth.value || 0);
+        const labels = {
+            "[data-gearlab-preview-type]": type.replaceAll("-", " ").toUpperCase(),
+            "[data-gearlab-preview-count]": String(teeth),
+            "[data-gearlab-preview-pitch]": `${(moduleValue * teeth).toFixed(2)} mm`,
+            "[data-gearlab-preview-module]": `${moduleValue.toFixed(2)} mm`
+        };
+        Object.entries(labels).forEach(([selector, value]) => {
+            const node = consoleNode.querySelector(selector);
+            if (node) node.innerText = value;
+        });
+        const teethNode = consoleNode.querySelector("[data-gearlab-preview-teeth]");
+        const rendered = Math.max(14, Math.min(42, Math.round(teeth / 2)));
+        if (teethNode && Number(teethNode.dataset.count) !== rendered) {
+            teethNode.dataset.count = String(rendered);
+            teethNode.innerHTML = Array.from({length: rendered}, (_, index) => `<i style="--angle:${index * 360 / rendered}deg"></i>`).join("");
+        }
+    }
+
+    gearLabRequestPayload(form) {
+        const value = name => Number(form.elements[name].value);
+        const type = form.elements.gearType.value;
+        const exportFormats = Array.from(form.querySelectorAll('input[name="format"]:checked')).map(item => item.value);
+        const common = {
+            gear_name: String(form.elements.gearName.value || "aegis_gear").trim(),
+            module_mm: value("moduleMm"),
+            pressure_angle_deg: value("pressureAngle"),
+            face_width_mm: value("faceWidth"),
+            backlash_mm: value("backlash"),
+            profile_shift: 0,
+            number_of_profile_points: value("profilePoints"),
+            export_formats: exportFormats.length ? exportFormats : ["step"]
+        };
+        if (type === "internal-gear-pair") {
+            return {
+                endpoint: type,
+                payload: {
+                    assembly_name: common.gear_name,
+                    module_mm: common.module_mm,
+                    pressure_angle_deg: common.pressure_angle_deg,
+                    face_width_mm: common.face_width_mm,
+                    pinion_teeth: value("pinionTeeth"),
+                    ring_teeth: value("ringTeeth"),
+                    pinion_bore_mm: value("bore"),
+                    ring_outer_diameter_mm: value("ringOuter"),
+                    backlash_mm: common.backlash_mm,
+                    profile_shift_pinion: 0,
+                    profile_shift_ring: 0,
+                    number_of_profile_points: common.number_of_profile_points,
+                    export_formats: common.export_formats,
+                    export_mode: "assembly_and_parts"
+                }
+            };
+        }
+        const payload = {...common, teeth: value("teeth")};
+        if (type === "spur-internal") payload.outer_diameter_mm = value("outerDiameter");
+        else payload.bore_diameter_mm = value("bore");
+        if (type === "helical-external" || type === "herringbone-external") {
+            payload.helix_angle_deg = value("helixAngle");
+            payload.helix_hand = form.elements.helixHand.value;
+            payload.module_type = form.elements.moduleType.value;
+        }
+        if (type === "herringbone-external") {
+            payload.center_gap_mm = value("centerGap");
+            payload.continuous_v = false;
+        }
+        return {endpoint: type, payload};
+    }
+
+    async generateEngineeringGearLab(consoleNode, form) {
+        const button = form.querySelector(".gearlab-generate");
+        if (button && button.disabled) return;
+        if (button) { button.disabled = true; button.innerText = "GENERATING · OPEN CASCADE"; }
+        this.setGearLabStatus("API STARTING", consoleNode, "Submitting validated parameters to local CAD backend.");
+        const request = this.gearLabRequestPayload(form);
+        try {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 120000);
+            const response = await fetch(`${this.gearLabBaseUrl}/generate/${request.endpoint}`, {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify(request.payload),
+                signal: controller.signal
+            });
+            clearTimeout(timeout);
+            const payload = await response.json().catch(() => ({status: "error", code: "INVALID_RESPONSE", message: "GearLab returned invalid JSON."}));
+            if (!response.ok || payload.status === "error") {
+                const status = payload.code === "CAD_BACKEND_UNAVAILABLE" ? "CAD BACKEND MISSING" : "ERROR";
+                this.setGearLabStatus(status, consoleNode, payload.message || `HTTP ${response.status}`);
+                this.renderEngineeringGearLabResult(consoleNode, payload);
+                return;
+            }
+            this.setGearLabStatus("API READY", consoleNode, `${payload.name} generated by ${payload.generator}.`);
+            this.renderEngineeringGearLabResult(consoleNode, payload);
+        } catch (error) {
+            const message = error.name === "AbortError" ? "Generation timed out." : "Local GearLab API is offline.";
+            this.setGearLabStatus("API OFFLINE", consoleNode, message);
+            this.renderEngineeringGearLabResult(consoleNode, {status: "error", code: "API_OFFLINE", message});
+        } finally {
+            if (button) { button.disabled = false; button.innerText = "GENERATE CAD"; }
+        }
+    }
+
+    renderEngineeringGearLabResult(consoleNode, payload = {}) {
+        const geometry = consoleNode.querySelector("[data-gearlab-geometry]");
+        const warningNode = consoleNode.querySelector("[data-gearlab-warnings]");
+        const filesNode = consoleNode.querySelector("[data-gearlab-files]");
+        if (geometry) {
+            const entries = Object.entries(payload.calculated_geometry || {}).filter(([, value]) => typeof value !== "object").slice(0, 16);
+            geometry.innerHTML = entries.length ? entries.map(([key, value]) => `<div><small>${this.escape(key.replaceAll("_", " "))}</small><strong>${this.escape(String(value))}</strong></div>`).join("") : "<small>NO GEOMETRY</small>";
+        }
+        if (warningNode) {
+            if (payload.status === "error") {
+                warningNode.innerHTML = `<article class="gearlab-fatal"><strong>${this.escape(payload.code || "ERROR")}</strong><p>${this.escape(payload.message || "Generation failed.")}</p></article>`;
+            } else {
+                const warnings = Array.isArray(payload.warnings) ? payload.warnings : [];
+                warningNode.innerHTML = warnings.length ? warnings.map(item => `<article><strong>${this.escape(item.code || "WARNING")}</strong><p>${this.escape(item.message || "")}</p></article>`).join("") : "<small>NONE</small>";
+            }
+        }
+        if (filesNode) {
+            const files = Object.entries(payload.files || {});
+            filesNode.innerHTML = files.length ? files.map(([format, path]) => `<button type="button" data-gearlab-file="${this.escape(path)}"><strong>${this.escape(format.toUpperCase())}</strong><small>${this.escape(String(path).split("/").pop())}</small></button>`).join("") : "<small>NO FILES</small>";
+            filesNode.querySelectorAll("[data-gearlab-file]").forEach(button => {
+                button.addEventListener("click", () => this.openGearLabUrl(`${this.gearLabBaseUrl}${button.dataset.gearlabFile}`, consoleNode));
+            });
+        }
+    }
+
+    setGearLabStatus(status, consoleNode = null, message = "") {
+        this.gearLabStatus = status;
+        const targets = [consoleNode, document].filter(Boolean);
+        targets.forEach(root => root.querySelectorAll("[data-gearlab-status]").forEach(node => node.innerText = status));
+        if (consoleNode) {
+            const messageNode = consoleNode.querySelector("[data-gearlab-message]");
+            if (messageNode && message) messageNode.innerText = message;
+            consoleNode.dataset.apiState = status.toLowerCase().replaceAll(" ", "-");
+        }
+        document.querySelectorAll('[data-eng-tool="aegis-gearlab"] em').forEach(node => {
+            node.className = this.statusClass(status);
+            node.innerText = status;
+        });
+    }
+
+    async checkGearLabHealth({consoleNode = null, silent = false} = {}) {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 3500);
+        try {
+            const [healthResponse, capabilityResponse] = await Promise.all([
+                fetch(`${this.gearLabBaseUrl}/health`, {signal: controller.signal}),
+                fetch(`${this.gearLabBaseUrl}/capabilities`, {signal: controller.signal})
+            ]);
+            clearTimeout(timeout);
+            if (!healthResponse.ok || !capabilityResponse.ok) throw new Error(`HTTP ${healthResponse.status}/${capabilityResponse.status}`);
+            const health = await healthResponse.json();
+            const capabilities = await capabilityResponse.json();
+            const backendReady = capabilities.cad_backend !== "unavailable";
+            const status = backendReady ? "API READY" : "CAD BACKEND MISSING";
+            this.setGearLabStatus(status, consoleNode, `${health.service} ${health.version} · ${backendReady ? "CadQuery/OpenCascade ready" : "run setup_mac.sh"}`);
+            return {ok: true, health, capabilities};
+        } catch (error) {
+            clearTimeout(timeout);
+            this.setGearLabStatus("API OFFLINE", consoleNode, silent ? "" : "Aegis GearLab is not running on 127.0.0.1:8765.");
+            return {ok: false, error: error.message || String(error)};
+        }
+    }
+
+    gearLabLocalRoot() {
+        try {
+            const fs = require("fs");
+            const path = require("path");
+            const candidates = [
+                path.resolve(process.cwd(), "tools/aegis-gearlab"),
+                path.resolve(__dirname, "../../tools/aegis-gearlab"),
+                process.resourcesPath ? path.join(process.resourcesPath, "aegis-gearlab") : ""
+            ].filter(Boolean);
+            return candidates.find(candidate => fs.existsSync(path.join(candidate, "run_api.sh"))) || null;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    async startGearLabApi(consoleNode) {
+        const root = this.gearLabLocalRoot();
+        if (!root) {
+            this.setGearLabStatus("ERROR", consoleNode, "GearLab module path is unavailable. Open DOCS for setup.");
+            return;
+        }
+        try {
+            const fs = require("fs");
+            const path = require("path");
+            const {spawn} = require("child_process");
+            if (!fs.existsSync(path.join(root, ".venv/bin/python"))) {
+                this.setGearLabStatus("CAD BACKEND MISSING", consoleNode, "Local venv is not installed. Run setup_mac.sh once.");
+                return;
+            }
+            this.setGearLabStatus("API STARTING", consoleNode, "Starting fixed local GearLab service.");
+            const child = spawn("/bin/zsh", [path.join(root, "run_api.sh")], {cwd: root, detached: true, stdio: "ignore"});
+            child.unref();
+            for (let attempt = 0; attempt < 12; attempt += 1) {
+                await new Promise(resolve => setTimeout(resolve, 650));
+                const health = await this.checkGearLabHealth({consoleNode, silent: true});
+                if (health.ok) return;
+            }
+            this.setGearLabStatus("ERROR", consoleNode, "GearLab process started but health check did not become ready.");
+        } catch (error) {
+            this.setGearLabStatus("ERROR", consoleNode, error.message || "Cannot start GearLab API.");
+        }
+    }
+
+    openGearLabUrl(target, consoleNode) {
+        try {
+            const {spawn} = require("child_process");
+            if (!/^http:\/\/127\.0\.0\.1:8765\//.test(String(target))) throw new Error("Rejected non-local GearLab URL.");
+            spawn("/usr/bin/open", [target], {detached: true, stdio: "ignore"}).unref();
+        } catch (error) {
+            this.setGearLabStatus("ERROR", consoleNode, error.message || "Cannot open GearLab URL.");
+        }
+    }
+
+    openGearLabLocalTarget(target, consoleNode) {
+        const root = this.gearLabLocalRoot();
+        if (!root) {
+            this.setGearLabStatus("ERROR", consoleNode, "GearLab module path is unavailable.");
+            return;
+        }
+        try {
+            const path = require("path");
+            const {spawn} = require("child_process");
+            const destination = target === "docs" ? path.join(root, "README.md") : path.join(root, "exports");
+            spawn("/usr/bin/open", [destination], {detached: true, stdio: "ignore"}).unref();
+        } catch (error) {
+            this.setGearLabStatus("ERROR", consoleNode, error.message || "Cannot open local GearLab target.");
+        }
     }
 
     engineeringInternalToolBody(tool) {
@@ -737,6 +1106,7 @@ class WorkspaceManager {
         overlay.querySelectorAll('[data-eng-detail-action="execute"]').forEach(button => {
             button.addEventListener("click", () => this.executeEngineeringTool(tool.id, this.engineeringView));
         });
+        if (tool.id === "aegis-gearlab") this.bindEngineeringGearLab(overlay);
     }
 
     bindEngineeringDetailToolActions() {
@@ -1117,6 +1487,10 @@ class WorkspaceManager {
     async executeEngineeringTool(toolId, view = this.engineeringView) {
         const tool = this.engineeringTools && this.engineeringTools.find(item => item.id === toolId);
         if (!tool) return;
+        if (tool.id === "aegis-gearlab") {
+            this.openEngineeringToolById(tool.id);
+            return;
+        }
         if (tool.type === "web" && tool.url) {
             await this.openLink(tool.url, view);
             return;

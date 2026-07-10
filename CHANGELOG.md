@@ -1,5 +1,23 @@
 # Changelog
 
+## 2.2.7 - 2026-07-10
+
+### Added
+
+- Added Aegis GearLab local FastAPI module under `tools/aegis-gearlab`.
+- Added modular STEP-first gear generation architecture using CadQuery/OpenCascade.
+- Added schemas, validators, warning handling, involute math, reports, exports,
+  examples, macOS setup/run scripts and pytest coverage for GearLab.
+- Integrated Aegis GearLab as a special fullscreen ENG tool with API health,
+  generation, warnings/errors and export links.
+- Added a safe command-router action for opening GearLab from Assistant.
+
+### Security
+
+- GearLab runs locally on `127.0.0.1:8765`.
+- GearLab exports and virtual environments are ignored by Git.
+- No cloud service, shell bridge or destructive command path is introduced.
+
 ## 2.2.6 - 2026-07-10
 
 ### Improved

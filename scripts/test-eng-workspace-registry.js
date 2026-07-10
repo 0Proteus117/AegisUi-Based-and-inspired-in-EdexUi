@@ -23,6 +23,7 @@ for (const tool of registry.TOOLS) {
     if (tool.type === "web" && !tool.url) failures.push(`web tool missing url ${tool.id}`);
     if (tool.type === "app" && !(tool.appName || tool.bundleId || tool.aliases)) failures.push(`app tool missing app hint ${tool.id}`);
     if (tool.type === "internal" && !tool.actionId) failures.push(`internal tool missing action id ${tool.id}`);
+    if (tool.type === "special" && (!tool.actionId || !tool.supportsFullscreen)) failures.push(`special tool invalid ${tool.id}`);
 }
 
 print("ENG_REGISTRY_CATEGORIES", requiredCategories.every(category => registry.CATEGORIES.some(item => item.id === category)) ? "OK" : "FAIL");
@@ -31,6 +32,7 @@ print("ENG_REGISTRY_DUPLICATES", failures.some(item => item.includes("duplicate"
 print("ENG_REGISTRY_WEB_URLS", failures.some(item => item.includes("missing url")) ? "FAIL" : "OK");
 print("ENG_REGISTRY_APP_HINTS", failures.some(item => item.includes("app hint")) ? "FAIL" : "OK");
 print("ENG_REGISTRY_INTERNAL_ACTIONS", failures.some(item => item.includes("action id")) ? "FAIL" : "OK");
+print("ENG_REGISTRY_GEARLAB", registry.TOOLS.some(item => item.id === "aegis-gearlab" && item.type === "special") ? "OK" : "FAIL");
 print("ENG_WORKSPACE_REGISTRY", failures.length ? "FAIL" : "OK");
 
 if (failures.length) {

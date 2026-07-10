@@ -1,0 +1,17 @@
+{
+  "assembly_name": "internal_pair_test",
+  "module_mm": 2.0,
+  "pressure_angle_deg": 20.0,
+  "face_width_mm": 12.0,
+  "pinion_teeth": 20,
+  "ring_teeth": 60,
+  "pinion_bore_mm": 8.0,
+  "ring_outer_diameter_mm": 140.0,
+  "backlash_mm": 0.08,
+  "profile_shift_pinion": 0.0,
+  "profile_shift_ring": 0.0,
+  "number_of_profile_points": 24,
+  "export_formats": ["step", "json_report"],
+  "export_mode": "assembly_and_parts"
+}
+
