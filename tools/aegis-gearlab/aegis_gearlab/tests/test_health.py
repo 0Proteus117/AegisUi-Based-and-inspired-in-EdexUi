@@ -21,5 +21,6 @@ def test_capabilities_are_explicit():
     assert payload["primary_format"] == "step"
     assert "spur_external" in payload["supported_generators"]
     assert "internal_gear_pair" in payload["supported_generators"]
+    assert "planetary_set" in payload["supported_generators"]
+    assert "gear_types" in payload
     assert payload["export_formats"] == ["step", "stl", "dxf", "json_report"]
-

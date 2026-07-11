@@ -37,6 +37,12 @@ ln -s "$VENV_DIR" .venv
 
 "$VENV_DIR/bin/python" -m pip install --upgrade pip setuptools wheel
 "$VENV_DIR/bin/python" -m pip install -r requirements.txt
+if "$VENV_DIR/bin/python" -m pip install "cadquery>=2.5,<3"; then
+  echo "CADQUERY: OK"
+else
+  echo "CADQUERY: OPTIONAL_INSTALL_FAILED"
+  echo "CAD_BACKEND_UNAVAILABLE will be reported by generation endpoints until CadQuery is installed."
+fi
 mkdir -p exports
 touch exports/.gitkeep
 

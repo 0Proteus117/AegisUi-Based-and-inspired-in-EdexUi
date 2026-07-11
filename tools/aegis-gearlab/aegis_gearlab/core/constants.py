@@ -12,9 +12,12 @@ SUPPORTED_GENERATORS = (
     "internal_gear_pair",
     "helical_external",
     "herringbone_external",
+    "bevel_external",
+    "worm_gear",
+    "rack_pinion",
+    "planetary_set",
 )
 REPORT_DISCLAIMER = (
     "Geometry report only. No strength/contact stress calculation included."
 )
 MIN_RING_WALL_MODULES = 2.0
-

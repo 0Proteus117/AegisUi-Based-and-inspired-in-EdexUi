@@ -38,14 +38,6 @@ assistant/memory/private/
 assistant/chat/
 assistant/config/assistant-ai.json
 assistant/config/assistant-ai.local.json
-tools/aegis-gearlab/.venv
-tools/aegis-gearlab/.venv/
-tools/aegis-gearlab/.pytest_cache/
-!tools/aegis-gearlab/exports/
-tools/aegis-gearlab/exports/*
-!tools/aegis-gearlab/exports/.gitkeep
-tools/aegis-gearlab/**/__pycache__/
-tools/aegis-gearlab/**/*.pyc
 *.wav
 *.mp3
 *.flac
@@ -106,3 +98,13 @@ src/native/EdexUiEngCalendar.app
 *.exe
 *.tmp
 *.bak
+
+# Standalone Aegis GearLab local runtime artifacts
+tools/aegis-gearlab/.venv
+tools/aegis-gearlab/.venv/
+tools/aegis-gearlab/.pytest_cache/
+tools/aegis-gearlab/**/__pycache__/
+tools/aegis-gearlab/**/*.pyc
+!tools/aegis-gearlab/exports/
+tools/aegis-gearlab/exports/*
+!tools/aegis-gearlab/exports/.gitkeep
