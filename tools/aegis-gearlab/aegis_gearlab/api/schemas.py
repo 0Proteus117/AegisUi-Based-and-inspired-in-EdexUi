@@ -118,86 +118,6 @@ class HerringboneExternalInput(HelicalExternalInput):
         return self
 
 
-class BevelExternalInput(BaseModel):
-    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
-
-    gear_name: str = Field(min_length=1, max_length=80)
-    module_mm: float = Field(gt=0)
-    teeth: int = Field(ge=8)
-    pressure_angle_deg: float = Field(ge=14.5, le=25.0)
-    face_width_mm: float = Field(gt=0)
-    pitch_cone_angle_deg: float = Field(gt=0, lt=90)
-    bore_diameter_mm: float = Field(ge=0)
-    export_formats: list[str] = Field(default_factory=lambda: ["step"])
-
-    @field_validator("export_formats")
-    @classmethod
-    def validate_export_formats(cls, value: list[str]) -> list[str]:
-        return GearBaseInput.validate_export_formats(value)
-
-
-class WormGearInput(BaseModel):
-    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
-
-    gear_name: str = Field(min_length=1, max_length=80)
-    module_mm: float = Field(gt=0)
-    worm_starts: int = Field(ge=1, le=8)
-    worm_wheel_teeth: int = Field(ge=12)
-    pressure_angle_deg: float = Field(ge=14.5, le=25.0)
-    face_width_mm: float = Field(gt=0)
-    bore_diameter_mm: float = Field(ge=0)
-    lead_angle_deg: float | None = Field(default=None, gt=0, lt=45)
-    export_formats: list[str] = Field(default_factory=lambda: ["step"])
-
-    @field_validator("export_formats")
-    @classmethod
-    def validate_export_formats(cls, value: list[str]) -> list[str]:
-        return GearBaseInput.validate_export_formats(value)
-
-
-class RackPinionInput(BaseModel):
-    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
-
-    assembly_name: str = Field(min_length=1, max_length=80)
-    module_mm: float = Field(gt=0)
-    pinion_teeth: int = Field(ge=8)
-    rack_length_mm: float = Field(gt=0)
-    pressure_angle_deg: float = Field(ge=14.5, le=25.0)
-    face_width_mm: float = Field(gt=0)
-    bore_diameter_mm: float = Field(ge=0)
-    export_formats: list[str] = Field(default_factory=lambda: ["step"])
-
-    @field_validator("export_formats")
-    @classmethod
-    def validate_export_formats(cls, value: list[str]) -> list[str]:
-        return GearBaseInput.validate_export_formats(value)
-
-
-class PlanetarySetInput(BaseModel):
-    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
-
-    assembly_name: str = Field(min_length=1, max_length=80)
-    module_mm: float = Field(gt=0)
-    sun_teeth: int = Field(ge=8)
-    planet_teeth: int = Field(ge=8)
-    ring_teeth: int = Field(ge=24)
-    planet_count: int = Field(ge=1, le=12)
-    pressure_angle_deg: float = Field(ge=14.5, le=25.0)
-    face_width_mm: float = Field(gt=0)
-    export_formats: list[str] = Field(default_factory=lambda: ["step"])
-
-    @field_validator("export_formats")
-    @classmethod
-    def validate_export_formats(cls, value: list[str]) -> list[str]:
-        return GearBaseInput.validate_export_formats(value)
-
-    @model_validator(mode="after")
-    def validate_basic_planetary_relation(self):
-        if self.ring_teeth <= self.sun_teeth:
-            raise ValueError("Ring tooth count must be greater than sun tooth count.")
-        return self
-
-
 class WarningResponse(BaseModel):
     code: str
     severity: str
@@ -213,3 +133,4 @@ class GenerationResponse(BaseModel):
     calculated_geometry: dict
     warnings: list[WarningResponse]
     files: dict[str, str]
+

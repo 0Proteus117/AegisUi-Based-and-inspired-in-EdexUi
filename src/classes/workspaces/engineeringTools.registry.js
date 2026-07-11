@@ -69,6 +69,14 @@
     });
 
     const TOOLS = Object.freeze([
+        specialTool(
+            "aegis-gearlab",
+            "Aegis GearLab",
+            "cad",
+            "⚙",
+            "aegis_gearlab",
+            "Parametric gear generation and STEP export."
+        ),
         appTool("fusion", "Autodesk Fusion", "cad", "▧", ["Autodesk Fusion", "Fusion 360"], "CAD / CAM / CAE platform.", "https://www.autodesk.com/products/fusion-360/overview"),
         appTool("freecad", "FreeCAD", "cad", "▦", ["FreeCAD"], "Open-source parametric CAD.", "https://www.freecad.org/"),
         appTool("blender", "Blender", "cad", "◈", ["Blender"], "3D modelling and visualization.", "https://www.blender.org/"),
@@ -177,6 +185,22 @@
             supportsFullscreen: true,
             supportsCommandRouter: true,
             tags: ["internal", category]
+        };
+    }
+
+    function specialTool(id, title, category, icon, actionId, description) {
+        return {
+            id,
+            title,
+            category,
+            type: "special",
+            icon,
+            description,
+            status: "API OFFLINE",
+            actionId,
+            supportsFullscreen: true,
+            supportsCommandRouter: true,
+            tags: ["local-api", "cad-generator", "step", category]
         };
     }
 

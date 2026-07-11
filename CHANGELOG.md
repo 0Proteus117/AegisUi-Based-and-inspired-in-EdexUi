@@ -1,21 +1,22 @@
 # Changelog
 
-## 2.2.8 - 2026-07-11
-
-### Recovery
-
-- Reverted broken v2.2.7 runtime integration.
-- Restored stable v2.2.6 AegisUI behavior.
-- Preserved HUB, Apple Music, Map, Calendar, Project Timeline, Applications
-  grid, ENG calculators and Assistant stability.
+## 2.2.7 - 2026-07-10
 
 ### Added
 
-- Added standalone `tools/aegis-gearlab` FastAPI/CadQuery module.
-- Added standalone GearLab UI served by FastAPI at `/ui`.
-- Added STEP-first spur gear generation path with schemas, validators,
-  warnings, reports, examples, tests and macOS scripts.
-- GearLab is intentionally not integrated into ENG runtime yet.
+- Added Aegis GearLab local FastAPI module under `tools/aegis-gearlab`.
+- Added modular STEP-first gear generation architecture using CadQuery/OpenCascade.
+- Added schemas, validators, warning handling, involute math, reports, exports,
+  examples, macOS setup/run scripts and pytest coverage for GearLab.
+- Integrated Aegis GearLab as a special fullscreen ENG tool with API health,
+  generation, warnings/errors and export links.
+- Added a safe command-router action for opening GearLab from Assistant.
+
+### Security
+
+- GearLab runs locally on `127.0.0.1:8765`.
+- GearLab exports and virtual environments are ignored by Git.
+- No cloud service, shell bridge or destructive command path is introduced.
 
 ## 2.2.6 - 2026-07-10
 

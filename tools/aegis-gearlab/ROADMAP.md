@@ -1,52 +1,45 @@
 # Aegis GearLab Roadmap
 
-## Phase 1
+## Phase 1 — Local API foundation
 
 - Local FastAPI service.
-- Standalone local UI.
-- Spur external generator.
-- STEP export.
+- External spur gear.
+- Internal spur gear.
+- Internal gear pair.
+- STEP-first export.
 - JSON geometry report.
-- Basic validation and warnings.
+- Basic fatal validation and non-fatal warnings.
 
-## Phase 2
+## Phase 2 — Tooth surface expansion
 
-- Spur internal hardening.
-- Internal gear pair assembly export.
-- Helical external validation.
-- Herringbone external validation.
-- STL and DXF export hardening.
-- Better profile accuracy.
+- External helical refinement.
+- Internal helical gear.
+- External herringbone refinement.
+- STL/DXF export hardening.
+- Higher-accuracy profiles and fillets.
 
-## Phase 3
+## Phase 3 — Meshing and project workflow
 
-- Project mode.
 - Advanced undercut detection.
 - Backlash tools.
 - Contact ratio.
-- Assembly export improvements.
+- Improved assembly export.
+- Full project mode and revision history.
 
-## Phase 4
+## Phase 4 — Engineering calculations
 
 - Material database.
-- Torque/load inputs.
+- Torque input.
 - Basic stress estimation.
 - Contact stress.
 - Root bending stress.
 - Manufacturing notes.
 
-## Phase 5
+## Phase 5 — Transmission systems
 
+- Multi-gear trains.
 - Planetary gears.
-- Multi-stage gear trains.
 - DSG-style conceptual modules.
-- Simulation workflow exports.
+- Export to simulation workflows.
+- Deeper AegisUi orchestration.
 
-## Phase 6
-
-- Future AegisUI integration after isolation tests.
-- Future ENG tool card.
-- Future assistant command router actions.
-
-The v2.2.8 rule is isolation first: GearLab can exist and run independently,
-but it must not affect AegisUI runtime stability.

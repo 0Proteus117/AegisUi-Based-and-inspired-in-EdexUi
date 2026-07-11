@@ -1,8 +1,8 @@
 {
   "name": "edex-ui-eng",
   "productName": "EdexUi-Eng",
-  "version": "2.2.6",
-  "description": "Engineering-focused eDEX-UI sci-fi interface",
+  "version": "2.2.8",
+  "description": "An engineering-focused eDEX-UI dashboard for Apple Silicon.",
   "keywords": [
     "desktop",
     "sci-fi",
@@ -11,7 +11,31 @@
     "tty",
     "terminal"
   ],
-  "main": "_boot.js",
+  "main": "src/_boot.js",
+  "scripts": {
+    "start": "electron src --nointro",
+    "install-linux": "npm ci && cd src && npm ci && ./../node_modules/.bin/electron-rebuild -f -w node-pty && cd ..",
+    "install-darwin": "npm ci && cd src && npm ci && ./../node_modules/.bin/electron-rebuild -f -w node-pty --arch=arm64 --module-dir . && cd ..",
+    "preinstall-windows": "npm install --global --production windows-build-tools && npm install --global node-gyp && setx PYTHON \"%USERPROFILE%\\.windows-build-tools\\python27\\python.exe\"",
+    "install-windows": "npm install && cd src && npm install && ..\\node_modules\\.bin\\electron-rebuild -f -w node-pty && cd ..",
+    "prebuild-linux": "rsync -a --info=progress2 src/ prebuild-src --exclude node_modules && node prebuild-minify.js && cd prebuild-src && npm install",
+    "build-calendar-helper": "node build/build-calendar-helper.js",
+    "prebuild-darwin": "node build/build-calendar-helper.js && rsync -a src/ prebuild-src --exclude node_modules && node prebuild-minify.js && cd prebuild-src && npm ci",
+    "prebuild-windows": "mkdir prebuild-src && xcopy src\\* prebuild-src\\ /E /C /Q /Y && node prebuild-minify.js && cd prebuild-src && npm install",
+    "build-linux": "./node_modules/.bin/electron-builder build -l --x64 --ia32 --arm64 --armv7l",
+    "build-darwin": "./node_modules/.bin/electron-builder build -m --arm64",
+    "build-windows": "node_modules\\.bin\\electron-builder build -w",
+    "postbuild-linux": "rm -R prebuild-src",
+    "postbuild-darwin": "rm -R prebuild-src",
+    "postbuild-windows": "rmdir /S /Q prebuild-src",
+    "test": "rsync -a --info=progress2 src/ prebuild-src --exclude node_modules && node prebuild-minify.js && cd prebuild-src && npm install && snyk test && cd .. && rm -R prebuild-src",
+    "init-file-icons": "git submodule update --init",
+    "update-file-icons": "git submodule foreach git pull origin master && node file-icons-generator.js",
+    "config:where": "node tools/where-user-data.js",
+    "config:export": "node tools/export-user-config.js",
+    "config:import": "node tools/import-user-config.js",
+    "security:audit": "node tools/security-audit.js"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/0Proteus117/AegisUi-Based-and-inspired-in-EdexUi.git"
@@ -22,31 +46,99 @@
     "url": "https://github.com/0Proteus117/AegisUi-Based-and-inspired-in-EdexUi/issues"
   },
   "homepage": "https://github.com/0Proteus117/AegisUi-Based-and-inspired-in-EdexUi#readme",
+  "build": {
+    "appId": "com.edex.ui.eng",
+    "productName": "EdexUi-Eng",
+    "publish": "github",
+    "asar": true,
+    "extraResources": [
+      {
+        "from": "prebuild-src/native/EdexUiEngCalendar.app",
+        "to": "EdexUiEngCalendar.app"
+      }
+    ],
+    "compression": "normal",
+    "afterPack": "build/after-pack.js",
+    "copyright": "Copyright © 2017-2021 Gabriel 'Squared' SAILLARD <gabriel@saillard.dev> (https://gaby.dev)",
+    "directories": {
+      "output": "dist",
+      "app": "prebuild-src"
+    },
+    "forceCodeSigning": false,
+    "npmRebuild": true,
+    "artifactName": "EdexUi-Eng-${os}-${arch}.${ext}",
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "System",
+      "icon": "media/linuxIcons"
+    },
+    "appImage": {
+      "artifactName": "eDEX-UI-Linux-${arch}.AppImage"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "arm64"
+          ]
+        }
+      ],
+      "category": "public.app-category.utilities",
+      "icon": "media/icon.icns",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "identity": "-",
+      "signIgnore": [
+        "Resources/EdexUiEngCalendar\\.app"
+      ],
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "extendInfo": {
+        "NSAppleEventsUsageDescription": "EdexUi-Eng uses Automation only when you connect Apple Music to show your current playback.",
+        "NSCalendarsFullAccessUsageDescription": "EdexUi-Eng reads calendar events locally to display your weekly and monthly schedule."
+      }
+    },
+    "dmg": {
+      "artifactName": "EdexUi-Eng-macOS-${arch}.dmg"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64",
+            "ia32"
+          ]
+        }
+      ],
+      "icon": "media/icon.ico"
+    },
+    "nsis": {
+      "artifactName": "EdexUi-Eng-Windows-${arch}.exe",
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "deleteAppDataOnUninstall": true
+    }
+  },
   "dependencies": {
-    "@electron/remote": "2.1.3",
-    "augmented-ui": "^1.1.2",
-    "color": "3.2.1",
-    "geolite2-redist": "3.1.3",
-    "howler": "2.2.3",
-    "maxmind": "4.3.2",
+    "@electron/rebuild": "4.0.4",
+    "clean-css": "5.2.1",
+    "electron": "42.4.1",
+    "electron-builder": "26.15.3",
     "mime-types": "^2.1.33",
-    "nanoid": "3.3.13",
-    "node-pty": "1.1.0",
-    "pdfjs-dist": "6.0.227",
-    "pretty-bytes": "5.6.0",
-    "satellite.js": "^5.0.0",
-    "shell-env": "3.0.1",
-    "signale": "1.4.0",
-    "smoothie": "1.36.1",
-    "systeminformation": "5.31.7",
-    "tail": "2.2.4",
-    "username": "5.1.0",
-    "which": "2.0.2",
-    "ws": "7.5.11",
-    "xterm": "4.14.1",
-    "xterm-addon-attach": "0.6.0",
-    "xterm-addon-fit": "0.5.0",
-    "xterm-addon-ligatures": "0.5.1",
-    "xterm-addon-webgl": "^0.11.2"
+    "node-json-minify": "1.0.0",
+    "terser": "^5.9.0"
+  },
+  "optionalDependencies": {
+    "cson-parser": "4.0.9"
   }
 }

@@ -3,14 +3,12 @@
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from fastapi.staticfiles import StaticFiles
 
 from aegis_gearlab import __version__
 from aegis_gearlab.api.errors import GearLabError
@@ -30,9 +28,6 @@ app.add_middleware(
     allow_headers=["Content-Type"],
 )
 app.include_router(router)
-
-UI_ROOT = Path(__file__).resolve().parent / "ui"
-app.mount("/ui/static", StaticFiles(directory=UI_ROOT / "static"), name="gearlab-ui-static")
 
 
 @app.on_event("startup")

@@ -299,7 +299,8 @@
                 ? `\n\n[CONVERSATION MEMORY - LOCAL USERDATA]\n${memory.conversation}\n[/CONVERSATION MEMORY]`
                 : "";
             const runtime = `\n\n[CURRENT RUNTIME CAPABILITIES]\nLocal written chat: ACTIVE.\nAssistant command router: SAFE READY for allowlisted UI actions only.\nVoice, STT and TTS: OFFLINE.\nAllowed actions are validated by AegisUi before execution. Never invent new actions.\nShell commands, arbitrary file writes, Git operations, destructive actions, messages, payments and credential handling: BLOCKED.\nOnly mention these limits when the user asks for a system action or unsafe operation.\n[/CURRENT RUNTIME CAPABILITIES]`;
-            return `${base}\n\n${globalRules}${memoryText}${conversationText}${runtime}`;
+            const gearLabContext = `\n\n[AEGIS GEARLAB]\nAegis GearLab is a local ENG tool for validated parametric gear geometry and STEP-first CAD export. You may open it through the safe router. Never claim a gear was generated unless GearLab returned a real success response and file.\n[/AEGIS GEARLAB]`;
+            return `${base}\n\n${globalRules}${memoryText}${conversationText}${runtime}${gearLabContext}`;
         }
 
         async checkLocalAIStatus(options = {}) {

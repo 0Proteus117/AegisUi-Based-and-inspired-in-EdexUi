@@ -57,6 +57,7 @@
         "open_eng_tool_freecad",
         "open_eng_tool_blender",
         "open_eng_tool_bambu_studio",
+        "open_eng_tool_aegis_gearlab",
         "open_eng_calculator_unit_converter",
         "open_eng_calculator_torque_power_rpm",
         "open_eng_calculator_mass_estimator",
@@ -85,6 +86,7 @@
         [/^(cambia|cambiar|pon|poner|switch).*(ares)\b/, "switch_to_ares"],
         [/^(cambia|cambiar|pon|poner|switch).*(aphrodite|afrodita)\b/, "switch_to_aphrodite"],
         [/^(abre|abrir|open|muestra|mostrar|show|ve a|ir a).*\bhub\b/, "open_workspace_hub"],
+        [/^(abre|abrir|open|muestra|mostrar|show).*(aegis gearlab|gearlab|generador de engranajes|gear generator)/, "open_eng_tool_aegis_gearlab"],
         [/^(abre|abrir|open|muestra|mostrar|show|ve a|ir a).*(eng|engineer|engineering|ingenier|ingenieria|ingeniería)/, "open_workspace_eng"],
         [/^(abre|abrir|open|muestra|mostrar|show|ve a|ir a).*(osint|analyst|analista)/, "open_workspace_osint"],
         [/^(abre|abrir|open|muestra|mostrar|show|ve a|ir a).*(student|estudiante)/, "open_workspace_student"],
@@ -288,7 +290,8 @@
                     open_eng_tool_fusion: "fusion",
                     open_eng_tool_freecad: "freecad",
                     open_eng_tool_blender: "blender",
-                    open_eng_tool_bambu_studio: "bambu-studio"
+                    open_eng_tool_bambu_studio: "bambu-studio",
+                    open_eng_tool_aegis_gearlab: "aegis-gearlab"
                 };
                 const engineeringCalculatorMap = {
                     open_eng_calculator_unit_converter: "unit_converter",

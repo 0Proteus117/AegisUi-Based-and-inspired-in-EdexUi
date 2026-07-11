@@ -1,91 +1,66 @@
 # Aegis GearLab
 
-Aegis GearLab is a standalone local engineering tool for parametric gear
-generation and STEP-first export.
+Aegis GearLab is a local, modular engineering API for parametric gear geometry. It is embedded in the AegisUi repository but its CAD engine is deliberately isolated from the Electron UI. The API uses real involute mathematics and CadQuery/OpenCascade, with STEP as the primary output.
 
-It lives under `tools/aegis-gearlab/` and does not load inside the AegisUI
-runtime in v2.2.8.
+Version: `0.1.0`  
+Local URL: `http://127.0.0.1:8765`
 
-## What it does
+## Current generators
 
-- Runs a local FastAPI service at `http://127.0.0.1:8765`.
-- Serves a standalone local UI at `http://127.0.0.1:8765/ui`.
-- Provides schemas, validation, warnings, reports and export management.
-- Generates external spur gears as STEP when CadQuery/OpenCascade is available.
-- Produces JSON geometry reports when requested.
-- Keeps generated exports under `tools/aegis-gearlab/exports/`.
+- External spur gear.
+- Internal spur ring gear.
+- Internal ring/pinion assembly.
+- External helical gear using an involute loft strategy.
+- External herringbone gear using opposing involute lofts.
 
-## What it does not guarantee
+STEP is the priority format. STL, DXF and JSON geometry reports are available through the same export layer. Helical and herringbone output carries an explicit approximation warning because its two-section loft is not yet a production tooth-surface solver.
 
-Generated geometry must be reviewed before manufacturing. This tool does not
-yet replace professional gear calculation software such as KISSsoft, eAssistant,
-MESYS or equivalent.
+## macOS setup
 
-GearLab v0.1.0 does not calculate strength, root bending stress, Hertzian
-contact stress, lubrication, heat, noise, life, tolerance stack-up or real load
-capacity.
-
-## Install on macOS
+Python 3.11 or newer is required. Python 3.12 is preferred for current CadQuery wheels.
 
 ```bash
 cd tools/aegis-gearlab
-chmod +x setup_mac.sh run_api.sh run_ui.sh
+chmod +x setup_mac.sh run_api.sh
 ./setup_mac.sh
-```
-
-The setup script creates a virtual environment in:
-
-`~/Library/Application Support/EdexUi-Eng/aegis-gearlab/.venv`
-
-CadQuery is attempted as an optional CAD backend. If it cannot be installed, the
-API can still run and returns `CAD_BACKEND_UNAVAILABLE` for CAD export requests.
-
-## Run API
-
-```bash
-cd tools/aegis-gearlab
 ./run_api.sh
 ```
 
-Open:
+The installer creates the real environment under `~/Library/Application Support/EdexUi-Eng/aegis-gearlab/.venv`, links the ignored local `.venv`, installs FastAPI/Uvicorn/Pydantic/CadQuery/pytest and prepares the ignored `exports/` directory. This avoids FileProvider offloading and keeps the same environment usable by the unpackaged project. Runtime remains local after installation; the API binds only to `127.0.0.1`.
 
-`http://127.0.0.1:8765/ui`
+If CadQuery cannot be installed, schemas and mathematics remain testable and generation returns `CAD_BACKEND_UNAVAILABLE`. GearLab never substitutes decorative fake geometry.
 
 ## API examples
 
-Health:
-
 ```bash
 curl http://127.0.0.1:8765/health
-```
-
-Capabilities:
-
-```bash
 curl http://127.0.0.1:8765/capabilities
+
+curl -X POST http://127.0.0.1:8765/generate/spur-external \
+  -H 'Content-Type: application/json' \
+  --data @examples/spur_external_example.json
 ```
 
-Generate a spur external gear:
+Generated responses contain relative export links such as `/exports/pinion_test_....step`:
 
 ```bash
-curl -X POST http://127.0.0.1:8765/generate/spur-external \
-  -H "Content-Type: application/json" \
-  -d @examples/spur_external_example.json
+curl -O http://127.0.0.1:8765/exports/<generated-filename>.step
 ```
 
-## Supported architecture
+Interactive local documentation is available at `http://127.0.0.1:8765/docs`.
 
-- Spur external: implemented when CadQuery is available.
-- Spur internal: implemented when CadQuery is available.
-- Internal gear pair: implemented when CadQuery is available.
-- Helical external: partial approximation.
-- Herringbone external: partial approximation.
-- Bevel, worm, rack/pinion, planetary: schemas and planned endpoints only.
+## Tests
 
-Unimplemented generators return `NOT_IMPLEMENTED`. GearLab does not export fake
-CAD and label it as usable geometry.
+```bash
+.venv/bin/python -m pytest
+```
 
-## Standalone boundary
+Tests cover health/capabilities, schemas, gear mathematics, involute generation, internal-pair centre distance, warnings, safe filenames, reports and real CAD exports when the backend is present.
 
-This module must not be imported from AegisUI `src/` in v2.2.8. It must not add
-ENG cards, command router actions, Electron resources or runtime services.
+## Boundaries
+
+GearLab currently reports geometry only. It does not calculate torque capacity, fatigue life, Hertzian contact stress, root bending stress, lubrication, thermal growth, tolerances or manufacturing capability. Warnings are engineering review prompts, not certification.
+
+> Generated geometry must be reviewed before manufacturing. This tool does not yet replace professional gear calculation software such as KISSsoft, eAssistant, MESYS or equivalent.
+
+See [ROADMAP.md](ROADMAP.md) and [AegisUI_INTEGRATION.md](AegisUI_INTEGRATION.md).
