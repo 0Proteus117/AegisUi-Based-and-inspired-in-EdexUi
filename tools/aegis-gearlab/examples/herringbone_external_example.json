@@ -1,0 +1,18 @@
+{
+  "gear_name": "herringbone_test",
+  "module_mm": 2.0,
+  "pressure_angle_deg": 20.0,
+  "face_width_mm": 24.0,
+  "backlash_mm": 0.08,
+  "profile_shift": 0.0,
+  "number_of_profile_points": 24,
+  "teeth": 32,
+  "bore_diameter_mm": 10.0,
+  "helix_angle_deg": 20.0,
+  "helix_hand": "right",
+  "module_type": "normal",
+  "center_gap_mm": 1.0,
+  "continuous_v": false,
+  "export_formats": ["step", "json_report"]
+}
+

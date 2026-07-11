@@ -1,0 +1,10 @@
+{
+  "assembly_name": "rack_pinion_demo",
+  "module_mm": 2.0,
+  "pinion_teeth": 24,
+  "rack_length_mm": 180.0,
+  "pressure_angle_deg": 20.0,
+  "face_width_mm": 14.0,
+  "bore_diameter_mm": 8.0,
+  "export_formats": ["step", "json_report"]
+}

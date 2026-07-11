@@ -1,0 +1,11 @@
+{
+  "gear_name": "worm_set_demo",
+  "module_mm": 2.0,
+  "worm_starts": 2,
+  "worm_wheel_teeth": 40,
+  "pressure_angle_deg": 20.0,
+  "face_width_mm": 18.0,
+  "bore_diameter_mm": 8.0,
+  "lead_angle_deg": 14.0,
+  "export_formats": ["step", "json_report"]
+}

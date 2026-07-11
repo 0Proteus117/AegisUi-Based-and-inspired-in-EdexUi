@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Aegis GearLab Standalone</title>
+  <link rel="stylesheet" href="/ui/static/style.css" />
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">LOCAL CAD API / STANDALONE</p>
+        <h1>Aegis GearLab</h1>
+        <p class="subtitle">STEP-first parametric gear generation. Not integrated into AegisUI runtime.</p>
+      </div>
+      <div class="status-panel">
+        <span id="health-light" class="status-light"></span>
+        <div>
+          <span class="label">API</span>
+          <strong id="api-status">CHECKING</strong>
+        </div>
+      </div>
+    </header>
+
+    <section class="tabs" aria-label="Gear type status">
+      <button class="tab active">Spur external <span>ACTIVE</span></button>
+      <button class="tab muted">Spur internal <span>API</span></button>
+      <button class="tab muted">Internal pair <span>API</span></button>
+      <button class="tab muted">Helical <span>PARTIAL</span></button>
+      <button class="tab muted">Herringbone <span>PARTIAL</span></button>
+      <button class="tab planned">Bevel <span>PLANNED</span></button>
+      <button class="tab planned">Worm <span>PLANNED</span></button>
+      <button class="tab planned">Rack / pinion <span>PLANNED</span></button>
+      <button class="tab planned">Planetary <span>PLANNED</span></button>
+    </section>
+
+    <section class="grid">
+      <form id="gear-form" class="panel parameters">
+        <div class="panel-title">
+          <span>01</span>
+          <h2>Spur external parameters</h2>
+        </div>
+
+        <label class="field wide">
+          <span>Gear name</span>
+          <input id="gear_name" name="gear_name" value="pinion_test" />
+        </label>
+
+        <div class="field">
+          <span>Module <em>mm</em></span>
+          <input type="range" id="module_slider" min="0.5" max="8" step="0.1" value="2" />
+          <input type="number" id="module_mm" name="module_mm" min="0.1" step="0.1" value="2" />
+        </div>
+
+        <div class="field">
+          <span>Teeth</span>
+          <input type="range" id="teeth_slider" min="8" max="120" step="1" value="24" />
+          <input type="number" id="teeth" name="teeth" min="8" step="1" value="24" />
+        </div>
+
+        <div class="field">
+          <span>Pressure angle <em>deg</em></span>
+          <input type="range" id="pressure_slider" min="14.5" max="25" step="0.5" value="20" />
+          <input type="number" id="pressure_angle_deg" name="pressure_angle_deg" min="14.5" max="25" step="0.5" value="20" />
+        </div>
+
+        <div class="field">
+          <span>Face width <em>mm</em></span>
+          <input type="range" id="face_slider" min="2" max="80" step="1" value="10" />
+          <input type="number" id="face_width_mm" name="face_width_mm" min="0.5" step="0.5" value="10" />
+        </div>
+
+        <div class="field">
+          <span>Bore <em>mm</em></span>
+          <input type="range" id="bore_slider" min="0" max="80" step="0.5" value="8" />
+          <input type="number" id="bore_diameter_mm" name="bore_diameter_mm" min="0" step="0.5" value="8" />
+        </div>
+
+        <div class="field">
+          <span>Backlash <em>mm</em></span>
+          <input type="range" id="backlash_slider" min="0" max="1" step="0.01" value="0.08" />
+          <input type="number" id="backlash_mm" name="backlash_mm" min="0" step="0.01" value="0.08" />
+        </div>
+
+        <div class="field">
+          <span>Profile points</span>
+          <input type="range" id="points_slider" min="8" max="96" step="1" value="24" />
+          <input type="number" id="number_of_profile_points" name="number_of_profile_points" min="8" max="96" step="1" value="24" />
+        </div>
+
+        <label class="check">
+          <input type="checkbox" id="json_report" checked />
+          <span>Include JSON report</span>
+        </label>
+
+        <button type="submit" class="primary">GENERATE STEP</button>
+      </form>
+
+      <section class="panel preview">
+        <div class="panel-title">
+          <span>02</span>
+          <h2>Technical preview</h2>
+        </div>
+        <svg id="gear-preview" viewBox="0 0 320 320" role="img" aria-label="gear preview">
+          <defs>
+            <filter id="glow">
+              <feGaussianBlur stdDeviation="2.5" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
+          <g id="gear-shape" transform="translate(160 160)"></g>
+          <circle id="bore-shape" cx="160" cy="160" r="24" />
+          <line x1="160" y1="18" x2="160" y2="302" class="axis" />
+          <line x1="18" y1="160" x2="302" y2="160" class="axis" />
+        </svg>
+        <div class="readouts">
+          <div><span>Pitch diameter</span><strong id="pitch_readout">48.00 mm</strong></div>
+          <div><span>Root diameter</span><strong id="root_readout">43.00 mm</strong></div>
+          <div><span>Outside diameter</span><strong id="outside_readout">52.00 mm</strong></div>
+        </div>
+      </section>
+
+      <section class="panel output">
+        <div class="panel-title">
+          <span>03</span>
+          <h2>Warnings / exports</h2>
+        </div>
+        <div id="message" class="message">Ready. CadQuery backend is checked during generation.</div>
+        <div class="subpanel">
+          <h3>Warnings</h3>
+          <ul id="warnings"></ul>
+        </div>
+        <div class="subpanel">
+          <h3>Files</h3>
+          <div id="files" class="files"></div>
+        </div>
+        <pre id="json-output" class="json-output">{}</pre>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    const pairs = [
+      ["module_slider", "module_mm"],
+      ["teeth_slider", "teeth"],
+      ["pressure_slider", "pressure_angle_deg"],
+      ["face_slider", "face_width_mm"],
+      ["bore_slider", "bore_diameter_mm"],
+      ["backlash_slider", "backlash_mm"],
+      ["points_slider", "number_of_profile_points"]
+    ];
+
+    const $ = (id) => document.getElementById(id);
+
+    pairs.forEach(([slider, number]) => {
+      $(slider).addEventListener("input", () => { $(number).value = $(slider).value; drawPreview(); });
+      $(number).addEventListener("input", () => { $(slider).value = $(number).value; drawPreview(); });
+    });
+
+    function getPayload() {
+      const formats = ["step"];
+      if ($("json_report").checked) formats.push("json_report");
+      return {
+        gear_name: $("gear_name").value || "gear",
+        module_mm: Number($("module_mm").value),
+        pressure_angle_deg: Number($("pressure_angle_deg").value),
+        face_width_mm: Number($("face_width_mm").value),
+        backlash_mm: Number($("backlash_mm").value),
+        profile_shift: 0,
+        number_of_profile_points: Number($("number_of_profile_points").value),
+        teeth: Number($("teeth").value),
+        bore_diameter_mm: Number($("bore_diameter_mm").value),
+        export_formats: formats
+      };
+    }
+
+    function drawPreview() {
+      const data = getPayload();
+      const pitch = data.module_mm * data.teeth;
+      const outside = pitch + 2 * data.module_mm;
+      const root = pitch - 2.5 * data.module_mm;
+      const maxRadius = Math.max(outside / 2, 1);
+      const scale = 118 / maxRadius;
+      const rootR = Math.max(18, root / 2 * scale);
+      const outerR = Math.max(rootR + 4, outside / 2 * scale);
+      const teeth = Math.max(8, Math.min(120, data.teeth));
+      let d = "";
+      for (let i = 0; i < teeth * 2; i++) {
+        const radius = i % 2 === 0 ? outerR : rootR;
+        const angle = (Math.PI * 2 * i) / (teeth * 2) - Math.PI / 2;
+        const x = Math.cos(angle) * radius;
+        const y = Math.sin(angle) * radius;
+        d += `${i === 0 ? "M" : "L"} ${x.toFixed(2)} ${y.toFixed(2)} `;
+      }
+      d += "Z";
+      $("gear-shape").innerHTML = `<path d="${d}" class="gear-path" filter="url(#glow)"></path><circle r="${(pitch / 2 * scale).toFixed(2)}" class="pitch"></circle>`;
+      $("bore-shape").setAttribute("r", Math.max(0, data.bore_diameter_mm / 2 * scale).toFixed(2));
+      $("pitch_readout").textContent = `${pitch.toFixed(2)} mm`;
+      $("root_readout").textContent = `${root.toFixed(2)} mm`;
+      $("outside_readout").textContent = `${outside.toFixed(2)} mm`;
+    }
+
+    async function checkHealth() {
+      try {
+        const response = await fetch("/health");
+        const data = await response.json();
+        $("api-status").textContent = data.status === "ok" ? "ONLINE" : "ERROR";
+        $("health-light").classList.toggle("online", data.status === "ok");
+      } catch (error) {
+        $("api-status").textContent = "OFFLINE";
+      }
+    }
+
+    function renderResult(data) {
+      $("json-output").textContent = JSON.stringify(data, null, 2);
+      $("message").textContent = data.status === "success" ? `Generated ${data.generator}: ${data.name}` : data.message;
+      $("message").classList.toggle("error", data.status !== "success");
+      $("warnings").innerHTML = "";
+      (data.warnings || []).forEach((warning) => {
+        const li = document.createElement("li");
+        li.textContent = `${warning.code}: ${warning.message}`;
+        $("warnings").appendChild(li);
+      });
+      $("files").innerHTML = "";
+      Object.entries(data.files || {}).forEach(([format, path]) => {
+        const a = document.createElement("a");
+        a.href = path;
+        a.textContent = `${format.toUpperCase()} download`;
+        a.className = "file-link";
+        $("files").appendChild(a);
+      });
+    }
+
+    $("gear-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      $("message").textContent = "Generating...";
+      try {
+        const response = await fetch("/generate/spur-external", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(getPayload())
+        });
+        const data = await response.json();
+        renderResult(data);
+      } catch (error) {
+        renderResult({ status: "error", message: String(error), warnings: [], files: {} });
+      }
+    });
+
+    drawPreview();
+    checkHealth();
+  </script>
+</body>
+</html>

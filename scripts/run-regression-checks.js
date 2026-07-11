@@ -18,6 +18,7 @@ const CHECKS = [
     "scripts/test-eng-workspace-registry.js",
     "scripts/test-eng-command-router.js",
     "scripts/test-eng-calculators.js",
+    "scripts/test-aegis-gearlab-standalone.js",
     "scripts/test-apple-music-bridge-static.js",
     "scripts/test-apple-music-runtime.js",
     "scripts/test-map-providers.js",

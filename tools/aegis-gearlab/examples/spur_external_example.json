@@ -1,0 +1,13 @@
+{
+  "gear_name": "pinion_test",
+  "module_mm": 2.0,
+  "pressure_angle_deg": 20.0,
+  "face_width_mm": 12.0,
+  "backlash_mm": 0.08,
+  "profile_shift": 0.0,
+  "number_of_profile_points": 24,
+  "teeth": 24,
+  "bore_diameter_mm": 8.0,
+  "export_formats": ["step", "stl", "dxf", "json_report"]
+}
+

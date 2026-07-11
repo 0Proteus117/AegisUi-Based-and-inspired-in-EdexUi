@@ -98,3 +98,13 @@ src/native/EdexUiEngCalendar.app
 *.exe
 *.tmp
 *.bak
+
+# Standalone Aegis GearLab local runtime artifacts
+tools/aegis-gearlab/.venv
+tools/aegis-gearlab/.venv/
+tools/aegis-gearlab/.pytest_cache/
+tools/aegis-gearlab/**/__pycache__/
+tools/aegis-gearlab/**/*.pyc
+!tools/aegis-gearlab/exports/
+tools/aegis-gearlab/exports/*
+!tools/aegis-gearlab/exports/.gitkeep

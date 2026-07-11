@@ -52,6 +52,10 @@ keyboard and large terminal with:
 - ENG quick calculators use cockpit-styled sliders, precision numeric inputs
   and lightweight technical diagrams for gear ratio, beam deflection,
   torque/power/RPM, material mass, unit conversion and thread references;
+- Aegis GearLab exists as a standalone local FastAPI/CadQuery tool under
+  `tools/aegis-gearlab/` for STEP-first gear generation experiments. It is not
+  loaded by the AegisUI renderer and is not integrated into ENG runtime in
+  v2.2.8;
 - a global Assistant Presence orb for the future Angie / Gustav assistant
   system, with local-only visual states, Ares/Aphrodite public profiles,
   Gustav/Angie private aliases, private local memory bootstrap status, panel
