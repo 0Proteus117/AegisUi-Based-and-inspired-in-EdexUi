@@ -32,7 +32,7 @@ print("ENG_REGISTRY_DUPLICATES", failures.some(item => item.includes("duplicate"
 print("ENG_REGISTRY_WEB_URLS", failures.some(item => item.includes("missing url")) ? "FAIL" : "OK");
 print("ENG_REGISTRY_APP_HINTS", failures.some(item => item.includes("app hint")) ? "FAIL" : "OK");
 print("ENG_REGISTRY_INTERNAL_ACTIONS", failures.some(item => item.includes("action id")) ? "FAIL" : "OK");
-print("ENG_REGISTRY_GEARLAB", registry.TOOLS.some(item => item.id === "aegis-gearlab" && item.type === "special") ? "OK" : "FAIL");
+print("ENG_REGISTRY_GEARLAB_ISOLATED", registry.TOOLS.some(item => item.id === "aegis-gearlab") ? "FAIL" : "OK");
 print("ENG_WORKSPACE_REGISTRY", failures.length ? "FAIL" : "OK");
 
 if (failures.length) {

@@ -43,24 +43,23 @@ async function main() {
         && torque.ok
         && materials.ok
         && fusion.ok
-        && gearLab.ok
         && blocked.status === "BLOCKED"
         && calls.includes("workspace:ENGINEER")
         && calls.includes("category:cad")
         && calls.includes("calculator:torque_power_rpm")
         && calls.includes("category:materials")
         && calls.includes("tool:fusion");
-    const gearLabOk = gearLab.ok && calls.includes("tool:aegis-gearlab");
+    const gearLabIsolated = !calls.includes("tool:aegis-gearlab");
 
     print("ENG_ROUTER_NORMAL_CHAT", normal.type === "CHAT" ? "OK" : "FAIL");
     print("ENG_ROUTER_OPEN_WORKSPACE", openEng.ok ? "OK" : "FAIL");
     print("ENG_ROUTER_CATEGORY", cad.ok && materials.ok ? "OK" : "FAIL");
     print("ENG_ROUTER_CALCULATOR", torque.ok ? "OK" : "FAIL");
     print("ENG_ROUTER_TOOL", fusion.ok ? "OK" : "FAIL");
-    print("ENG_ROUTER_GEARLAB", gearLabOk ? "OK" : "FAIL");
+    print("ENG_ROUTER_GEARLAB_ISOLATED", gearLabIsolated ? "OK" : "FAIL");
     print("ENG_ROUTER_BLOCKED", blocked.status === "BLOCKED" ? "OK" : "FAIL");
-    print("ENG_COMMAND_ROUTER", ok && gearLabOk ? "OK" : "FAIL");
-    if (!ok || !gearLabOk) process.exit(1);
+    print("ENG_COMMAND_ROUTER", ok && gearLabIsolated ? "OK" : "FAIL");
+    if (!ok || !gearLabIsolated) process.exit(1);
 }
 
 main().catch(error => {
