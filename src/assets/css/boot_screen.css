@@ -1,106 +1,223 @@
 section#boot_screen {
     position: fixed;
-    top: 0vh;
-    left: 0vh;
+    inset: 0;
+    z-index: 9999999;
     width: 100%;
     height: 100%;
-    padding: 0vh;
-    margin: 0vh;
+    padding: 0;
+    margin: 0;
     overflow: hidden;
-
-    font-family: monospace;
-    font-size: 1.4vh;
-    text-align: left;
     display: flex;
     align-items: flex-end;
     justify-content: flex-start;
+    background:
+        radial-gradient(circle at 50% 45%, rgba(var(--color_r), var(--color_g), var(--color_b), 0.16), transparent 34%),
+        radial-gradient(circle at 16% 22%, rgba(41, 192, 255, 0.12), transparent 28%),
+        linear-gradient(180deg, rgba(2, 9, 17, 0.98), rgba(0, 0, 0, 0.98));
+    color: rgba(190, 238, 255, 0.92);
+    font-family: var(--font_main), monospace;
+    font-size: 1.35vh;
+    text-align: left;
 }
 
-section#boot_screen.center {
+section#boot_screen::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background:
+        linear-gradient(rgba(80, 190, 255, 0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(80, 190, 255, 0.025) 1px, transparent 1px);
+    background-size: 44px 44px;
+    mask-image: radial-gradient(circle at 50% 48%, rgba(0, 0, 0, 0.85), transparent 76%);
+}
+
+section#boot_screen.center,
+section#boot_screen.aegis-boot-title-mode {
     align-items: center;
     justify-content: center;
 }
 
-section#boot_screen h1 {
-    font-family: var(--font_main);
-    font-size: 10vh;
+.aegis-boot-particles,
+.aegis-boot-glow,
+.aegis-boot-content,
+.aegis-boot-log {
+    position: absolute;
+}
+
+.aegis-boot-particles {
+    inset: 0;
+    z-index: 2;
+    width: 100%;
+    height: 100%;
+    opacity: 0.78;
+}
+
+.aegis-boot-glow {
+    z-index: 1;
+    width: 36vw;
+    height: 36vw;
+    max-width: 560px;
+    max-height: 560px;
+    border-radius: 50%;
+    filter: blur(34px);
+    opacity: 0.26;
+    pointer-events: none;
+}
+
+.aegis-boot-glow-a {
+    top: 10%;
+    left: 14%;
+    background: rgba(0, 178, 255, 0.42);
+}
+
+.aegis-boot-glow-b {
+    right: 10%;
+    bottom: 6%;
+    background: rgba(0, 95, 255, 0.3);
+}
+
+.aegis-boot-content {
+    z-index: 4;
+    top: 50%;
+    left: 50%;
+    display: grid;
+    justify-items: center;
+    gap: 1.2vh;
+    width: min(52vw, 620px);
+    transform: translate(-50%, -50%) scale(0.98);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 460ms ease, transform 680ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.aegis-boot-title-mode .aegis-boot-content {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+}
+
+.aegis-boot-mark-wrap {
+    width: min(28vw, 300px);
+    aspect-ratio: 220 / 190;
+    display: grid;
+    place-items: center;
+}
+
+.aegis-boot-mark {
+    width: 100%;
+    height: auto;
+    overflow: visible;
+}
+
+.aegis-boot-piece {
+    fill: rgba(245, 252, 255, 0.08);
+    stroke: url(#aegisBootPiece);
+    stroke-width: 4.5;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
+    filter: drop-shadow(0 0 10px rgba(37, 190, 255, 0.62));
+    transform-box: fill-box;
+    transform-origin: 50% 50%;
+}
+
+.aegis-boot-title-mode .aegis-boot-piece-a {
+    animation: aegisPieceInA 780ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.aegis-boot-title-mode .aegis-boot-piece-b {
+    animation: aegisPieceInB 860ms cubic-bezier(0.16, 1, 0.3, 1) 120ms both;
+}
+
+.aegis-boot-title-mode .aegis-boot-piece-c {
+    animation: aegisPieceInC 940ms cubic-bezier(0.16, 1, 0.3, 1) 220ms both;
+}
+
+.aegis-boot-title,
+.aegis-boot-subtitle,
+.aegis-boot-status {
     text-align: center;
-    border-bottom: 0.46vh solid rgb(var(--color_r), var(--color_g), var(--color_b));
-    padding-top: 2vh;
-    padding-right: 2vh;
-    padding-left: 1.5vh;
-    background-color: transparent;
-
-    opacity: 0;
-    animation-name: fadeInTitle;
-    animation-duration: 300ms;
-    animation-timing-function: linear;
-    animation-fill-mode: forwards;
-    animation-iteration-count: 1;
+    letter-spacing: 0.42em;
+    text-transform: uppercase;
+    text-shadow: 0 0 18px rgba(0, 190, 255, 0.42);
 }
 
-section#boot_screen h1.glitch {
-    border: none;
-    color: transparent;
+.aegis-boot-title {
+    font-size: clamp(28px, 5.2vh, 72px);
+    color: rgba(239, 253, 255, 0.96);
 }
 
-@keyframes fadeInTitle {
-    from { opacity: 0; }
-    to   { opacity: 1; }
+.aegis-boot-subtitle {
+    font-size: clamp(11px, 1.35vh, 18px);
+    color: rgba(117, 214, 255, 0.9);
 }
 
-section#boot_screen h1::before {
-    content: "eDEX-UI";
-    display: block;
-    transform: translateY(100%) translateX(-2%);
-    clip-path: polygon(100% 0%, 100% 40%, 0% 40%, 0% 0%);
-    color: rgba(var(--color_r), var(--color_g), var(--color_b), 0.8);
-
-    animation-name: derezzer_top;
-    animation-duration: 50ms;
-    animation-timing-function: linear;
-    animation-iteration-count: infinite;
-    animation-direction: alternate-reverse;
-    animation-play-state: paused;
-    height: 0px;
-    opacity: 0;
+.aegis-boot-status {
+    margin-top: 0.7vh;
+    padding: 0.72vh 1.1vw;
+    border: 1px solid rgba(var(--color_r), var(--color_g), var(--color_b), 0.42);
+    background: rgba(0, 18, 34, 0.5);
+    color: rgba(202, 244, 255, 0.8);
+    font-size: clamp(9px, 1.05vh, 13px);
 }
 
-section#boot_screen h1.glitch::before {
-    height: auto;
-    opacity: 1;
-    animation-play-state: running;
+.aegis-boot-log {
+    z-index: 5;
+    left: 2.2vw;
+    right: 2.2vw;
+    bottom: 2vh;
+    max-height: 34vh;
+    overflow: hidden;
+    color: rgba(159, 226, 255, 0.82);
+    font-family: monospace;
+    font-size: 1.35vh;
+    line-height: 1.42;
+    text-shadow: 0 0 10px rgba(0, 170, 255, 0.35);
+    transition: opacity 380ms ease, transform 420ms ease;
 }
 
-@keyframes derezzer_top {
-    from {transform: translateY(100%) translateX(-1%);}
-    to {transform: translateY(100%) translateX(-5%);}
+.aegis-boot-title-mode .aegis-boot-log {
+    opacity: 0.12;
+    transform: translateY(2vh);
 }
 
-section#boot_screen h1::after {
-    content: "eDEX-UI";
-    display: block;
-    transform: translateY(-100%) translateX(2%);
-    clip-path: polygon(100% 40%, 100% 100%, 0% 100%, 0% 40%);
-    color: rgba(var(--color_r), var(--color_g), var(--color_b), 0.9);
-
-    animation-name: derezzer_bottom;
-    animation-duration: 50ms;
-    animation-timing-function: linear;
-    animation-iteration-count: infinite;
-    animation-direction: alternate-reverse;
-    animation-play-state: paused;
-    height: 0px;
-    opacity: 0;
+.aegis-boot-exit {
+    animation: aegisBootExit 820ms ease forwards;
 }
 
-section#boot_screen h1.glitch::after {
-    height: auto;
-    opacity: 1;
-    animation-play-state: running;
+@keyframes aegisPieceInA {
+    from { opacity: 0; transform: translateY(-52px) scale(0.94); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-@keyframes derezzer_bottom {
-    from {transform: translateY(-100%) translateX(1%);}
-    to {transform: translateY(-100%) translateX(3%);}
+@keyframes aegisPieceInB {
+    from { opacity: 0; transform: translate(-46px, 34px) scale(0.94); }
+    to { opacity: 1; transform: translate(0, 0) scale(1); }
+}
+
+@keyframes aegisPieceInC {
+    from { opacity: 0; transform: translate(46px, 34px) scale(0.94); }
+    to { opacity: 1; transform: translate(0, 0) scale(1); }
+}
+
+@keyframes aegisBootExit {
+    to {
+        opacity: 0;
+        filter: blur(10px);
+        transform: scale(1.018);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .aegis-boot-piece,
+    .aegis-boot-title-mode .aegis-boot-piece-a,
+    .aegis-boot-title-mode .aegis-boot-piece-b,
+    .aegis-boot-title-mode .aegis-boot-piece-c,
+    .aegis-boot-exit {
+        animation: none;
+    }
+
+    .aegis-boot-content {
+        transition: opacity 180ms linear;
+    }
 }

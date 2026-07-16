@@ -220,6 +220,8 @@ if (window.settings.nointro || window.settings.nointroOverride) {
 // Startup boot log
 function displayLine() {
     let bootScreen = document.getElementById("boot_screen");
+    const bootSplash = window.AegisBootSplash || null;
+    if (bootSplash) bootSplash.ensure();
     let log = fs.readFileSync(path.join(__dirname, "assets", "misc", "boot_log.txt")).toString().split('\n');
 
     function isArchUser() {
@@ -238,13 +240,22 @@ function displayLine() {
     } else {
         window.audioManager.stdout.play();
     }
-    bootScreen.innerHTML += log[i]+"<br/>";
+    if (bootSplash) {
+        bootSplash.appendLog(log[i]);
+    } else {
+        bootScreen.innerHTML += log[i]+"<br/>";
+    }
     i++;
 
     switch(true) {
         case i === 2:
             const os = require("os");
-            bootScreen.innerHTML += `eDEX-UI Kernel version ${remote.app.getVersion()} boot at ${Date().toString()}; root:${os.type().toLowerCase()}-${os.release()}/${os.arch().toUpperCase()}`;
+            const kernelLine = `AegisUi Kernel version ${remote.app.getVersion()} boot at ${Date().toString()}; root:${os.type().toLowerCase()}-${os.release()}/${os.arch().toUpperCase()}`;
+            if (bootSplash) {
+                bootSplash.appendRawLine(kernelLine);
+            } else {
+                bootScreen.innerHTML += kernelLine;
+            }
         case i === 4:
             setTimeout(displayLine, 500);
             break;
@@ -282,14 +293,23 @@ async function displayTitleScreen() {
         bootScreen.setAttribute("style", "z-index: 9999999");
         document.body.appendChild(bootScreen);
     }
-    bootScreen.innerHTML = "";
+    if (window.AegisBootSplash) {
+        window.AegisBootSplash.ensure();
+    } else {
+        bootScreen.innerHTML = "";
+    }
     window.audioManager.theme.play();
 
     await _delay(400);
 
     document.body.setAttribute("class", "");
-    bootScreen.setAttribute("class", "center");
-    bootScreen.innerHTML = "<h1>eDEX-UI</h1>";
+    if (window.AegisBootSplash) {
+        bootScreen.classList.add("center");
+        window.AegisBootSplash.showTitle();
+    } else {
+        bootScreen.setAttribute("class", "center");
+        bootScreen.innerHTML = "<h1>AEGISUI</h1>";
+    }
     let title = document.querySelector("section > h1");
 
     await _delay(200);
@@ -298,32 +318,48 @@ async function displayTitleScreen() {
 
     await _delay(100);
 
-    title.setAttribute("style", `background-color: rgb(${window.theme.r}, ${window.theme.g}, ${window.theme.b});border-bottom: 5px solid rgb(${window.theme.r}, ${window.theme.g}, ${window.theme.b});`);
+    if (title) title.setAttribute("style", `background-color: rgb(${window.theme.r}, ${window.theme.g}, ${window.theme.b});border-bottom: 5px solid rgb(${window.theme.r}, ${window.theme.g}, ${window.theme.b});`);
 
     await _delay(300);
 
-    title.setAttribute("style", `border: 5px solid rgb(${window.theme.r}, ${window.theme.g}, ${window.theme.b});`);
+    if (title) title.setAttribute("style", `border: 5px solid rgb(${window.theme.r}, ${window.theme.g}, ${window.theme.b});`);
 
     await _delay(100);
 
-    title.setAttribute("style", "");
-    title.setAttribute("class", "glitch");
+    if (title) {
+        title.setAttribute("style", "");
+        title.setAttribute("class", "glitch");
+    }
 
     await _delay(500);
 
     document.body.setAttribute("class", "");
-    title.setAttribute("class", "");
-    title.setAttribute("style", `border: 5px solid rgb(${window.theme.r}, ${window.theme.g}, ${window.theme.b});`);
+    if (title) {
+        title.setAttribute("class", "");
+        title.setAttribute("style", `border: 5px solid rgb(${window.theme.r}, ${window.theme.g}, ${window.theme.b});`);
+    }
 
     await _delay(1000);
     if (window.term) {
-        bootScreen.remove();
+        if (window.AegisBootSplash) {
+            window.AegisBootSplash.exit();
+            await _delay(360);
+            window.AegisBootSplash.remove();
+        } else {
+            bootScreen.remove();
+        }
         return true;
     }
     initGraphicalErrorHandling();
     initSystemInformationProxy();
-    waitForFonts().then(() => {
-        bootScreen.remove();
+    waitForFonts().then(async () => {
+        if (window.AegisBootSplash) {
+            window.AegisBootSplash.exit();
+            await _delay(360);
+            window.AegisBootSplash.remove();
+        } else {
+            bootScreen.remove();
+        }
         initUI();
     });
 }
