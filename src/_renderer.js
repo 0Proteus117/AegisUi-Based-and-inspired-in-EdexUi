@@ -221,7 +221,15 @@ if (window.settings.nointro || window.settings.nointroOverride) {
 function displayLine() {
     let bootScreen = document.getElementById("boot_screen");
     const bootSplash = window.AegisBootSplash || null;
-    if (bootSplash) bootSplash.ensure();
+    if (bootSplash) {
+        bootSplash.ensure();
+        bootSplash.configure({
+            locale: (window.settings && window.settings.locale) || navigator.language || "es",
+            minimumSequenceMs: 9000,
+            networkDelayMs: 2000,
+            titleDelayMs: 4100
+        });
+    }
     let log = fs.readFileSync(path.join(__dirname, "assets", "misc", "boot_log.txt")).toString().split('\n');
 
     function isArchUser() {
@@ -295,6 +303,13 @@ async function displayTitleScreen() {
     }
     if (window.AegisBootSplash) {
         window.AegisBootSplash.ensure();
+        window.AegisBootSplash.configure({
+            displayName: await getDisplayName(),
+            locale: (window.settings && window.settings.locale) || navigator.language || "es",
+            minimumSequenceMs: 9000,
+            networkDelayMs: 2000,
+            titleDelayMs: 4100
+        });
     } else {
         bootScreen.innerHTML = "";
     }
@@ -343,7 +358,7 @@ async function displayTitleScreen() {
     if (window.term) {
         if (window.AegisBootSplash) {
             window.AegisBootSplash.exit();
-            await _delay(360);
+            await _delay(1500);
             window.AegisBootSplash.remove();
         } else {
             bootScreen.remove();
@@ -355,7 +370,7 @@ async function displayTitleScreen() {
     waitForFonts().then(async () => {
         if (window.AegisBootSplash) {
             window.AegisBootSplash.exit();
-            await _delay(360);
+            await _delay(1500);
             window.AegisBootSplash.remove();
         } else {
             bootScreen.remove();
@@ -369,6 +384,16 @@ async function getDisplayName() {
     let user = settings.username || null;
     if (user)
         return user;
+
+    try {
+        if (process.platform === "darwin") {
+            user = require("child_process")
+                .execFileSync("/usr/bin/id", ["-F"], { encoding: "utf8", timeout: 1000 })
+                .trim();
+            if (user)
+                return user;
+        }
+    } catch (e) {}
 
     try {
         user = await require("username")();

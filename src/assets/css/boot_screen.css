@@ -1,4 +1,20 @@
+@font-face {
+    font-family: "Orbitron Aegis Boot";
+    src: url("../fonts/Orbitron%5Bwght%5D.ttf") format("truetype");
+    font-style: normal;
+    font-weight: 400 900;
+    font-display: block;
+}
+
 section#boot_screen {
+    --aegis-boot-bg: #12161d;
+    --aegis-boot-bg-soft: #202730;
+    --aegis-boot-ink: #f3f7fb;
+    --aegis-boot-muted: #b8c4d2;
+    --aegis-boot-cyan: #79cfff;
+    --aegis-boot-blue: #4d8df4;
+    --aegis-boot-line: rgba(202, 218, 235, 0.28);
+    --aegis-boot-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
     position: fixed;
     inset: 0;
     z-index: 9999999;
@@ -7,17 +23,27 @@ section#boot_screen {
     padding: 0;
     margin: 0;
     overflow: hidden;
-    display: flex;
-    align-items: flex-end;
-    justify-content: flex-start;
+    display: grid;
+    place-items: center;
     background:
-        radial-gradient(circle at 50% 45%, rgba(var(--color_r), var(--color_g), var(--color_b), 0.16), transparent 34%),
-        radial-gradient(circle at 16% 22%, rgba(41, 192, 255, 0.12), transparent 28%),
-        linear-gradient(180deg, rgba(2, 9, 17, 0.98), rgba(0, 0, 0, 0.98));
-    color: rgba(190, 238, 255, 0.92);
-    font-family: var(--font_main), monospace;
-    font-size: 1.35vh;
-    text-align: left;
+        radial-gradient(80% 80% at 50% 48%, rgba(48, 57, 69, 0.98) 0%, var(--aegis-boot-bg) 50%, var(--aegis-boot-bg-soft) 100%);
+    color: var(--aegis-boot-ink);
+    font-family: var(--font_main), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    text-align: center;
+    isolation: isolate;
+    transition: opacity 760ms var(--aegis-boot-ease), filter 760ms var(--aegis-boot-ease);
+}
+
+section#boot_screen[data-theme="light"] {
+    --aegis-boot-bg: #f7f9fe;
+    --aegis-boot-bg-soft: #edf4ff;
+    --aegis-boot-ink: #102441;
+    --aegis-boot-muted: #607594;
+    --aegis-boot-cyan: #20a9dc;
+    --aegis-boot-blue: #2e62d4;
+    --aegis-boot-line: rgba(38, 119, 213, 0.18);
+    background:
+        radial-gradient(80% 80% at 50% 48%, #ffffff 0%, var(--aegis-boot-bg) 50%, var(--aegis-boot-bg-soft) 100%);
 }
 
 section#boot_screen::before {
@@ -27,81 +53,90 @@ section#boot_screen::before {
     z-index: 1;
     pointer-events: none;
     background:
-        linear-gradient(rgba(80, 190, 255, 0.035) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(80, 190, 255, 0.025) 1px, transparent 1px);
-    background-size: 44px 44px;
-    mask-image: radial-gradient(circle at 50% 48%, rgba(0, 0, 0, 0.85), transparent 76%);
+        linear-gradient(rgba(140, 190, 230, 0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(140, 190, 230, 0.025) 1px, transparent 1px);
+    background-size: 46px 46px;
+    opacity: 0.38;
+    mask-image: radial-gradient(circle at 50% 48%, rgba(0, 0, 0, 0.9), transparent 82%);
 }
 
-section#boot_screen.center,
-section#boot_screen.aegis-boot-title-mode {
-    align-items: center;
-    justify-content: center;
+section#boot_screen[data-theme="light"]::before {
+    opacity: 0.18;
 }
 
 .aegis-boot-particles,
 .aegis-boot-glow,
 .aegis-boot-content,
-.aegis-boot-log {
+.aegis-boot-log,
+.aegis-boot-skip {
     position: absolute;
 }
 
 .aegis-boot-particles {
     inset: 0;
-    z-index: 2;
+    z-index: 0;
     width: 100%;
     height: 100%;
-    opacity: 0.78;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 1850ms var(--aegis-boot-ease);
+}
+
+.aegis-boot-network-mode .aegis-boot-particles {
+    opacity: 1;
 }
 
 .aegis-boot-glow {
-    z-index: 1;
-    width: 36vw;
-    height: 36vw;
-    max-width: 560px;
-    max-height: 560px;
+    z-index: 0;
+    width: 48vmax;
+    height: 48vmax;
     border-radius: 50%;
-    filter: blur(34px);
-    opacity: 0.26;
+    filter: blur(32px);
+    opacity: 0;
     pointer-events: none;
+    transition: opacity 1850ms var(--aegis-boot-ease);
+}
+
+.aegis-boot-network-mode .aegis-boot-glow {
+    opacity: 0.24;
 }
 
 .aegis-boot-glow-a {
-    top: 10%;
-    left: 14%;
-    background: rgba(0, 178, 255, 0.42);
+    background: radial-gradient(circle, rgba(157, 168, 188, 0.18), transparent 68%);
+    transform: translate(-30%, -10%);
 }
 
 .aegis-boot-glow-b {
-    right: 10%;
-    bottom: 6%;
-    background: rgba(0, 95, 255, 0.3);
+    background: radial-gradient(circle, rgba(100, 180, 244, 0.16), transparent 67%);
+    transform: translate(35%, 28%);
 }
 
 .aegis-boot-content {
-    z-index: 4;
+    z-index: 3;
     top: 50%;
     left: 50%;
     display: grid;
     justify-items: center;
-    gap: 1.2vh;
-    width: min(52vw, 620px);
-    transform: translate(-50%, -50%) scale(0.98);
+    gap: clamp(16px, 2.4vh, 28px);
+    width: min(80vw, 720px);
+    padding: 40px;
+    transform: translate(-50%, -52%) scale(0.985);
     opacity: 0;
     pointer-events: none;
-    transition: opacity 460ms ease, transform 680ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    transition: opacity 520ms var(--aegis-boot-ease), transform 720ms var(--aegis-boot-ease);
 }
 
 .aegis-boot-title-mode .aegis-boot-content {
     opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
+    transform: translate(-50%, -52%) scale(1);
 }
 
 .aegis-boot-mark-wrap {
-    width: min(28vw, 300px);
+    width: clamp(118px, 15vw, 220px);
     aspect-ratio: 220 / 190;
     display: grid;
     place-items: center;
+    filter: drop-shadow(0 18px 18px rgba(27, 85, 159, 0.12));
 }
 
 .aegis-boot-mark {
@@ -111,109 +146,222 @@ section#boot_screen.aegis-boot-title-mode {
 }
 
 .aegis-boot-piece {
-    fill: rgba(245, 252, 255, 0.08);
-    stroke: url(#aegisBootPiece);
-    stroke-width: 4.5;
+    transform-origin: 110px 94.2px;
+}
+
+.aegis-boot-piece path {
+    fill: #17222f;
+    stroke: rgba(103, 179, 255, 0.94);
+    stroke-width: 3.1;
     stroke-linejoin: round;
     vector-effect: non-scaling-stroke;
-    filter: drop-shadow(0 0 10px rgba(37, 190, 255, 0.62));
-    transform-box: fill-box;
-    transform-origin: 50% 50%;
+    filter: drop-shadow(0 0 9px rgba(105, 183, 255, 0.32));
+}
+
+section#boot_screen[data-theme="light"] .aegis-boot-piece path {
+    fill: #fafdff;
+    stroke: rgba(34, 117, 212, 0.86);
+    filter: drop-shadow(0 0 8px rgba(32, 169, 220, 0.26));
 }
 
 .aegis-boot-title-mode .aegis-boot-piece-a {
-    animation: aegisPieceInA 780ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation: aegisPieceInA 860ms 40ms both var(--aegis-boot-ease);
 }
 
 .aegis-boot-title-mode .aegis-boot-piece-b {
-    animation: aegisPieceInB 860ms cubic-bezier(0.16, 1, 0.3, 1) 120ms both;
+    animation: aegisPieceInB 860ms 110ms both var(--aegis-boot-ease);
 }
 
 .aegis-boot-title-mode .aegis-boot-piece-c {
-    animation: aegisPieceInC 940ms cubic-bezier(0.16, 1, 0.3, 1) 220ms both;
+    animation: aegisPieceInC 860ms 180ms both var(--aegis-boot-ease);
 }
 
-.aegis-boot-title,
-.aegis-boot-subtitle,
-.aegis-boot-status {
+.aegis-boot-title-mode:not(.aegis-boot-exit) .aegis-boot-piece path {
+    animation: aegisLogoBreathe 2300ms ease-in-out 1040ms infinite;
+}
+
+.aegis-boot-copy {
+    display: grid;
+    gap: 13px;
+}
+
+.aegis-boot-welcome,
+.aegis-boot-begin {
+    margin: 0;
+    letter-spacing: 0.052em;
     text-align: center;
-    letter-spacing: 0.42em;
-    text-transform: uppercase;
-    text-shadow: 0 0 18px rgba(0, 190, 255, 0.42);
 }
 
-.aegis-boot-title {
-    font-size: clamp(28px, 5.2vh, 72px);
-    color: rgba(239, 253, 255, 0.96);
+.aegis-boot-welcome {
+    max-width: min(80vw, 650px);
+    color: var(--aegis-boot-ink);
+    font-size: clamp(14px, 1.35vw, 20px);
+    font-weight: 500;
+    line-height: 1.6;
+    text-shadow: 0 0 18px rgba(0, 0, 0, 0.2);
+    font-family: "Orbitron Aegis Boot", var(--font_main), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
-.aegis-boot-subtitle {
-    font-size: clamp(11px, 1.35vh, 18px);
-    color: rgba(117, 214, 255, 0.9);
+section#boot_screen[data-theme="light"] .aegis-boot-welcome {
+    text-shadow: none;
 }
 
-.aegis-boot-status {
-    margin-top: 0.7vh;
-    padding: 0.72vh 1.1vw;
-    border: 1px solid rgba(var(--color_r), var(--color_g), var(--color_b), 0.42);
-    background: rgba(0, 18, 34, 0.5);
-    color: rgba(202, 244, 255, 0.8);
-    font-size: clamp(9px, 1.05vh, 13px);
+.aegis-boot-begin {
+    color: var(--aegis-boot-cyan);
+    font-size: clamp(17px, 1.7vw, 25px);
+    font-weight: 650;
+    letter-spacing: 0.18em;
+    text-shadow: 0 0 16px rgba(55, 177, 255, 0.4);
+    animation: aegisCopyIn 660ms 720ms both var(--aegis-boot-ease);
+    font-family: "Orbitron Aegis Boot", var(--font_main), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.aegis-boot-skip {
+    z-index: 4;
+    right: clamp(18px, 3vw, 44px);
+    bottom: clamp(18px, 3vw, 38px);
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: rgba(223, 235, 248, 0.68);
+    font: 500 11px/1 "Orbitron Aegis Boot", var(--font_main), sans-serif;
+    letter-spacing: 0.12em;
+    padding: 12px 14px;
+    opacity: 0.72;
+    cursor: pointer;
+    transition: background 150ms ease, color 150ms ease, opacity 150ms ease;
+}
+
+section#boot_screen[data-theme="light"] .aegis-boot-skip {
+    color: rgba(16, 36, 65, 0.56);
+}
+
+.aegis-boot-skip:hover,
+.aegis-boot-skip:focus-visible {
+    background: rgba(46, 98, 212, 0.1);
+    color: var(--aegis-boot-ink);
+    opacity: 1;
+    outline: 2px solid rgba(32, 169, 220, 0.42);
+    outline-offset: 2px;
 }
 
 .aegis-boot-log {
-    z-index: 5;
+    z-index: 2;
     left: 2.2vw;
     right: 2.2vw;
     bottom: 2vh;
-    max-height: 34vh;
+    max-height: 28vh;
     overflow: hidden;
-    color: rgba(159, 226, 255, 0.82);
+    color: rgba(159, 226, 255, 0.44);
     font-family: monospace;
-    font-size: 1.35vh;
+    font-size: 1.2vh;
     line-height: 1.42;
-    text-shadow: 0 0 10px rgba(0, 170, 255, 0.35);
+    text-align: left;
+    text-shadow: 0 0 10px rgba(0, 170, 255, 0.24);
+    opacity: 0;
     transition: opacity 380ms ease, transform 420ms ease;
 }
 
 .aegis-boot-title-mode .aegis-boot-log {
-    opacity: 0.12;
+    opacity: 0;
     transform: translateY(2vh);
 }
 
 .aegis-boot-exit {
-    animation: aegisBootExit 820ms ease forwards;
+    animation: aegisBootExit 1500ms linear forwards;
+}
+
+.aegis-boot-exit .aegis-boot-content {
+    animation: aegisContentExit 1500ms var(--aegis-boot-ease) forwards;
+}
+
+.aegis-boot-exit .aegis-boot-piece {
+    animation: aegisPieceOut 1500ms cubic-bezier(0.16, 0.84, 0.22, 1) forwards;
+}
+
+.aegis-boot-exit .aegis-boot-piece-a {
+    --aegis-piece-out-x: 0;
+    --aegis-piece-out-y: -62vh;
+}
+
+.aegis-boot-exit .aegis-boot-piece-b {
+    --aegis-piece-out-x: -56vw;
+    --aegis-piece-out-y: 48vh;
+}
+
+.aegis-boot-exit .aegis-boot-piece-c {
+    --aegis-piece-out-x: 56vw;
+    --aegis-piece-out-y: 48vh;
+}
+
+.aegis-boot-exit .aegis-boot-particles {
+    transition: opacity 820ms var(--aegis-boot-ease);
+    opacity: 0;
 }
 
 @keyframes aegisPieceInA {
-    from { opacity: 0; transform: translateY(-52px) scale(0.94); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
+    from { opacity: 0; transform: translateY(-24px); }
+    to { opacity: 1; transform: none; }
 }
 
 @keyframes aegisPieceInB {
-    from { opacity: 0; transform: translate(-46px, 34px) scale(0.94); }
-    to { opacity: 1; transform: translate(0, 0) scale(1); }
+    from { opacity: 0; transform: translate(-26px, 21px) rotate(-8deg); }
+    to { opacity: 1; transform: none; }
 }
 
 @keyframes aegisPieceInC {
-    from { opacity: 0; transform: translate(46px, 34px) scale(0.94); }
-    to { opacity: 1; transform: translate(0, 0) scale(1); }
+    from { opacity: 0; transform: translate(26px, 21px) rotate(8deg); }
+    to { opacity: 1; transform: none; }
+}
+
+@keyframes aegisCopyIn {
+    from { opacity: 0; transform: translateY(9px); }
+    to { opacity: 1; transform: none; }
+}
+
+@keyframes aegisLogoBreathe {
+    0%, 100% {
+        stroke: rgba(103, 179, 255, 0.84);
+        filter: drop-shadow(0 0 8px rgba(105, 183, 255, 0.28));
+    }
+    50% {
+        stroke: rgba(128, 211, 255, 1);
+        filter:
+            drop-shadow(0 0 9px rgba(105, 183, 255, 0.45))
+            drop-shadow(0 0 18px rgba(49, 165, 255, 0.24));
+    }
+}
+
+@keyframes aegisContentExit {
+    0%, 56% { opacity: 1; transform: translate(-50%, -52%) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -52%) scale(0.985); }
+}
+
+@keyframes aegisPieceOut {
+    0% { opacity: 1; transform: translate(0, 0) scale(1); }
+    100% { opacity: 0; transform: translate(var(--aegis-piece-out-x), var(--aegis-piece-out-y)) scale(0.86); }
 }
 
 @keyframes aegisBootExit {
+    0%, 60% {
+        opacity: 1;
+        filter: none;
+    }
     to {
         opacity: 0;
-        filter: blur(10px);
-        transform: scale(1.018);
+        filter: blur(1px);
     }
 }
 
 @media (prefers-reduced-motion: reduce) {
     .aegis-boot-piece,
+    .aegis-boot-piece path,
     .aegis-boot-title-mode .aegis-boot-piece-a,
     .aegis-boot-title-mode .aegis-boot-piece-b,
     .aegis-boot-title-mode .aegis-boot-piece-c,
-    .aegis-boot-exit {
+    .aegis-boot-begin,
+    .aegis-boot-exit,
+    .aegis-boot-exit .aegis-boot-content {
         animation: none;
     }
 
