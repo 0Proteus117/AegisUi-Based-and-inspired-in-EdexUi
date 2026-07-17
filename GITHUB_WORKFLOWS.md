@@ -1,5 +1,7 @@
 # GitHub workflows
 
+The active branch is `feature/systems-online-pass`.
+
 ## Repo health
 
 `Repo health` is the automatic workflow for normal development pushes and pull
@@ -58,3 +60,10 @@ Then open the development app and packaged app locally to validate:
 - calendar;
 - Project Timeline;
 - fullscreen map.
+
+## Red-check policy
+
+Historical false-red workflow runs may be deleted from GitHub Actions once the
+current automatic `Repo health` check is green and the run is known to be
+obsolete. This keeps the repository signal clean without hiding the current
+state.

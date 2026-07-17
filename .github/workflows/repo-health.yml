@@ -3,10 +3,15 @@ name: Repo health
 on:
   push:
     branches:
-      - master
       - feature/systems-online-pass
   pull_request:
+    branches:
+      - feature/systems-online-pass
   workflow_dispatch:
+
+concurrency:
+  group: repo-health-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -36,7 +41,5 @@ jobs:
 
       - name: Legacy test note
         run: |
-          echo "Skipping root npm test in automatic Repo health."
-          echo "The legacy test script performs a full prebuild plus Snyk scan,"
-          echo "which is not a lightweight repository health signal and can create"
-          echo "false red checks without local packaging credentials or Snyk auth."
+          echo "Repo health intentionally avoids DMG packaging, signing, notarization"
+          echo "and legacy Snyk/prebuild flows. Those are validated locally on macOS."

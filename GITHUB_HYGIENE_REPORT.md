@@ -1,109 +1,85 @@
 # GitHub hygiene report
 
-Phase: `v2.1.9 GitHub hygiene and workflow cleanup`
+Phase: repository cleanup after AegisUi/GearLab comparison
 
-## Repository state
+## GearLab reference
 
-- Working branch: `feature/github-hygiene-workflow-cleanup`
-- Main development branch: `feature/systems-online-pass`
-- Stable base commit: `2859c4a v2.1.8 release version bump`
-- Remote: `https://github.com/0Proteus117/AegisUi-Based-and-inspired-in-EdexUi.git`
+- Repository inspected read-only: `0Proteus117/aegis-gearlab`
+- Visibility: private
+- Default branch: `main`
+- Latest release observed: `Aegis GearLab 1.12.0`
+- Draft releases observed: none
+- Topics observed: `cad`, `cadquery`, `fastapi`, `gears`, `macos`,
+  `mechanical-engineering`, `opencascade`, `python`, `step`
+- Style notes: focused README, published release line, per-version reports,
+  architecture docs, validation reports and explicit honesty around unsupported
+  geometry.
+- Remote modifications applied to GearLab: none.
 
-## Workflows before cleanup
+## AegisUi state before cleanup
 
-- `Build packaged binaries`
-  - Active.
-  - Triggered on `push`, `pull_request` and `create`.
-  - Repeatedly failed on normal development pushes.
-  - Latest inspected failed run: `28709006724`.
-  - Observed root cause: legacy packaging workflow used deprecated GitHub
-    Actions (`actions/cache@v2`, `actions/upload-artifact@v2`) and attempted
-    cross-platform binary packaging on every push.
-- `CodeQL`
-  - Active.
-  - Runs on `master` only plus schedule.
+- Repository: `0Proteus117/AegisUi-Based-and-inspired-in-EdexUi`
+- Visibility: public
+- Default branch before cleanup: `master`
+- Active development branch: `feature/systems-online-pass`
+- Latest active commit inspected: `d8ff9be v2.2.8 sync manifest and isolation tests`
+- Open PRs before cleanup: 0
+- Draft releases before cleanup: 8
+- Historical false-red workflow runs before cleanup: present
 
-## Workflow actions applied
+## Problems found
 
-- Converted `Build packaged binaries` to manual-only `workflow_dispatch`.
-- Replaced automatic packaging jobs with a manual packaging preflight.
-- Added `Repo health` automatic workflow for push/PR lightweight checks.
-- Added `scripts/release-health-check.js`.
-- Added `scripts/run-regression-checks.js`.
-- Added `GITHUB_WORKFLOWS.md`.
+- GitHub default branch pointed to `master`, not the active AegisUi line.
+- README still opened with upstream GitSquared/eDEX badges, download links and
+  archived-project messaging.
+- Issue template still linked to GitSquared discussions.
+- Funding config still referenced upstream funding.
+- CodeQL workflow used old action versions and only watched `master`.
+- Duplicate draft releases cluttered the Releases page.
+- Historical failed packaging runs cluttered Actions with false red status.
 
-## Pull requests before cleanup
+## Actions applied in source
 
-Open PRs before: 7
+- Replaced README with a clean AegisUi-focused repository front page.
+- Added `REPOSITORY_POLICY.md`.
+- Modernized CodeQL workflow.
+- Kept `Build packaged binaries` manual-only.
+- Focused `Repo health` on the active branch.
+- Refreshed issue and PR templates.
+- Removed stale upstream funding config.
+- Updated this report and workflow documentation.
 
-- `#1 feat: native Apple Silicon (arm64) macOS build`
-- `#2 [codex] Modernize eDEX-UI for native Apple Silicon`
-- `#3 [codex] Create the first functional EdexUi-Eng dashboard`
-- `#4 [codex] Add Engineering Dashboard Sprint 1`
-- `#5 [codex] Add visual Project Control center`
-- `#6 [codex] Fix Calendar with native week and month views`
-- `#7 v1.4 Workspace architecture foundation`
+## Remote cleanup policy
 
-All were old v1.x development lines, conflicted/unstable/dirty relative to the
-current repository state, and are superseded by `feature/systems-online-pass`
-and later v2.x builds.
+Applied only to AegisUi:
 
-## Pull request actions applied
+- delete duplicate draft releases by release ID;
+- delete historical failed workflow runs once the latest Repo health run is
+  green;
+- update repository metadata/topics/default branch.
 
-Closed PRs: 7
+Not applied:
 
-Close comment used:
+- no GearLab changes;
+- no tag deletion;
+- no published release deletion;
+- no branch history rewrite.
 
-```text
-Closed as superseded by the current feature/systems-online-pass development
-line and later v2.x builds. Branches/tags are left intact; no source history
-is deleted.
-```
+## Expected final state
 
-Branches deleted: none.
+- Open PRs: 0
+- Duplicate drafts: 0
+- Latest automatic check: green Repo health
+- Packaging workflow: manual-only
+- Default branch: active AegisUi branch
+- README: AegisUi-branded, not upstream eDEX-branded
 
-## Releases before cleanup
+## Local validation
 
-Draft releases before: 8
-
-- duplicate draft `v1.1.0` entries;
-- duplicate draft `v1.2.0` entries;
-- duplicate draft `v1.3.0` entries;
-- duplicate draft `v2.2.8` entries.
-
-Published/pre-release historical builds were also present for:
-
-- `edexui-eng-v1.0.0`;
-- `edexui-eng-v1.1.0`;
-- `edexui-eng-v1.2.0`;
-- `edexui-eng-v1.3.0`.
-
-## Release actions applied
-
-Draft releases deleted: 0
-
-Reason:
-
-- every duplicate draft inspected had assets attached;
-- the cleanup rules explicitly avoid deleting release artifacts when there is
-  uncertainty or useful historical content;
-- no tags were touched.
-
-Tags touched: none.
-
-## Risks
-
-- Existing historical draft releases remain visible because they contain
-  assets.
-- Past failed workflow runs remain in GitHub history, but new normal pushes
-  should no longer run the old packaging workflow.
-- `Repo health` intentionally avoids DMG packaging and notarization.
-
-## Actions not applied
-
-- No tags deleted.
-- No release assets deleted.
-- No remote branches deleted.
-- No app feature code changed.
-- No map, Apple Music, calendar, Project Timeline, Assistant runtime or command
-  router code changed.
+- `node scripts/release-health-check.js`: OK
+- `node scripts/run-regression-checks.js`: expected local warning/fail in the
+  temporary clean clone because private bootstrap memory and AIS credentials are
+  intentionally not copied into `/tmp`.
+- Apple Music bridge static/runtime checks: OK inside the regression run.
+- Assistant/Ollama, ENG registry/router/calculators and GearLab isolation
+  checks: OK inside the regression run.

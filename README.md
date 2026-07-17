@@ -1,411 +1,206 @@
-<p align="center">
-  <br>
-  <img alt="Logo" src="media/logo.png">
-  <br><br>
-  <a href="https://lgtm.com/projects/g/GitSquared/edex-ui/context:javascript"><img alt="undefined" src="https://img.shields.io/lgtm/grade/javascript/g/GitSquared/edex-ui.svg?logo=lgtm&logoWidth=18"/></a>
-  <br>
-  <a href="https://github.com/GitSquared/edex-ui/releases/latest"><img alt="undefined" src="https://img.shields.io/github/release/GitSquared/edex-ui.svg?style=popout"></a>
-  <a href="#featured-in"><img alt="undefined" src="https://img.shields.io/github/downloads/GitSquared/edex-ui/total.svg?style=popout"></a>
-  <a href="https://github.com/GitSquared/edex-ui/blob/master/LICENSE"><img alt="undefined" src="https://img.shields.io/github/license/GitSquared/edex-ui.svg?style=popout"></a>
-  <br>
-  <a href="https://github.com/GitSquared/edex-ui/releases/download/v2.2.8/eDEX-UI-Windows.exe" target="_blank"><img alt="undefined" src="https://badgen.net/badge/Download/Windows/?color=blue&icon=windows&label"></a>
-  <a href="https://github.com/GitSquared/edex-ui/releases/download/v2.2.8/eDEX-UI-macOS.dmg" target="_blank"><img alt="undefined" src="https://badgen.net/badge/Download/macOS/?color=grey&icon=apple&label"></a>
-  <a href="https://github.com/GitSquared/edex-ui/releases/download/v2.2.8/eDEX-UI-Linux-x86_64.AppImage" target="_blank"><img alt="undefined" src="https://badgen.net/badge/Download/Linux64/?color=orange&icon=terminal&label"></a>
-  <a href="https://github.com/GitSquared/edex-ui/releases/download/v2.2.8/eDEX-UI-Linux-arm64-AppImage" target="_blank"><img alt="undefined" src="https://badgen.net/badge/Download/LinuxArm64/?color=orange&icon=terminal&label"></a>
-  <a href="https://aur.archlinux.org/packages/edex-ui" target="_blank"><img alt="undefined" src="https://badgen.net/badge/AUR/Package/cyan"></a>
-  <br>
-  <a href="https://github.com/GitSquared/edex-ui/releases/tag/v2.2.8"><strong><i>(Project archived oct. 18th 2021)</i></strong></a>
-  <br><br><br>
-</p>
+# AegisUi / EdexUi-Eng
 
-eDEX-UI is a fullscreen, cross-platform terminal emulator and system monitor that looks and feels like a sci-fi computer interface.
+Local-first macOS engineering cockpit based on the visual spirit of eDEX-UI.
 
-## EdexUi-Eng
+[![Repo health](https://github.com/0Proteus117/AegisUi-Based-and-inspired-in-EdexUi/actions/workflows/repo-health.yml/badge.svg?branch=feature%2Fsystems-online-pass)](https://github.com/0Proteus117/AegisUi-Based-and-inspired-in-EdexUi/actions/workflows/repo-health.yml)
+[![CodeQL](https://github.com/0Proteus117/AegisUi-Based-and-inspired-in-EdexUi/actions/workflows/codeql-analysis.yml/badge.svg?branch=feature%2Fsystems-online-pass)](https://github.com/0Proteus117/AegisUi-Based-and-inspired-in-EdexUi/actions/workflows/codeql-analysis.yml)
+![Platform](https://img.shields.io/badge/platform-macOS%20Apple%20Silicon-3BA7FF)
+![Local first](https://img.shields.io/badge/local--first-yes-7CCBFF)
+![Version](https://img.shields.io/badge/version-2.2.8-13263A)
 
-This branch is an engineering-focused Apple Silicon edition. It keeps the
-original system telemetry and visual language while replacing the touch
-keyboard and large terminal with:
+## Current status
 
-- a one-line engineering shell;
-- a local Situational Awareness map with TomTom/OSM base-map fallback, live
-  RainViewer precipitation radar, optional TomTom traffic and modular
-  real-provider layers for OpenSky air traffic, AISStream maritime traffic,
-  Open-Meteo Marine sea-state cells, CelesTrak satellite positions with local
-  SGP4 propagation and NOAA/NDBC ocean stations;
-- a native macOS Calendar panel with week and month views, recurring events
-  and a single calendar selector for every enabled iCloud, Outlook and
-  Exchange account;
-- Apple Music metadata, controls, progress, a playback-driven visualizer and
-  a local playlist launcher. The player also displays the current track
-  artwork directly from Music, with the existing cockpit animation as fallback;
-- a local-first Launch Bay game deck with a lightweight 3D carousel, hero
-  backdrop, manual game configuration and safe launch URLs;
-- a Developer Classic Deck that preserves the original eDEX-UI programming
-  spirit with terminal focus, Git status, detected npm scripts, project
-  structure and dependency/runtime health;
-- an Agent Command deck for human-controlled AI-agent coordination, with local
-  agent roles, prompt templates, permission levels and a central task board;
-- an ENG workspace specialized for engineering command work, with CAD/CAM,
-  CAE/simulation, manufacturing and 3D printing launchers, internal
-  calculators, material cards, research/standards references and Project
-  Timeline integration;
-- ENG quick calculators use cockpit-styled sliders, precision numeric inputs
-  and lightweight technical diagrams for gear ratio, beam deflection,
-  torque/power/RPM, material mass, unit conversion and thread references;
-- Aegis GearLab exists as a standalone local FastAPI/CadQuery tool under
-  `tools/aegis-gearlab/` for STEP-first gear generation experiments. It is not
-  loaded by the AegisUI renderer and is not integrated into ENG runtime in
-  v2.2.8;
-- a global Assistant Presence orb for the future Angie / Gustav assistant
-  system, with local-only visual states, Ares/Aphrodite public profiles,
-  Gustav/Angie private aliases, private local memory bootstrap status, panel
-  settings, expanded local written chat through Ollama, local conversational
-  memory and a safe allowlisted command router for reversible UI actions.
-  Voice, STT and TTS remain offline;
-- editable project timelines for engineering work, with a visual Project
-  Control popup for creating projects, managing milestones, changing status,
-  reordering steps and saving without manually editing JSON;
-- a launch grid containing the applications installed on the Mac.
+AegisUi is currently developed on `feature/systems-online-pass`.
 
-Version 1.8 adds a modular Command Deck with ten navigable workspaces:
+The app is packaged as `EdexUi-Eng` while the project identity migrates toward
+the AegisUi name. The stable local release line is `v2.2.x`.
 
-- `HUB` preserves this complete original dashboard;
-- `ENGINEER` / `ENG` provides a real engineering command deck with app
-  detection, CAD/CAM/CAE/manufacturing launchers, internal calculators,
-  materials, research, standards and Project Timeline status;
-- ENG calculator detail views include synchronized sliders, dark AegisUi inputs
-  and compact technical visuals instead of generic form controls.
-- `OSINT / ANALYST`, `STUDENT`, `ARTIST` and `BUSINESS` provide structured
-  foundations ready for profile-specific widgets and integrations.
-- `COMMS` centralizes safe launchers for WhatsApp Web, Slack, Teams, Discord,
-  Gmail, Outlook, LinkedIn, Instagram and X / Twitter, plus local communication
-  status and notification placeholders.
-- `LAUNCH BAY` adds a local-first game launcher foundation with a lightweight
-  3D carousel, manual `launch-bay-games.json` configuration and safe Steam or
-  launcher URLs.
-- `DEVELOPER` brings back the classic programming cockpit: terminal bridge,
-  read-only Git status, quick script launchers in safe placeholder mode, logs,
-  curated project structure and dependency/runtime health.
-- `AGENT COMMAND` adds a local-first control room for configurable programming
-  agents, task routing, prompts, permission levels and approval-first workflow
-  placeholders.
+## What it is
 
-The workspace bar supports mouse navigation, `Command + Option + 1…9` and
-`Command + Option + 0` for the tenth workspace.
-Changing workspace never recreates the HUB: its map, Calendar, Music and
-project state remain alive in the background. Non-HUB views are rendered only
-when first opened.
+AegisUi is a cockpit-style desktop environment for engineering work:
 
-GitHub hygiene note: automatic GitHub Actions now use the lightweight
-`Repo health` workflow. macOS DMG packaging remains a manual/local release
-step because Apple Silicon packaging, ad-hoc signing and Music.app Automation
-identity are environment-sensitive. See [GITHUB_WORKFLOWS.md](GITHUB_WORKFLOWS.md).
+- HUB dashboard with live map, Calendar, Project Timeline, Apple Music,
+  Applications grid and status panels.
+- ENG workspace with CAD/CAM/CAE launchers, manufacturing tools, internal
+  engineering calculators, materials, standards and research references.
+- Live systems map with TomTom traffic, AISStream maritime traffic,
+  RainViewer radar, Open-Meteo Marine conditions and CelesTrak SAT support.
+- Assistant presence layer with Angie/Gustav/Ares/Aphrodite profiles,
+  local Ollama written chat, private local memory bootstrap and a safe
+  allowlisted command router.
+- Local Apple Music bridge through direct Music.app Automation. It does not use
+  System Events and it keeps failures isolated inside the Music panel.
+- Standalone Aegis GearLab research module under `tools/aegis-gearlab/`.
+  GearLab is intentionally isolated from the AegisUi renderer in this release.
 
-Workspace content is defined in
-`src/config/workspaces.config.js`, while rendering and navigation live in
-`src/classes/workspaceManager.class.js`. This keeps profile configuration out
-of the existing HUB components and makes future widgets incremental. The
-professional-profile research, priorities and safety boundaries are documented
-in [WORKSPACE_RESEARCH.md](WORKSPACE_RESEARCH.md).
+## Stable systems
 
-Calendar and Apple Music remain disconnected until their panel button is
-pressed. Calendar requests local read-only EventKit access; Music requests
-Automation access and reports whether Music.app is running, connected, blocked
-by permission or unavailable. Music control uses direct local Music.app
-Automation through the app's stable bundle identity and does not depend on
-System Events. The playlist column is a cached local launcher index; `CONNECTED`
-is shown only when a live Music.app call succeeds. Weather radar and Marine
-Weather need no key.
-Real-time road traffic can be enabled from the map's `API KEY` button with a
-TomTom key; the base map can fall back to OSM if TomTom is unavailable. Air,
-maritime AIS, marine weather, satellite and ocean map layers stay fully idle
-until their toggles are enabled. SEA/AISStream now defaults to current-view or
-controlled maritime presets instead of a normal global firehose. The map's `⚙`
-settings button controls layer toggles, SAT CelesTrak groups, density caps,
-provider limits, SEA refresh/marker preferences, base-map fallback, radar
-opacity, expanded-map behavior, local UI sounds and location fallback behavior
-without storing API keys.
+| System | Status |
+| --- | --- |
+| HUB | Stable |
+| ENG workspace | Stable |
+| ENG calculators | Stable |
+| Apple Music | Local Music.app bridge |
+| Map / Traffic / AIS / Radar / Marine / SAT | Live providers with local fallbacks |
+| Calendar | Local macOS integration |
+| Project Timeline | Local JSON state |
+| Assistant / Ollama | Local written chat |
+| Command router | Safe allowlist only |
+| DMG packaging | Local macOS build path |
 
-The dashboard creates private configuration files inside the EdexUi-Eng
-application-data folder. They are never committed to GitHub:
+## Workspaces
 
-- `projects.json` contains the project timelines and supports the states
-  `pending`, `active`, `complete` and `blocked`. Project Control manages this
-  file automatically and keeps a local `projects.backup.json` safety copy.
-- `music-playlists.json` contains Apple Music playlist names. Clicking a name
-  starts that playlist without bringing Music to the foreground.
-- `map-layers.json` contains Local Situation layer preferences such as enabled
-  map overlays and layer modes, including Marine Weather. It never stores API
-  keys.
-- `launch-bay-games.json` contains the manual local game library for Launch
-  Bay. It stores titles, launcher URLs and local artwork paths, but no tokens.
-- `developer-deck.json` contains the active project path, favorite script names
-  and display limits for DEVELOPER. It does not store secrets, tokens or
-  credentials.
-- `agent-command.json` contains local agent definitions, task-board items,
-  prompt templates and placeholder output. It must not contain API keys,
-  tokens, `.env` contents or private histories.
+The top command rail exposes:
 
-The Engineering Dashboard uses a restrained blue cockpit palette:
-`#3BA7FF`, `#7CCBFF`, `#13263A`, `#070B10`, `#101820` and `#24445F`.
+1. HUB
+2. ENG
+3. OSINT
+4. STUD
+5. ART
+6. BUS
+7. COMMS
+8. BAY
+9. DEV
+0. AGENT
 
-## AegisUi status
+HUB stays alive while workspaces change. Non-HUB workspaces render only when
+opened.
 
-This fork is now being prepared as **AegisUi**, a local-first Engineering
-Cockpit based on eDEX-UI. The current package and bundle name is still
-`EdexUi-Eng` to avoid a risky rename during the security/offline hardening
-phase.
+## ENG workspace
 
-Current stable foundation:
+ENG is the engineering command deck:
 
-- HUB dashboard with map, traffic, radar, Calendar, Music, projects and apps;
-- workspaces for HUB, ENGINEER, OSINT / ANALYST, STUDENT, ARTIST, BUSINESS,
-  COMMS, LAUNCH BAY, DEVELOPER and AGENT COMMAND;
-- Apple Silicon macOS build path;
-- local JSON project timelines and playlists;
-- optional online services with graceful fallback where configured.
+- CAD/CAM/design launchers.
+- CAE/simulation references.
+- Manufacturing and 3D printing tools.
+- Unit, torque/power/RPM, gear ratio, beam deflection, material mass and
+  thread/drill calculators.
+- Material quick cards.
+- Standards and research links.
+- Project Timeline integration.
 
-Security/offline documentation:
+See [ENG_WORKSPACE.md](ENG_WORKSPACE.md) and [WORKSPACES.md](WORKSPACES.md).
 
-- [CONFIGURATION.md](CONFIGURATION.md) explains local data, API keys, export
-  and import.
-- [OFFLINE_MODE.md](OFFLINE_MODE.md) classifies each module as offline or
-  online and describes expected fallback behavior.
-- [MAP_LAYERS.md](MAP_LAYERS.md) documents the Situational Awareness map layer
-  architecture, states, providers, privacy and performance rules.
-- [COMMS_DECK.md](COMMS_DECK.md) documents the COMMS launcher foundation,
-  WhatsApp safety boundaries and future official API options.
-- [GAME_DECK.md](GAME_DECK.md) documents Launch Bay, manual game configuration,
-  safe launch URLs and future platform/artwork integrations.
-- [DEVELOPER_DECK.md](DEVELOPER_DECK.md) documents the classic developer
-  workspace, local configuration, script safety boundaries and future terminal
-  improvements.
-- [AGENT_COMMAND_DECK.md](AGENT_COMMAND_DECK.md) documents the agent command
-  room, roles, permissions, task board, approval flow and future AI integration
-  boundaries.
-- [ASSISTANT_SYSTEM.md](ASSISTANT_SYSTEM.md) documents the Assistant Presence
-  orb, states, aliases, local settings, voice safety and local text bridge.
-- [ASSISTANT_LOCAL_AI.md](ASSISTANT_LOCAL_AI.md) documents the local Ollama
-  written-chat setup, model check, reliability diagnostics and safety
-  boundaries.
-- [ASSISTANT_PERSONALITY.md](ASSISTANT_PERSONALITY.md) documents the local
-  Gustav/Angie and Ares/Aphrodite personality split.
-- [ASSISTANT_AUTHORITY_MATRIX.md](ASSISTANT_AUTHORITY_MATRIX.md) defines the
-  future assistant permission levels from observe-only to blocked actions.
-- [WORKSPACE_NAVIGATION.md](WORKSPACE_NAVIGATION.md) documents the scalable
-  pinned-HUB plus compact workspace rail navigation decision.
-- [MOCK_TO_REAL_AUDIT.md](MOCK_TO_REAL_AUDIT.md) inventories mockups,
-  placeholders and recommended activation order.
-- [INTEGRATIONS.md](INTEGRATIONS.md) tracks real integrations, launchers,
-  optional APIs, system integrations, AI boundaries and fallback states.
-- [SECURITY.md](SECURITY.md) documents the current security posture and known
-  Electron hardening work.
-- [CHANGELOG.md](CHANGELOG.md) tracks the AegisUi/EdexUi-Eng fork changes.
+## Assistant
 
-## Running on another Mac
+The assistant layer is local-first:
 
-The intended portable flow is:
+- Gustav: dry, technical, private profile.
+- Angie: warm, present, private profile.
+- Ares: public tactical profile.
+- Aphrodite: public warm/elegant profile.
 
-1. Install the Xcode command line tools and Node.js matching `.nvmrc`.
-2. Clone this repository.
-3. Run `npm ci`.
-4. Run `cd src && npm ci && cd ..`.
-5. Copy `.env.example` to `.env` only if you want private local API keys.
-6. Add your own `TOMTOM_API_KEY` or compatible TomTom alias if you want TomTom
-   base tiles and live TomTom traffic. Air, satellite, marine weather and ocean
-   layers can run without keys; maritime AIS requires `AISSTREAM_API_KEY` if
-   you want live vessel data.
-7. Run `npm run start`.
+Current capabilities:
 
-The app should still open without any API key. In that case:
+- visual orb and HUD panel;
+- local written chat through Ollama;
+- local conversation memory in userData;
+- private bootstrap memory support;
+- safe UI command router.
 
-- projects, Project Control, workspaces, terminal, system telemetry,
-  applications, Calendar and Apple Music integrations remain local;
-- radar, live map tiles, traffic and update checks degrade when the network or
-  a service is unavailable;
-- traffic clearly reports that the API key is missing instead of crashing.
+Not connected yet:
 
-To locate local data:
+- voice;
+- STT;
+- TTS;
+- Apple Native provider;
+- arbitrary shell or destructive commands.
+
+See [ASSISTANT_SYSTEM.md](ASSISTANT_SYSTEM.md),
+[ASSISTANT_LOCAL_AI.md](ASSISTANT_LOCAL_AI.md),
+[ASSISTANT_MEMORY.md](ASSISTANT_MEMORY.md) and
+[ASSISTANT_COMMAND_ROUTER.md](ASSISTANT_COMMAND_ROUTER.md).
+
+## Local setup
+
+Requirements:
+
+- macOS on Apple Silicon for the validated app path.
+- Node.js matching `.nvmrc`.
+- Xcode command line tools.
+- Ollama only if using local Assistant chat.
+
+Install:
 
 ```sh
-npm run config:where
+npm ci
+cd src && npm ci && cd ..
 ```
 
-To export user configuration without API keys, tokens or secrets:
+Run:
 
 ```sh
-npm run config:export -- --out ./aegisui-config-export.json
+npm run start
 ```
 
-To import that export on another Mac:
+Optional local secrets belong in `.env.local` and must never be committed.
+See [.env.example](.env.example) and [CONFIGURATION.md](CONFIGURATION.md).
+
+## Validation
+
+Lightweight repo checks:
 
 ```sh
-npm run config:import -- --from ./aegisui-config-export.json
+node scripts/release-health-check.js
+node scripts/run-regression-checks.js
 ```
 
-API keys are intentionally not exported. Configure them separately with a
-private `.env` file or through the in-app traffic key control.
+Provider-specific checks are available under `scripts/`.
 
----
+## GitHub workflows
 
-<a href="https://youtu.be/BGeY1rK19zA">
-  <img align="right" width="400" alt="Demo on YouTube" src="media/youtube-demo-teaser.gif">
-</a>
+- `Repo health` runs automatically on `feature/systems-online-pass` pushes and
+  pull requests.
+- `CodeQL` runs on the active AegisUi branch and weekly schedule.
+- `Build packaged binaries` is manual-only. DMGs are generated locally because
+  Apple Silicon packaging, ad-hoc signing and Music.app Automation identity are
+  environment-sensitive.
 
-Heavily inspired from the [TRON Legacy movie effects](https://web.archive.org/web/20170511000410/http://jtnimoy.com/blogs/projects/14881671) (especially the [Board Room sequence](https://gmunk.com/TRON-Board-Room)), the eDEX-UI project was originally meant to be *"[DEX-UI](https://github.com/seenaburns/dex-ui) with less « art » and more « distributable software »"*.
+See [GITHUB_WORKFLOWS.md](GITHUB_WORKFLOWS.md).
 
-While keeping a futuristic look and feel, it strives to maintain a certain level of functionality and to be usable in real-life scenarios, with the larger goal of bringing science-fiction UXs to the mainstream.
+## Local/private data
 
-<br>
+The app creates local userData files for projects, playlists, Assistant memory,
+conversation history, map preferences and app configuration.
 
-It might or might not be a joke taken too seriously.
+These are intentionally ignored:
 
+- `.env`, `.env.local`;
+- `assistant/memory/private/`;
+- `assistant/chat/`;
+- generated DMGs/zips;
+- audio/model/sample files;
+- GearLab venvs and generated exports.
 
----
+See [SECURITY.md](SECURITY.md) and [CONFIGURATION.md](CONFIGURATION.md).
 
-<p align="center">
-  <em>Jump to: <br><a href="#features">Features</a> — <a href="#screenshots">Screenshots</a> — <a href="#qa">Questions & Answers</a> — <strong><a href="#how-do-i-get-it">Download</a></strong> — <a href="#featured-in">Featured In</a> — <a href="#useful-commands-for-the-nerds">Contributor Instructions</a> — <a href="#credits">Credits</a></em>
-</p>
+## Documentation index
 
-## Sponsor
+- [CHANGELOG.md](CHANGELOG.md)
+- [CONFIGURATION.md](CONFIGURATION.md)
+- [GITHUB_WORKFLOWS.md](GITHUB_WORKFLOWS.md)
+- [ENG_WORKSPACE.md](ENG_WORKSPACE.md)
+- [WORKSPACES.md](WORKSPACES.md)
+- [MAP_LAYERS.md](MAP_LAYERS.md)
+- [MAP_PROVIDER_HARDENING.md](MAP_PROVIDER_HARDENING.md)
+- [APPLE_MUSIC.md](APPLE_MUSIC.md)
+- [ASSISTANT_SYSTEM.md](ASSISTANT_SYSTEM.md)
+- [ASSISTANT_LOCAL_AI.md](ASSISTANT_LOCAL_AI.md)
+- [ASSISTANT_MEMORY.md](ASSISTANT_MEMORY.md)
+- [ASSISTANT_COMMAND_ROUTER.md](ASSISTANT_COMMAND_ROUTER.md)
+- [INTEGRATIONS.md](INTEGRATIONS.md)
+- [OFFLINE_MODE.md](OFFLINE_MODE.md)
+- [SECURITY.md](SECURITY.md)
 
-**Want to help support my open-source experiments and learn some cool JavaScript tricks at the same time?**
+## Project policy
 
-Click the banner below and sign up to **Bytes**, the only newsletter cool enough to be recommended by eDEX-UI.
+AegisUi does not present fake live systems as real functionality. Live modules
+must either use real providers, local data, or show an explicit offline/blocked
+state. Packaging and release artifacts must be validated locally before being
+published.
 
-[![Bytes by UI.dev](media/sponsor-uidev-bytes.jpg)](https://ui.dev/bytes/?r=gabriel)
+See [REPOSITORY_POLICY.md](REPOSITORY_POLICY.md).
 
-## Features
-- Fully featured terminal emulator with tabs, colors, mouse events, and support for `curses` and `curses`-like applications.
-- Real-time system (CPU, RAM, swap, processes) and network (GeoIP, active connections, transfer rates) monitoring.
-- Full support for touch-enabled displays, including an on-screen keyboard.
-- Directory viewer that follows the CWD (current working directory) of the terminal.
-- Advanced customization using themes, on-screen keyboard layouts, CSS injections. See the [wiki](https://github.com/GitSquared/edex-ui/wiki) for more info.
-- Optional sound effects made by a talented sound designer for maximum hollywood hacking vibe.
+## License
 
-## Screenshots
-![Default screenshot](media/screenshot_default.png)
-
-_[neofetch](https://github.com/dylanaraps/neofetch) on eDEX-UI 2.2 with the default "tron" theme & QWERTY keyboard_
-
-![Blade screenshot](media/screenshot_blade.png)
-
-_Checking out available themes in [eDEX's config dir](https://github.com/GitSquared/edex-ui/wiki/userData) with [`ranger`](https://github.com/ranger/ranger) on eDEX-UI 2.2 with the "blade" theme_
-
-![Disrupted screenshot](media/screenshot_disrupted.png)
-
-_[cmatrix](https://github.com/abishekvashok/cmatrix) on eDEX-UI 2.2 with the experimental "tron-disrupted" theme, and the user-contributed DVORAK keyboard_
-
-![Horizon screenshot](media/screenshot_horizon.png)
-
-_Editing eDEX-UI source code with `nvim` on eDEX-UI 2.2 with the custom [`horizon-full`](https://github.com/GitSquared/horizon-edex-theme) theme_
-
-## Q&A
-#### How do I get it?
-Click on the little badges under the eDEX logo at the top of this page, or go to the [Releases](https://github.com/GitSquared/edex-ui/releases) tab, or download it through [one of the available repositories](https://repology.org/project/edex-ui/versions) (Homebrew, AUR...).
-
-Public release binaries are unsigned ([why](https://gaby.dev/posts/code-signing)). On Linux, you will need to `chmod +x` the AppImage file in order to run it.
-#### I have a problem!
-Search through the [Issues](https://github.com/GitSquared/edex-ui/issues) to see if yours has already been reported. If you're confident it hasn't been reported yet, feel free to open up a new one. If you see your issue and it's been closed, it probably means that the fix for it will ship in the next version, and you'll have to wait a bit.
-#### Can you disable the keyboard/the filesystem display?
-You can't disable them (yet) but you can hide them. See the `tron-notype` theme.
-#### Why is the file browser saying that "Tracking Failed"? (Windows only)
-On Linux and macOS, eDEX tracks where you're going in your terminal tab to display the content of the current folder on-screen.
-Sadly, this is technically impossible to do on Windows right now, so the file browser reverts back to a "detached" mode. You can still use it to browse files & directories and click on files to input their path in the terminal.
-#### Can this run on a Raspberry Pi / ARM device?
-We provide prebuilt arm64 builds. For other platforms, see [this issue comment](https://github.com/GitSquared/edex-ui/issues/313#issuecomment-443465345), and the thread on issue [#818](https://github.com/GitSquared/edex-ui/issues/818).
-#### Is this repo actively maintained?
-No, after a 3 years run, this project has been archived. See the [announcement](https://github.com/GitSquared/edex-ui/releases/tag/v2.2.8).
-#### How did you make this?
-Glad you're interested! See [#272](https://github.com/GitSquared/edex-ui/issues/272).
-#### This is so cool.
-Thanks! If you feel like it, you can [follow me on Twitter](https://gaby.dev/twitter) to hear about new stuff I'm making.
-
-<img width="220" src="https://78.media.tumblr.com/35d4ef4447e0112f776b629bffd99188/tumblr_mk4gf8zvyC1s567uwo1_500.gif" />
-
-
-## Featured in...
-- [Linux Uprising Blog](https://www.linuxuprising.com/2018/11/edex-ui-fully-functioning-sci-fi.html)
-- [My post on r/unixporn](https://www.reddit.com/r/unixporn/comments/9ysbx7/oc_a_little_project_that_ive_been_working_on/)
-- [Korben article (in french)](https://korben.info/une-interface-futuriste-pour-vos-ecrans-tactiles.html)
-- [Hacker News](https://news.ycombinator.com/item?id=18509828)
-- [This tweet that made me smile](https://twitter.com/mikemaccana/status/1065615451940667396)
-- [BoingBoing article](https://boingboing.net/2018/11/23/simulacrum-sf.html) - Apparently i'm a "French hacker"
-- [OReilly 4 short links](https://www.oreilly.com/ideas/four-short-links-23-november-2018)
-- [Hackaday](https://hackaday.com/2018/11/23/look-like-a-movie-hacker/)
-- [Developpez.com (another french link)](https://www.developpez.com/actu/234808/Une-application-de-bureau-ressemble-a-une-interface-d-ordinateur-de-science-fiction-inspiree-des-effets-du-film-TRON-Legacy/)
-- [GitHub Blog's Release Radar November 2018](https://blog.github.com/2018-12-21-release-radar-november-2018/)
-- [opensource.com Productive Tools for 2019](https://opensource.com/article/19/1/productivity-tool-edex-ui)
-- [O'Reilly 4 short links (again)](https://www.oreilly.com/radar/four-short-links-7-july-2020/)
-- [LinuxLinks](https://www.linuxlinks.com/linux-candy-edex-ui-sci-fi-computer-terminal-emulator-system-monitor/)
-- [Linux For Everyone (Youtube)](https://www.youtube.com/watch?v=gbzqCAjm--g)
-- [BestOfJS Rising Stars 2020](https://risingstars.js.org/2020/en#edex-ui)
-- [The Geek Freaks (Youtube/German)](https://youtu.be/TSjMIeLG0Sk)
-- [JSNation Open Source Awards 2021](https://osawards.com/javascript/#nominees) (Nominee - Fun Side Project of the Year)
-
-
-## Useful commands for the nerds
-
-**IMPORTANT NOTE:** the following instructions are meant for running eDEX from the latest unoptimized, unreleased, development version. If you'd like to get stable software instead, refer to [these](#how-do-i-get-it) instructions.
-
-#### Starting from source:
-on Linux:
-- clone the repository
-- `npm run install-linux`
-- `npm run start`
-
-on macOS (Apple Silicon — M1 or newer — requires Node.js 24 and the Xcode command line tools):
-- clone the repository
-- `npm run install-darwin`
-- `npm run start`
-
-on Windows:
-- start cmd or powershell **as administrator**
-- clone the repository
-- `npm run install-windows`
-- `npm run start`
-
-#### Building
-Note: Due to native modules, you can only build targets for the host OS you are using.
-
-- `npm ci` (NOT `install-linux`, `install-darwin`, or `install-windows`)
-- `npm run build-linux` or `build-windows` or `build-darwin`
-
-The script will minify the source code, recompile native dependencies and create distributable assets in the `dist` folder.
-
-##### Apple Silicon notes
-This fork targets **arm64 macOS natively** (no x64 / Rosetta build is produced)
-and generates both `.dmg` and `.zip` artifacts. Builds use an ad-hoc local
-signature, but are not notarized by Apple. If Gatekeeper blocks the first
-launch, right-click the application and choose **Open**, or clear the quarantine
-attribute once after dragging `eDEX-UI.app` to `/Applications`:
-
-```
-xattr -cr /Applications/eDEX-UI.app
-```
-
-If you need an Intel build, run the build on
-an x64 host or revert `build.mac.target[0].arch` in `package.json` to `"x64"`.
-
-#### Getting the bleeding edge
-If you're interested in running the latest in-development version but don't want to compile source code yourself, get the pre-built artifacts from [this fork's GitHub Actions](https://github.com/0Proteus117/edex-ui-fan-update-Apple-Silicon-/actions): click the latest successful run and download the macOS ARM64 artifact.
-
-## Credits
-eDEX-UI's source code was primarily written by me, [Squared](https://github.com/GitSquared). If you want to get in touch with me or find other projects I'm involved in, check out [my website](https://gaby.dev).
-
-[PixelyIon](https://github.com/PixelyIon) helped me get started with Windows compatibility and offered some precious advice when I started to work on this project seriously.
-
-[IceWolf](https://soundcloud.com/iamicewolf) composed the sound effects on v2.1.x and above. He makes really cool stuff, check out his music!
-
-## Thanks
-Of course, eDEX would never have existed if I hadn't stumbled upon the amazing work of [Seena](https://github.com/seenaburns) on [r/unixporn](https://reddit.com/r/unixporn).
-
-This project uses a bunch of open-source libraries, frameworks and tools, see [the full dependency graph](https://github.com/GitSquared/edex-ui/network/dependencies).
-
-I want to namely thank the developers behind [xterm.js](https://github.com/xtermjs/xterm.js), [systeminformation](https://github.com/sebhildebrandt/systeminformation) and [SmoothieCharts](https://github.com/joewalnes/smoothie).
-
-Huge thanks to [Rob "Arscan" Scanlon](https://github.com/arscan) for making the fantastic [ENCOM Globe](https://github.com/arscan/encom-globe), also inspired by the TRON: Legacy movie, and distributing it freely. His work really puts the icing on the cake.
-
-## Licensing
-
-Licensed under the [GPLv3.0](https://github.com/GitSquared/edex-ui/blob/master/LICENSE).
+This fork keeps the upstream eDEX-UI GPL-3.0 license. See [LICENSE](LICENSE).
