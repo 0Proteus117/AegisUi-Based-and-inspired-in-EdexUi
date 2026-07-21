@@ -1,0 +1,195 @@
+@font-face {
+    font-family: "Orbitron Aegis Boot";
+    src: url("../fonts/Orbitron%5Bwght%5D.ttf") format("truetype");
+    font-style: normal;
+    font-weight: 400 900;
+    font-display: block;
+}
+
+section#boot_screen.aegis-boot-screen {
+    --aegis-boot-bg: #12161d;
+    --aegis-boot-bg-soft: #202730;
+    --aegis-boot-ink: #f3f7fb;
+    --aegis-boot-cyan: #79cfff;
+    --aegis-boot-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+    position: fixed;
+    inset: 0;
+    z-index: 9999999;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    margin: 0;
+    overflow: hidden;
+    display: grid;
+    place-items: center;
+    background: radial-gradient(80% 80% at 50% 48%, rgba(48, 57, 69, 0.98) 0%, var(--aegis-boot-bg) 50%, var(--aegis-boot-bg-soft) 100%);
+    background-color: #12161d;
+    color: var(--aegis-boot-ink);
+    font-family: var(--font_main), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    text-align: center;
+    isolation: isolate;
+    color-scheme: dark;
+}
+
+section#boot_screen.aegis-boot-screen[data-theme="light"] {
+    --aegis-boot-bg: #f7f9fe;
+    --aegis-boot-bg-soft: #edf4ff;
+    --aegis-boot-ink: #102441;
+    --aegis-boot-cyan: #20a9dc;
+    background: radial-gradient(80% 80% at 50% 48%, #ffffff 0%, var(--aegis-boot-bg) 50%, var(--aegis-boot-bg-soft) 100%);
+    color-scheme: light;
+}
+
+section#boot_screen.aegis-boot-screen::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background: linear-gradient(rgba(140, 190, 230, 0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(140, 190, 230, 0.025) 1px, transparent 1px);
+    background-size: 46px 46px;
+    opacity: 0.38;
+    mask-image: radial-gradient(circle at 50% 48%, rgba(0, 0, 0, 0.9), transparent 82%);
+}
+
+.aegis-boot-screen .aegis-boot-particles,
+.aegis-boot-screen .aegis-boot-glow,
+.aegis-boot-screen .aegis-boot-content,
+.aegis-boot-screen .aegis-boot-skip { position: absolute; }
+
+.aegis-boot-screen .aegis-boot-particles {
+    inset: 0;
+    z-index: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    opacity: 1 !important;
+    transform: translateZ(0);
+}
+
+.aegis-boot-screen .aegis-boot-glow {
+    z-index: 0;
+    width: 48vmax;
+    height: 48vmax;
+    border-radius: 50%;
+    filter: blur(32px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 1850ms var(--aegis-boot-ease);
+}
+.aegis-boot-screen.aegis-boot-network-mode .aegis-boot-glow { opacity: 0.24; }
+.aegis-boot-screen .aegis-boot-glow-a { background: radial-gradient(circle, rgba(157, 168, 188, 0.18), transparent 68%); transform: translate(-30%, -10%); }
+.aegis-boot-screen .aegis-boot-glow-b { background: radial-gradient(circle, rgba(100, 180, 244, 0.16), transparent 67%); transform: translate(35%, 28%); }
+
+.aegis-boot-screen .aegis-boot-content {
+    z-index: 3;
+    top: 50%;
+    left: 50%;
+    display: grid;
+    justify-items: center;
+    gap: clamp(16px, 2.4vh, 28px);
+    width: min(80vw, 720px);
+    padding: 40px;
+    transform: translate(-50%, -52%) scale(0.985);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 720ms var(--aegis-boot-ease), transform 860ms var(--aegis-boot-ease);
+}
+.aegis-boot-screen.aegis-boot-title-mode .aegis-boot-content { opacity: 1; transform: translate(-50%, -52%) scale(1); }
+
+.aegis-boot-screen .aegis-boot-mark-wrap {
+    width: clamp(118px, 15vw, 220px);
+    aspect-ratio: 220 / 190;
+    display: grid;
+    place-items: center;
+    filter: drop-shadow(0 18px 18px rgba(27, 85, 159, 0.12));
+    position: relative;
+    z-index: 3;
+    transform: translateZ(0);
+}
+.aegis-boot-screen .aegis-boot-mark { width: 100%; height: auto; overflow: visible; }
+.aegis-boot-screen .aegis-boot-piece { transform-origin: 110px 94.2px; }
+.aegis-boot-screen .aegis-boot-piece path {
+    fill: #17222f;
+    stroke: rgba(103, 179, 255, 0.94);
+    stroke-width: 3.1;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
+    filter: drop-shadow(0 0 9px rgba(105, 183, 255, 0.34)) drop-shadow(0 0 16px rgba(49, 165, 255, 0.12));
+}
+section#boot_screen.aegis-boot-screen[data-theme="light"] .aegis-boot-piece path { fill: #fafdff; stroke: rgba(34, 117, 212, 0.86); filter: drop-shadow(0 0 8px rgba(32, 169, 220, 0.26)); }
+.aegis-boot-screen.aegis-boot-title-mode .aegis-boot-piece-a { animation: aegisPieceInA 860ms 40ms both var(--aegis-boot-ease); }
+.aegis-boot-screen.aegis-boot-title-mode .aegis-boot-piece-b { animation: aegisPieceInB 860ms 110ms both var(--aegis-boot-ease); }
+.aegis-boot-screen.aegis-boot-title-mode .aegis-boot-piece-c { animation: aegisPieceInC 860ms 180ms both var(--aegis-boot-ease); }
+.aegis-boot-screen.aegis-boot-title-mode:not(.aegis-boot-exit) .aegis-boot-mark-wrap { animation: aegisMarkBreathingField 2500ms ease-in-out 900ms infinite; }
+.aegis-boot-screen.aegis-boot-title-mode:not(.aegis-boot-exit) .aegis-boot-piece path { animation: aegisLogoBreathe 2500ms ease-in-out 900ms infinite; }
+
+.aegis-boot-screen .aegis-boot-copy { display: grid; gap: 13px; position: relative; z-index: 6; }
+.aegis-boot-screen .aegis-boot-welcome,
+.aegis-boot-screen .aegis-boot-begin { margin: 0; text-align: center; font-family: "Orbitron Aegis Boot", var(--font_main), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+.aegis-boot-screen .aegis-boot-welcome {
+    max-width: min(80vw, 650px);
+    color: var(--aegis-boot-ink);
+    font-size: clamp(14px, 1.35vw, 20px);
+    font-weight: 500;
+    line-height: 1.6;
+    letter-spacing: 0.052em;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 900ms var(--aegis-boot-ease), transform 900ms var(--aegis-boot-ease);
+}
+.aegis-boot-screen .aegis-boot-begin {
+    color: var(--aegis-boot-cyan);
+    font-size: clamp(17px, 1.7vw, 25px);
+    font-weight: 650;
+    letter-spacing: 0.18em;
+    text-shadow: 0 0 16px rgba(55, 177, 255, 0.4);
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 720ms var(--aegis-boot-ease), transform 720ms var(--aegis-boot-ease);
+}
+.aegis-boot-screen .aegis-boot-copy-line-visible { opacity: 1; transform: none; }
+
+.aegis-boot-screen .aegis-boot-skip {
+    z-index: 4;
+    right: clamp(18px, 3vw, 44px);
+    bottom: clamp(18px, 3vw, 38px);
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: rgba(223, 235, 248, 0.68);
+    font: 500 11px/1 "Orbitron Aegis Boot", var(--font_main), sans-serif;
+    letter-spacing: 0.12em;
+    padding: 12px 14px;
+    cursor: pointer;
+}
+.aegis-boot-screen .aegis-boot-skip:hover,
+.aegis-boot-screen .aegis-boot-skip:focus-visible { background: rgba(46, 98, 212, 0.1); color: var(--aegis-boot-ink); outline: 2px solid rgba(32, 169, 220, 0.42); outline-offset: 2px; }
+
+.aegis-boot-screen.aegis-boot-exit { opacity: 1; filter: none; }
+.aegis-boot-screen.aegis-boot-exit .aegis-boot-content { animation: aegisContentExit 2000ms var(--aegis-boot-ease) forwards; }
+.aegis-boot-screen.aegis-boot-exit .aegis-boot-piece { animation: aegisPieceOut 2000ms cubic-bezier(0.16, 0.84, 0.22, 1) forwards; }
+.aegis-boot-screen.aegis-boot-exit .aegis-boot-piece-a { --aegis-piece-out-x: 0; --aegis-piece-out-y: -62vh; }
+.aegis-boot-screen.aegis-boot-exit .aegis-boot-piece-b { --aegis-piece-out-x: -56vw; --aegis-piece-out-y: 48vh; }
+.aegis-boot-screen.aegis-boot-exit .aegis-boot-piece-c { --aegis-piece-out-x: 56vw; --aegis-piece-out-y: 48vh; }
+
+@keyframes aegisPieceInA { from { opacity: 0; transform: translateY(-24px); } to { opacity: 1; transform: none; } }
+@keyframes aegisPieceInB { from { opacity: 0; transform: translate(-26px, 21px) rotate(-8deg); } to { opacity: 1; transform: none; } }
+@keyframes aegisPieceInC { from { opacity: 0; transform: translate(26px, 21px) rotate(8deg); } to { opacity: 1; transform: none; } }
+@keyframes aegisLogoBreathe {
+    0%, 100% { stroke: rgba(103, 179, 255, 0.84); stroke-width: 3.05; filter: drop-shadow(0 0 8px rgba(105, 183, 255, 0.28)) drop-shadow(0 0 15px rgba(49, 165, 255, 0.1)); }
+    50% { stroke: rgba(128, 211, 255, 1); stroke-width: 3.55; filter: drop-shadow(0 0 12px rgba(128, 211, 255, 0.58)) drop-shadow(0 0 28px rgba(49, 165, 255, 0.36)) drop-shadow(0 0 44px rgba(49, 165, 255, 0.14)); }
+}
+@keyframes aegisMarkBreathingField {
+    0%, 100% { filter: drop-shadow(0 18px 18px rgba(27, 85, 159, 0.12)) drop-shadow(0 0 8px rgba(105, 183, 255, 0.16)); }
+    50% { filter: drop-shadow(0 18px 20px rgba(27, 85, 159, 0.2)) drop-shadow(0 0 22px rgba(105, 183, 255, 0.34)) drop-shadow(0 0 42px rgba(49, 165, 255, 0.18)); }
+}
+@keyframes aegisContentExit { 0%, 56% { opacity: 1; transform: translate(-50%, -52%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -52%) scale(0.985); } }
+@keyframes aegisPieceOut { 0% { opacity: 1; transform: translate(0, 0) scale(1); } 100% { opacity: 0; transform: translate(var(--aegis-piece-out-x), var(--aegis-piece-out-y)) scale(0.86); } }
+
+@media (prefers-reduced-motion: reduce) {
+    .aegis-boot-screen .aegis-boot-piece,
+    .aegis-boot-screen .aegis-boot-piece path,
+    .aegis-boot-screen .aegis-boot-mark-wrap,
+    .aegis-boot-screen.aegis-boot-exit .aegis-boot-content { animation: none; }
+}

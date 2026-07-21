@@ -1,7 +1,7 @@
 {
   "name": "edex-ui-eng",
   "productName": "EdexUi-Eng",
-  "version": "2.3.0",
+  "version": "2.3.1",
   "description": "An engineering-focused eDEX-UI dashboard for Apple Silicon.",
   "keywords": [
     "desktop",
@@ -20,7 +20,7 @@
     "install-windows": "npm install && cd src && npm install && ..\\node_modules\\.bin\\electron-rebuild -f -w node-pty && cd ..",
     "prebuild-linux": "rsync -a --info=progress2 src/ prebuild-src --exclude node_modules && node prebuild-minify.js && cd prebuild-src && npm install",
     "build-calendar-helper": "node build/build-calendar-helper.js",
-    "prebuild-darwin": "node build/build-calendar-helper.js && rsync -a src/ prebuild-src --exclude node_modules && node prebuild-minify.js && cd prebuild-src && npm ci",
+    "prebuild-darwin": "node build/build-calendar-helper.js && rsync -a --delete src/ prebuild-src --exclude node_modules && node prebuild-minify.js && cd prebuild-src && npm ci",
     "prebuild-windows": "mkdir prebuild-src && xcopy src\\* prebuild-src\\ /E /C /Q /Y && node prebuild-minify.js && cd prebuild-src && npm install",
     "build-linux": "./node_modules/.bin/electron-builder build -l --x64 --ia32 --arm64 --armv7l",
     "build-darwin": "./node_modules/.bin/electron-builder build -m --arm64",
