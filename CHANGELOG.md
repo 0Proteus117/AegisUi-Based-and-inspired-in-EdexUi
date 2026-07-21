@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.3.2 - 2026-07-21
+
+### AegisUi application identity
+
+- Renamed the visible macOS application, window title and release artifacts to
+  `AegisUi`.
+- Replaced the inherited eDEX icon with the AegisUi cyan mark used by the
+  source-controlled startup sequence.
+- Kept the established local data location and technical macOS identity so
+  existing Apple Music, map and Assistant data are not reset by the visual
+  branding migration.
+
 ## 2.3.1 - 2026-07-21
 
 ### Fixed

@@ -46,6 +46,11 @@ function main() {
     const pkg = readJson("package.json");
     const srcPkg = readJson("src/package.json");
     const versionsMatch = pkg.version === srcPkg.version;
+    const aegisUiBranding = pkg.productName === "AegisUi"
+        && srcPkg.productName === "AegisUi"
+        && exists("media/aegisui-mark.svg")
+        && exists("media/aegisui-icon.icns")
+        && exists("scripts/test-aegisui-branding.js");
 
     const privateTracked = runGit(["ls-files", "assistant/memory/private"], {timeout: 5000});
     const privateTrackedNo = privateTracked.ok && !privateTracked.stdout;
@@ -90,6 +95,7 @@ function main() {
         && exists("scripts/test-osint-native-access-foundation.js");
 
     if (!versionsMatch) failures.push("package versions do not match");
+    if (!aegisUiBranding) failures.push("AegisUi visible branding files are missing");
     if (!privateTrackedNo) failures.push("private memory is tracked");
     if (!privateIgnoredYes) failures.push("private memory is not ignored");
     if (!chatTrackedNo) failures.push("assistant chat exports are tracked");
@@ -103,6 +109,7 @@ function main() {
     print("PACKAGE_VERSION", pkg.version || "UNKNOWN");
     print("SRC_PACKAGE_VERSION", srcPkg.version || "UNKNOWN");
     print("VERSIONS_MATCH", versionsMatch ? "YES" : "NO");
+    print("AEGISUI_BRANDING", aegisUiBranding ? "PRESENT" : "MISSING");
     print("PRIVATE_MEMORY_TRACKED", privateTrackedNo ? "NO" : "YES");
     print("PRIVATE_MEMORY_IGNORED", privateIgnoredYes ? "YES" : "NO");
     print("CHAT_EXPORTS_TRACKED", chatTrackedNo ? "NO" : "YES");

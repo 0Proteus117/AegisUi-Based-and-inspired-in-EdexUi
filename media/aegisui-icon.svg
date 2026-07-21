@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title">
+  <title id="title">AegisUi application icon</title>
+  <defs>
+    <radialGradient id="surface" cx="50%" cy="43%" r="74%">
+      <stop offset="0" stop-color="#1c2a39"/>
+      <stop offset="0.58" stop-color="#101923"/>
+      <stop offset="1" stop-color="#070d14"/>
+    </radialGradient>
+    <radialGradient id="halo" cx="50%" cy="51%" r="37%">
+      <stop offset="0" stop-color="#41c8ff" stop-opacity="0.32"/>
+      <stop offset="0.44" stop-color="#238cda" stop-opacity="0.12"/>
+      <stop offset="1" stop-color="#238cda" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="12" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="1024" height="1024" rx="228" fill="url(#surface)"/>
+  <rect x="24" y="24" width="976" height="976" rx="206" fill="none" stroke="#63c9ff" stroke-opacity="0.17" stroke-width="3"/>
+  <circle cx="512" cy="518" r="356" fill="url(#halo)"/>
+  <g transform="translate(0 58) scale(4.654545)" fill="#fafdff" stroke="#68caff" stroke-linejoin="round" stroke-width="3" filter="url(#glow)">
+    <path d="M59 43.333L161 43.333L165 50L161 56.667L59 56.667L55 50Z"/>
+    <path d="M179.552 75.466L128.552 163.801L120.778 163.931L117.005 157.134L168.005 68.799L175.778 68.669Z"/>
+    <path d="M91.448 163.801L40.448 75.466L44.222 68.669L51.995 68.799L102.995 157.134L99.222 163.931Z"/>
+  </g>
+</svg>

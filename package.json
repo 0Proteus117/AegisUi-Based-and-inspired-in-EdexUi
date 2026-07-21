@@ -1,8 +1,8 @@
 {
-  "name": "edex-ui-eng",
-  "productName": "EdexUi-Eng",
-  "version": "2.3.1",
-  "description": "An engineering-focused eDEX-UI dashboard for Apple Silicon.",
+  "name": "aegis-ui",
+  "productName": "AegisUi",
+  "version": "2.3.2",
+  "description": "AegisUi local-first engineering cockpit for Apple Silicon.",
   "keywords": [
     "desktop",
     "sci-fi",
@@ -48,7 +48,7 @@
   "homepage": "https://github.com/0Proteus117/AegisUi-Based-and-inspired-in-EdexUi#readme",
   "build": {
     "appId": "com.edex.ui.eng",
-    "productName": "EdexUi-Eng",
+    "productName": "AegisUi",
     "publish": "github",
     "asar": true,
     "asarUnpack": [
@@ -57,7 +57,7 @@
     "extraResources": [
       {
         "from": "prebuild-src/native/EdexUiEngCalendar.app",
-        "to": "EdexUiEngCalendar.app"
+        "to": "AegisUiCalendar.app"
       }
     ],
     "compression": "normal",
@@ -69,7 +69,7 @@
     },
     "forceCodeSigning": false,
     "npmRebuild": true,
-    "artifactName": "EdexUi-Eng-${os}-${arch}.${ext}",
+    "artifactName": "AegisUi-${version}-${os}-${arch}.${ext}",
     "linux": {
       "target": [
         "AppImage"
@@ -78,7 +78,7 @@
       "icon": "media/linuxIcons"
     },
     "appImage": {
-      "artifactName": "eDEX-UI-Linux-${arch}.AppImage"
+      "artifactName": "AegisUi-${version}-Linux-${arch}.AppImage"
     },
     "mac": {
       "target": [
@@ -96,22 +96,22 @@
         }
       ],
       "category": "public.app-category.utilities",
-      "icon": "media/icon.icns",
+      "icon": "media/aegisui-icon.icns",
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
       "identity": "-",
       "signIgnore": [
-        "Resources/EdexUiEngCalendar\\.app"
+        "Resources/AegisUiCalendar\\.app"
       ],
       "entitlements": "build/entitlements.mac.plist",
       "entitlementsInherit": "build/entitlements.mac.plist",
       "extendInfo": {
-        "NSAppleEventsUsageDescription": "EdexUi-Eng uses Automation only when you connect Apple Music to show your current playback.",
-        "NSCalendarsFullAccessUsageDescription": "EdexUi-Eng reads calendar events locally to display your weekly and monthly schedule."
+        "NSAppleEventsUsageDescription": "AegisUi uses Automation only when you connect Apple Music to show your current playback.",
+        "NSCalendarsFullAccessUsageDescription": "AegisUi reads calendar events locally to display your weekly and monthly schedule."
       }
     },
     "dmg": {
-      "artifactName": "EdexUi-Eng-macOS-${arch}.dmg"
+      "artifactName": "AegisUi-${version}-${arch}.dmg"
     },
     "win": {
       "target": [
@@ -123,10 +123,10 @@
           ]
         }
       ],
-      "icon": "media/icon.ico"
+      "icon": "media/aegisui-icon.ico"
     },
     "nsis": {
-      "artifactName": "EdexUi-Eng-Windows-${arch}.exe",
+      "artifactName": "AegisUi-${version}-Windows-${arch}.exe",
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "deleteAppDataOnUninstall": true

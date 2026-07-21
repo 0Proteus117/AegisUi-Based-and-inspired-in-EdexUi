@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 190" role="img" aria-labelledby="title">
+  <title id="title">AegisUi mark</title>
+  <g fill="#fafdff" stroke="#68caff" stroke-linejoin="round" stroke-width="3">
+    <path d="M59 43.333L161 43.333L165 50L161 56.667L59 56.667L55 50Z"/>
+    <path d="M179.552 75.466L128.552 163.801L120.778 163.931L117.005 157.134L168.005 68.799L175.778 68.669Z"/>
+    <path d="M91.448 163.801L40.448 75.466L44.222 68.669L51.995 68.799L102.995 157.134L99.222 163.931Z"/>
+  </g>
+</svg>

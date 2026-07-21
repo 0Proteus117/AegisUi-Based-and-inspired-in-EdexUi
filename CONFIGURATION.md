@@ -2,8 +2,9 @@
 
 AegisUi is designed to keep personal data out of the repository.
 
-The current application bundle is still named `EdexUi-Eng`; therefore macOS
-stores app data in:
+The application bundle is named `AegisUi`. To preserve existing local map,
+music and assistant data during the branding migration, it continues using the
+established macOS data directory:
 
 ```text
 ~/Library/Application Support/EdexUi-Eng
@@ -165,7 +166,7 @@ Automation call succeeds in the current run.
 
 Packaged builds must keep a stable identity for macOS Automation/TCC:
 
-- Product name: `EdexUi-Eng`
+- Product name: `AegisUi`
 - Bundle identifier: `com.edex.ui.eng`
 
 When a manual package replaces files inside the `.app`, re-sign the app after

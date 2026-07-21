@@ -451,7 +451,7 @@ async function initUI(options = {}) {
     // it. Reassigning body.innerHTML here used to recreate #boot_screen,
     // detach its live particle canvas and leave a frozen duplicate on screen.
     document.body.insertAdjacentHTML("beforeend", `<section class="mod_column" id="mod_column_left">
-        <h3 class="title"><p>EDEXUI-ENG</p><p>SYSTEM</p></h3>
+        <h3 class="title"><p>AEGISUI</p><p>SYSTEM</p></h3>
     </section>
     <section id="main_shell" style="opacity:0;" augmented-ui="bl-clip tr-clip exe">
         <h3 class="title"><p>COMMAND LINE</p><p><span id="workspace_active_label">HUB</span> / READY</p></h3>

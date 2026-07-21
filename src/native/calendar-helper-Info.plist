@@ -5,13 +5,13 @@
     <key>CFBundleIdentifier</key>
     <string>com.edex.ui.eng.calendar-helper</string>
     <key>CFBundleDisplayName</key>
-    <string>EdexUi-Eng Calendar</string>
+    <string>AegisUi Calendar</string>
     <key>CFBundleExecutable</key>
     <string>calendar-helper</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
-    <string>EdexUi-Eng Calendar</string>
+    <string>AegisUi Calendar</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
@@ -21,6 +21,6 @@
     <key>LSUIElement</key>
     <true/>
     <key>NSCalendarsFullAccessUsageDescription</key>
-    <string>EdexUi-Eng reads calendar events locally to display your weekly and monthly schedule.</string>
+    <string>AegisUi reads calendar events locally to display your weekly and monthly schedule.</string>
 </dict>
 </plist>

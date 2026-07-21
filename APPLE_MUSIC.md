@@ -10,7 +10,7 @@ Apple Music cloud APIs, tokens, audio capture or `System Events`.
 - Bridge: `/usr/bin/osascript -l JavaScript`
 - Target: `Application("com.apple.Music")`
 - Bundle id expected for AegisUi: `com.edex.ui.eng`
-- Product name: `EdexUi-Eng`
+- Product name: `AegisUi`
 
 Allowed actions:
 
@@ -24,13 +24,13 @@ Allowed actions:
 
 ## Automation error `-1743`
 
-`-1743` means macOS blocked Apple Events from `EdexUi-Eng` to Music.
+`-1743` means macOS blocked Apple Events from `AegisUi` to Music.
 
 Recovery:
 
 1. Open Music.app.
 2. Press `CONNECT APPLE MUSIC` in AegisUi.
-3. If macOS prompts, allow `EdexUi-Eng` to control Music.
+3. If macOS prompts, allow `AegisUi` to control Music.
 4. If needed, check System Settings → Privacy & Security → Automation.
 5. Press `REFRESH`.
 

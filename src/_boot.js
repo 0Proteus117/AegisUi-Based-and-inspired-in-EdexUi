@@ -2,10 +2,19 @@ const signale = require("signale");
 const {app, BrowserWindow, dialog, shell, nativeImage, WebContentsView, session} = require("electron");
 const {execFile, execFileSync} = require("child_process");
 const {promisify} = require("util");
+const path = require("path");
+
+// The visible application identity is AegisUi. Retain the established data
+// directory unless a test/profile explicitly supplies --user-data-dir, so the
+// branding release does not discard local Assistant, map or Music state.
+const hasCustomUserDataDirectory = process.argv.some((argument) => argument.startsWith("--user-data-dir"));
+if (!hasCustomUserDataDirectory) {
+    app.setPath("userData", path.join(app.getPath("appData"), "EdexUi-Eng"));
+}
 
 process.on("uncaughtException", e => {
     signale.fatal(e);
-    dialog.showErrorBox("eDEX-UI crashed", e.message || "Cannot retrieve error message.");
+    dialog.showErrorBox("AegisUi crashed", e.message || "Cannot retrieve error message.");
     if (tty) {
         tty.close();
     }
@@ -19,13 +28,13 @@ process.on("uncaughtException", e => {
     process.exit(1);
 });
 
-signale.start(`Starting EdexUi-Eng v${app.getVersion()}`);
+signale.start(`Starting AegisUi v${app.getVersion()}`);
 signale.info(`With Node ${process.versions.node} and Electron ${process.versions.electron}`);
 signale.info(`Renderer is Chrome ${process.versions.chrome}`);
 
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
-    signale.fatal("Error: Another instance of EdexUi-Eng is already running. Cannot proceed.");
+    signale.fatal("Error: Another instance of AegisUi is already running. Cannot proceed.");
     app.exit(1);
 }
 
@@ -35,7 +44,6 @@ const electron = require("electron");
 const remoteMain = require('@electron/remote/main');
 remoteMain.initialize();
 const ipc = electron.ipcMain;
-const path = require("path");
 const url = require("url");
 const fs = require("fs");
 const crypto = require("crypto");
@@ -1443,7 +1451,7 @@ function normalizeMusicAutomationError(message = "") {
             permissionDenied: true,
             permissionTarget: "Music",
             technicalCode: "-1743",
-            safeMessage: "macOS Automation permission required for EdexUi-Eng to control Music."
+            safeMessage: "macOS Automation permission required for AegisUi to control Music."
         };
     }
     return {
@@ -1493,9 +1501,9 @@ ipc.handle("calendar-events", async (event, requestedRange = {}) => {
     }
 
     const packagedHelperBundle = app.isPackaged
-        ? path.join(process.resourcesPath, "EdexUiEngCalendar.app")
+        ? path.join(process.resourcesPath, "AegisUiCalendar.app")
         : path.join(__dirname, "native", "EdexUiEngCalendar.app");
-    const helperBundle = path.join(app.getPath("userData"), "EdexUiEngCalendar.app");
+    const helperBundle = path.join(app.getPath("userData"), "AegisUiCalendar.app");
     const outputFile = path.join(app.getPath("temp"), `edex-calendar-${process.pid}-${Date.now()}.json`);
     try {
         if (!fs.existsSync(packagedHelperBundle)) {
@@ -2183,7 +2191,7 @@ function createWindow(settings) {
     let {x, y, width, height} = display.bounds;
     width++; height++;
     win = new BrowserWindow({
-        title: "EdexUi-Eng",
+        title: "AegisUi",
         x,
         y,
         width,
@@ -2262,7 +2270,7 @@ app.on('ready', async () => {
     Object.assign(cleanEnv, {
         TERM: "xterm-256color",
         COLORTERM: "truecolor",
-        TERM_PROGRAM: "EdexUi-Eng",
+        TERM_PROGRAM: "AegisUi",
         TERM_PROGRAM_VERSION: app.getVersion()
     }, settings.env);
 

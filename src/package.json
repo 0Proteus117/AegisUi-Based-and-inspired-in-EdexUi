@@ -1,8 +1,8 @@
 {
-  "name": "edex-ui-eng",
-  "productName": "EdexUi-Eng",
-  "version": "2.3.1",
-  "description": "Engineering-focused eDEX-UI sci-fi interface",
+  "name": "aegis-ui",
+  "productName": "AegisUi",
+  "version": "2.3.2",
+  "description": "AegisUi local-first engineering cockpit",
   "keywords": [
     "desktop",
     "sci-fi",

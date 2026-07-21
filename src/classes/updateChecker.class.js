@@ -27,7 +27,7 @@ class UpdateChecker {
             return 0;
         };
         const fail = error => {
-            electron.ipcRenderer.send("log", "note", "UpdateChecker: Could not fetch EdexUi-Eng releases.");
+            electron.ipcRenderer.send("log", "note", "UpdateChecker: Could not fetch AegisUi releases.");
             electron.ipcRenderer.send("log", "debug", `Error: ${error}`);
         };
 
@@ -36,7 +36,7 @@ class UpdateChecker {
             host: "api.github.com",
             path: "/repos/0Proteus117/AegisUi-Based-and-inspired-in-EdexUi/releases?per_page=10",
             headers: {
-                "User-Agent": "EdexUi-Eng UpdateChecker"
+                "User-Agent": "AegisUi UpdateChecker"
             }
         }, response => {
             let rawData = "";
@@ -52,22 +52,22 @@ class UpdateChecker {
                         return !item.draft && String(item.tag_name).startsWith(tagPrefix);
                     });
                     if (!release) {
-                        electron.ipcRenderer.send("log", "info", "UpdateChecker: No EdexUi-Eng release found.");
+                        electron.ipcRenderer.send("log", "info", "UpdateChecker: No AegisUi release found.");
                         return;
                     }
 
                     const comparison = compareVersions(current, release.tag_name);
                     if (comparison === 0) {
-                        electron.ipcRenderer.send("log", "info", "UpdateChecker: Running latest EdexUi-Eng version.");
+                        electron.ipcRenderer.send("log", "info", "UpdateChecker: Running latest AegisUi version.");
                     } else if (comparison > 0) {
-                        electron.ipcRenderer.send("log", "info", "UpdateChecker: Running an EdexUi-Eng development version.");
+                        electron.ipcRenderer.send("log", "info", "UpdateChecker: Running an AegisUi development version.");
                     } else {
                         new Modal({
                             type: "info",
-                            title: "New EdexUi-Eng version available",
-                            message: `EdexUi-Eng <strong>${release.tag_name.replace(tagPrefix, "")}</strong> is available.<br/>Open the <a href="#" onclick="require('electron').shell.openExternal('${release.html_url}')">GitHub release</a> to download it.`
+                            title: "New AegisUi version available",
+                            message: `AegisUi <strong>${release.tag_name.replace(tagPrefix, "")}</strong> is available.<br/>Open the <a href="#" onclick="require('electron').shell.openExternal('${release.html_url}')">GitHub release</a> to download it.`
                         });
-                        electron.ipcRenderer.send("log", "info", `UpdateChecker: New EdexUi-Eng version ${release.tag_name} available.`);
+                        electron.ipcRenderer.send("log", "info", `UpdateChecker: New AegisUi version ${release.tag_name} available.`);
                     }
                 } catch (error) {
                     fail(error);

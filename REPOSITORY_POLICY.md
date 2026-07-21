@@ -12,6 +12,8 @@ current cockpit instead of the archived upstream baseline.
 ## Release hygiene
 
 - Published releases must correspond to validated source state.
+- Published releases must include screenshots of the key changed screens and a
+  concise user-facing explanation of what changed.
 - Draft releases should not be duplicated.
 - DMG assets must not be published unless the packaged app was opened and
   validated locally.

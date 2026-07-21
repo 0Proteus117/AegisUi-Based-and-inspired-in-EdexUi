@@ -1,4 +1,4 @@
-# AegisUi / EdexUi-Eng
+# AegisUi
 
 Local-first macOS engineering cockpit based on the visual spirit of eDEX-UI.
 
@@ -6,14 +6,14 @@ Local-first macOS engineering cockpit based on the visual spirit of eDEX-UI.
 [![CodeQL](https://github.com/0Proteus117/AegisUi-Based-and-inspired-in-EdexUi/actions/workflows/codeql-analysis.yml/badge.svg?branch=feature%2Fsystems-online-pass)](https://github.com/0Proteus117/AegisUi-Based-and-inspired-in-EdexUi/actions/workflows/codeql-analysis.yml)
 ![Platform](https://img.shields.io/badge/platform-macOS%20Apple%20Silicon-3BA7FF)
 ![Local first](https://img.shields.io/badge/local--first-yes-7CCBFF)
-![Version](https://img.shields.io/badge/version-2.3.0-13263A)
+![Version](https://img.shields.io/badge/version-2.3.2-13263A)
 
 ## Current status
 
 AegisUi is currently developed on `feature/systems-online-pass`.
 
-The app is packaged as `EdexUi-Eng` while the project identity migrates toward
-the AegisUi name. The active local release line is `v2.3.x`.
+The application, bundle display name and release artifacts are branded
+`AegisUi`. The active local release line is `v2.3.x`.
 
 ## What it is
 
