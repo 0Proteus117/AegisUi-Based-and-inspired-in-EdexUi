@@ -10,9 +10,11 @@ const afterPack = fs.readFileSync(path.join(root, "build", "after-pack.js"), "ut
 const unpackRules = packageJson.build && packageJson.build.asarUnpack;
 const keepsNodePtyUnpacked = Array.isArray(unpackRules) && unpackRules.some((rule) => String(rule).includes("node-pty"));
 const signsSpawnHelper = afterPack.includes("spawn-helper") && afterPack.includes("codesign");
+const makesSpawnHelperExecutable = afterPack.includes("chmodSync(helper, 0o755)");
 
 console.log(`NODE_PTY_ASAR_UNPACK: ${keepsNodePtyUnpacked ? "OK" : "FAIL"}`);
 console.log(`SPAWN_HELPER_SIGNING: ${signsSpawnHelper ? "OK" : "FAIL"}`);
-console.log(`PACKAGED_NODE_PTY_INTEGRITY: ${keepsNodePtyUnpacked && signsSpawnHelper ? "OK" : "FAIL"}`);
+console.log(`SPAWN_HELPER_EXECUTABLE: ${makesSpawnHelperExecutable ? "OK" : "FAIL"}`);
+console.log(`PACKAGED_NODE_PTY_INTEGRITY: ${keepsNodePtyUnpacked && signsSpawnHelper && makesSpawnHelperExecutable ? "OK" : "FAIL"}`);
 
-process.exitCode = keepsNodePtyUnpacked && signsSpawnHelper ? 0 : 1;
+process.exitCode = keepsNodePtyUnpacked && signsSpawnHelper && makesSpawnHelperExecutable ? 0 : 1;

@@ -28,6 +28,10 @@ exports.default = async function removeMacMetadata(context) {
         throw new Error("node-pty spawn-helper missing from packaged macOS application");
     }
     for (const helper of helpers) {
+        // npm/pnpm staging can preserve the helper without an executable bit.
+        // Signing alone is insufficient: node-pty must execute this binary to
+        // create the first terminal, before the main Aegis window is shown.
+        fs.chmodSync(helper, 0o755);
         execFileSync("/usr/bin/codesign", ["--force", "--sign", "-", "--timestamp=none", helper], {
             stdio: "ignore"
         });
