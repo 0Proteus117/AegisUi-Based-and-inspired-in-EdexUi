@@ -18,6 +18,26 @@
   controlled external launch action for each resource.
 - Added a static OSINT workspace registry test and release visual evidence.
 
+## Repository hygiene refresh - 2026-07-17
+
+### Changed
+
+- Replaced inherited eDEX/GitSquared README front matter with a clean
+  AegisUi-focused repository front page.
+- Modernized GitHub Actions metadata for `Repo health`, `CodeQL` and manual
+  packaging.
+- Added `REPOSITORY_POLICY.md` to document release, workflow, runtime honesty
+  and privacy rules.
+- Refreshed issue and pull request templates for AegisUi modules.
+- Removed stale GitSquared funding/contact references.
+
+### GitHub cleanup
+
+- GearLab was inspected as a read-only reference and was not modified.
+- Duplicate draft releases are treated as cleanup targets.
+- Historical false-red workflow runs are treated as cleanup targets once the
+  latest Repo health run is green.
+
 ## 2.2.8 - 2026-07-11
 
 ### Recovery
@@ -905,3 +925,4 @@
   unnecessary startup I/O and preserving local customizations.
 - An existing GeoIP database is opened directly; the updater is loaded only
   when the local database still needs to be installed.
+

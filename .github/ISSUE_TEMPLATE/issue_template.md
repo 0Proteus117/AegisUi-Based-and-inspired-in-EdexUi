@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: Something's broken or screaming error messages at you? Let's fix it.
+about: Something in AegisUi is broken or behaving unexpectedly.
 title: ''
 labels: investigation
 
@@ -16,20 +16,24 @@ labels: investigation
 
 ## Technical information
 **Using version:**
- - [ ] `master` (running from GitHub-published source code, currently `v2.2.8-pre`)
- - [ ] `latest` (latest release, currently `v2.2.7`)
+ - [ ] `feature/systems-online-pass` source
+ - [ ] local DMG build
+ - [ ] packaged app from `dist/`
  - [ ] `vX.X.X` (specify other version)
 
 **Running on:**
- - [ ] Linux
- - [ ] Windows
  - [ ] macOS
+ - [ ] Other / experimental
 
-**How comfortable you are with your system and/or IT in general:**
- - [ ] I'm kind of lost, honestly
- - [ ] I know what's up, I could help you run some commands or checks
- - [ ] My machine is fully under my control, tell me what you need
- - [ ] I attended [Defcon](https://defcon.org) last year
+**Affected module:**
+ - [ ] HUB
+ - [ ] ENG
+ - [ ] Assistant / Ollama
+ - [ ] Apple Music
+ - [ ] Map / AIS / Radar / Marine / SAT
+ - [ ] Calendar
+ - [ ] Project Timeline
+ - [ ] Packaged app / DMG
 
 ---
 
