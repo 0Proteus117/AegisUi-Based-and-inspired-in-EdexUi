@@ -6,14 +6,14 @@ Local-first macOS engineering cockpit based on the visual spirit of eDEX-UI.
 [![CodeQL](https://github.com/0Proteus117/AegisUi-Based-and-inspired-in-EdexUi/actions/workflows/codeql-analysis.yml/badge.svg?branch=feature%2Fsystems-online-pass)](https://github.com/0Proteus117/AegisUi-Based-and-inspired-in-EdexUi/actions/workflows/codeql-analysis.yml)
 ![Platform](https://img.shields.io/badge/platform-macOS%20Apple%20Silicon-3BA7FF)
 ![Local first](https://img.shields.io/badge/local--first-yes-7CCBFF)
-![Version](https://img.shields.io/badge/version-2.2.9-13263A)
+![Version](https://img.shields.io/badge/version-2.3.0-13263A)
 
 ## Current status
 
 AegisUi is currently developed on `feature/systems-online-pass`.
 
 The app is packaged as `EdexUi-Eng` while the project identity migrates toward
-the AegisUi name. The stable local release line is `v2.2.x`.
+the AegisUi name. The active local release line is `v2.3.x`.
 
 ## What it is
 
@@ -23,9 +23,9 @@ AegisUi is a cockpit-style desktop environment for engineering work:
   Applications grid and status panels.
 - ENG workspace with CAD/CAM/CAE launchers, manufacturing tools, internal
   engineering calculators, materials, standards and research references.
-- OSINT Analyst Deck with nine public-source research domains, 161 curated
-  resources, compact tool briefs and controlled external launches. It does not
-  automate collection, credential access or intrusive actions.
+- OSINT Analyst Deck with a native-access foundation: official provider
+  responses render inside AegisUi where available, while public websites run
+  in isolated source views with a visible external-browser fallback.
 - Live systems map with TomTom traffic, AISStream maritime traffic,
   RainViewer radar, Open-Meteo Marine conditions and CelesTrak SAT support.
 - Assistant presence layer with Angie/Gustav/Ares/Aphrodite profiles,
@@ -86,11 +86,14 @@ See [ENG_WORKSPACE.md](ENG_WORKSPACE.md) and [WORKSPACES.md](WORKSPACES.md).
 
 ## OSINT Analyst Deck
 
-OSINT is a visual, public-source research catalog. Select a domain to open its
-resource deck, then inspect a tool brief before choosing `OPEN WEB`. The deck
-contains no scraping, credential collection, tracking or destructive tooling.
+OSINT is a visual, public-source research workspace. The first active domain,
+Discovery / Search, provides a native Internet Archive Wayback Availability
+lookup and isolated in-suite access to selected public-source websites. The
+deck contains no scraping, credential collection, tracking or destructive
+tooling.
 
-Release visual overview: [OSINT Analyst Deck preview](docs/releases/v2.2.9/osint-release-preview.html).
+See [OSINT_NATIVE_ACCESS.md](OSINT_NATIVE_ACCESS.md) for the provider,
+isolated-view and privacy model.
 
 ## Assistant
 
@@ -192,7 +195,7 @@ See [SECURITY.md](SECURITY.md) and [CONFIGURATION.md](CONFIGURATION.md).
 - [GITHUB_WORKFLOWS.md](GITHUB_WORKFLOWS.md)
 - [ENG_WORKSPACE.md](ENG_WORKSPACE.md)
 - [WORKSPACES.md](WORKSPACES.md)
-- [OSINT release visual preview](docs/releases/v2.2.9/osint-release-preview.html)
+- [OSINT_NATIVE_ACCESS.md](OSINT_NATIVE_ACCESS.md)
 - [MAP_LAYERS.md](MAP_LAYERS.md)
 - [MAP_PROVIDER_HARDENING.md](MAP_PROVIDER_HARDENING.md)
 - [APPLE_MUSIC.md](APPLE_MUSIC.md)
@@ -216,4 +219,3 @@ See [REPOSITORY_POLICY.md](REPOSITORY_POLICY.md).
 ## License
 
 This fork keeps the upstream eDEX-UI GPL-3.0 license. See [LICENSE](LICENSE).
-

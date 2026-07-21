@@ -1,5 +1,5 @@
 const signale = require("signale");
-const {app, BrowserWindow, dialog, shell, nativeImage} = require("electron");
+const {app, BrowserWindow, dialog, shell, nativeImage, WebContentsView, session} = require("electron");
 const {execFile, execFileSync} = require("child_process");
 const {promisify} = require("util");
 
@@ -41,12 +41,16 @@ const fs = require("fs");
 const crypto = require("crypto");
 const which = require("which");
 const Terminal = require("./classes/terminal.class.js").Terminal;
+const OsintToolsRegistry = require("./classes/workspaces/osintTools.registry.js");
 
 ipc.on("log", (e, type, content) => {
     signale[type](content);
 });
 
 var win, tty, extraTtys;
+let osintSourceView = null;
+let osintSourceMetadata = null;
+let osintSourceSession = null;
 const settingsFile = path.join(electron.app.getPath("userData"), "settings.json");
 const shortcutsFile = path.join(electron.app.getPath("userData"), "shortcuts.json");
 const lastWindowStateFile = path.join(electron.app.getPath("userData"), "lastWindowState.json");
@@ -215,6 +219,155 @@ function sanitizeLaunchUrl(value) {
     }
 
     return parsed.toString();
+}
+
+function getOsintSource(sourceId) {
+    const source = OsintToolsRegistry && OsintToolsRegistry.getEmbeddedTool
+        ? OsintToolsRegistry.getEmbeddedTool(String(sourceId || ""))
+        : null;
+    return source || null;
+}
+
+function isAllowedOsintSourceUrl(target, source) {
+    try {
+        const parsed = new URL(String(target || ""));
+        if (parsed.protocol !== "https:") return false;
+        const host = parsed.hostname.toLowerCase();
+        return (source.allowedHosts || []).some(allowed => {
+            const allowedHost = String(allowed || "").toLowerCase();
+            return host === allowedHost || host.endsWith(`.${allowedHost}`);
+        });
+    } catch (error) {
+        return false;
+    }
+}
+
+function sendOsintSourceEvent(payload = {}) {
+    if (!win || win.isDestroyed()) return;
+    win.webContents.send("osint-source-event", payload);
+}
+
+function getOsintSourceSession() {
+    if (osintSourceSession) return osintSourceSession;
+    osintSourceSession = session.fromPartition("persist:aegis-osint-sources");
+    osintSourceSession.setPermissionCheckHandler(() => false);
+    osintSourceSession.setPermissionRequestHandler((_webContents, _permission, callback) => callback(false));
+    return osintSourceSession;
+}
+
+function closeOsintSourceView() {
+    if (!osintSourceView) return;
+    try {
+        if (win && !win.isDestroyed()) win.contentView.removeChildView(osintSourceView);
+        if (!osintSourceView.webContents.isDestroyed()) osintSourceView.webContents.close();
+    } catch (error) {
+        signale.warn(`OSINT source close warning: ${error.message}`);
+    }
+    osintSourceView = null;
+    osintSourceMetadata = null;
+}
+
+function setOsintSourceBounds(bounds = {}) {
+    if (!osintSourceView || !win || win.isDestroyed()) return false;
+    const contentBounds = win.getContentBounds();
+    const width = Math.max(1, Math.min(Number(bounds.width) || 1, contentBounds.width));
+    const height = Math.max(1, Math.min(Number(bounds.height) || 1, contentBounds.height));
+    const x = Math.max(0, Math.min(Number(bounds.x) || 0, contentBounds.width - 1));
+    const y = Math.max(0, Math.min(Number(bounds.y) || 0, contentBounds.height - 1));
+    osintSourceView.setBounds({
+        x: Math.round(x),
+        y: Math.round(y),
+        width: Math.round(Math.min(width, contentBounds.width - x)),
+        height: Math.round(Math.min(height, contentBounds.height - y))
+    });
+    return true;
+}
+
+function openOsintSourceView(source) {
+    if (!win || win.isDestroyed()) throw new Error("AegisUi window is not available.");
+    closeOsintSourceView();
+    const view = new WebContentsView({
+        webPreferences: {
+            session: getOsintSourceSession(),
+            nodeIntegration: false,
+            contextIsolation: true,
+            sandbox: true,
+            webSecurity: true,
+            allowRunningInsecureContent: false,
+            devTools: false,
+            webviewTag: false,
+            nativeWindowOpen: false
+        }
+    });
+    const contents = view.webContents;
+    contents.__aegisOsintSource = source;
+    contents.setWindowOpenHandler(({url: target}) => {
+        if (/^https:/i.test(String(target || ""))) shell.openExternal(target).catch(() => {});
+        return {action: "deny"};
+    });
+    contents.on("will-navigate", (event, target) => {
+        if (isAllowedOsintSourceUrl(target, source)) return;
+        event.preventDefault();
+        if (/^https:/i.test(String(target || ""))) shell.openExternal(target).catch(() => {});
+    });
+    contents.on("did-start-loading", () => sendOsintSourceEvent({sourceId: source.id, status: "LOADING"}));
+    contents.on("did-finish-load", () => sendOsintSourceEvent({sourceId: source.id, status: "READY"}));
+    contents.on("did-fail-load", (_event, code, description, validatedURL) => {
+        if (code === -3) return;
+        sendOsintSourceEvent({
+            sourceId: source.id,
+            status: "ERROR",
+            error: `Source load failed (${code}): ${description}`,
+            url: validatedURL
+        });
+    });
+
+    osintSourceView = view;
+    osintSourceMetadata = source;
+    win.contentView.addChildView(view);
+    setOsintSourceBounds({x: 0, y: 0, width: 1, height: 1});
+    contents.loadURL(source.url).catch(error => {
+        sendOsintSourceEvent({sourceId: source.id, status: "ERROR", error: error.message || "Source load failed."});
+    });
+}
+
+async function queryWaybackAvailability(query) {
+    let target = String(query || "").trim().slice(0, 2048);
+    if (!target) throw new Error("A URL is required.");
+    if (!/^https?:\/\//i.test(target)) target = `https://${target}`;
+    const parsedTarget = new URL(target);
+    if (!["http:", "https:"].includes(parsedTarget.protocol)) throw new Error("Only HTTP and HTTPS URLs can be checked.");
+
+    const endpoint = `https://archive.org/wayback/available?url=${encodeURIComponent(parsedTarget.toString())}`;
+    const response = await getJSON(endpoint);
+    const closest = response && response.archived_snapshots && response.archived_snapshots.closest;
+    if (!closest || !closest.available) {
+        return {
+            available: false,
+            message: "No public snapshot was returned for this URL."
+        };
+    }
+    const rawSnapshotUrl = String(closest.url || "");
+    let snapshot;
+    try {
+        snapshot = new URL(rawSnapshotUrl);
+    } catch (_error) {
+        throw new Error("Archive provider returned an invalid snapshot URL.");
+    }
+    // The availability API still returns legacy http://web.archive.org links for
+    // some captures. Accept only that exact host, then upgrade it before the
+    // renderer ever receives the URL.
+    if (snapshot.hostname.toLowerCase() !== "web.archive.org" || !["http:", "https:"].includes(snapshot.protocol)) {
+        throw new Error("Archive provider returned an unexpected snapshot URL.");
+    }
+    snapshot.protocol = "https:";
+    const snapshotUrl = snapshot.toString();
+    return {
+        available: true,
+        status: String(closest.status || "AVAILABLE"),
+        timestamp: String(closest.timestamp || ""),
+        snapshotUrl
+    };
 }
 
 function sanitizeLaunchBayGames(input = {}) {
@@ -1462,6 +1615,39 @@ ipc.handle("workspace-open-link", async (event, target) => {
         return {ok: false, status: "ERROR", error: error.message || "Cannot open this launcher."};
     }
 });
+ipc.handle("osint-source-open", async (_event, sourceId) => {
+    try {
+        const source = getOsintSource(sourceId);
+        if (!source || !isAllowedOsintSourceUrl(source.url, source)) {
+            return {ok: false, status: "SOURCE_DENIED", error: "OSINT source is not allowlisted."};
+        }
+        openOsintSourceView(source);
+        return {ok: true, status: "LOADING", source: {id: source.id, title: source.title}};
+    } catch (error) {
+        return {ok: false, status: "SOURCE_UNAVAILABLE", error: error.message || "Cannot open this isolated source."};
+    }
+});
+ipc.handle("osint-source-layout", (_event, bounds) => ({ok: setOsintSourceBounds(bounds)}));
+ipc.handle("osint-source-reload", () => {
+    if (!osintSourceView || osintSourceView.webContents.isDestroyed()) return {ok: false, status: "SOURCE_CLOSED"};
+    osintSourceView.webContents.reloadIgnoringCache();
+    return {ok: true, status: "RELOADING"};
+});
+ipc.handle("osint-source-close", () => {
+    closeOsintSourceView();
+    return {ok: true, status: "CLOSED"};
+});
+ipc.handle("osint-native-query", async (_event, request = {}) => {
+    try {
+        const providerId = String(request.providerId || "");
+        if (providerId !== "wayback-availability") {
+            return {ok: false, status: "PROVIDER_UNAVAILABLE", error: "This native provider is not enabled."};
+        }
+        return {ok: true, status: "READY", data: await queryWaybackAvailability(request.query)};
+    } catch (error) {
+        return {ok: false, status: "PROVIDER_UNAVAILABLE", error: error.message || "Native provider query failed."};
+    }
+});
 ipc.handle("calendar-open-accounts", () => {
     return shell.openExternal("x-apple.systempreferences:com.apple.Internet-Accounts-Settings.extension");
 });
@@ -2200,6 +2386,7 @@ app.on('web-contents-created', (e, contents) => {
 
     // Prevent loading something else than the UI
     contents.on('will-navigate', (e, url) => {
+        if (contents.__aegisOsintSource) return;
         if (url !== contents.getURL()) e.preventDefault();
     });
 });
@@ -2210,6 +2397,7 @@ app.on('window-all-closed', () => {
 });
 
 app.on('before-quit', () => {
+    closeOsintSourceView();
     if (tty) tty.close();
     if (extraTtys) {
         Object.keys(extraTtys).forEach(key => {

@@ -85,6 +85,9 @@ function main() {
         && exists("scripts/test-eng-workspace-registry.js")
         && exists("scripts/test-eng-command-router.js")
         && exists("scripts/test-eng-calculators.js");
+    const osintFoundation = exists("src/classes/workspaces/osintTools.registry.js")
+        && exists("src/classes/workspaces/osintAccess.class.js")
+        && exists("scripts/test-osint-native-access-foundation.js");
 
     if (!versionsMatch) failures.push("package versions do not match");
     if (!privateTrackedNo) failures.push("private memory is tracked");
@@ -95,6 +98,7 @@ function main() {
     if (!appleMusicBridge) failures.push("Apple Music bridge validation files missing");
     if (!mapProviders) failures.push("map provider files missing");
     if (!engWorkspace) failures.push("ENG workspace files missing");
+    if (!osintFoundation) failures.push("OSINT native access foundation files missing");
 
     print("PACKAGE_VERSION", pkg.version || "UNKNOWN");
     print("SRC_PACKAGE_VERSION", srcPkg.version || "UNKNOWN");
@@ -110,6 +114,7 @@ function main() {
     print("APPLE_MUSIC_BRIDGE", appleMusicBridge ? "PRESENT" : "MISSING");
     print("MAP_PROVIDERS", mapProviders ? "PRESENT" : "MISSING");
     print("ENG_WORKSPACE", engWorkspace ? "PRESENT" : "MISSING");
+    print("OSINT_NATIVE_ACCESS", osintFoundation ? "PRESENT" : "MISSING");
     print("RELEASE_HEALTH", failures.length ? "FAIL" : "OK");
 
     if (failures.length) {

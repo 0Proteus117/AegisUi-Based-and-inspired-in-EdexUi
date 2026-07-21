@@ -1,5 +1,21 @@
 # Changelog
 
+## 2.3.0 - 2026-07-21
+
+### OSINT native access foundation
+
+- Activated the first Analyst Desk domain: Discovery / Search.
+- Added an in-suite isolated source surface based on Electron
+  `WebContentsView`, with a per-source HTTPS allowlist, sandboxing, no Node
+  integration and denied permissions.
+- Added the first cockpit-native provider: Internet Archive Wayback
+  Availability, with user-directed URL checks and explicit provider errors.
+- Added Discovery/Search sources for Bellingcat Toolkit, Google, Bing,
+  DuckDuckGo, Yandex, Google Scholar, OSINT Framework and IntelTechniques.
+- Added registry, regression test, documentation and release-health coverage.
+- Kept browser opening as an explicit fallback; no scraping, credential
+  collection, background querying or intrusive actions were added.
+
 ## 2.2.9 - 2026-07-21
 
 ### AegisUi Boot Branding
@@ -925,4 +941,3 @@
   unnecessary startup I/O and preserving local customizations.
 - An existing GeoIP database is opened directly; the updater is loaded only
   when the local database still needs to be installed.
-
