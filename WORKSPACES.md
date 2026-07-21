@@ -6,7 +6,7 @@ Current workspace line:
 
 - HUB — main cockpit
 - ENG — engineering command deck
-- OSINT — analyst desk
+- OSINT — analyst desk and public-source tool catalog
 - STUD — student workspace
 - ART — creative workspace
 - BUS — business workspace

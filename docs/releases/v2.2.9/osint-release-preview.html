@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AegisUi v2.2.9 OSINT Analyst Deck</title>
+  <style>
+    :root { color-scheme: dark; --cyan:#3ba7ff; --soft:#7ccbff; --ink:#060b12; --panel:#09131d; --line:#183d59; --muted:#6c9ab8; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-width:1200px; background:#05090f; color:#d8f1ff; font-family:"SF Mono",Menlo,monospace; }
+    .frame { min-height:100vh; padding:18px 22px 22px 242px; background:linear-gradient(115deg,rgba(59,167,255,.05),transparent 36%),radial-gradient(circle at 77% 25%,rgba(33,91,144,.16),transparent 31%),#070d15; }
+    .side { position:fixed; inset:0 auto 0 0; width:220px; padding:20px 16px; border-right:1px solid var(--line); background:linear-gradient(180deg,#07101a,#04080e); }
+    .brand { display:flex; justify-content:space-between; border-top:1px solid var(--line); border-bottom:1px solid var(--line); padding:7px 0; color:var(--cyan); font-size:12px; }
+    .clock { margin:30px 0 20px; color:var(--cyan); font-size:40px; letter-spacing:4px; }
+    .sys { margin-top:22px; border-top:1px solid var(--line); padding-top:14px; color:var(--muted); font-size:11px; line-height:1.8; }
+    .sys strong { display:block; color:var(--soft); font-size:13px; }
+    .nav { height:32px; display:flex; gap:5px; align-items:stretch; border-bottom:1px solid var(--cyan); }
+    .nav span { min-width:74px; padding:8px 12px; border:1px solid var(--line); color:#6c9ab8; font-size:11px; text-align:center; }
+    .nav .active { color:#eaf7ff; border-color:var(--cyan); box-shadow:inset 0 -3px var(--cyan),0 0 14px rgba(59,167,255,.2); }
+    .terminal { margin-top:12px; height:44px; padding:11px 16px; border:1px solid var(--line); background:#03070c; color:#a8d7ee; font-size:14px; }
+    .hero { margin-top:16px; min-height:100px; padding:18px; display:flex; justify-content:space-between; border:1px solid var(--line); border-left:5px solid var(--cyan); background:linear-gradient(100deg,rgba(59,167,255,.13),transparent 45%),rgba(15,25,35,.88); }
+    .eyebrow,.status small,.panel-label { color:var(--muted); font-size:9px; letter-spacing:2px; }
+    h1 { margin:7px 0 5px; font-size:26px; letter-spacing:1px; } p { margin:0; color:#91b4c9; font:12px/1.5 Arial,sans-serif; }
+    .status { text-align:right; padding-top:10px; } .status b { display:block; margin:5px 0; color:var(--cyan); font-size:16px; }
+    .quick { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin:12px 0; }
+    .quick div,.tool,.scope { border:1px solid var(--line); background:rgba(3,9,15,.76); padding:12px; min-height:56px; }
+    .quick em,.tool em { display:block; color:#4e8eb9; font-style:normal; font-size:8px; letter-spacing:1px; text-align:right; }
+    .quick b { display:block; color:#b7e7ff; margin-top:3px; font-size:12px; }
+    .deck { display:grid; grid-template-columns:3fr 1fr; gap:12px; }
+    .catalog,.scope { border:1px solid var(--line); background:linear-gradient(135deg,rgba(59,167,255,.05),transparent 60%),rgba(3,9,15,.82); }
+    .catalog-head { padding:16px 17px 12px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:end; }
+    h2 { margin:5px 0 0; color:#e1f4ff; font-size:21px; }
+    .stats { display:flex; gap:18px; text-align:right; } .stats b { display:block; color:var(--cyan); font-size:17px; }
+    .categories { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; padding:9px; }
+    .category { min-height:130px; padding:14px; border:1px solid rgba(31,73,106,.82); background:linear-gradient(145deg,rgba(18,44,65,.35),rgba(4,10,17,.7)); }
+    .category span,.tool span,.badge { display:inline-grid; place-items:center; min-width:26px; height:26px; border:1px solid rgba(59,167,255,.65); color:var(--soft); font-size:13px; }
+    .category b { display:block; margin:11px 0 8px; color:#c9ebff; font-size:12px; }
+    .category small { color:#4f7590; font-size:9px; line-height:1.45; }
+    .category i { display:block; margin-top:15px; color:#3ba7ff; font-size:9px; font-style:normal; }
+    .scope { padding:16px; min-height:450px; } .scope h3 { margin:8px 0 24px; color:#d8f1ff; font-size:14px; }
+    .scope-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .scope-grid div { padding:10px 0; border-top:1px solid var(--line); color:#75a2bf; font-size:9px; }
+    .scope-grid b { display:block; margin-top:6px; color:#d8f1ff; font-size:10px; }
+    .tools { grid-column:1 / -1; margin-top:2px; border:1px solid var(--line); background:#07111b; padding:12px; }
+    .tools-head { display:flex; justify-content:space-between; margin-bottom:10px; color:#9bcfe9; font-size:11px; }
+    .tools-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; }
+    .tool { min-height:92px; padding:10px; } .tool span { float:left; margin-right:9px; } .tool b { color:#d8f1ff; font-size:11px; } .tool p { clear:both; padding-top:9px; color:#6e9bb5; font-size:10px; }
+    .detail { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(1,5,9,.74); backdrop-filter:blur(6px); }
+    .modal { width:min(760px,75vw); border:1px solid var(--cyan); background:linear-gradient(135deg,rgba(15,40,61,.98),rgba(3,9,15,.98) 60%); box-shadow:0 0 40px rgba(59,167,255,.18); }
+    .modal-head { padding:16px; border-bottom:1px solid var(--line); display:flex; gap:12px; align-items:center; } .modal-head h2 { flex:1; font-size:18px; }
+    .modal-body { padding:20px; min-height:195px; } .cols { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:18px; } .cols div { border-top:1px solid var(--line); padding-top:8px; color:#6692ad; font-size:9px; } .cols b { display:block; margin-top:5px; color:#cbeeff; font-size:11px; }
+    .url { margin-top:18px; padding:10px; border:1px solid var(--line); color:#73b7dd; font-size:10px; }
+    .actions { padding:12px; border-top:1px solid var(--line); display:flex; justify-content:flex-end; gap:8px; } .actions span { padding:10px 20px; border:1px solid var(--cyan); color:var(--soft); font-size:10px; }
+  </style>
+</head>
+<body>
+  <aside class="side"><div class="brand"><b>EDEXUI-ENG</b><b>SYSTEM</b></div><div class="clock">02:58:17</div><div class="sys"><strong>2026 JUL 21</strong>UPTIME 0d00:02<br>TYPE macOS<br>POWER WIRED<br><br><strong>CPU USAGE</strong>ANALYST DESK<br><br><strong>MEMORY</strong>PUBLIC-SOURCE MODE</div></aside>
+  <main class="frame">
+    <nav class="nav"><span>1 HUB</span><span>2 ENG</span><span class="active">3 OSINT</span><span>4 STUD</span><span>5 ART</span><span>6 BUS</span><span>7 COMMS</span><span>8 BAY</span><span>9 DEV</span><span>0 AGENT</span></nav>
+    <div class="terminal">gabrielpradalareo@MacBook-Pro-de-Gabriel EdexUi-Eng % <b>OSINT / READY</b></div>
+    <section class="hero"><div><div class="eyebrow">WORKSPACE / OSINT</div><h1>OSINT / Analyst Desk</h1><p>A public-source analyst deck for discovery, verification, infrastructure context and evidence-aware research.</p></div><div class="status"><small>IMPLEMENTATION</small><b>TOOL CATALOG</b><small>PUBLIC-SOURCE / READ ONLY</small></div></section>
+    <section class="quick"><div><em>EXTERNAL</em><b>BELLINGCAT TOOLKIT</b></div><div><em>EXTERNAL</em><b>WAYBACK MACHINE</b></div><div><em>EXTERNAL</em><b>VIRUSTOTAL</b></div><div><em>EXTERNAL</em><b>CENSYS</b></div></section>
+    <section class="deck"><section class="catalog"><header class="catalog-head"><div><span class="panel-label">PUBLIC-SOURCE / EVIDENCE-AWARE RESEARCH</span><h2>OSINT TOOL CATALOG</h2><p>Choose an investigation domain. Each source opens through a compact technical brief.</p></div><div class="stats"><div><span class="panel-label">CATEGORIES</span><b id="categoryCount">9</b></div><div><span class="panel-label">TOOLS</span><b id="toolCount">161</b></div><div><span class="panel-label">MODE</span><b>PUBLIC</b></div></div></header><div class="categories" id="categories"></div></section><aside class="scope"><span class="panel-label">OPERATING SCOPE</span><h3>PUBLIC-SOURCE RESEARCH</h3><div class="scope-grid"><div>RESEARCH<b>PUBLIC SOURCES</b></div><div>EXPOSURE<b>PASSIVE CONTEXT</b></div><div>EVIDENCE<b>CAPTURE / VERIFY</b></div><div>ACCESS<b>EXTERNAL TOOLS</b></div></div><p style="margin-top:28px">External sources retain their own terms, rate limits and access controls.</p></aside><section class="tools"><div class="tools-head"><b>CORE TOOLCHAIN</b><span>DETAIL / OPEN</span></div><div class="tools-grid" id="tools"></div></section></section>
+  </main>
+  <div class="detail" id="detail" hidden><section class="modal"><header class="modal-head"><span class="badge">B</span><div><div class="panel-label">OSINT TOOL / DISCOVERY / RESEARCH</div><h2>Bellingcat Toolkit</h2></div><span class="panel-label">EXTERNAL SOURCE</span></header><div class="modal-body"><p>Curated online-investigation methods and public-source tools.</p><div class="cols"><div>ACCESS<b>EXTERNAL WEB</b></div><div>DOMAIN<b>DISCOVERY / RESEARCH</b></div><div>TAGS<b>METHOD · VERIFICATION</b></div></div><div class="url">https://bellingcat.gitbook.io/toolkit</div></div><footer class="actions"><span>OPEN WEB</span><span>COPY URL</span><span>CLOSE</span></footer></section></div>
+  <script src="../../../src/classes/workspaces/osintTools.registry.js"></script>
+  <script>
+    const registry = window.OSINTToolsRegistry || { CATEGORIES: [], TOOLS: [], FEATURED: [] };
+    document.querySelector('#categoryCount').textContent = registry.CATEGORIES.length || 9;
+    document.querySelector('#toolCount').textContent = registry.TOOLS.length || 161;
+    document.querySelector('#categories').innerHTML = registry.CATEGORIES.map(category => {
+      const count = registry.TOOLS.filter(tool => tool.category === category.id).length;
+      return `<article class="category"><span>${category.icon}</span><b>${category.title}</b><small>${category.description}</small><i>${count} TOOLS</i></article>`;
+    }).join('');
+    document.querySelector('#tools').innerHTML = registry.FEATURED.map(id => registry.TOOLS.find(tool => tool.id === id)).filter(Boolean).map(tool => `<article class="tool"><span>${tool.icon}</span><em>EXTERNAL</em><b>${tool.title}</b><p>${tool.description}</p></article>`).join('');
+    if (new URLSearchParams(location.search).get('detail') === '1') document.querySelector('#detail').hidden = false;
+  </script>
+</body>
+</html>

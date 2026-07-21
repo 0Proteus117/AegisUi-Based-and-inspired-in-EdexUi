@@ -1,5 +1,23 @@
 # Changelog
 
+## 2.2.9 - 2026-07-21
+
+### AegisUi Boot Branding
+
+- Added the GearLab-inspired AegisUi boot sequence with a progressive particle
+  network, identity mark, welcome line, controlled glow and a single clean
+  transition into the cockpit.
+- Stabilised the boot lifecycle so the sequence cannot restart or clear its
+  particle field before the final transition.
+
+### OSINT Analyst Deck
+
+- Replaced the OSINT placeholder layout with a nine-domain, 161-tool
+  public-source catalog.
+- Added full-workspace category navigation, compact tool briefs, tags and a
+  controlled external launch action for each resource.
+- Added a static OSINT workspace registry test and release visual evidence.
+
 ## 2.2.8 - 2026-07-11
 
 ### Recovery

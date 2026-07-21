@@ -141,35 +141,19 @@
             id: "osint",
             navigationLabel: "OSINT",
             name: "OSINT / Analyst Desk",
-            description: "A legal, public-source investigation workspace for discovery, verification and organized notes.",
-            status: "placeholder",
-            implementation: "foundation",
-            categories: ["search", "maps", "domains", "archives", "news", "evidence"],
+            description: "A public-source analyst deck for discovery, verification, infrastructure context and evidence-aware research.",
+            status: "active",
+            implementation: "tool catalog",
+            categories: ["discovery", "archives", "infrastructure", "threat intelligence", "geo / visual", "entities", "analysis"],
             quickActions: [
-                link("BELLINGCAT TOOLKIT", "https://bellingcat.gitbook.io/toolkit"),
-                link("WAYBACK MACHINE", "https://web.archive.org/"),
-                link("VIRUSTOTAL", "https://www.virustotal.com/gui/home/search"),
-                link("CENSYS", "https://search.censys.io/")
+                link("BELLINGCAT TOOLKIT", "https://bellingcat.gitbook.io/toolkit", "Methods and public-source verification"),
+                link("WAYBACK MACHINE", "https://web.archive.org/", "Historical web evidence"),
+                link("VIRUSTOTAL", "https://www.virustotal.com/gui/home/search", "Threat intelligence context"),
+                link("CENSYS", "https://search.censys.io/", "Public Internet asset context")
             ],
-            recommendedTools: [
-                {
-                    category: "PUBLIC-SOURCE DISCOVERY",
-                    items: [
-                        link("BELLINGCAT TOOLKIT", "https://bellingcat.gitbook.io/toolkit"),
-                        link("WAYBACK MACHINE", "https://web.archive.org/"),
-                        link("VIRUSTOTAL", "https://www.virustotal.com/gui/home/search"),
-                        link("CENSYS", "https://search.censys.io/")
-                    ]
-                }
-            ],
-            widgets: [
-                {id: "osint-search", name: "Search launchpad", type: "placeholder", status: "placeholder"},
-                {id: "osint-map", name: "Geospatial verification", type: "placeholder", status: "future"},
-                {id: "osint-domains", name: "Domain & infrastructure context", type: "placeholder", status: "future"},
-                {id: "osint-findings", name: "Findings notebook", type: "placeholder", status: "future"},
-                {id: "osint-news", name: "Source monitor", type: "placeholder", status: "future"}
-            ],
-            futureModules: ["Case board", "Source provenance", "Archive snapshots", "Exportable evidence log"]
+            recommendedTools: [],
+            widgets: [],
+            futureModules: []
         },
         {
             id: "student",

@@ -75,7 +75,8 @@ Version 1.8 adds a modular Command Deck with ten navigable workspaces:
   materials, research, standards and Project Timeline status;
 - ENG calculator detail views include synchronized sliders, dark AegisUi inputs
   and compact technical visuals instead of generic form controls.
-- `OSINT / ANALYST`, `STUDENT`, `ARTIST` and `BUSINESS` provide structured
+- `OSINT / ANALYST` is an interactive public-source tool catalog with category
+  navigation, compact tool briefs and safe external launch actions. `STUDENT`, `ARTIST` and `BUSINESS` provide structured
   foundations ready for profile-specific widgets and integrations.
 - `COMMS` centralizes safe launchers for WhatsApp Web, Slack, Teams, Discord,
   Gmail, Outlook, LinkedIn, Instagram and X / Twitter, plus local communication
