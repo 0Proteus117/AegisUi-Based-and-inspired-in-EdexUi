@@ -27,10 +27,12 @@ section#boot_screen {
     place-items: center;
     background:
         radial-gradient(80% 80% at 50% 48%, rgba(48, 57, 69, 0.98) 0%, var(--aegis-boot-bg) 50%, var(--aegis-boot-bg-soft) 100%);
+    background-color: #12161d;
     color: var(--aegis-boot-ink);
     font-family: var(--font_main), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     text-align: center;
     isolation: isolate;
+    color-scheme: dark;
     transition: opacity 760ms var(--aegis-boot-ease), filter 760ms var(--aegis-boot-ease);
 }
 
@@ -44,6 +46,24 @@ section#boot_screen[data-theme="light"] {
     --aegis-boot-line: rgba(38, 119, 213, 0.18);
     background:
         radial-gradient(80% 80% at 50% 48%, #ffffff 0%, var(--aegis-boot-bg) 50%, var(--aegis-boot-bg-soft) 100%);
+    color-scheme: light;
+}
+
+/* Match the first painted frame to macOS appearance. JavaScript applies the
+ * same mode immediately afterwards, so this prevents a transient opposite
+ * theme before the splash controller has initialised. */
+@media (prefers-color-scheme: light) {
+    section#boot_screen:not([data-theme]) {
+        --aegis-boot-bg: #f7f9fe;
+        --aegis-boot-bg-soft: #edf4ff;
+        --aegis-boot-ink: #102441;
+        --aegis-boot-muted: #607594;
+        --aegis-boot-cyan: #20a9dc;
+        --aegis-boot-blue: #2e62d4;
+        --aegis-boot-line: rgba(38, 119, 213, 0.18);
+        background: radial-gradient(80% 80% at 50% 48%, #ffffff 0%, var(--aegis-boot-bg) 50%, var(--aegis-boot-bg-soft) 100%);
+        color-scheme: light;
+    }
 }
 
 section#boot_screen::before {
@@ -78,12 +98,21 @@ section#boot_screen[data-theme="light"]::before {
     width: 100%;
     height: 100%;
     pointer-events: none;
-    opacity: 0;
-    transition: opacity 1850ms var(--aegis-boot-ease);
+    opacity: 1;
+    transition: opacity 420ms var(--aegis-boot-ease);
+    transform: translateZ(0);
+    will-change: opacity;
 }
 
 .aegis-boot-network-mode .aegis-boot-particles {
-    opacity: 1;
+    opacity: 1 !important;
+}
+
+/* The title is still part of the loading state. Keep the field alive until
+ * JavaScript explicitly begins the radial logo exit. */
+.aegis-boot-title-mode:not(.aegis-boot-exit) .aegis-boot-particles {
+    opacity: 1 !important;
+    visibility: visible !important;
 }
 
 .aegis-boot-glow {
@@ -123,7 +152,8 @@ section#boot_screen[data-theme="light"]::before {
     transform: translate(-50%, -52%) scale(0.985);
     opacity: 0;
     pointer-events: none;
-    transition: opacity 520ms var(--aegis-boot-ease), transform 720ms var(--aegis-boot-ease);
+    will-change: opacity, transform;
+    transition: opacity 720ms var(--aegis-boot-ease), transform 860ms var(--aegis-boot-ease);
 }
 
 .aegis-boot-title-mode .aegis-boot-content {
@@ -137,6 +167,11 @@ section#boot_screen[data-theme="light"]::before {
     display: grid;
     place-items: center;
     filter: drop-shadow(0 18px 18px rgba(27, 85, 159, 0.12));
+    animation: none;
+    position: relative;
+    z-index: 3;
+    transform: translateZ(0);
+    will-change: transform, filter;
 }
 
 .aegis-boot-mark {
@@ -147,6 +182,7 @@ section#boot_screen[data-theme="light"]::before {
 
 .aegis-boot-piece {
     transform-origin: 110px 94.2px;
+    will-change: transform, opacity;
 }
 
 .aegis-boot-piece path {
@@ -155,7 +191,10 @@ section#boot_screen[data-theme="light"]::before {
     stroke-width: 3.1;
     stroke-linejoin: round;
     vector-effect: non-scaling-stroke;
-    filter: drop-shadow(0 0 9px rgba(105, 183, 255, 0.32));
+    filter:
+        drop-shadow(0 0 9px rgba(105, 183, 255, 0.34))
+        drop-shadow(0 0 16px rgba(49, 165, 255, 0.12));
+    will-change: filter, stroke;
 }
 
 section#boot_screen[data-theme="light"] .aegis-boot-piece path {
@@ -176,13 +215,21 @@ section#boot_screen[data-theme="light"] .aegis-boot-piece path {
     animation: aegisPieceInC 860ms 180ms both var(--aegis-boot-ease);
 }
 
+.aegis-boot-title-mode:not(.aegis-boot-exit) .aegis-boot-mark-wrap {
+    animation: aegisMarkBreathingField 2500ms ease-in-out 900ms infinite;
+}
+
 .aegis-boot-title-mode:not(.aegis-boot-exit) .aegis-boot-piece path {
-    animation: aegisLogoBreathe 2300ms ease-in-out 1040ms infinite;
+    animation: aegisLogoBreathe 2500ms ease-in-out 900ms infinite;
 }
 
 .aegis-boot-copy {
     display: grid;
     gap: 13px;
+    position: relative;
+    z-index: 6;
+    isolation: isolate;
+    pointer-events: none;
 }
 
 .aegis-boot-welcome,
@@ -200,10 +247,20 @@ section#boot_screen[data-theme="light"] .aegis-boot-piece path {
     line-height: 1.6;
     text-shadow: 0 0 18px rgba(0, 0, 0, 0.2);
     font-family: "Orbitron Aegis Boot", var(--font_main), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    opacity: 0;
+    transform: translateY(10px);
+    transition:
+        opacity 900ms var(--aegis-boot-ease),
+        transform 900ms var(--aegis-boot-ease);
 }
 
 section#boot_screen[data-theme="light"] .aegis-boot-welcome {
     text-shadow: none;
+}
+
+.aegis-boot-welcome.aegis-boot-copy-line-visible {
+    opacity: 1;
+    transform: none;
 }
 
 .aegis-boot-begin {
@@ -212,8 +269,18 @@ section#boot_screen[data-theme="light"] .aegis-boot-welcome {
     font-weight: 650;
     letter-spacing: 0.18em;
     text-shadow: 0 0 16px rgba(55, 177, 255, 0.4);
-    animation: aegisCopyIn 660ms 720ms both var(--aegis-boot-ease);
+    opacity: 0;
+    transform: translateY(10px);
+    animation: none;
+    transition:
+        opacity 720ms var(--aegis-boot-ease),
+        transform 720ms var(--aegis-boot-ease);
     font-family: "Orbitron Aegis Boot", var(--font_main), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.aegis-boot-begin.aegis-boot-copy-line-visible {
+    opacity: 1;
+    transform: none;
 }
 
 .aegis-boot-skip {
@@ -268,15 +335,21 @@ section#boot_screen[data-theme="light"] .aegis-boot-skip {
 }
 
 .aegis-boot-exit {
-    animation: aegisBootExit 1500ms linear forwards;
+    /* The splash must never fade its whole surface to transparent. Doing so
+     * briefly exposed an incompletely painted renderer beneath it and caused
+     * the white flash seen at startup and hand-off. The UI is prepared behind
+     * this opaque surface; only the animated elements leave before removal. */
+    opacity: 1;
+    filter: none;
+    transition: none;
 }
 
 .aegis-boot-exit .aegis-boot-content {
-    animation: aegisContentExit 1500ms var(--aegis-boot-ease) forwards;
+    animation: aegisContentExit 2000ms var(--aegis-boot-ease) forwards;
 }
 
 .aegis-boot-exit .aegis-boot-piece {
-    animation: aegisPieceOut 1500ms cubic-bezier(0.16, 0.84, 0.22, 1) forwards;
+    animation: aegisPieceOut 2000ms cubic-bezier(0.16, 0.84, 0.22, 1) forwards;
 }
 
 .aegis-boot-exit .aegis-boot-piece-a {
@@ -295,8 +368,10 @@ section#boot_screen[data-theme="light"] .aegis-boot-skip {
 }
 
 .aegis-boot-exit .aegis-boot-particles {
-    transition: opacity 820ms var(--aegis-boot-ease);
-    opacity: 0;
+    /* Particle alpha is driven frame-by-frame by the radial burst. A CSS
+     * opacity drop here made the complete field vanish halfway through it. */
+    transition: none;
+    opacity: 1;
 }
 
 @keyframes aegisPieceInA {
@@ -322,13 +397,32 @@ section#boot_screen[data-theme="light"] .aegis-boot-skip {
 @keyframes aegisLogoBreathe {
     0%, 100% {
         stroke: rgba(103, 179, 255, 0.84);
-        filter: drop-shadow(0 0 8px rgba(105, 183, 255, 0.28));
+        stroke-width: 3.05;
+        filter:
+            drop-shadow(0 0 8px rgba(105, 183, 255, 0.28))
+            drop-shadow(0 0 15px rgba(49, 165, 255, 0.1));
     }
     50% {
         stroke: rgba(128, 211, 255, 1);
+        stroke-width: 3.55;
         filter:
-            drop-shadow(0 0 9px rgba(105, 183, 255, 0.45))
-            drop-shadow(0 0 18px rgba(49, 165, 255, 0.24));
+            drop-shadow(0 0 12px rgba(128, 211, 255, 0.58))
+            drop-shadow(0 0 28px rgba(49, 165, 255, 0.36))
+            drop-shadow(0 0 44px rgba(49, 165, 255, 0.14));
+    }
+}
+
+@keyframes aegisMarkBreathingField {
+    0%, 100% {
+        filter:
+            drop-shadow(0 18px 18px rgba(27, 85, 159, 0.12))
+            drop-shadow(0 0 8px rgba(105, 183, 255, 0.16));
+    }
+    50% {
+        filter:
+            drop-shadow(0 18px 20px rgba(27, 85, 159, 0.2))
+            drop-shadow(0 0 22px rgba(105, 183, 255, 0.34))
+            drop-shadow(0 0 42px rgba(49, 165, 255, 0.18));
     }
 }
 
@@ -340,17 +434,6 @@ section#boot_screen[data-theme="light"] .aegis-boot-skip {
 @keyframes aegisPieceOut {
     0% { opacity: 1; transform: translate(0, 0) scale(1); }
     100% { opacity: 0; transform: translate(var(--aegis-piece-out-x), var(--aegis-piece-out-y)) scale(0.86); }
-}
-
-@keyframes aegisBootExit {
-    0%, 60% {
-        opacity: 1;
-        filter: none;
-    }
-    to {
-        opacity: 0;
-        filter: blur(1px);
-    }
 }
 
 @media (prefers-reduced-motion: reduce) {

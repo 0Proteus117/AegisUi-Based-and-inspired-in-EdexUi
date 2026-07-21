@@ -207,6 +207,7 @@ window.audioManager = new AudioManager();
 remote.app.focus();
 
 let i = 0;
+let aegisBootSequence = null;
 if (window.settings.nointro || window.settings.nointroOverride) {
     initGraphicalErrorHandling();
     initSystemInformationProxy();
@@ -217,6 +218,47 @@ if (window.settings.nointro || window.settings.nointroOverride) {
     displayLine();
 }
 
+// The branded splash owns its complete visual timeline. In particular, do
+// not initialise the cockpit while the particle field is visible: initUI()
+// creates a large amount of DOM synchronously and would freeze the network
+// at exactly the moment the mark enters.
+function startAegisBootSequence(bootSplash) {
+    if (aegisBootSequence) return aegisBootSequence;
+
+    aegisBootSequence = (async () => {
+        const displayName = (await getDisplayName()) || "Gabriel Prada Lareo";
+        bootSplash.configure({
+            displayName,
+            locale: (window.settings && window.settings.locale) || navigator.language || "es",
+            minimumSequenceMs: 12000,
+            networkDelayMs: 0,
+            titleDelayMs: 2500
+        });
+
+        // Begin loading the local display font without making the animation
+        // wait for it. The mark, name and copy still follow the fixed timing.
+        if (document.fonts && document.fonts.load) {
+            document.fonts.load('500 16px "Orbitron Aegis Boot"').catch(() => {});
+        }
+
+        bootSplash.showTitle();
+        await bootSplash.waitForMinimumSequence();
+        bootSplash.exit();
+        await _delay(2000);
+
+        // All heavy DOM/module construction happens after the radial exit.
+        // The opaque splash remains mounted until the cockpit is genuinely
+        // ready, preventing both animation stutter and a white hand-off.
+        initGraphicalErrorHandling();
+        initSystemInformationProxy();
+        await waitForFonts();
+        await initUI({ silentStartup: true });
+        bootSplash.remove();
+    })();
+
+    return aegisBootSequence;
+}
+
 // Startup boot log
 function displayLine() {
     let bootScreen = document.getElementById("boot_screen");
@@ -225,10 +267,12 @@ function displayLine() {
         bootSplash.ensure();
         bootSplash.configure({
             locale: (window.settings && window.settings.locale) || navigator.language || "es",
-            minimumSequenceMs: 9000,
-            networkDelayMs: 2000,
-            titleDelayMs: 4100
+            minimumSequenceMs: 12000,
+            networkDelayMs: 0,
+            titleDelayMs: 2500
         });
+        startAegisBootSequence(bootSplash);
+        return;
     }
     let log = fs.readFileSync(path.join(__dirname, "assets", "misc", "boot_log.txt")).toString().split('\n');
 
@@ -243,10 +287,12 @@ function displayLine() {
         return;
     }
 
-    if (log[i] === "Boot Complete") {
-        window.audioManager.granted.play();
-    } else {
-        window.audioManager.stdout.play();
+    if (!bootSplash) {
+        if (log[i] === "Boot Complete") {
+            window.audioManager.granted.play();
+        } else {
+            window.audioManager.stdout.play();
+        }
     }
     if (bootSplash) {
         bootSplash.appendLog(log[i]);
@@ -303,13 +349,8 @@ async function displayTitleScreen() {
     }
     if (window.AegisBootSplash) {
         window.AegisBootSplash.ensure();
-        window.AegisBootSplash.configure({
-            displayName: await getDisplayName(),
-            locale: (window.settings && window.settings.locale) || navigator.language || "es",
-            minimumSequenceMs: 9000,
-            networkDelayMs: 2000,
-            titleDelayMs: 4100
-        });
+        startAegisBootSequence(window.AegisBootSplash);
+        return true;
     } else {
         bootScreen.innerHTML = "";
     }
@@ -403,9 +444,13 @@ async function getDisplayName() {
 }
 
 // Create the engineering dashboard and its compact terminal.
-async function initUI() {
+async function initUI(options = {}) {
+    const silentStartup = Boolean(options.silentStartup);
     document.body.classList.add("engineering-mode");
-    document.body.innerHTML += `<section class="mod_column" id="mod_column_left">
+    // The startup splash remains mounted while the cockpit is prepared behind
+    // it. Reassigning body.innerHTML here used to recreate #boot_screen,
+    // detach its live particle canvas and leave a frozen duplicate on screen.
+    document.body.insertAdjacentHTML("beforeend", `<section class="mod_column" id="mod_column_left">
         <h3 class="title"><p>EDEXUI-ENG</p><p>SYSTEM</p></h3>
     </section>
     <section id="main_shell" style="opacity:0;" augmented-ui="bl-clip tr-clip exe">
@@ -415,7 +460,7 @@ async function initUI() {
     <section id="engineering_services" aria-hidden="true"></section>
     <main id="engineering_dashboard"></main>
     <section id="workspace_views"></section>
-    <section id="keyboard" aria-hidden="true"></section>`;
+    <section id="keyboard" aria-hidden="true"></section>`);
 
     // Keep the keyboard engine hidden for backwards compatibility with
     // shortcuts and settings, while removing the on-screen keyboard itself.
@@ -445,7 +490,7 @@ async function initUI() {
         if (!left[i]) {
             clearInterval(x);
         } else {
-            window.audioManager.panels.play();
+            if (!silentStartup) window.audioManager.panels.play();
             left[i].setAttribute("style", "animation-play-state: running;");
             i++;
         }
@@ -497,7 +542,7 @@ async function initUI() {
     });
     window.assistantPresence = new AssistantPresence();
 
-    window.audioManager.expand.play();
+    if (!silentStartup) window.audioManager.expand.play();
     shellContainer.setAttribute("style", "opacity:1;");
     await _delay(300);
     window.updateCheck = new UpdateChecker();
