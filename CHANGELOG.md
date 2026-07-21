@@ -7,6 +7,7 @@
 - Restored the source-controlled Aegis boot sequence: particle reveal, branded mark, greeting, breathing glow and radial exit.
 - Added a boot-splash integrity check and a clean `src` → `prebuild-src` sync so packaging cannot silently fall back to the upstream eDEX-UI intro.
 - Clean builds now synchronize only from current source; no prior `.app` or DMG is used as packaging input.
+- Hardened packaged startup by keeping `node-pty`'s `spawn-helper` outside ASAR and signing it during macOS packaging.
 
 ## 2.3.0 - 2026-07-21
 

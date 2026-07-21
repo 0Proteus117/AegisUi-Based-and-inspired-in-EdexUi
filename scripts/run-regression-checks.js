@@ -9,6 +9,7 @@ const {spawnSync} = require("child_process");
 const ROOT = path.resolve(__dirname, "..");
 const CHECKS = [
     "scripts/test-boot-splash-integrity.js",
+    "scripts/test-packaged-node-pty-helper.js",
     "scripts/release-health-check.js",
     "scripts/test-assistant-ollama.js",
     "scripts/test-assistant-routing-classifier.js",

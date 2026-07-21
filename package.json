@@ -51,6 +51,9 @@
     "productName": "EdexUi-Eng",
     "publish": "github",
     "asar": true,
+    "asarUnpack": [
+      "**/node-pty/**"
+    ],
     "extraResources": [
       {
         "from": "prebuild-src/native/EdexUiEngCalendar.app",
