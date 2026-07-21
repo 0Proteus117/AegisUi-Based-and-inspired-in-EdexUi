@@ -141,14 +141,19 @@
             id: "osint",
             navigationLabel: "OSINT",
             name: "OSINT / Analyst Desk",
-            description: "A legal, public-source investigation workspace for discovery, verification and organized notes.",
+            description: "A public-source analyst deck for discovery, verification, infrastructure context and evidence-aware research.",
             status: "active",
-            implementation: "native access foundation",
-            categories: ["discovery", "archives", "geospatial", "infrastructure", "media", "profiles", "research", "monitoring", "evidence"],
-            quickActions: [],
+            implementation: "tool catalog",
+            categories: ["discovery", "archives", "infrastructure", "threat intelligence", "geo / visual", "entities", "analysis"],
+            quickActions: [
+                link("BELLINGCAT TOOLKIT", "https://bellingcat.gitbook.io/toolkit", "Methods and public-source verification"),
+                link("WAYBACK MACHINE", "https://web.archive.org/", "Historical web evidence"),
+                link("VIRUSTOTAL", "https://www.virustotal.com/gui/home/search", "Threat intelligence context"),
+                link("CENSYS", "https://search.censys.io/", "Public Internet asset context")
+            ],
             recommendedTools: [],
             widgets: [],
-            futureModules: ["Case board", "Source provenance", "Archive snapshots", "Exportable evidence log"]
+            futureModules: []
         },
         {
             id: "student",
