@@ -22,6 +22,7 @@ const fixture = registry.getProvider("cobalt-strike-reference");
 const attemptedActions = [
     policy.canLaunch(fixture),
     policy.canCopyUrl(fixture),
+    policy.canViewDocs(fixture),
     policy.canInstall(fixture),
     policy.canConfigure(fixture),
     policy.canIntegrate(fixture)
@@ -42,6 +43,8 @@ check("REFERENCE_NO_NETWORK_REQUEST", true, "policy is pure and does not perform
 check("REFERENCE_NO_DISK_WRITE", true, "policy is pure and does not write local data");
 check("REFERENCE_DETAIL_UI", managerSource.includes("data-osint-reference-notice") && managerSource.includes("READ REFERENCE"));
 check("REFERENCE_HANDLER_GUARD", managerSource.includes("launchOSINTProvider(provider)") && managerSource.includes("if (!decision.allowed)"));
+check("REFERENCE_PANEL_POLICY_BLOCK", managerSource.includes("rejectOSINTPolicy(provider, decision") && managerSource.includes('code: "POLICY_BLOCKED"'));
+check("REFERENCE_PANEL_ACTIONS_ONLY", managerSource.includes('data-osint-panel-action="read"') && managerSource.includes('data-osint-panel-action="close"'));
 check("REFERENCE_OPENLINK_AFTER_POLICY", managerSource.indexOf("if (!decision.allowed)") < managerSource.indexOf("await this.openLink(provider.officialUrl, this.osintView)"));
 check("REFERENCE_NO_NEW_IPC", !bootSource.includes("osint-provider-"));
 check("REFERENCE_NO_LEGACY_RECONNECT", !managerSource.includes("OsintAccessController"));
