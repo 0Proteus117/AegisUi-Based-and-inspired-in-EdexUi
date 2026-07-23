@@ -5,6 +5,7 @@ const path = require("path");
 
 const root = path.resolve(__dirname, "..");
 const registry = require(path.join(root, "src/classes/workspaces/osintTools.registry.js"));
+const policy = require(path.join(root, "src/classes/workspaces/osintProviderPolicy.class.js"));
 const workspaceManager = fs.readFileSync(path.join(root, "src/classes/workspaceManager.class.js"), "utf8");
 const ui = fs.readFileSync(path.join(root, "src/ui.html"), "utf8");
 
@@ -14,18 +15,25 @@ const toolIds = new Set();
 if (!Array.isArray(registry.CATEGORIES) || registry.CATEGORIES.length < 8) {
     failures.push("OSINT_CATEGORIES_MISSING");
 }
-if (!Array.isArray(registry.TOOLS) || registry.TOOLS.length < 140) {
+if (!Array.isArray(registry.PROVIDERS) || registry.PROVIDERS.length < 161) {
     failures.push("OSINT_TOOL_CATALOG_TOO_SMALL");
 }
 
-registry.TOOLS.forEach(tool => {
-    if (!tool.id || !tool.title || !tool.category || !tool.url || tool.type !== "web") {
-        failures.push(`INVALID_TOOL:${tool.id || "unknown"}`);
+registry.PROVIDERS.forEach(provider => {
+    const referenceOnly = policy.isReferenceOnly(provider);
+    if (!provider.id || !provider.name || !provider.category || !provider.providerType || !provider.accessMode) {
+        failures.push(`INVALID_PROVIDER:${provider.id || "unknown"}`);
     }
-    if (toolIds.has(tool.id)) failures.push(`DUPLICATE_TOOL:${tool.id}`);
-    toolIds.add(tool.id);
-    if (!registry.CATEGORIES.some(category => category.id === tool.category)) {
-        failures.push(`UNKNOWN_CATEGORY:${tool.id}`);
+    if (!referenceOnly && (!provider.officialUrl || provider.accessMode !== "WEB")) {
+        failures.push(`INVALID_LAUNCHABLE_PROVIDER:${provider.id}`);
+    }
+    if (referenceOnly && (provider.officialUrl || provider.launchAllowed || provider.copyUrlAllowed)) {
+        failures.push(`INVALID_REFERENCE_PROVIDER:${provider.id}`);
+    }
+    if (toolIds.has(provider.id)) failures.push(`DUPLICATE_TOOL:${provider.id}`);
+    toolIds.add(provider.id);
+    if (!registry.CATEGORIES.some(category => category.id === provider.category)) {
+        failures.push(`UNKNOWN_CATEGORY:${provider.id}`);
     }
 });
 
@@ -37,19 +45,22 @@ registry.FEATURED.forEach(id => {
     "renderOSINT(view, definition)",
     "renderOSINTState(view = this.osintView",
     "openOSINTToolById(toolId)",
-    "openOSINTDetail(tool)",
-    "closeOSINTDetail()"
+    "openOSINTDetail(provider)",
+    "closeOSINTDetail()",
+    "launchOSINTProvider(provider)",
+    "copyOSINTProviderUrl(provider)",
+    "osintPolicyFilterControls()"
 ].forEach(signature => {
     if (!workspaceManager.includes(signature)) failures.push(`WORKSPACE_MANAGER_MISSING:${signature}`);
 });
 
-if (!ui.includes("classes/workspaces/osintTools.registry.js")) {
+if (!ui.includes("classes/workspaces/osintTools.registry.js") || !ui.includes("classes/workspaces/osintProviderSchema.class.js") || !ui.includes("classes/workspaces/osintProviderPolicy.class.js")) {
     failures.push("OSINT_REGISTRY_NOT_LOADED");
 }
 
 console.log(`OSINT_CATEGORIES: ${registry.CATEGORIES.length}`);
-console.log(`OSINT_TOOLS: ${registry.TOOLS.length}`);
-console.log(`OSINT_DUPLICATE_IDS: ${registry.TOOLS.length - toolIds.size}`);
+console.log(`OSINT_TOOLS: ${registry.PROVIDERS.length}`);
+console.log(`OSINT_DUPLICATE_IDS: ${registry.PROVIDERS.length - toolIds.size}`);
 console.log(`OSINT_WORKSPACE: ${failures.length ? "FAIL" : "OK"}`);
 
 if (failures.length) {

@@ -3587,6 +3587,19 @@ button.eng-thread-row.active {
     letter-spacing: .06vh;
 }
 
+.engineering-mode .osint-tool-card.reference-only {
+    border-color: rgba(218, 160, 74, .72);
+    background:
+        linear-gradient(142deg, rgba(218, 160, 74, .09), transparent 56%),
+        rgba(18, 14, 10, .8);
+}
+
+.engineering-mode .osint-tool-card.reference-only em,
+.engineering-mode .osint-tool-card.reference-only i b {
+    color: rgba(239, 193, 122, .82);
+    border-color: rgba(218, 160, 74, .45);
+}
+
 .engineering-mode .osint-tool-card strong {
     overflow: hidden;
     text-overflow: ellipsis;
@@ -3752,7 +3765,8 @@ button.eng-thread-row.active {
 
 .engineering-mode .osint-category-notes .workspace-panel-content {
     display: grid;
-    align-content: space-between;
+    gap: .8vh;
+    align-content: start;
 }
 
 .engineering-mode .osint-category-notes p {
@@ -3766,6 +3780,69 @@ button.eng-thread-row.active {
     display: flex;
     flex-wrap: wrap;
     gap: .32vh;
+}
+
+.engineering-mode .osint-policy-filters {
+    display: grid;
+    gap: .45vh;
+}
+
+.engineering-mode .osint-policy-filter {
+    display: grid;
+    grid-template-columns: 5.5vh minmax(0, 1fr);
+    gap: .45vh;
+    align-items: center;
+    color: rgba(124, 203, 255, .58);
+    font: .48vh var(--font_mono);
+    letter-spacing: .06vh;
+}
+
+.engineering-mode .osint-policy-filter .aegis-select {
+    width: 100%;
+    min-height: 2.35vh;
+    padding: .25vh .38vh;
+    border: .08vh solid rgba(59, 167, 255, .48);
+    color: rgba(216, 241, 255, .82);
+    background: rgba(3, 7, 11, .68);
+    font: .51vh var(--font_mono);
+    outline: none;
+}
+
+.engineering-mode .osint-policy-filter .aegis-select:focus {
+    border-color: #7CCBFF;
+    box-shadow: 0 0 .7vh rgba(59, 167, 255, .25);
+}
+
+.engineering-mode .osint-filter-clear {
+    justify-self: start;
+    padding: .36vh .46vh;
+    border: .08vh solid rgba(59, 167, 255, .45);
+    color: rgba(124, 203, 255, .68);
+    background: rgba(3, 7, 11, .5);
+    font: .48vh var(--font_mono);
+    letter-spacing: .06vh;
+}
+
+.engineering-mode .osint-empty-state {
+    min-height: 16vh;
+    display: grid;
+    place-content: center;
+    gap: .65vh;
+    border: .08vh dashed rgba(59, 167, 255, .32);
+    color: rgba(124, 203, 255, .7);
+    background: rgba(3, 7, 11, .32);
+    text-align: center;
+}
+
+.engineering-mode .osint-empty-state strong {
+    font: .7vh var(--font_main);
+    font-weight: normal;
+    letter-spacing: .08vh;
+}
+
+.engineering-mode .osint-empty-state span {
+    color: rgba(216, 241, 255, .44);
+    font: .56vh var(--font_main_light);
 }
 
 .osint-detail-overlay {
@@ -3795,6 +3872,21 @@ button.eng-thread-row.active {
         linear-gradient(145deg, rgba(59, 167, 255, .08), transparent 54%),
         rgba(7, 11, 16, .97);
     box-shadow: 0 0 2.6vh rgba(59, 167, 255, .22), 0 2vh 6vh rgba(0, 0, 0, .55);
+}
+
+.osint-detail-panel.reference-only {
+    border-color: rgba(218, 160, 74, .78);
+    background:
+        radial-gradient(circle at 80% 10%, rgba(218, 160, 74, .14), transparent 25%),
+        linear-gradient(145deg, rgba(218, 160, 74, .08), transparent 54%),
+        rgba(16, 13, 10, .98);
+}
+
+.osint-detail-panel.reference-only > header > span,
+.osint-detail-panel.reference-only .osint-detail-close,
+.osint-detail-panel.reference-only > footer button {
+    border-color: rgba(218, 160, 74, .62);
+    color: #efc17a;
 }
 
 .osint-detail-panel > header {
@@ -3867,6 +3959,48 @@ button.eng-thread-row.active {
     background: rgba(3, 7, 11, .38);
     font: .62vh var(--font_mono);
     word-break: break-all;
+}
+
+.osint-detail-policy {
+    padding: .65vh;
+    border-left: .14vh solid rgba(59, 167, 255, .5);
+    color: rgba(216, 241, 255, .55);
+    background: rgba(3, 7, 11, .3);
+    font: .58vh var(--font_main_light);
+}
+
+.osint-reference-notice {
+    display: grid;
+    gap: .7vh;
+    padding: .9vh;
+    border: .08vh solid rgba(218, 160, 74, .5);
+    color: rgba(242, 216, 172, .78);
+    background: rgba(46, 32, 15, .32);
+}
+
+.osint-reference-notice > strong {
+    color: #efc17a;
+    font: .66vh var(--font_mono);
+    font-weight: normal;
+    letter-spacing: .09vh;
+}
+
+.osint-reference-notice p {
+    margin: 0;
+    color: rgba(242, 224, 191, .7);
+    font-size: .66vh;
+}
+
+.osint-reference-notice b {
+    color: #efc17a;
+    font: .52vh var(--font_mono);
+    letter-spacing: .06vh;
+}
+
+.osint-reference-notice small {
+    color: rgba(239, 193, 122, .65);
+    font: .48vh var(--font_mono);
+    letter-spacing: .06vh;
 }
 
 .osint-detail-panel > footer {

@@ -91,8 +91,12 @@ function main() {
         && exists("scripts/test-eng-command-router.js")
         && exists("scripts/test-eng-calculators.js");
     const osintFoundation = exists("src/classes/workspaces/osintTools.registry.js")
+        && exists("src/classes/workspaces/osintProviderSchema.class.js")
+        && exists("src/classes/workspaces/osintProviderPolicy.class.js")
         && exists("src/classes/workspaces/osintAccess.class.js")
-        && exists("scripts/test-osint-native-access-foundation.js");
+        && exists("scripts/test-osint-native-access-foundation.js")
+        && exists("scripts/test-osint-provider-registry.js")
+        && exists("scripts/test-osint-reference-only-policy.js");
 
     if (!versionsMatch) failures.push("package versions do not match");
     if (!aegisUiBranding) failures.push("AegisUi visible branding files are missing");
@@ -122,6 +126,7 @@ function main() {
     print("MAP_PROVIDERS", mapProviders ? "PRESENT" : "MISSING");
     print("ENG_WORKSPACE", engWorkspace ? "PRESENT" : "MISSING");
     print("OSINT_NATIVE_ACCESS", osintFoundation ? "PRESENT" : "MISSING");
+    print("OSINT_PROVIDER_REGISTRY", exists("src/classes/workspaces/osintProviderSchema.class.js") && exists("src/classes/workspaces/osintProviderPolicy.class.js") ? "PRESENT" : "MISSING");
     print("RELEASE_HEALTH", failures.length ? "FAIL" : "OK");
 
     if (failures.length) {
