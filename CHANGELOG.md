@@ -1,5 +1,24 @@
 # Changelog
 
+## 2.3.4 - 2026-07-23
+
+### OSINT functional tool access panel
+
+- Added the dynamic, policy-aware `TOOL ACCESS` panel to the existing Analyst
+  Desk without changing the catalog composition or connecting a native provider
+  runtime.
+- Separated hover preview, explicit provider selection, detail dialog and
+  permitted external actions; selecting a card no longer implies navigation.
+- Added normalized provider metadata, visible policy/risk/legal context and
+  an in-memory-only, capped session history with lightweight clear confirmation.
+- Added an accessible, responsive detail flow with keyboard semantics and focus
+  return.
+- Kept `REFERENCE_ONLY` entries informational: only `READ REFERENCE` and
+  `CLOSE` are rendered, while policy guards still return `POLICY_BLOCKED` for
+  artificial action invocation before the external-link path.
+- Preserved the legacy runtime boundary: no new IPC, no WebContentsView use, no
+  legacy source bridge and no provider API integration.
+
 ## 2.3.3 - 2026-07-23
 
 ### OSINT provider registry and reference policy

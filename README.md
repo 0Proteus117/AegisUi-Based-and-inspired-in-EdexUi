@@ -6,7 +6,7 @@ Local-first macOS engineering cockpit based on the visual spirit of eDEX-UI.
 [![CodeQL](https://github.com/0Proteus117/AegisUi-Based-and-inspired-in-EdexUi/actions/workflows/codeql-analysis.yml/badge.svg?branch=feature%2Fsystems-online-pass)](https://github.com/0Proteus117/AegisUi-Based-and-inspired-in-EdexUi/actions/workflows/codeql-analysis.yml)
 ![Platform](https://img.shields.io/badge/platform-macOS%20Apple%20Silicon-3BA7FF)
 ![Local first](https://img.shields.io/badge/local--first-yes-7CCBFF)
-![Version](https://img.shields.io/badge/version-2.3.3-13263A)
+![Version](https://img.shields.io/badge/version-2.3.4-13263A)
 
 ## Current status
 
@@ -24,8 +24,10 @@ AegisUi is a cockpit-style desktop environment for engineering work:
 - ENG workspace with CAD/CAM/CAE launchers, manufacturing tools, internal
   engineering calculators, materials, standards and research references.
 - OSINT Analyst Deck with a normalized provider registry: public-source
-  references carry explicit access, provider-status, risk and legal-context
-  policy before a permitted external browser action is available.
+references carry explicit access, provider-status, risk and legal-context
+policy before a permitted external browser action is available. Its `TOOL
+ACCESS` panel keeps selection, metadata, policy decisions and a private
+in-memory session view separate from external actions.
 - Live systems map with TomTom traffic, AISStream maritime traffic,
   RainViewer radar, Open-Meteo Marine conditions and CelesTrak SAT support.
 - Assistant presence layer with Angie/Gustav/Ares/Aphrodite profiles,
@@ -97,7 +99,11 @@ See [OSINT_PROVIDER_SCHEMA.md](OSINT_PROVIDER_SCHEMA.md),
 [OSINT_PROVIDER_POLICY.md](OSINT_PROVIDER_POLICY.md),
 [OSINT_REFERENCE_ONLY_POLICY.md](OSINT_REFERENCE_ONLY_POLICY.md),
 [OSINT_LEGAL_STATUS_POLICY.md](OSINT_LEGAL_STATUS_POLICY.md) and
-[OSINT_LEGACY_RUNTIME_MAP.md](OSINT_LEGACY_RUNTIME_MAP.md).
+[OSINT_LEGACY_RUNTIME_MAP.md](OSINT_LEGACY_RUNTIME_MAP.md),
+[OSINT_TOOL_ACCESS_PANEL.md](OSINT_TOOL_ACCESS_PANEL.md),
+[OSINT_PANEL_STATE_MODEL.md](OSINT_PANEL_STATE_MODEL.md),
+[OSINT_SESSION_HISTORY.md](OSINT_SESSION_HISTORY.md) and
+[OSINT_ACCESSIBILITY.md](OSINT_ACCESSIBILITY.md).
 
 ## Assistant
 
@@ -204,6 +210,11 @@ See [SECURITY.md](SECURITY.md) and [CONFIGURATION.md](CONFIGURATION.md).
 - [OSINT_REFERENCE_ONLY_POLICY.md](OSINT_REFERENCE_ONLY_POLICY.md)
 - [OSINT_LEGAL_STATUS_POLICY.md](OSINT_LEGAL_STATUS_POLICY.md)
 - [OSINT_LEGACY_RUNTIME_MAP.md](OSINT_LEGACY_RUNTIME_MAP.md)
+- [OSINT_TOOL_ACCESS_PANEL.md](OSINT_TOOL_ACCESS_PANEL.md)
+- [OSINT_PANEL_STATE_MODEL.md](OSINT_PANEL_STATE_MODEL.md)
+- [OSINT_SESSION_HISTORY.md](OSINT_SESSION_HISTORY.md)
+- [OSINT_ACCESSIBILITY.md](OSINT_ACCESSIBILITY.md)
+- [OSINT_PHASE2_VALIDATION.md](OSINT_PHASE2_VALIDATION.md)
 - [MAP_LAYERS.md](MAP_LAYERS.md)
 - [MAP_PROVIDER_HARDENING.md](MAP_PROVIDER_HARDENING.md)
 - [APPLE_MUSIC.md](APPLE_MUSIC.md)

@@ -8,11 +8,19 @@
 | --- | --- | --- |
 | External browser launch | `canLaunch(provider)` | Approved `WEB` provider with an approved URL and launch permission. |
 | Clipboard URL copy | `canCopyUrl(provider)` | Only after launch policy passes and copy permission is true. |
+| Documentation view | `canViewDocs(provider)` | Approved documentation URL only; no reference entry can expose one. |
+| Reference reading | `canReadReference(provider)` | Informational reference detail only; it never provides an operational route. |
 | Installation | `canInstall(provider)` | No provider currently receives approval in this phase. |
 | Configuration | `canConfigure(provider)` | Blocked in this catalog-only phase. |
 | Integration | `canIntegrate(provider)` | No provider currently receives runtime integration. |
 
 The policy returns `{allowed, code, message}`. It does not perform network activity, disk writes, provider execution, scraping, downloads or IPC registration.
+
+The Phase 2 `TOOL ACCESS` panel calls these decisions for every action. A
+normal provider may expose `DETAIL`, `OPEN`, `COPY URL` or `DOCS` only when the
+specific decision permits it. A `REFERENCE_ONLY` provider exposes only `READ
+REFERENCE` and `CLOSE`; a manipulated launch, copy or docs call still returns
+`POLICY_BLOCKED` before the external-link bridge.
 
 ## Launch requirements
 

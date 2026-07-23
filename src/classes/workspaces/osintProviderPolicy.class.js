@@ -47,6 +47,22 @@
         return allowed("COPY_APPROVED_URL");
     }
 
+    function canViewDocs(provider) {
+        if (!provider) return denied("PROVIDER_NOT_FOUND", "Provider record is unavailable.");
+        if (isReferenceOnly(provider)) return denied("REFERENCE_ONLY", "Reference-only entries have no actionable documentation route.");
+        if (["DISABLED", "UNSUPPORTED", "REFERENCE_ONLY"].includes(provider.providerStatus)) {
+            return denied("STATUS_BLOCKED", "This provider is not currently available for documentation access.");
+        }
+        if (!validWebUrl(provider.docsUrl)) return denied("DOCS_UNAVAILABLE", "This provider has no approved documentation URL.");
+        return allowed("VIEW_APPROVED_DOCUMENTATION");
+    }
+
+    function canReadReference(provider) {
+        if (!provider) return denied("PROVIDER_NOT_FOUND", "Provider record is unavailable.");
+        if (!isReferenceOnly(provider)) return denied("NOT_REFERENCE_ONLY", "This action is reserved for reference-only entries.");
+        return allowed("READ_REFERENCE");
+    }
+
     function canInstall(provider) {
         if (isReferenceOnly(provider)) return denied("REFERENCE_ONLY", "Reference-only entries cannot be installed by AegisUi.");
         return provider && provider.installationAllowed
@@ -75,8 +91,11 @@
 
     return Object.freeze({
         isReferenceOnly,
+        canOpen: canLaunch,
         canLaunch,
         canCopyUrl,
+        canViewDocs,
+        canReadReference,
         canInstall,
         canConfigure,
         canIntegrate,

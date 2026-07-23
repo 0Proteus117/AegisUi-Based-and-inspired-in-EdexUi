@@ -3343,12 +3343,12 @@ button.eng-thread-row.active {
 }
 
 .engineering-mode .osint-command-grid {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) 23vw;
     grid-template-rows: 9vh minmax(0, 1fr) 14.4vh;
     grid-template-areas:
-        "hero"
-        "categories"
-        "bottom";
+        "hero hero"
+        "categories access"
+        "bottom access";
 }
 
 .engineering-mode .osint-command-hero {
@@ -3519,16 +3519,16 @@ button.eng-thread-row.active {
 }
 
 .engineering-mode .osint-scope-panel {
-    position: absolute;
-    right: 0;
-    bottom: 0;
-    width: 23vw;
-    height: 14.4vh;
+    grid-area: access;
+    min-width: 0;
+    min-height: 0;
+    width: auto;
+    height: auto;
     box-sizing: border-box;
 }
 
 .engineering-mode .osint-featured-panel {
-    margin-right: calc(23vw + 1.05vh);
+    margin-right: 0;
 }
 
 .engineering-mode .osint-featured-grid {
@@ -3564,6 +3564,24 @@ button.eng-thread-row.active {
     background: rgba(18, 40, 61, .93);
     box-shadow: 0 0 1.1vh rgba(59, 167, 255, .18);
     transform: translateY(-.1vh);
+}
+
+.engineering-mode .osint-tool-card.selected {
+    z-index: 3;
+    border-color: #7CCBFF;
+    color: #d8f1ff;
+    background:
+        linear-gradient(142deg, rgba(124, 203, 255, .16), transparent 58%),
+        rgba(18, 40, 61, .94);
+    box-shadow: inset .18vh 0 0 #7CCBFF, 0 0 1.2vh rgba(59, 167, 255, .22);
+}
+
+.engineering-mode .osint-tool-card:focus-visible,
+.engineering-mode .osint-category-tile:focus-visible,
+.engineering-mode .osint-tool-access button:focus-visible,
+.osint-detail-panel button:focus-visible {
+    outline: .12vh solid #d8f1ff;
+    outline-offset: .14vh;
 }
 
 .engineering-mode .osint-tool-icon {
@@ -3645,6 +3663,18 @@ button.eng-thread-row.active {
     font: .47vh var(--font_mono);
     letter-spacing: .06vh;
     text-decoration: none;
+}
+
+.engineering-mode .osint-action-unavailable {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.1vh;
+    padding: .34vh .46vh;
+    border: .08vh solid rgba(124, 203, 255, .22);
+    color: rgba(216, 241, 255, .38);
+    background: rgba(3, 7, 11, .28);
+    font: .48vh var(--font_mono);
+    letter-spacing: .05vh;
 }
 
 .engineering-mode .osint-featured-grid .osint-tool-card {
@@ -3761,12 +3791,16 @@ button.eng-thread-row.active {
 
 .engineering-mode .osint-category-notes {
     grid-area: notes;
+    min-height: 0;
 }
 
-.engineering-mode .osint-category-notes .workspace-panel-content {
+.engineering-mode .osint-category-notes .workspace-panel-content,
+.engineering-mode .osint-scope-panel .workspace-panel-content {
     display: grid;
     gap: .8vh;
     align-content: start;
+    min-height: 0;
+    overflow: auto;
 }
 
 .engineering-mode .osint-category-notes p {
@@ -3821,6 +3855,241 @@ button.eng-thread-row.active {
     background: rgba(3, 7, 11, .5);
     font: .48vh var(--font_mono);
     letter-spacing: .06vh;
+}
+
+.engineering-mode .osint-tool-access {
+    display: grid;
+    gap: .72vh;
+    min-width: 0;
+    color: rgba(216, 241, 255, .78);
+}
+
+.engineering-mode .osint-panel-state-readout {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .34vh;
+}
+
+.engineering-mode .osint-panel-state-readout div,
+.engineering-mode .osint-panel-metadata-grid > div {
+    min-width: 0;
+    padding: .43vh .5vh;
+    border-left: .12vh solid rgba(59, 167, 255, .48);
+    background: rgba(3, 7, 11, .33);
+}
+
+.engineering-mode .osint-panel-state-readout small,
+.engineering-mode .osint-panel-metadata-grid small,
+.engineering-mode .osint-tool-access header small {
+    display: block;
+    color: rgba(124, 203, 255, .48);
+    font: .46vh var(--font_mono);
+    letter-spacing: .07vh;
+}
+
+.engineering-mode .osint-panel-state-readout strong,
+.engineering-mode .osint-panel-metadata-grid strong {
+    display: block;
+    margin-top: .16vh;
+    overflow: hidden;
+    color: rgba(216, 241, 255, .83);
+    font: .53vh var(--font_main);
+    font-weight: normal;
+    line-height: 1.25;
+    text-overflow: ellipsis;
+}
+
+.engineering-mode .osint-panel-idle,
+.engineering-mode .osint-panel-hover-preview,
+.engineering-mode .osint-panel-policy-note,
+.engineering-mode .osint-panel-error {
+    display: grid;
+    gap: .38vh;
+    padding: .65vh;
+    border: .08vh solid rgba(36, 68, 95, .72);
+    background: rgba(3, 7, 11, .32);
+}
+
+.engineering-mode .osint-panel-idle strong,
+.engineering-mode .osint-panel-hover-preview strong,
+.engineering-mode .osint-panel-error strong {
+    color: #7CCBFF;
+    font: .62vh var(--font_mono);
+    font-weight: normal;
+    letter-spacing: .06vh;
+}
+
+.engineering-mode .osint-panel-idle p,
+.engineering-mode .osint-panel-hover-preview span,
+.engineering-mode .osint-panel-policy-note p,
+.engineering-mode .osint-panel-error p,
+.engineering-mode .osint-panel-muted {
+    margin: 0;
+    color: rgba(216, 241, 255, .52);
+    font: .57vh var(--font_main_light);
+    line-height: 1.42;
+}
+
+.engineering-mode .osint-panel-hover-preview em {
+    color: rgba(124, 203, 255, .64);
+    font: .46vh var(--font_mono);
+    font-style: normal;
+    letter-spacing: .06vh;
+}
+
+.engineering-mode .osint-panel-identity {
+    position: relative;
+    padding: .7vh;
+    border: .08vh solid rgba(59, 167, 255, .4);
+    background: linear-gradient(120deg, rgba(59, 167, 255, .09), transparent 66%), rgba(3, 7, 11, .38);
+}
+
+.engineering-mode .osint-panel-identity > div:first-child {
+    padding-right: 6vh;
+}
+
+.engineering-mode .osint-panel-identity small,
+.engineering-mode .osint-panel-identity span {
+    color: rgba(124, 203, 255, .5);
+    font: .47vh var(--font_mono);
+    letter-spacing: .07vh;
+}
+
+.engineering-mode .osint-panel-identity h3 {
+    margin: .2vh 0;
+    color: #d8f1ff;
+    font: .86vh var(--font_main);
+    font-weight: normal;
+}
+
+.engineering-mode .osint-panel-identity > em {
+    position: absolute;
+    top: .65vh;
+    right: .65vh;
+    color: #7CCBFF;
+    font: .48vh var(--font_mono);
+    font-style: normal;
+    letter-spacing: .07vh;
+}
+
+.engineering-mode .osint-panel-identity p {
+    margin: .55vh 0;
+    color: rgba(216, 241, 255, .58);
+    font: .58vh var(--font_main_light);
+    line-height: 1.35;
+}
+
+.engineering-mode .osint-panel-metadata {
+    display: grid;
+    gap: .6vh;
+}
+
+.engineering-mode .osint-panel-metadata-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .34vh;
+}
+
+.engineering-mode .osint-panel-policy-note small {
+    color: rgba(124, 203, 255, .55);
+    font: .45vh var(--font_mono);
+    letter-spacing: .05vh;
+    line-height: 1.35;
+}
+
+.engineering-mode .osint-panel-error {
+    border-color: rgba(218, 160, 74, .58);
+    background: rgba(46, 32, 15, .28);
+}
+
+.engineering-mode .osint-panel-error strong,
+.engineering-mode .osint-tool-access.reference-only .osint-panel-identity > em {
+    color: #efc17a;
+}
+
+.engineering-mode .osint-tool-access.reference-only .osint-panel-identity,
+.engineering-mode .osint-tool-access.reference-only .osint-panel-state-readout div {
+    border-color: rgba(218, 160, 74, .48);
+}
+
+.engineering-mode .osint-panel-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .4vh;
+}
+
+.engineering-mode .osint-panel-actions button,
+.engineering-mode .osint-panel-quiet-action {
+    padding: .45vh .56vh;
+    border: .08vh solid rgba(59, 167, 255, .56);
+    color: #7CCBFF;
+    background: rgba(13, 31, 47, .74);
+    font: .48vh var(--font_mono);
+    letter-spacing: .05vh;
+}
+
+.engineering-mode .osint-tool-access.reference-only .osint-panel-actions button {
+    border-color: rgba(218, 160, 74, .62);
+    color: #efc17a;
+    background: rgba(46, 32, 15, .42);
+}
+
+.engineering-mode .osint-panel-quiet-action.confirm {
+    border-color: rgba(218, 160, 74, .72);
+    color: #efc17a;
+}
+
+.engineering-mode .osint-panel-history {
+    display: grid;
+    gap: .42vh;
+    padding-top: .55vh;
+    border-top: .08vh solid rgba(36, 68, 95, .62);
+}
+
+.engineering-mode .osint-panel-history header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .4vh;
+}
+
+.engineering-mode .osint-session-history {
+    display: grid;
+    gap: .3vh;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.engineering-mode .osint-session-history li {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: .16vh .45vh;
+    padding: .38vh .46vh;
+    border-left: .1vh solid rgba(59, 167, 255, .38);
+    background: rgba(3, 7, 11, .28);
+}
+
+.engineering-mode .osint-session-history strong {
+    color: rgba(216, 241, 255, .76);
+    font: .46vh var(--font_mono);
+    font-weight: normal;
+}
+
+.engineering-mode .osint-session-history span {
+    overflow: hidden;
+    color: rgba(124, 203, 255, .52);
+    font: .43vh var(--font_main_light);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.engineering-mode .osint-session-history small {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    align-self: center;
+    color: rgba(124, 203, 255, .43);
+    font: .42vh var(--font_mono);
 }
 
 .engineering-mode .osint-empty-state {
@@ -4018,6 +4287,55 @@ button.eng-thread-row.active {
     color: #7CCBFF;
     background: rgba(19, 38, 58, .72);
     font: .7vh var(--font_main);
+}
+
+@media (max-width: 1120px), (max-aspect-ratio: 16/10) {
+    .engineering-mode .osint-command-grid {
+        grid-template-columns: minmax(0, 1fr) 27vw;
+    }
+
+    .engineering-mode .osint-tool-catalog {
+        grid-template-columns: repeat(auto-fill, minmax(17vw, 1fr));
+    }
+}
+
+@media (max-width: 900px), (max-aspect-ratio: 5/4) {
+    .engineering-mode .osint-command-grid,
+    .engineering-mode .osint-command-grid:has(.osint-category-header) {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: auto minmax(18vh, 1fr) auto auto;
+        grid-template-areas:
+            "hero"
+            "categories"
+            "bottom"
+            "access";
+        overflow: auto;
+    }
+
+    .engineering-mode .osint-command-grid:has(.osint-category-header) {
+        grid-template-rows: auto minmax(22vh, 1fr) auto;
+        grid-template-areas:
+            "category"
+            "catalog"
+            "notes";
+    }
+
+    .engineering-mode .osint-scope-panel,
+    .engineering-mode .osint-category-notes {
+        max-height: 33vh;
+    }
+
+    .engineering-mode .osint-category-deck {
+        min-height: 28vh;
+    }
+
+    .engineering-mode .osint-featured-panel {
+        min-height: 18vh;
+    }
+
+    .engineering-mode .osint-detail-panel {
+        width: min(92vw, 82vh);
+    }
 }
 
 @media (max-aspect-ratio: 16/10) {

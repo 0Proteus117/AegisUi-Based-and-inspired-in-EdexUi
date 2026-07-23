@@ -119,6 +119,7 @@ class WorkspaceManager {
         const definition = this.byId.get(workspaceId);
         if (!definition) return;
 
+        if (this.activeId === "osint" && workspaceId !== "osint") this.disposeOSINTDeck();
         const leavingHub = this.activeId === "hub" && workspaceId !== "hub";
         this.activeId = workspaceId;
         this.hub.classList.toggle("workspace-is-hidden", workspaceId !== "hub");
@@ -143,6 +144,8 @@ class WorkspaceManager {
         if (!definition.preserveExistingView && !this.rendered.has(workspaceId)) {
             this.renderWorkspace(definition);
             this.rendered.add(workspaceId);
+        } else if (workspaceId === "osint") {
+            this.bindOSINTDeck(this.osintView);
         }
 
         document.body.dataset.workspace = workspaceId;
@@ -1524,6 +1527,9 @@ class WorkspaceManager {
         this.osintView = view;
         this.osintRegistry = window.OSINTToolsRegistry || {CATEGORIES: [], PROVIDERS: [], FEATURED: []};
         this.osintPolicy = window.OSINTProviderPolicy || null;
+        this.osintAccess = this.osintAccess || (window.OSINTToolAccessPanel
+            ? new window.OSINTToolAccessPanel.SessionHistory({maxEntries: 50})
+            : null);
         this.osintState = this.osintState || {
             categoryId: null,
             filters: {providerStatus: "", riskProfile: "", legalStatus: ""}
@@ -1538,6 +1544,7 @@ class WorkspaceManager {
         const grid = view.querySelector(".workspace-grid");
         if (!grid) return;
         const activeCategory = registry.CATEGORIES.find(category => category.id === this.osintState.categoryId);
+        const selectedProvider = this.getSelectedOSINTProvider();
         grid.className = "workspace-grid osint-command-grid";
 
         if (!activeCategory) {
@@ -1563,18 +1570,13 @@ class WorkspaceManager {
                 </section>
                 <section class="osint-featured-panel workspace-panel">
                     <header><h2>CORE TOOLCHAIN</h2><span>QUICK ACCESS</span></header>
-                    <div class="workspace-panel-content osint-featured-grid">
+                    <div class="workspace-panel-content osint-featured-grid" role="listbox" aria-label="Featured OSINT providers">
                         ${featured.map(tool => this.osintToolCard(tool, true)).join("")}
                     </div>
                 </section>
                 <section class="osint-scope-panel workspace-panel">
-                    <header><h2>OPERATING SCOPE</h2><span>READ ONLY</span></header>
-                    <div class="workspace-panel-content osint-scope-readout">
-                        <div><small>RESEARCH</small><strong>PUBLIC SOURCES</strong></div>
-                        <div><small>EXPOSURE</small><strong>PASSIVE CONTEXT</strong></div>
-                        <div><small>EVIDENCE</small><strong>CAPTURE / VERIFY</strong></div>
-                        <p>External tools retain their own terms, rate limits and access controls. This deck does not probe, automate access or collect private data.</p>
-                    </div>
+                    <header><h2>TOOL ACCESS</h2><span>${this.escape(this.formatOSINTEnum(this.getOSINTPanelSnapshot().panelState))}</span></header>
+                    <div class="workspace-panel-content">${this.renderOSINTToolAccessPanel(selectedProvider)}</div>
                 </section>`;
         } else {
             const allCategoryProviders = this.getOSINTProviders({category: activeCategory.id});
@@ -1586,15 +1588,14 @@ class WorkspaceManager {
                     <div><small>OSINT DOMAIN / ${this.escape(activeCategory.id)}</small><h2>${this.escape(activeCategory.title)}</h2><p>${this.escape(activeCategory.description)}</p></div>
                     <strong>${providers.length} / ${allCategoryProviders.length} SOURCES</strong>
                 </section>
-                <section class="osint-tool-catalog" aria-label="${this.escape(activeCategory.title)} tools">
+                <section class="osint-tool-catalog" role="listbox" aria-label="${this.escape(activeCategory.title)} tools">
                     ${providers.length ? providers.map(provider => this.osintToolCard(provider)).join("") : `<div class="osint-empty-state"><strong>NO PROVIDERS MATCH THE CURRENT POLICY FILTERS</strong><span>Clear or adjust provider, risk or legal-status filters.</span></div>`}
                 </section>
                 <aside class="osint-category-notes workspace-panel">
-                    <header><h2>TOOL ACCESS</h2><span>POLICY</span></header>
+                    <header><h2>TOOL ACCESS</h2><span>${this.escape(this.formatOSINTEnum(this.getOSINTPanelSnapshot().panelState))}</span></header>
                     <div class="workspace-panel-content">
                         ${this.osintPolicyFilterControls()}
-                        <p>Select a source for its access method, provider status, risk profile and legal context. Launch is evaluated centrally; reference-only entries remain informational.</p>
-                        <div class="osint-category-tags">${allCategoryProviders.flatMap(provider => provider.tags || []).filter((tag, index, list) => list.indexOf(tag) === index).slice(0, 12).map(tag => `<span>${this.escape(tag)}</span>`).join("")}</div>
+                        ${this.renderOSINTToolAccessPanel(selectedProvider)}
                     </div>
                 </aside>`;
         }
@@ -1623,10 +1624,37 @@ class WorkspaceManager {
         return {...(this.osintState && this.osintState.filters || {})};
     }
 
+    getOSINTPanelSnapshot() {
+        if (this.osintAccess && typeof this.osintAccess.snapshot === "function") return this.osintAccess.snapshot();
+        return {panelState: "IDLE", queryState: "IDLE", history: [], activeProviderId: null, previewProviderId: null, clearArmed: false};
+    }
+
+    getSelectedOSINTProvider() {
+        const snapshot = this.getOSINTPanelSnapshot();
+        if (!snapshot.activeProviderId) return null;
+        return this.osintRegistry && typeof this.osintRegistry.getProvider === "function"
+            ? this.osintRegistry.getProvider(snapshot.activeProviderId)
+            : this.getOSINTProviders().find(provider => provider.id === snapshot.activeProviderId) || null;
+    }
+
+    formatOSINTEnum(value, fallback = "NOT AVAILABLE") {
+        if (window.OSINTToolAccessPanel && typeof window.OSINTToolAccessPanel.formatEnum === "function") {
+            return window.OSINTToolAccessPanel.formatEnum(value, fallback);
+        }
+        return value ? String(value).replace(/_/g, " ") : fallback;
+    }
+
+    formatOSINTList(values, fallback = "NOT DECLARED") {
+        if (window.OSINTToolAccessPanel && typeof window.OSINTToolAccessPanel.formatList === "function") {
+            return window.OSINTToolAccessPanel.formatList(values, fallback);
+        }
+        return Array.isArray(values) && values.length ? values.join(" · ") : fallback;
+    }
+
     osintPolicyFilterControls() {
         const filters = this.getOSINTFilters();
         const enumValues = this.osintRegistry && this.osintRegistry.ENUMS || {};
-        const label = value => String(value || "").replace(/_/g, " ");
+        const label = value => this.formatOSINTEnum(value, "");
         const select = (key, title, values) => `
             <label class="osint-policy-filter"><span>${title}</span>
                 <select class="aegis-select" data-osint-filter="${key}">
@@ -1656,57 +1684,195 @@ class WorkspaceManager {
     osintToolCard(provider, featured = false) {
         const referenceOnly = Boolean(this.osintPolicy && this.osintPolicy.isReferenceOnly && this.osintPolicy.isReferenceOnly(provider));
         const badges = this.osintBadgeLabel(provider);
+        const selected = this.getOSINTPanelSnapshot().activeProviderId === provider.id;
         return `
-            <button type="button" class="osint-tool-card${featured ? " featured" : ""}${referenceOnly ? " reference-only" : ""}" data-osint-tool="${this.escape(provider.id)}">
+            <button type="button" role="option" aria-selected="${selected ? "true" : "false"}" aria-pressed="${selected ? "true" : "false"}" class="osint-tool-card${featured ? " featured" : ""}${referenceOnly ? " reference-only" : ""}${selected ? " selected" : ""}" data-osint-tool="${this.escape(provider.id)}">
                 <span class="osint-tool-icon">${this.escape(provider.icon || "◌")}</span>
                 <em>${this.escape(badges[0] || "EXTERNAL")}</em>
                 <strong>${this.escape(provider.name)}</strong>
                 <small>${this.escape(provider.description || "Public-source research tool.")}</small>
                 <i>${badges.slice(1).map(badge => `<b>${this.escape(badge)}</b>`).join("")}${(provider.tags || []).slice(0, Math.max(0, 3 - badges.length)).map(tag => `<b>${this.escape(tag)}</b>`).join("")}</i>
-                <u>${referenceOnly ? "READ REFERENCE" : "DETAIL / OPEN"}</u>
+                <u>${referenceOnly ? "REFERENCE INFO" : "SELECT PROVIDER"}</u>
             </button>`;
     }
 
     bindOSINTDeck(view = this.osintView) {
-        if (!view) return;
-        view.querySelectorAll("[data-osint-category]").forEach(button => {
-            button.addEventListener("click", () => {
-                this.osintState.categoryId = button.dataset.osintCategory;
+        if (!view || view.dataset.osintDeckBound === "true") return;
+        this.boundOSINTDeckClick = event => {
+            const target = event.target.closest("[data-osint-category], [data-osint-back], [data-osint-filter-clear], [data-osint-tool], [data-osint-panel-action], [data-osint-history-clear]");
+            if (!target || !view.contains(target)) return;
+            if (target.matches("[data-osint-category]")) {
+                this.osintState.categoryId = target.dataset.osintCategory;
                 this.renderOSINTState(view);
-            });
-        });
-        view.querySelectorAll("[data-osint-back]").forEach(button => {
-            button.addEventListener("click", () => {
+                return;
+            }
+            if (target.matches("[data-osint-back]")) {
                 this.osintState.categoryId = null;
                 this.renderOSINTState(view);
-            });
-        });
-        view.querySelectorAll("[data-osint-filter]").forEach(select => {
-            select.addEventListener("change", () => {
-                this.osintState.filters[select.dataset.osintFilter] = select.value;
-                this.renderOSINTState(view);
-            });
-        });
-        view.querySelectorAll("[data-osint-filter-clear]").forEach(button => {
-            button.addEventListener("click", () => {
+                return;
+            }
+            if (target.matches("[data-osint-filter-clear]")) {
                 this.osintState.filters = {providerStatus: "", riskProfile: "", legalStatus: ""};
                 this.renderOSINTState(view);
-            });
-        });
-        view.querySelectorAll("[data-osint-tool]").forEach(button => {
-            button.addEventListener("click", () => this.openOSINTToolById(button.dataset.osintTool));
-        });
+                return;
+            }
+            if (target.matches("[data-osint-tool]")) {
+                this.selectOSINTProviderById(target.dataset.osintTool, target);
+                return;
+            }
+            if (target.matches("[data-osint-history-clear]")) {
+                this.clearOSINTSessionHistory();
+                return;
+            }
+            if (target.matches("[data-osint-panel-action]")) this.handleOSINTPanelAction(target.dataset.osintPanelAction, target);
+        };
+        this.boundOSINTDeckChange = event => {
+            const select = event.target.closest("[data-osint-filter]");
+            if (!select || !view.contains(select)) return;
+            this.osintState.filters[select.dataset.osintFilter] = select.value;
+            this.renderOSINTState(view);
+        };
+        this.boundOSINTDeckOver = event => {
+            const card = event.target.closest("[data-osint-tool]");
+            if (!card || !view.contains(card) || card.contains(event.relatedTarget)) return;
+            this.previewOSINTProviderById(card.dataset.osintTool);
+        };
+        this.boundOSINTDeckOut = event => {
+            const card = event.target.closest("[data-osint-tool]");
+            if (!card || !view.contains(card) || card.contains(event.relatedTarget)) return;
+            this.clearOSINTProviderPreview();
+        };
+        view.addEventListener("click", this.boundOSINTDeckClick);
+        view.addEventListener("change", this.boundOSINTDeckChange);
+        view.addEventListener("pointerover", this.boundOSINTDeckOver);
+        view.addEventListener("pointerout", this.boundOSINTDeckOut);
+        view.dataset.osintDeckBound = "true";
+    }
+
+    disposeOSINTDeck() {
+        const view = this.osintView;
+        if (!view || view.dataset.osintDeckBound !== "true") return;
+        view.removeEventListener("click", this.boundOSINTDeckClick);
+        view.removeEventListener("change", this.boundOSINTDeckChange);
+        view.removeEventListener("pointerover", this.boundOSINTDeckOver);
+        view.removeEventListener("pointerout", this.boundOSINTDeckOut);
+        delete view.dataset.osintDeckBound;
+        this.closeOSINTDetail();
     }
 
     openOSINTToolById(toolId) {
+        return this.selectOSINTProviderById(toolId);
+    }
+
+    selectOSINTProviderById(toolId, trigger = null) {
         const provider = this.osintRegistry && typeof this.osintRegistry.getProvider === "function"
             ? this.osintRegistry.getProvider(toolId)
             : this.getOSINTProviders().find(item => item.id === toolId);
-        if (!provider) return;
-        this.openOSINTDetail(provider);
+        if (!provider || !this.osintAccess) return null;
+        this.osintSelectionTrigger = trigger;
+        this.osintAccess.select(provider);
+        this.osintState.categoryId = provider.category;
+        this.renderOSINTState();
+        const selectedCard = this.osintView && this.osintView.querySelector(`[data-osint-tool="${provider.id}"]`);
+        if (selectedCard && trigger) selectedCard.focus({preventScroll: true});
+        return provider;
     }
 
-    openOSINTDetail(provider) {
+    previewOSINTProviderById(toolId) {
+        if (!this.osintAccess) return;
+        const provider = this.osintRegistry && typeof this.osintRegistry.getProvider === "function" ? this.osintRegistry.getProvider(toolId) : null;
+        if (!provider) return;
+        this.osintAccess.hover(provider);
+        const preview = this.osintView && this.osintView.querySelector("[data-osint-panel-preview]");
+        if (!preview) return;
+        preview.hidden = false;
+        preview.innerHTML = `<small>HOVER PREVIEW</small><strong>${this.escape(provider.name)}</strong><span>${this.escape(provider.description)}</span><em>${this.escape(this.osintBadgeLabel(provider, 1)[0] || "EXTERNAL")} · ${this.escape(this.formatOSINTEnum(provider.providerStatus))}</em>`;
+    }
+
+    clearOSINTProviderPreview() {
+        if (this.osintAccess) this.osintAccess.clearHover();
+        const preview = this.osintView && this.osintView.querySelector("[data-osint-panel-preview]");
+        if (!preview) return;
+        preview.hidden = true;
+        preview.innerHTML = "";
+    }
+
+    osintPolicyDecision(name, provider) {
+        const policy = this.osintPolicy;
+        if (!policy || typeof policy[name] !== "function") return {allowed: false, code: "POLICY_UNAVAILABLE", message: "OSINT provider policy is unavailable."};
+        return policy[name](provider);
+    }
+
+    renderOSINTToolAccessPanel(provider = this.getSelectedOSINTProvider()) {
+        const snapshot = this.getOSINTPanelSnapshot();
+        const history = snapshot.history || [];
+        const previewProvider = snapshot.previewProviderId && this.osintRegistry && typeof this.osintRegistry.getProvider === "function"
+            ? this.osintRegistry.getProvider(snapshot.previewProviderId)
+            : null;
+        const previewMarkup = `<section class="osint-panel-hover-preview" data-osint-panel-preview${previewProvider ? "" : " hidden"}>${previewProvider ? `<small>HOVER PREVIEW</small><strong>${this.escape(previewProvider.name)}</strong><span>${this.escape(previewProvider.description)}</span><em>${this.escape(this.osintBadgeLabel(previewProvider, 1)[0] || "EXTERNAL")} · ${this.escape(this.formatOSINTEnum(previewProvider.providerStatus))}</em>` : ""}</section>`;
+        const state = this.escape(this.formatOSINTEnum(snapshot.panelState, "IDLE"));
+        const historyMarkup = history.length
+            ? `<ol class="osint-session-history" aria-label="OSINT session history">${history.slice(-5).reverse().map(event => `<li><strong>${this.escape(this.formatOSINTEnum(event.action))}</strong><span>${this.escape(event.providerName)} · ${this.escape(this.formatOSINTEnum(event.state))}</span><small>${this.escape(new Date(event.timestamp).toLocaleTimeString([], {hour: "2-digit", minute: "2-digit", second: "2-digit"}))}</small></li>`).join("")}</ol>`
+            : `<p class="osint-panel-muted">No OSINT session actions yet.</p>`;
+        const historyButton = history.length
+            ? `<button type="button" class="osint-panel-quiet-action${snapshot.clearArmed ? " confirm" : ""}" data-osint-history-clear>${snapshot.clearArmed ? "CONFIRM CLEAR" : "CLEAR SESSION"}</button>`
+            : "";
+        const stateReadout = `<section class="osint-panel-state-readout" aria-label="Tool access state"><div><small>PANEL</small><strong>${state}</strong></div><div><small>QUERY</small><strong>${this.escape(this.formatOSINTEnum(snapshot.queryState, "IDLE"))}</strong></div>${provider ? `<div><small>PROVIDER</small><strong>${this.escape(this.formatOSINTEnum(provider.providerStatus))}</strong></div><div><small>LEGAL</small><strong>${this.escape(this.formatOSINTEnum(provider.legalStatus))}</strong></div>` : ""}</section>`;
+        if (!provider) return `<div class="osint-tool-access" data-osint-tool-access data-panel-state="IDLE">${stateReadout}${previewMarkup}<section class="osint-panel-idle"><strong>SELECT A PROVIDER</strong><p>Choose a catalog entry to inspect its access method, policies, risk context and allowed actions.</p></section><section class="osint-panel-history"><header><small>SESSION HISTORY</small>${historyButton}</header>${historyMarkup}</section></div>`;
+
+        const referenceOnly = Boolean(this.osintPolicy && this.osintPolicy.isReferenceOnly && this.osintPolicy.isReferenceOnly(provider));
+        const actions = this.renderOSINTPanelActions(provider, referenceOnly);
+        return `<div class="osint-tool-access${referenceOnly ? " reference-only" : ""}" data-osint-tool-access data-panel-state="${this.escape(snapshot.panelState)}">${stateReadout}${previewMarkup}<section class="osint-panel-identity"><div><small>ACTIVE PROVIDER</small><h3>${this.escape(provider.name)}</h3><span>${this.escape(provider.shortName)}</span></div><em>${this.escape(referenceOnly ? "REFERENCE ONLY" : this.osintPolicy && this.osintPolicy.displayAccess ? this.osintPolicy.displayAccess(provider) : provider.accessMode)}</em><p>${this.escape(provider.description)}</p><div class="osint-category-tags">${(provider.tags || []).slice(0, 8).map(tag => `<span>${this.escape(tag)}</span>`).join("")}</div></section>${this.renderOSINTProviderMetadata(provider, referenceOnly)}${snapshot.lastError ? `<section class="osint-panel-error"><strong>${this.escape(this.formatOSINTEnum(snapshot.lastError.code))}</strong><p>${this.escape(snapshot.lastError.message)}</p><small>${this.escape(new Date(snapshot.lastError.timestamp).toLocaleTimeString())}</small></section>` : ""}<section class="osint-panel-actions" aria-label="Allowed provider actions">${actions}</section><section class="osint-panel-history"><header><small>SESSION HISTORY</small>${historyButton}</header>${historyMarkup}</section></div>`;
+    }
+
+    renderOSINTProviderMetadata(provider, referenceOnly) {
+        const launch = this.osintPolicyDecision("canLaunch", provider);
+        const copy = this.osintPolicyDecision("canCopyUrl", provider);
+        const docs = this.osintPolicyDecision("canViewDocs", provider);
+        const integration = this.osintPolicyDecision("canIntegrate", provider);
+        const installation = this.osintPolicyDecision("canInstall", provider);
+        const status = this.formatOSINTEnum(provider.providerStatus);
+        return `<section class="osint-panel-metadata"><div class="osint-panel-metadata-grid"><div><small>CAPABILITIES</small><strong>${this.escape(this.formatOSINTList(provider.capabilities))}</strong></div><div><small>TYPE / ACCESS</small><strong>${this.escape(this.formatOSINTEnum(provider.providerType))} · ${this.escape(this.formatOSINTEnum(provider.accessMode))}</strong></div><div><small>RISK / LEGAL</small><strong>${this.escape(this.formatOSINTEnum(provider.riskProfile))} · ${this.escape(this.formatOSINTEnum(provider.legalStatus))}</strong></div><div><small>INPUTS</small><strong>${this.escape(this.formatOSINTList(provider.inputs))}</strong></div><div><small>OUTPUTS</small><strong>${this.escape(this.formatOSINTList(provider.outputs))}</strong></div><div><small>AUTH / COST</small><strong>${this.escape(this.formatOSINTEnum(provider.authentication))} · ${this.escape(this.formatOSINTEnum(provider.costModel))}</strong></div><div><small>INTEGRATION</small><strong>${integration.allowed ? "APPROVED" : status === "LINK ONLY" ? "LINK ONLY · NOT CONNECTED" : "NOT AVAILABLE"}</strong></div><div><small>POLICY</small><strong>${launch.allowed ? "OPEN APPROVED" : referenceOnly ? "ACCESS BLOCKED" : this.escape(this.formatOSINTEnum(launch.code))} · ${copy.allowed ? "COPY APPROVED" : "COPY BLOCKED"}</strong></div><div><small>REVIEW</small><strong>${this.escape(provider.lastReviewed)} · ${this.escape(this.formatOSINTEnum(provider.sourceConfidence))}</strong></div></div>${referenceOnly ? `<section class="osint-reference-notice" data-osint-reference-notice><strong>ACCESS BLOCKED — REFERENCE ONLY</strong><p><b>WHY INCLUDED:</b> ${this.escape(provider.referenceReason)}</p><p><b>LEGAL CONTEXT:</b> ${this.escape(provider.legalDisclaimer)}</p><p><b>JURISDICTION:</b> ${this.escape(provider.jurisdictionNote)}</p></section>` : `<section class="osint-panel-policy-note"><p>${this.escape(provider.legalDisclaimer)}</p><small>OFFICIAL SOURCE ${launch.allowed ? "AVAILABLE THROUGH APPROVED OPEN ACTION" : "NOT AVAILABLE"} · DOCS ${docs.allowed ? "AVAILABLE" : "NOT DECLARED"} · INSTALL ${installation.allowed ? "APPROVED" : "BLOCKED"}</small></section>`}</section>`;
+    }
+
+    renderOSINTPanelActions(provider, referenceOnly) {
+        const launch = this.osintPolicyDecision("canLaunch", provider);
+        const copy = this.osintPolicyDecision("canCopyUrl", provider);
+        const docs = this.osintPolicyDecision("canViewDocs", provider);
+        if (referenceOnly) return `<button type="button" data-osint-panel-action="read">READ REFERENCE</button><button type="button" data-osint-panel-action="close">CLOSE</button>`;
+        const unavailable = !launch.allowed
+            ? `<span class="osint-action-unavailable" role="status" aria-disabled="true">OPEN BLOCKED · ${this.escape(this.formatOSINTEnum(launch.code))}</span>`
+            : "";
+        return `<button type="button" data-osint-panel-action="detail" aria-haspopup="dialog" aria-expanded="false">DETAIL</button>${launch.allowed ? `<button type="button" data-osint-panel-action="open">OPEN</button>` : ""}${copy.allowed ? `<button type="button" data-osint-panel-action="copy">COPY URL</button>` : ""}${docs.allowed ? `<button type="button" data-osint-panel-action="docs">DOCS</button>` : ""}${unavailable}`;
+    }
+
+    handleOSINTPanelAction(action, trigger) {
+        const provider = this.getSelectedOSINTProvider();
+        if (!provider) return;
+        if (action === "detail") return this.openOSINTDetail(provider, trigger);
+        if (action === "open") return this.launchOSINTProvider(provider);
+        if (action === "copy") return this.copyOSINTProviderUrl(provider);
+        if (action === "docs") return this.openOSINTProviderDocs(provider);
+        if (action === "read") {
+            const decision = this.osintPolicyDecision("canReadReference", provider);
+            if (!decision.allowed) return this.rejectOSINTPolicy(provider, decision, "READ REFERENCE");
+            this.osintAccess.recordAction(provider, "READ_REFERENCE", {state: "REFERENCE_ONLY", resultSummary: "Reference detail opened"});
+            return this.openOSINTDetail(provider, trigger);
+        }
+        if (action === "close") {
+            this.osintAccess.closeSelection();
+            this.renderOSINTState();
+        }
+    }
+
+    clearOSINTSessionHistory() {
+        if (!this.osintAccess) return;
+        const result = this.osintAccess.requestClear();
+        this.renderOSINTState();
+        this.showToast(this.osintView, result.confirmationRequired ? "CONFIRM CLEAR SESSION" : result.cleared ? "SESSION HISTORY CLEARED" : "SESSION HISTORY EMPTY");
+    }
+
+    openOSINTDetail(provider, trigger = null) {
         let overlay = document.getElementById("osint_tool_detail_overlay");
         if (!overlay) {
             overlay = document.createElement("section");
@@ -1722,14 +1888,14 @@ class WorkspaceManager {
             });
             document.body.appendChild(overlay);
         }
+        this.osintDetailTrigger = trigger || document.activeElement;
+        if (this.osintDetailTrigger && typeof this.osintDetailTrigger.setAttribute === "function") this.osintDetailTrigger.setAttribute("aria-expanded", "true");
         const category = (this.osintRegistry.CATEGORIES || []).find(item => item.id === provider.category);
         const policy = this.osintPolicy;
         const referenceOnly = Boolean(policy && policy.isReferenceOnly && policy.isReferenceOnly(provider));
-        const canLaunch = policy && policy.canLaunch ? policy.canLaunch(provider) : {allowed: Boolean(provider.launchAllowed)};
-        const canCopy = policy && policy.canCopyUrl ? policy.canCopyUrl(provider) : {allowed: Boolean(provider.copyUrlAllowed)};
-        const legalLabel = String(provider.legalStatus || "UNKNOWN").replace(/_/g, " ");
-        const riskLabel = String(provider.riskProfile || "PASSIVE").replace(/_/g, " ");
-        const statusLabel = String(provider.providerStatus || "LINK_ONLY").replace(/_/g, " ");
+        const canLaunch = this.osintPolicyDecision("canLaunch", provider);
+        const canCopy = this.osintPolicyDecision("canCopyUrl", provider);
+        const canDocs = this.osintPolicyDecision("canViewDocs", provider);
         overlay.innerHTML = `
             <article class="osint-detail-panel${referenceOnly ? " reference-only" : ""}">
                 <header>
@@ -1738,83 +1904,97 @@ class WorkspaceManager {
                     <em>${referenceOnly ? "REFERENCE ONLY" : this.escape(policy && policy.displayAccess ? policy.displayAccess(provider) : "EXTERNAL")}</em>
                     <button type="button" class="osint-detail-close" aria-label="Close OSINT tool detail">×</button>
                 </header>
-                <section class="osint-detail-body">
-                    <p>${this.escape(provider.description || "Public-source research tool.")}</p>
-                    <div class="osint-detail-readout">
-                        <div><small>ACCESS</small><strong>${this.escape(policy && policy.displayAccess ? policy.displayAccess(provider) : provider.accessMode || "EXTERNAL")}</strong></div>
-                        <div><small>STATUS</small><strong>${this.escape(statusLabel)}</strong></div>
-                        <div><small>RISK</small><strong>${this.escape(riskLabel)}</strong></div>
-                        <div><small>LEGAL</small><strong>${this.escape(legalLabel)}</strong></div>
-                        <div><small>DOMAIN</small><strong>${this.escape(category ? category.title : "OSINT")}</strong></div>
-                        <div><small>CAPABILITY</small><strong>${this.escape((provider.capabilities || []).join(" · ") || "PUBLIC SOURCE")}</strong></div>
-                    </div>
-                    ${referenceOnly ? `
-                        <section class="osint-reference-notice" data-osint-reference-notice>
-                            <strong>ACCESS BLOCKED — REFERENCE ONLY</strong>
-                            <p><b>WHY INCLUDED:</b> ${this.escape(provider.referenceReason)}</p>
-                            <p><b>LEGAL CONTEXT:</b> ${this.escape(provider.legalDisclaimer)}</p>
-                            <p><b>JURISDICTION:</b> ${this.escape(provider.jurisdictionNote)}</p>
-                            <small>LAST REVIEWED ${this.escape(provider.lastReviewed)} · SOURCE CONFIDENCE ${this.escape(String(provider.sourceConfidence || "UNKNOWN").replace(/_/g, " "))}</small>
-                        </section>` : `
-                        <p class="osint-detail-url">${this.escape(provider.officialUrl || "")}</p>
-                        <p class="osint-detail-policy">STATUS ${this.escape(statusLabel)} · ${this.escape(provider.legalDisclaimer)}</p>`}
-                </section>
-                <footer>
-                    ${referenceOnly ? `<button type="button" data-osint-detail-action="read">READ REFERENCE</button>` : ""}
-                    ${!referenceOnly && canLaunch.allowed ? `<button type="button" data-osint-detail-action="open">OPEN WEB</button>` : ""}
-                    ${!referenceOnly && canCopy.allowed ? `<button type="button" data-osint-detail-action="copy">COPY URL</button>` : ""}
-                    <button type="button" data-osint-detail-action="close">CLOSE</button>
-                </footer>
+                <section class="osint-detail-body">${this.renderOSINTProviderMetadata(provider, referenceOnly)}</section>
+                <footer>${referenceOnly ? `<button type="button" data-osint-detail-action="read">READ REFERENCE</button>` : `${canLaunch.allowed ? `<button type="button" data-osint-detail-action="detail-open">OPEN WEB</button>` : ""}${canCopy.allowed ? `<button type="button" data-osint-detail-action="detail-copy">COPY URL</button>` : ""}${canDocs.allowed ? `<button type="button" data-osint-detail-action="detail-docs">DOCS</button>` : ""}`}<button type="button" data-osint-detail-action="close">CLOSE</button></footer>
             </article>`;
         overlay.classList.add("visible");
+        overlay.setAttribute("aria-hidden", "false");
         overlay.querySelector(".osint-detail-close").addEventListener("click", () => this.closeOSINTDetail());
         overlay.querySelector('[data-osint-detail-action="close"]').addEventListener("click", () => this.closeOSINTDetail());
-        const openButton = overlay.querySelector('[data-osint-detail-action="open"]');
+        const openButton = overlay.querySelector('[data-osint-detail-action="detail-open"]');
         if (openButton) openButton.addEventListener("click", () => this.launchOSINTProvider(provider));
-        const copyButton = overlay.querySelector('[data-osint-detail-action="copy"]');
+        const copyButton = overlay.querySelector('[data-osint-detail-action="detail-copy"]');
         if (copyButton) copyButton.addEventListener("click", () => this.copyOSINTProviderUrl(provider));
+        const docsButton = overlay.querySelector('[data-osint-detail-action="detail-docs"]');
+        if (docsButton) docsButton.addEventListener("click", () => this.openOSINTProviderDocs(provider));
         const readButton = overlay.querySelector('[data-osint-detail-action="read"]');
-        if (readButton) readButton.addEventListener("click", () => this.showToast(this.osintView, "REFERENCE ONLY · NO ACCESS ACTIONS AVAILABLE"));
-        document.addEventListener("keydown", this.boundOSINTDetailEscape = this.boundOSINTDetailEscape || (event => {
+        if (readButton) readButton.addEventListener("click", () => {
+            const decision = this.osintPolicyDecision("canReadReference", provider);
+            if (!decision.allowed) return this.rejectOSINTPolicy(provider, decision, "READ REFERENCE");
+            if (this.osintAccess) this.osintAccess.recordAction(provider, "READ_REFERENCE", {state: "REFERENCE_ONLY", resultSummary: "Reference detail reviewed"});
+            this.showToast(this.osintView, "REFERENCE ONLY · NO ACCESS ACTIONS AVAILABLE");
+        });
+        if (this.boundOSINTDetailEscape) document.removeEventListener("keydown", this.boundOSINTDetailEscape);
+        this.boundOSINTDetailEscape = event => {
             if (event.key === "Escape") this.closeOSINTDetail();
-        }));
+        };
+        document.addEventListener("keydown", this.boundOSINTDetailEscape);
+        overlay.querySelector(".osint-detail-close").focus();
+    }
+
+    rejectOSINTPolicy(provider, decision, action = "ACTION") {
+        const rejection = {allowed: false, code: "POLICY_BLOCKED", policyCode: decision.code || "UNKNOWN_ERROR", message: decision.message || "Action blocked by provider policy."};
+        this.lastOSINTPolicyDecision = rejection;
+        if (this.osintAccess) this.osintAccess.recordError(provider, rejection.code, `${action} · ${rejection.policyCode}`);
+        this.showToast(this.osintView, `ACCESS BLOCKED · ${rejection.policyCode}`);
+        this.renderOSINTState();
+        return rejection;
     }
 
     async launchOSINTProvider(provider) {
-        const decision = this.osintPolicy && this.osintPolicy.canLaunch
-            ? this.osintPolicy.canLaunch(provider)
-            : {allowed: false, code: "POLICY_UNAVAILABLE", message: "OSINT launch policy is unavailable."};
+        const decision = this.osintPolicyDecision("canLaunch", provider);
         this.lastOSINTPolicyDecision = decision;
-        if (!decision.allowed) {
-            this.showToast(this.osintView, `ACCESS BLOCKED · ${decision.code}`);
-            return decision;
-        }
-        await this.openLink(provider.officialUrl, this.osintView);
-        return decision;
+        if (!decision.allowed) return this.rejectOSINTPolicy(provider, decision, "OPEN");
+        const response = await this.openLink(provider.officialUrl, this.osintView);
+        if (this.osintAccess) this.osintAccess.setPanelState(response && response.ok ? "READY" : "ERROR", response && response.ok ? "IDLE" : "ERROR");
+        if (this.osintAccess) this.osintAccess.recordAction(provider, "OPEN_PROVIDER", {state: response && response.ok ? "READY" : "ERROR", resultSummary: response && response.ok ? "Approved external launch requested" : "Approved launch failed", errorCode: response && !response.ok ? "OPEN_FAILED" : null});
+        this.renderOSINTState();
+        return {...decision, response};
     }
 
     async copyOSINTProviderUrl(provider) {
-        const decision = this.osintPolicy && this.osintPolicy.canCopyUrl
-            ? this.osintPolicy.canCopyUrl(provider)
-            : {allowed: false, code: "POLICY_UNAVAILABLE", message: "OSINT copy policy is unavailable."};
+        const decision = this.osintPolicyDecision("canCopyUrl", provider);
         this.lastOSINTPolicyDecision = decision;
-        if (!decision.allowed) {
-            this.showToast(this.osintView, `COPY BLOCKED · ${decision.code}`);
-            return decision;
-        }
+        if (!decision.allowed) return this.rejectOSINTPolicy(provider, decision, "COPY URL");
         try {
             await navigator.clipboard.writeText(provider.officialUrl);
+            if (this.osintAccess) this.osintAccess.setPanelState("READY", "IDLE");
+            if (this.osintAccess) this.osintAccess.recordAction(provider, "COPY_PROVIDER_URL", {state: "READY", resultSummary: "Approved source URL copied"});
             this.showToast(this.osintView, "SOURCE URL COPIED");
+            this.renderOSINTState();
             return decision;
         } catch (error) {
+            if (this.osintAccess) this.osintAccess.recordError(provider, "OPEN_FAILED", "Clipboard unavailable");
             this.showToast(this.osintView, "COPY UNAVAILABLE");
             return {allowed: false, code: "COPY_UNAVAILABLE", message: error.message || "Clipboard unavailable."};
         }
     }
 
+    async openOSINTProviderDocs(provider) {
+        const decision = this.osintPolicyDecision("canViewDocs", provider);
+        this.lastOSINTPolicyDecision = decision;
+        if (!decision.allowed) return this.rejectOSINTPolicy(provider, decision, "DOCS");
+        const response = await this.openLink(provider.docsUrl, this.osintView);
+        if (this.osintAccess) this.osintAccess.setPanelState(response && response.ok ? "READY" : "ERROR", response && response.ok ? "IDLE" : "ERROR");
+        if (this.osintAccess) this.osintAccess.recordAction(provider, "OPEN_PROVIDER_DOCS", {state: response && response.ok ? "READY" : "ERROR", resultSummary: response && response.ok ? "Approved documentation launch requested" : "Documentation launch failed", errorCode: response && !response.ok ? "OPEN_FAILED" : null});
+        this.renderOSINTState();
+        return {...decision, response};
+    }
+
     closeOSINTDetail() {
         const overlay = document.getElementById("osint_tool_detail_overlay");
-        if (overlay) overlay.classList.remove("visible");
+        if (overlay) {
+            overlay.classList.remove("visible");
+            overlay.setAttribute("aria-hidden", "true");
+        }
+        if (this.boundOSINTDetailEscape) {
+            document.removeEventListener("keydown", this.boundOSINTDetailEscape);
+            this.boundOSINTDetailEscape = null;
+        }
+        const trigger = this.osintDetailTrigger;
+        this.osintDetailTrigger = null;
+        if (trigger && typeof trigger.setAttribute === "function") trigger.setAttribute("aria-expanded", "false");
+        if (trigger && document.contains(trigger) && typeof trigger.focus === "function") trigger.focus({preventScroll: true});
     }
 
     renderFoundation(view, definition) {
@@ -2648,6 +2828,7 @@ class WorkspaceManager {
         this.showToast(view, response.ok
             ? `OPENED · ${response.status || "EXTERNAL"}`
             : `${response.status || "ERROR"} · ${response.error}`);
+        return response;
     }
 
     async launchApplication(action, view, button) {

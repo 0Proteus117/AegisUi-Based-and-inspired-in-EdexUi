@@ -45,10 +45,13 @@ registry.FEATURED.forEach(id => {
     "renderOSINT(view, definition)",
     "renderOSINTState(view = this.osintView",
     "openOSINTToolById(toolId)",
-    "openOSINTDetail(provider)",
+    "selectOSINTProviderById(toolId, trigger = null)",
+    "openOSINTDetail(provider, trigger = null)",
     "closeOSINTDetail()",
     "launchOSINTProvider(provider)",
     "copyOSINTProviderUrl(provider)",
+    "openOSINTProviderDocs(provider)",
+    "renderOSINTToolAccessPanel(provider = this.getSelectedOSINTProvider())",
     "osintPolicyFilterControls()"
 ].forEach(signature => {
     if (!workspaceManager.includes(signature)) failures.push(`WORKSPACE_MANAGER_MISSING:${signature}`);
