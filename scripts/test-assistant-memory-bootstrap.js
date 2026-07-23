@@ -50,10 +50,14 @@ function main() {
     if (fs.existsSync(schema)) JSON.parse(fs.readFileSync(schema, "utf8"));
 
     const localFiles = listMemoryFiles(privateBootstrap);
-    ok(localFiles.length >= 10, "PRIVATE_BOOTSTRAP_LOCAL");
-
     const ignored = runGit(["check-ignore", "assistant/memory/private/bootstrap/00_index.md"]);
     ok(Boolean(ignored), "PRIVATE_BOOTSTRAP_GITIGNORED");
+    const cleanWorktreeWithoutPrivateSource = localFiles.length === 0 && Boolean(ignored);
+    if (cleanWorktreeWithoutPrivateSource) {
+        print("PRIVATE_BOOTSTRAP_LOCAL", "CLEAN_WORKTREE_NOT_PRESENT_EXPECTED");
+    } else {
+        ok(localFiles.length >= 10, "PRIVATE_BOOTSTRAP_LOCAL");
+    }
 
     const tracked = runGit(["ls-files", "assistant/memory/private"]);
     ok(!tracked, "PRIVATE_BOOTSTRAP_TRACKED", tracked ? "YES" : "NO");
@@ -61,13 +65,17 @@ function main() {
     const stagedPrivate = runGit(["diff", "--cached", "--name-only", "--", "assistant/memory/private"]);
     ok(!stagedPrivate, "PRIVATE_BOOTSTRAP_STAGED", stagedPrivate ? "YES" : "NO");
 
-    const install = spawnSync(process.execPath, [path.join(projectRoot, "scripts", "install-assistant-bootstrap-memory.js")], {
-        cwd: projectRoot,
-        encoding: "utf8"
-    });
-    if (install.stdout) process.stdout.write(install.stdout);
-    if (install.stderr) process.stderr.write(install.stderr);
-    ok(install.status === 0, "USERDATA_INSTALL");
+    if (cleanWorktreeWithoutPrivateSource) {
+        print("USERDATA_INSTALL", "SKIPPED_CLEAN_WORKTREE_SOURCE_ABSENT");
+    } else {
+        const install = spawnSync(process.execPath, [path.join(projectRoot, "scripts", "install-assistant-bootstrap-memory.js")], {
+            cwd: projectRoot,
+            encoding: "utf8"
+        });
+        if (install.stdout) process.stdout.write(install.stdout);
+        if (install.stderr) process.stderr.write(install.stderr);
+        ok(install.status === 0, "USERDATA_INSTALL");
+    }
 
     const installedFiles = listMemoryFiles(installedBootstrap);
     ok(installedFiles.length >= 10, "USERDATA_BOOTSTRAP_FILES", String(installedFiles.length));

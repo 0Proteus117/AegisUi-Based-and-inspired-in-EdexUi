@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.3.3 - 2026-07-23
+
+### OSINT provider registry and reference policy
+
+- Replaced the informal OSINT tool catalog data model with a validated normalized provider registry while preserving the nine categories, 161 existing reference entries and four featured entries.
+- Added explicit provider type, access mode, provider status, risk profile, legal status, capability, review and action-policy metadata.
+- Added a strictly blocked `REFERENCE_ONLY` entry type for transparent ecosystem context without URL launch, URL copy, installation, integration, IPC or operational instructions.
+- Added provider-policy filters and compact status/risk/legal badges while preserving the existing Analyst Desk composition and normal external-launch flow for approved entries.
+- Documented the disconnected legacy native runtime and retained it without reconnecting IPC or `WebContentsView` behavior.
+- Corrected clean-worktree private-memory testing so gitignored private bootstrap source files remain protected while installed userData memory can be verified.
+
 ## 2.3.2 - 2026-07-21
 
 ### AegisUi application identity

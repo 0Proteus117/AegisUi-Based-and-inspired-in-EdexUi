@@ -6,7 +6,7 @@ Local-first macOS engineering cockpit based on the visual spirit of eDEX-UI.
 [![CodeQL](https://github.com/0Proteus117/AegisUi-Based-and-inspired-in-EdexUi/actions/workflows/codeql-analysis.yml/badge.svg?branch=feature%2Fsystems-online-pass)](https://github.com/0Proteus117/AegisUi-Based-and-inspired-in-EdexUi/actions/workflows/codeql-analysis.yml)
 ![Platform](https://img.shields.io/badge/platform-macOS%20Apple%20Silicon-3BA7FF)
 ![Local first](https://img.shields.io/badge/local--first-yes-7CCBFF)
-![Version](https://img.shields.io/badge/version-2.3.2-13263A)
+![Version](https://img.shields.io/badge/version-2.3.3-13263A)
 
 ## Current status
 
@@ -23,9 +23,9 @@ AegisUi is a cockpit-style desktop environment for engineering work:
   Applications grid and status panels.
 - ENG workspace with CAD/CAM/CAE launchers, manufacturing tools, internal
   engineering calculators, materials, standards and research references.
-- OSINT Analyst Deck with a native-access foundation: official provider
-  responses render inside AegisUi where available, while public websites run
-  in isolated source views with a visible external-browser fallback.
+- OSINT Analyst Deck with a normalized provider registry: public-source
+  references carry explicit access, provider-status, risk and legal-context
+  policy before a permitted external browser action is available.
 - Live systems map with TomTom traffic, AISStream maritime traffic,
   RainViewer radar, Open-Meteo Marine conditions and CelesTrak SAT support.
 - Assistant presence layer with Angie/Gustav/Ares/Aphrodite profiles,
@@ -86,14 +86,18 @@ See [ENG_WORKSPACE.md](ENG_WORKSPACE.md) and [WORKSPACES.md](WORKSPACES.md).
 
 ## OSINT Analyst Deck
 
-OSINT is a visual, public-source research workspace. The first active domain,
-Discovery / Search, provides a native Internet Archive Wayback Availability
-lookup and isolated in-suite access to selected public-source websites. The
-deck contains no scraping, credential collection, tracking or destructive
-tooling.
+OSINT is a visual, public-source research workspace. Its catalog has nine
+domains and a validated provider registry. Approved public references open only
+through the existing external browser action. `REFERENCE_ONLY` entries are
+visible for defensive ecosystem context but have no launch, copy, install,
+integration, IPC or operational route. The workspace does not scrape, collect
+credentials, crawl or automate third-party services.
 
-See [OSINT_NATIVE_ACCESS.md](OSINT_NATIVE_ACCESS.md) for the provider,
-isolated-view and privacy model.
+See [OSINT_PROVIDER_SCHEMA.md](OSINT_PROVIDER_SCHEMA.md),
+[OSINT_PROVIDER_POLICY.md](OSINT_PROVIDER_POLICY.md),
+[OSINT_REFERENCE_ONLY_POLICY.md](OSINT_REFERENCE_ONLY_POLICY.md),
+[OSINT_LEGAL_STATUS_POLICY.md](OSINT_LEGAL_STATUS_POLICY.md) and
+[OSINT_LEGACY_RUNTIME_MAP.md](OSINT_LEGACY_RUNTIME_MAP.md).
 
 ## Assistant
 
@@ -195,7 +199,11 @@ See [SECURITY.md](SECURITY.md) and [CONFIGURATION.md](CONFIGURATION.md).
 - [GITHUB_WORKFLOWS.md](GITHUB_WORKFLOWS.md)
 - [ENG_WORKSPACE.md](ENG_WORKSPACE.md)
 - [WORKSPACES.md](WORKSPACES.md)
-- [OSINT_NATIVE_ACCESS.md](OSINT_NATIVE_ACCESS.md)
+- [OSINT_PROVIDER_SCHEMA.md](OSINT_PROVIDER_SCHEMA.md)
+- [OSINT_PROVIDER_POLICY.md](OSINT_PROVIDER_POLICY.md)
+- [OSINT_REFERENCE_ONLY_POLICY.md](OSINT_REFERENCE_ONLY_POLICY.md)
+- [OSINT_LEGAL_STATUS_POLICY.md](OSINT_LEGAL_STATUS_POLICY.md)
+- [OSINT_LEGACY_RUNTIME_MAP.md](OSINT_LEGACY_RUNTIME_MAP.md)
 - [MAP_LAYERS.md](MAP_LAYERS.md)
 - [MAP_PROVIDER_HARDENING.md](MAP_PROVIDER_HARDENING.md)
 - [APPLE_MUSIC.md](APPLE_MUSIC.md)

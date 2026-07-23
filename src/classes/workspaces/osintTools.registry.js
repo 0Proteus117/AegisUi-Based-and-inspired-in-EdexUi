@@ -3,7 +3,19 @@
     if (typeof module !== "undefined" && module.exports) module.exports = exported;
     if (root) root.OSINTToolsRegistry = exported;
 })(typeof window !== "undefined" ? window : null, function() {
-    const CATEGORIES = Object.freeze([
+    "use strict";
+
+    // Electron's legacy renderer exposes CommonJS `require`, but resolves it
+    // relative to ui.html for normal <script> tags. Prefer the already-loaded
+    // browser globals so the same registry works in Electron and Node tests.
+    const ProviderSchema = (typeof window !== "undefined" && window.OSINTProviderSchema)
+        || (typeof require === "function" ? require("./osintProviderSchema.class.js") : null);
+    const ProviderPolicy = (typeof window !== "undefined" && window.OSINTProviderPolicy)
+        || (typeof require === "function" ? require("./osintProviderPolicy.class.js") : null);
+
+    if (!ProviderSchema || !ProviderPolicy) throw new Error("OSINT provider schema and policy must load before the registry.");
+
+    const CATEGORY_DEFINITIONS = Object.freeze([
         {id: "discovery", title: "Discovery / Research", icon: "⌕", description: "Search engines, investigation directories and structured public research."},
         {id: "archives", title: "Archive / Evidence", icon: "▤", description: "Historical web, capture, preservation and source provenance."},
         {id: "infrastructure", title: "Domains / Infrastructure", icon: "◌", description: "Passive DNS, certificates, public exposure and web technology context."},
@@ -15,12 +27,13 @@
         {id: "transport", title: "Transport / Space", icon: "⌁", description: "Public aviation, maritime, satellite and Earth-observation sources."}
     ]);
 
-    const tool = (id, title, category, icon, url, description, tags = []) => ({
-        id, title, category, icon, url, description, tags, type: "web", status: "external"
+    const providerSeed = (id, title, category, icon, url, description, tags = [], featuredOrder = 0) => ({
+        id, title, category, icon, url, description, tags, featuredOrder, type: "web", status: "external"
     });
+    const tool = providerSeed;
 
-    const TOOLS = Object.freeze([
-        tool("bellingcat", "Bellingcat Toolkit", "discovery", "B", "https://bellingcat.gitbook.io/toolkit", "Curated online-investigation methods and public-source tools.", ["method", "verification"]),
+    const PROVIDER_SEEDS = Object.freeze([
+        tool("bellingcat", "Bellingcat Toolkit", "discovery", "B", "https://bellingcat.gitbook.io/toolkit", "Curated online-investigation methods and public-source tools.", ["method", "verification"], 1),
         tool("osint-framework", "OSINT Framework", "discovery", "O", "https://osintframework.com/", "Browsable directory of public-source research resources.", ["directory", "research"]),
         tool("maltego", "Maltego", "discovery", "M", "https://www.maltego.com/", "Entity relationship mapping and transform-based investigations.", ["graph", "entities"]),
         tool("spiderfoot", "SpiderFoot", "discovery", "S", "https://www.spiderfoot.net/", "Automated public-source reconnaissance framework.", ["automation", "public-data"]),
@@ -31,7 +44,7 @@
         tool("openalex", "OpenAlex", "discovery", "OA", "https://openalex.org/", "Open scholarly catalogue for works, authors and institutions.", ["research", "data"]),
         tool("lens-org", "Lens", "discovery", "L", "https://www.lens.org/", "Scholarly and patent research platform.", ["research", "patents"]),
 
-        tool("wayback", "Wayback Machine", "archives", "W", "https://web.archive.org/", "Historical snapshots of websites and public pages.", ["archive", "history"]),
+        tool("wayback", "Wayback Machine", "archives", "W", "https://web.archive.org/", "Historical snapshots of websites and public pages.", ["archive", "history"], 2),
         tool("archive-today", "Archive.today", "archives", "A", "https://archive.ph/", "On-demand snapshots of public web pages.", ["archive"]),
         tool("common-crawl", "Common Crawl", "archives", "CC", "https://commoncrawl.org/", "Open archive of web crawl data.", ["archive", "datasets"]),
         tool("memento", "Memento Time Travel", "archives", "MT", "http://timetravel.mementoweb.org/", "Search across public web archives.", ["archive"]),
@@ -42,7 +55,7 @@
         tool("github-history", "GitHub History", "archives", "GH", "https://github.com/", "Public repository commits, releases and issue history.", ["code", "history"]),
 
         tool("shodan", "Shodan", "infrastructure", "SH", "https://www.shodan.io/", "Search engine for publicly exposed Internet services.", ["public-exposure", "assets"]),
-        tool("censys", "Censys", "infrastructure", "C", "https://search.censys.io/", "Public host, certificate and Internet asset search.", ["certificates", "assets"]),
+        tool("censys", "Censys", "infrastructure", "C", "https://search.censys.io/", "Public host, certificate and Internet asset search.", ["certificates", "assets"], 4),
         tool("securitytrails", "SecurityTrails", "infrastructure", "ST", "https://securitytrails.com/", "DNS history, domain and subdomain context.", ["dns", "domains"]),
         tool("crtsh", "crt.sh", "infrastructure", "CT", "https://crt.sh/", "Certificate Transparency search.", ["certificates", "domains"]),
         tool("certspotter", "Cert Spotter", "infrastructure", "CS", "https://sslmate.com/certspotter/", "Certificate Transparency monitoring and search.", ["certificates"]),
@@ -54,7 +67,7 @@
         tool("wappalyzer", "Wappalyzer", "infrastructure", "WA", "https://www.wappalyzer.com/", "Website technology identification.", ["technology", "web"]),
         tool("publicwww", "PublicWWW", "infrastructure", "PW", "https://publicwww.com/", "Search public source code and web fingerprints.", ["code", "web"]),
 
-        tool("virustotal", "VirusTotal", "threat", "VT", "https://www.virustotal.com/gui/home/search", "Public reputation and analysis context for files, URLs, domains and IPs.", ["malware", "urls"]),
+        tool("virustotal", "VirusTotal", "threat", "VT", "https://www.virustotal.com/gui/home/search", "Public reputation and analysis context for files, URLs, domains and IPs.", ["malware", "urls"], 3),
         tool("urlscan", "urlscan.io", "threat", "US", "https://urlscan.io/", "Public URL scans, rendered pages, DOM and network indicators.", ["urls", "phishing"]),
         tool("urlhaus", "URLhaus", "threat", "UH", "https://urlhaus.abuse.ch/", "Malware distribution URL exchange.", ["malware", "urls"]),
         tool("malwarebazaar", "MalwareBazaar", "threat", "MB", "https://bazaar.abuse.ch/", "Malware sample intelligence and hashes.", ["malware", "hashes"]),
@@ -200,7 +213,178 @@
         tool("portwatch", "PortWatch", "transport", "PW", "https://unctad.org/topic/transport-and-trade-logistics/portwatch", "Public port and maritime trade context.", ["maritime", "trade"])
     ]);
 
-    const FEATURED = Object.freeze(["bellingcat", "wayback", "virustotal", "censys"]);
+    const REVIEW_DATE = "2026-07-23";
+    const CATEGORY_CAPABILITIES = Object.freeze({
+        discovery: ["RESEARCH_DISCOVERY"],
+        archives: ["HISTORICAL_ARCHIVE", "EVIDENCE_PRESERVATION"],
+        infrastructure: ["INFRASTRUCTURE_CONTEXT"],
+        threat: ["THREAT_REPUTATION"],
+        geospatial: ["GEOSPATIAL_VERIFICATION", "MEDIA_VERIFICATION"],
+        entities: ["ENTITY_RESEARCH"],
+        presence: ["PUBLIC_PRESENCE"],
+        data: ["DATA_ANALYSIS"],
+        transport: ["TRANSPORT_MONITORING"]
+    });
 
-    return Object.freeze({CATEGORIES, TOOLS, FEATURED});
+    const STANDARD_LEGAL_DISCLAIMER = "External providers retain their own terms, rate limits and access controls. Use only within applicable law, authorization and provider policy.";
+    const STANDARD_JURISDICTION_NOTE = "Availability and lawful use can vary by jurisdiction, authorization and the provider's own terms.";
+
+    function normalizeSeed(seed) {
+        const commercial = (seed.tags || []).includes("commercial");
+        const account = ["shodan", "censys", "virustotal", "whoisxml", "domaintools", "dnsdb", "anyrun", "joesandbox", "linkedin-company"].includes(seed.id);
+        return Object.freeze({
+            id: seed.id,
+            name: seed.title,
+            shortName: seed.title,
+            description: seed.description,
+            category: seed.category,
+            capabilities: CATEGORY_CAPABILITIES[seed.category] || ["RESEARCH_DISCOVERY"],
+            providerType: "EXTERNAL_WEB",
+            accessMode: "WEB",
+            providerStatus: "LINK_ONLY",
+            riskProfile: commercial ? "COMMERCIAL" : (account ? "ACCOUNT_REQUIRED" : "PASSIVE"),
+            legalStatus: "GENERALLY_LEGAL",
+            inputs: ["USER_DIRECTED_BROWSER_QUERY"],
+            outputs: ["PUBLIC_REFERENCE_CONTEXT"],
+            authentication: account ? "PROVIDER_ACCOUNT_OR_TIER" : "PROVIDER_DEFINED",
+            costModel: commercial ? "COMMERCIAL_OR_PROVIDER_DEFINED" : "PROVIDER_DEFINED",
+            officialUrl: seed.url,
+            docsUrl: null,
+            publicReferenceUrl: null,
+            launchAllowed: true,
+            copyUrlAllowed: true,
+            integrationAllowed: false,
+            installationAllowed: false,
+            referenceReason: "Legitimate public-source entry retained from the existing AegisUi OSINT catalog.",
+            legalDisclaimer: STANDARD_LEGAL_DISCLAIMER,
+            jurisdictionNote: STANDARD_JURISDICTION_NOTE,
+            tags: Object.freeze([...(seed.tags || [])]),
+            lastReviewed: REVIEW_DATE,
+            sourceConfidence: "VERIFIED_PUBLIC",
+            icon: seed.icon,
+            featured: Boolean(seed.featuredOrder),
+            featuredOrder: Number(seed.featuredOrder || 0)
+        });
+    }
+
+    const REFERENCE_ONLY_PROVIDERS = Object.freeze([
+        Object.freeze({
+            id: "cobalt-strike-reference",
+            name: "Cobalt Strike",
+            shortName: "Cobalt Strike",
+            description: "Commercial adversary-emulation software that can appear in defensive reporting and threat-context discussions.",
+            category: "threat",
+            capabilities: ["THREAT_REPUTATION", "RESEARCH_DISCOVERY"],
+            providerType: "REFERENCE",
+            accessMode: "REFERENCE_ONLY",
+            providerStatus: "REFERENCE_ONLY",
+            riskProfile: "HIGH_ABUSE_POTENTIAL",
+            legalStatus: "AUTHORIZATION_REQUIRED",
+            inputs: [],
+            outputs: ["ECOSYSTEM_CONTEXT"],
+            authentication: "NOT_APPLICABLE",
+            costModel: "NOT_APPLICABLE",
+            officialUrl: null,
+            docsUrl: null,
+            publicReferenceUrl: null,
+            launchAllowed: false,
+            copyUrlAllowed: false,
+            integrationAllowed: false,
+            installationAllowed: false,
+            referenceReason: "Included only so analysts can recognise the name in public reporting and defensive context. AegisUi intentionally blocks access and operational handling.",
+            legalDisclaimer: "This entry is included exclusively for ecosystem recognition, defensive analysis, technical context and informational transparency. Possession, distribution or use may be restricted or unlawful depending on the tool, jurisdiction, authorization and context. AegisUi provides no access, download, installation, configuration, automation, integration or operational instructions.",
+            jurisdictionNote: "Authorization and applicable law are required; legal treatment can vary by jurisdiction and context.",
+            tags: Object.freeze(["adversary-emulation", "defensive-context", "sensitive"]),
+            lastReviewed: REVIEW_DATE,
+            sourceConfidence: "VERIFIED_OFFICIAL",
+            icon: "CS",
+            featured: false,
+            featuredOrder: 0
+        })
+    ]);
+
+    const PROVIDERS = Object.freeze([
+        ...PROVIDER_SEEDS.map(normalizeSeed),
+        ...REFERENCE_ONLY_PROVIDERS
+    ]);
+
+    const CATEGORIES = Object.freeze(CATEGORY_DEFINITIONS.map(category => Object.freeze({
+        ...category,
+        count: PROVIDERS.filter(provider => provider.category === category.id).length
+    })));
+
+    const TOOLS = Object.freeze(PROVIDERS.map(provider => Object.freeze({
+        id: provider.id,
+        title: provider.name,
+        category: provider.category,
+        icon: provider.icon,
+        url: provider.officialUrl,
+        description: provider.description,
+        tags: provider.tags,
+        type: provider.accessMode === "WEB" ? "web" : "reference",
+        status: provider.providerStatus.toLowerCase(),
+        providerType: provider.providerType,
+        accessMode: provider.accessMode,
+        providerStatus: provider.providerStatus,
+        riskProfile: provider.riskProfile,
+        legalStatus: provider.legalStatus,
+        launchAllowed: provider.launchAllowed,
+        copyUrlAllowed: provider.copyUrlAllowed
+    })));
+
+    const FEATURED = Object.freeze(PROVIDERS
+        .filter(provider => provider.featured)
+        .sort((left, right) => left.featuredOrder - right.featuredOrder)
+        .map(provider => provider.id));
+
+    ProviderSchema.assertValidRegistry(PROVIDERS, CATEGORIES);
+
+    function getProvider(id) {
+        return PROVIDERS.find(provider => provider.id === String(id || "")) || null;
+    }
+
+    function getProviders(filters = {}) {
+        return PROVIDERS.filter(provider => {
+            if (filters.category && provider.category !== filters.category) return false;
+            if (filters.providerStatus && provider.providerStatus !== filters.providerStatus) return false;
+            if (filters.riskProfile && provider.riskProfile !== filters.riskProfile) return false;
+            if (filters.legalStatus && provider.legalStatus !== filters.legalStatus) return false;
+            if (filters.capability && !provider.capabilities.includes(filters.capability)) return false;
+            return true;
+        });
+    }
+
+    function getProvidersForCategory(categoryId, filters = {}) {
+        return getProviders({...filters, category: categoryId});
+    }
+
+    function getCategoryCounts(filters = {}) {
+        return Object.freeze(CATEGORIES.reduce((counts, category) => {
+            counts[category.id] = getProvidersForCategory(category.id, filters).length;
+            return counts;
+        }, {}));
+    }
+
+    function getFeaturedProviders() {
+        return Object.freeze(PROVIDERS
+            .filter(provider => provider.featured)
+            .sort((left, right) => left.featuredOrder - right.featuredOrder));
+    }
+
+    return Object.freeze({
+        SCHEMA_VERSION: ProviderSchema.VERSION,
+        CATEGORIES,
+        PROVIDERS,
+        TOOLS,
+        FEATURED,
+        ENUMS: ProviderSchema.ENUMS,
+        CAPABILITIES: ProviderSchema.CAPABILITIES,
+        getProvider,
+        getProviders,
+        getProvidersForCategory,
+        getCategoryCounts,
+        getFeaturedProviders,
+        validate: () => ProviderSchema.validateRegistry(PROVIDERS, CATEGORIES),
+        policy: ProviderPolicy
+    });
 });
