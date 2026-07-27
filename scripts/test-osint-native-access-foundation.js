@@ -9,6 +9,8 @@ const ROOT = path.resolve(__dirname, "..");
 const registry = require(path.join(ROOT, "src/classes/workspaces/osintTools.registry.js"));
 const schema = require(path.join(ROOT, "src/classes/workspaces/osintProviderSchema.class.js"));
 const policy = require(path.join(ROOT, "src/classes/workspaces/osintProviderPolicy.class.js"));
+const runtime = require(path.join(ROOT, "src/classes/workspaces/osintProviderRuntime.class.js"));
+const adapters = require(path.join(ROOT, "src/classes/workspaces/osintProviderAdapters.class.js"));
 const manager = fs.readFileSync(path.join(ROOT, "src/classes/workspaceManager.class.js"), "utf8");
 const boot = fs.readFileSync(path.join(ROOT, "src/_boot.js"), "utf8");
 
@@ -47,12 +49,18 @@ if (!workspaceChecks) failures.push("workspace OSINT normalized registry integra
 if (manager.includes("OsintAccessController")) failures.push("legacy native controller was reconnected unexpectedly");
 if (boot.includes("osint-provider-")) failures.push("new OSINT IPC was registered unexpectedly");
 
+const wayback = registry.getProvider("wayback");
+if (!wayback || !policy.canQuery(wayback).allowed || wayback.runtimeAdapter !== "WAYBACK_AVAILABILITY") failures.push("Wayback native capability is not configured");
+if (adapters.WAYBACK_AVAILABILITY_ENDPOINT !== "https://archive.org/wayback/available") failures.push("Wayback adapter endpoint is not fixed");
+if (!runtime.RESULT_STATUSES.includes("CANCELLED") || !runtime.ERROR_CODES.includes("TIMEOUT")) failures.push("provider runtime states are incomplete");
+
 print("OSINT_REGISTRY", categoriesPresent ? "OK" : "FAIL");
 print("OSINT_DISCOVERY_TOOLS", discovery.length);
 print("OSINT_PROVIDER_SCHEMA", registryValid ? "OK" : "FAIL");
 print("OSINT_REFERENCE_ONLY", referenceOnly.length ? `OK (${referenceOnly.length})` : "FAIL");
 print("OSINT_ISOLATED_VIEW", secureViewChecks ? "OK" : "FAIL");
 print("OSINT_WORKSPACE", workspaceChecks ? "OK" : "FAIL");
+print("OSINT_WAYBACK_RUNTIME", wayback && policy.canQuery(wayback).allowed ? "OK" : "FAIL");
 print("OSINT_NATIVE_ACCESS_FOUNDATION", failures.length ? "FAIL" : "OK");
 
 if (failures.length) {

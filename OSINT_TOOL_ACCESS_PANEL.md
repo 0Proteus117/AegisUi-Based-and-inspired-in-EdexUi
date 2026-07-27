@@ -23,15 +23,16 @@ The implementation lives in
 | `IDLE` | No active provider. The panel asks the operator to select one. |
 | `SELECTED` | A normal provider is active; metadata and only permitted actions are shown. |
 | `READY` | A permitted action has completed its local request path. |
-| `LOADING` | Reserved for a future approved adapter; no provider adapter is active in v2.3.4. |
-| `RESULT` | Reserved for a future approved adapter result. |
+| `LOADING` | A user-initiated approved provider query is in progress; `CANCEL` is available. |
+| `RESULT` | A normalized approved provider result is available. |
 | `ERROR` | The last allowed action failed locally, without retaining its URL. |
 | `OFFLINE` / `RATE_LIMITED` / `KEY_REQUIRED` | Reserved provider-runtime outcomes. |
 | `REFERENCE_ONLY` | Informational entry; operational access is blocked by schema and policy. |
 
-`QUERY` is displayed separately. It remains `IDLE` in this catalog-only phase;
-the panel performs no query, scraping, crawling, background request or provider
-API call.
+`QUERY` is displayed separately. In v2.3.5, Wayback Availability is the sole
+approved native query. It accepts one manual public URL/domain, uses a fixed
+endpoint and has no batch, scrape, crawl, background request or automatic
+snapshot-open path.
 
 ## What the panel shows
 
@@ -63,5 +64,6 @@ close it, then focus returns to the invoking control.
 ## Boundaries
 
 The panel does not register IPC, connect `WebContentsView`, revive
-`osint-source-*` or `osint-native-query`, create an API adapter, persist a case
-or collect credentials. Those capabilities remain outside this phase.
+`osint-source-*` or `osint-native-query`, persist a case or collect
+credentials. It uses a typed renderer-side adapter only for the approved
+Wayback Availability capability.

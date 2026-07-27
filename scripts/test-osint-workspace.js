@@ -24,7 +24,7 @@ registry.PROVIDERS.forEach(provider => {
     if (!provider.id || !provider.name || !provider.category || !provider.providerType || !provider.accessMode) {
         failures.push(`INVALID_PROVIDER:${provider.id || "unknown"}`);
     }
-    if (!referenceOnly && (!provider.officialUrl || provider.accessMode !== "WEB")) {
+    if (!referenceOnly && (!provider.officialUrl || !["WEB", "API"].includes(provider.accessMode))) {
         failures.push(`INVALID_LAUNCHABLE_PROVIDER:${provider.id}`);
     }
     if (referenceOnly && (provider.officialUrl || provider.launchAllowed || provider.copyUrlAllowed)) {
@@ -52,6 +52,9 @@ registry.FEATURED.forEach(id => {
     "copyOSINTProviderUrl(provider)",
     "openOSINTProviderDocs(provider)",
     "renderOSINTToolAccessPanel(provider = this.getSelectedOSINTProvider())",
+    "renderOSINTNativeQuery(provider, snapshot)",
+    "beginOSINTQuery(provider)",
+    "cancelActiveOSINTQuery({reason = \"USER_CANCELLED\", render = true} = {})",
     "osintPolicyFilterControls()"
 ].forEach(signature => {
     if (!workspaceManager.includes(signature)) failures.push(`WORKSPACE_MANAGER_MISSING:${signature}`);

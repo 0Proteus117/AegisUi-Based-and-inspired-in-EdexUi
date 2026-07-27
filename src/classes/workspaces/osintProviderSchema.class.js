@@ -13,6 +13,7 @@
         legalStatus: Object.freeze(["GENERALLY_LEGAL", "AUTHORIZATION_REQUIRED", "CONTEXT_DEPENDENT", "JURISDICTION_DEPENDENT", "POTENTIALLY_ILLEGAL", "UNKNOWN"]),
         sourceConfidence: Object.freeze(["VERIFIED_OFFICIAL", "VERIFIED_PUBLIC", "MULTIPLE_PUBLIC_SOURCES", "UNVERIFIED", "HISTORICAL"])
     });
+    const RUNTIME_ADAPTERS = Object.freeze(["EXTERNAL_WEB", "WAYBACK_AVAILABILITY", "LOCAL_TOOL", "SYSTEM_INTEGRATION", "REFERENCE_ONLY"]);
 
     const CAPABILITIES = Object.freeze([
         "RESEARCH_DISCOVERY",
@@ -55,7 +56,8 @@
         "jurisdictionNote",
         "tags",
         "lastReviewed",
-        "sourceConfidence"
+        "sourceConfidence",
+        "runtimeAdapter"
     ]);
 
     const ACCESS_FOR_TYPE = Object.freeze({
@@ -126,6 +128,7 @@
         ["providerType", "accessMode", "providerStatus", "riskProfile", "legalStatus", "sourceConfidence"].forEach(group => {
             if (!hasKnownEnum(group, provider[group])) errors.push(`invalid ${group}: ${provider[group]}`);
         });
+        if (!RUNTIME_ADAPTERS.includes(provider.runtimeAdapter)) errors.push(`invalid runtimeAdapter: ${provider.runtimeAdapter}`);
         ["officialUrl", "docsUrl", "publicReferenceUrl"].forEach(field => {
             if (!isOptionalUrl(provider[field])) errors.push(`${field} must be an http(s) URL or null`);
         });
@@ -145,6 +148,7 @@
             if (isOperationalUrl(provider.officialUrl) || isOperationalUrl(provider.docsUrl) || isOperationalUrl(provider.publicReferenceUrl)) {
                 errors.push("REFERENCE_ONLY cannot include an operational URL");
             }
+            if (provider.runtimeAdapter !== "REFERENCE_ONLY") errors.push("REFERENCE_ONLY requires REFERENCE_ONLY runtimeAdapter");
         }
 
         if (provider.launchAllowed && (provider.accessMode !== "WEB" || provider.providerStatus === "REFERENCE_ONLY" || !isOperationalUrl(provider.officialUrl))) {
@@ -158,6 +162,11 @@
         }
         if (provider.riskProfile === "HIGH_ABUSE_POTENTIAL" && provider.integrationAllowed) {
             errors.push("HIGH_ABUSE_POTENTIAL providers cannot be integrated without an explicit future policy review model");
+        }
+        if (provider.runtimeAdapter === "WAYBACK_AVAILABILITY") {
+            if (provider.id !== "wayback" || provider.providerType !== "REST_API" || provider.accessMode !== "API" || !provider.integrationAllowed) {
+                errors.push("WAYBACK_AVAILABILITY runtimeAdapter requires the approved Wayback REST API provider configuration");
+            }
         }
         return errors;
     }
@@ -187,6 +196,7 @@
     return Object.freeze({
         VERSION: "1.0.0",
         ENUMS,
+        RUNTIME_ADAPTERS,
         CAPABILITIES,
         REQUIRED_FIELDS,
         validateProvider,

@@ -4007,6 +4007,141 @@ button.eng-thread-row.active {
     color: #efc17a;
 }
 
+.engineering-mode .osint-native-query {
+    display: grid;
+    gap: .52vh;
+    padding: .65vh;
+    border: .08vh solid rgba(61, 183, 255, .48);
+    background:
+        linear-gradient(135deg, rgba(44, 152, 235, .1), transparent 58%),
+        rgba(3, 9, 15, .46);
+}
+
+.engineering-mode .osint-native-query > header,
+.engineering-mode .osint-native-result > header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: .45vh;
+}
+
+.engineering-mode .osint-native-query > header small,
+.engineering-mode .osint-native-query label > span,
+.engineering-mode .osint-native-query form > small,
+.engineering-mode .osint-native-result small {
+    color: rgba(124, 203, 255, .56);
+    font: .45vh var(--font_mono);
+    letter-spacing: .06vh;
+}
+
+.engineering-mode .osint-native-query > header strong,
+.engineering-mode .osint-native-result strong {
+    color: #9ed9ff;
+    font: .55vh var(--font_mono);
+    font-weight: normal;
+    letter-spacing: .07vh;
+}
+
+.engineering-mode .osint-native-query > header em {
+    color: rgba(124, 203, 255, .62);
+    font: .43vh var(--font_mono);
+    font-style: normal;
+    letter-spacing: .05vh;
+}
+
+.engineering-mode .osint-native-query form {
+    display: grid;
+    gap: .4vh;
+}
+
+.engineering-mode .osint-native-query label {
+    display: grid;
+    gap: .22vh;
+}
+
+.engineering-mode .osint-native-query .aegis-input {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    padding: .46vh .52vh;
+    border: .08vh solid rgba(72, 169, 232, .58);
+    outline: none;
+    color: rgba(220, 244, 255, .92);
+    background: rgba(2, 8, 14, .78);
+    font: .55vh var(--font_mono);
+}
+
+.engineering-mode .osint-native-query .aegis-input::placeholder {
+    color: rgba(124, 203, 255, .32);
+}
+
+.engineering-mode .osint-native-query .aegis-input:focus {
+    border-color: #7CCBFF;
+    box-shadow: 0 0 .85vh rgba(74, 183, 255, .3);
+}
+
+.engineering-mode .osint-native-query-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .38vh;
+}
+
+.engineering-mode .osint-native-query-actions button {
+    padding: .42vh .55vh;
+    border: .08vh solid rgba(74, 183, 255, .62);
+    color: #89d2ff;
+    background: rgba(14, 36, 56, .82);
+    font: .46vh var(--font_mono);
+    letter-spacing: .055vh;
+}
+
+.engineering-mode .osint-native-query-actions button[disabled] {
+    border-color: rgba(72, 98, 116, .45);
+    color: rgba(142, 172, 189, .38);
+    background: rgba(10, 16, 22, .55);
+}
+
+.engineering-mode .osint-native-result {
+    display: grid;
+    gap: .3vh;
+    padding: .5vh;
+    border-left: .13vh solid rgba(69, 186, 255, .66);
+    background: rgba(3, 9, 14, .38);
+}
+
+.engineering-mode .osint-native-result > div {
+    display: grid;
+    grid-template-columns: 5.6vh minmax(0, 1fr);
+    gap: .35vh;
+}
+
+.engineering-mode .osint-native-result > div small {
+    color: rgba(124, 203, 255, .48);
+}
+
+.engineering-mode .osint-native-result > div strong {
+    overflow: hidden;
+    color: rgba(220, 244, 255, .8);
+    font: .48vh var(--font_main_light);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.engineering-mode .osint-native-result p {
+    margin: 0;
+    color: rgba(238, 198, 124, .78);
+    font: .48vh var(--font_main_light);
+}
+
+.engineering-mode .osint-native-result.error {
+    border-left-color: rgba(227, 155, 91, .78);
+    background: rgba(50, 31, 14, .3);
+}
+
+.engineering-mode .osint-native-result.idle {
+    border-left-color: rgba(82, 124, 151, .5);
+}
+
 .engineering-mode .osint-tool-access.reference-only .osint-panel-identity,
 .engineering-mode .osint-tool-access.reference-only .osint-panel-state-readout div {
     border-color: rgba(218, 160, 74, .48);

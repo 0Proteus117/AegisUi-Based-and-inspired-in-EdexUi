@@ -31,6 +31,7 @@ The schema implementation lives in `src/classes/workspaces/osintProviderSchema.c
 | `referenceReason` / `legalDisclaimer` / `jurisdictionNote` | Context required for transparent catalog use. |
 | `tags` | Compact catalog context. |
 | `lastReviewed` / `sourceConfidence` | Review date and confidence classification. |
+| `runtimeAdapter` | Approved adapter family; it is resolved only by the runtime factory. |
 
 Optional metadata is deliberately narrow: aliases, maintainer, license, platforms, availability, deprecation/replacement notes and public-reference metadata. Arbitrary blobs are not accepted by the validation layer.
 
@@ -85,4 +86,5 @@ The schema also rejects `POTENTIALLY_ILLEGAL` providers presented as `ACTIVE` wi
 3. Select capabilities and policy metadata before considering presentation.
 4. Use `REFERENCE_ONLY` whenever AegisUi should inform without facilitating access.
 5. Run `node scripts/test-osint-provider-registry.js` and `node scripts/test-osint-reference-only-policy.js`.
-6. Do not add API, IPC, browser isolation or launch behavior in the registry-only phase.
+6. A native capability requires a dedicated policy review, adapter test and
+   normalized-result contract. It must not reuse a legacy IPC or webview route.

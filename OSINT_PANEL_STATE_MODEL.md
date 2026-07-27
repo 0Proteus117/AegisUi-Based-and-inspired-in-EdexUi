@@ -9,11 +9,13 @@ The OSINT interaction model is intentionally layered:
 | `DETAIL` | Opens an accessible provider dialog. | None |
 | `OPEN` / `COPY URL` / `DOCS` | Allowed only after central policy approval. | Sanitized session event only |
 | `READ REFERENCE` | Opens an informational reference dialog. | Sanitized session event only |
+| `QUERY WAYBACK` | Runs the one approved manual historical-archive query. | Sanitized event only |
+| `CANCEL` | Aborts the active manual query. | Sanitized cancellation event only |
 
 Selection never launches a browser, opens a modal, invokes IPC or fetches a
 provider. Hover never selects a provider or records history. This distinction
 keeps accidental pointer movement from becoming an access action.
 
-The model reserves `LOADING`, `RESULT`, `OFFLINE`, `RATE_LIMITED` and
-`KEY_REQUIRED` for a future approved Provider Runtime. They are display states,
-not an implicit promise that the current catalog has native data access.
+`LOADING`, `RESULT`, `CANCELLED`, `OFFLINE`, `RATE_LIMITED` and `KEY_REQUIRED`
+are runtime states. In v2.3.5 they are used only by the approved Wayback
+Availability adapter. They do not authorize any other catalog entry.

@@ -93,12 +93,16 @@ function main() {
     const osintFoundation = exists("src/classes/workspaces/osintTools.registry.js")
         && exists("src/classes/workspaces/osintProviderSchema.class.js")
         && exists("src/classes/workspaces/osintProviderPolicy.class.js")
+        && exists("src/classes/workspaces/osintCapabilityRegistry.class.js")
+        && exists("src/classes/workspaces/osintProviderRuntime.class.js")
+        && exists("src/classes/workspaces/osintProviderAdapters.class.js")
         && exists("src/classes/workspaces/osintToolAccessPanel.class.js")
         && exists("src/classes/workspaces/osintAccess.class.js")
         && exists("scripts/test-osint-native-access-foundation.js")
         && exists("scripts/test-osint-provider-registry.js")
         && exists("scripts/test-osint-reference-only-policy.js")
-        && exists("scripts/test-osint-tool-access-panel.js");
+        && exists("scripts/test-osint-tool-access-panel.js")
+        && exists("scripts/test-osint-provider-runtime.js");
 
     if (!versionsMatch) failures.push("package versions do not match");
     if (!aegisUiBranding) failures.push("AegisUi visible branding files are missing");

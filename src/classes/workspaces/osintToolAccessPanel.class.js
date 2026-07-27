@@ -15,9 +15,10 @@
         "OFFLINE",
         "RATE_LIMITED",
         "KEY_REQUIRED",
-        "REFERENCE_ONLY"
+        "REFERENCE_ONLY",
+        "CANCELLED"
     ]);
-    const QUERY_STATES = Object.freeze(["IDLE", "LOADING", "RESULT", "ERROR", "OFFLINE", "RATE_LIMITED", "KEY_REQUIRED"]);
+    const QUERY_STATES = Object.freeze(["IDLE", "LOADING", "RESULT", "ERROR", "OFFLINE", "RATE_LIMITED", "KEY_REQUIRED", "CANCELLED"]);
     const DEFAULT_HISTORY_LIMIT = 50;
 
     function formatEnum(value, fallback = "NOT AVAILABLE") {
@@ -67,6 +68,7 @@
             this.previewProviderId = null;
             this.panelState = "IDLE";
             this.providerStatus = null;
+            this.providerHealth = "UNKNOWN";
             this.queryState = "IDLE";
             this.legalStatus = null;
             this.lastAction = null;
@@ -83,6 +85,7 @@
                 previewProviderId: this.previewProviderId,
                 panelState: this.panelState,
                 providerStatus: this.providerStatus,
+                providerHealth: this.providerHealth,
                 queryState: this.queryState,
                 legalStatus: this.legalStatus,
                 lastAction: this.lastAction,
@@ -119,6 +122,7 @@
             this.activeReferenceOnly = snapshot.referenceOnly;
             this.previewProviderId = null;
             this.providerStatus = snapshot.providerStatus;
+            this.providerHealth = snapshot.referenceOnly ? "REFERENCE_ONLY" : "UNKNOWN";
             this.legalStatus = snapshot.legalStatus;
             this.queryState = "IDLE";
             this.lastResult = null;
@@ -149,6 +153,63 @@
             this.panelState = PANEL_STATES.includes(panelState) ? panelState : "ERROR";
             this.queryState = QUERY_STATES.includes(queryState) ? queryState : "ERROR";
             return this.snapshot();
+        }
+
+        beginQuery(provider, details = {}) {
+            this.clearArmed = false;
+            this.lastResult = null;
+            this.lastError = null;
+            this.panelState = "LOADING";
+            this.queryState = "LOADING";
+            this.providerHealth = details.providerHealth || "UNKNOWN";
+            return this.append(provider, "QUERY_STARTED", {
+                state: "LOADING",
+                querySummary: details.querySummary || "Manual query started",
+                resultSummary: "Provider request started"
+            });
+        }
+
+        recordQueryResult(provider, result = {}, details = {}) {
+            const status = String(result.status || "ERROR");
+            const stateByResult = {
+                SUCCESS: {panel: "RESULT", query: "RESULT", action: "QUERY_SUCCESS"},
+                EMPTY: {panel: "RESULT", query: "RESULT", action: "QUERY_EMPTY"},
+                CANCELLED: {panel: "CANCELLED", query: "CANCELLED", action: "QUERY_CANCELLED"},
+                OFFLINE: {panel: "OFFLINE", query: "OFFLINE", action: "QUERY_FAILED"},
+                RATE_LIMITED: {panel: "RATE_LIMITED", query: "RATE_LIMITED", action: "QUERY_FAILED"},
+                KEY_REQUIRED: {panel: "KEY_REQUIRED", query: "KEY_REQUIRED", action: "QUERY_FAILED"}
+            };
+            const state = stateByResult[status] || {panel: "ERROR", query: "ERROR", action: "QUERY_FAILED"};
+            this.panelState = state.panel;
+            this.queryState = state.query;
+            this.providerHealth = details.providerHealth || this.providerHealth;
+            this.lastResult = Object.freeze({
+                providerId: provider && provider.id ? String(provider.id) : null,
+                status,
+                summary: sanitizeSummary(result.summary, "Provider query completed."),
+                available: result.data && result.data.available === true,
+                originalInput: result.data && result.data.originalInput ? sanitizeSummary(result.data.originalInput) : null,
+                // This is the currently rendered, user-initiated result only.
+                // Histories below remain redacted and are never persisted.
+                canonicalUrl: result.data && result.data.canonicalUrl
+                    ? String(result.data.canonicalUrl).slice(0, 2048)
+                    : null,
+                snapshotTimestamp: result.data && result.data.snapshotTimestamp ? String(result.data.snapshotTimestamp).slice(0, 64) : null,
+                source: result.source && result.source.provider ? String(result.source.provider).slice(0, 96) : null,
+                queriedAt: result.queriedAt || null,
+                completedAt: result.completedAt || null
+            });
+            this.lastError = result.error ? Object.freeze({
+                code: String(result.error.code || "UNKNOWN_ERROR"),
+                message: sanitizeSummary(result.error.userMessage, "Provider request failed."),
+                timestamp: result.completedAt || this.clock().toISOString()
+            }) : null;
+            return this.append(provider, state.action, {
+                state: state.panel,
+                querySummary: details.querySummary || "Manual query",
+                resultSummary: this.lastResult.summary,
+                errorCode: this.lastError && this.lastError.code || null
+            });
         }
 
         recordError(provider, code, message) {
@@ -187,6 +248,7 @@
             this.activeReferenceOnly = false;
             this.previewProviderId = null;
             this.providerStatus = null;
+            this.providerHealth = "UNKNOWN";
             this.legalStatus = null;
             this.queryState = "IDLE";
             this.lastResult = null;
