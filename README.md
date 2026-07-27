@@ -6,7 +6,7 @@ Local-first macOS engineering cockpit based on the visual spirit of eDEX-UI.
 [![CodeQL](https://github.com/0Proteus117/AegisUi-Based-and-inspired-in-EdexUi/actions/workflows/codeql-analysis.yml/badge.svg?branch=feature%2Fsystems-online-pass)](https://github.com/0Proteus117/AegisUi-Based-and-inspired-in-EdexUi/actions/workflows/codeql-analysis.yml)
 ![Platform](https://img.shields.io/badge/platform-macOS%20Apple%20Silicon-3BA7FF)
 ![Local first](https://img.shields.io/badge/local--first-yes-7CCBFF)
-![Version](https://img.shields.io/badge/version-2.3.4-13263A)
+![Version](https://img.shields.io/badge/version-2.3.5-13263A)
 
 ## Current status
 
@@ -27,7 +27,10 @@ AegisUi is a cockpit-style desktop environment for engineering work:
 references carry explicit access, provider-status, risk and legal-context
 policy before a permitted external browser action is available. Its `TOOL
 ACCESS` panel keeps selection, metadata, policy decisions and a private
-in-memory session view separate from external actions.
+in-memory session view separate from external actions. The approved Wayback
+Availability capability additionally supports one manual URL/domain query via a
+fixed endpoint, cancellable and normalized in the renderer; it never opens a
+snapshot automatically or stores query data.
 - Live systems map with TomTom traffic, AISStream maritime traffic,
   RainViewer radar, Open-Meteo Marine conditions and CelesTrak SAT support.
 - Assistant presence layer with Angie/Gustav/Ares/Aphrodite profiles,
@@ -103,7 +106,16 @@ See [OSINT_PROVIDER_SCHEMA.md](OSINT_PROVIDER_SCHEMA.md),
 [OSINT_TOOL_ACCESS_PANEL.md](OSINT_TOOL_ACCESS_PANEL.md),
 [OSINT_PANEL_STATE_MODEL.md](OSINT_PANEL_STATE_MODEL.md),
 [OSINT_SESSION_HISTORY.md](OSINT_SESSION_HISTORY.md) and
-[OSINT_ACCESSIBILITY.md](OSINT_ACCESSIBILITY.md).
+[OSINT_ACCESSIBILITY.md](OSINT_ACCESSIBILITY.md),
+[OSINT_PROVIDER_RUNTIME.md](OSINT_PROVIDER_RUNTIME.md),
+[OSINT_CAPABILITY_MODEL.md](OSINT_CAPABILITY_MODEL.md),
+[OSINT_PROVIDER_ADAPTERS.md](OSINT_PROVIDER_ADAPTERS.md),
+[OSINT_QUERY_CONTEXT.md](OSINT_QUERY_CONTEXT.md),
+[OSINT_NORMALIZED_RESULTS.md](OSINT_NORMALIZED_RESULTS.md),
+[OSINT_PROVIDER_ERRORS.md](OSINT_PROVIDER_ERRORS.md) and
+[OSINT_PROVIDER_SECURITY.md](OSINT_PROVIDER_SECURITY.md),
+[OSINT_WAYBACK_MIGRATION.md](OSINT_WAYBACK_MIGRATION.md) and
+[OSINT_PHASE3_VALIDATION.md](OSINT_PHASE3_VALIDATION.md).
 
 ## Assistant
 
@@ -136,6 +148,13 @@ See [ASSISTANT_SYSTEM.md](ASSISTANT_SYSTEM.md),
 [ASSISTANT_COMMAND_ROUTER.md](ASSISTANT_COMMAND_ROUTER.md).
 
 ## Local setup
+
+For a local macOS release build, use the normal Electron Builder path. If the
+build host has Electron Builder but no npm executable for its dependency
+collector, the controlled fallback `node scripts/build-local-dmg.js` stages the
+current source into a fresh ad-hoc-signed `AegisUi.app` and creates
+`dist/AegisUi-<version>-arm64.dmg`; it never reuses an older app or DMG as
+input.
 
 Requirements:
 
@@ -215,6 +234,15 @@ See [SECURITY.md](SECURITY.md) and [CONFIGURATION.md](CONFIGURATION.md).
 - [OSINT_SESSION_HISTORY.md](OSINT_SESSION_HISTORY.md)
 - [OSINT_ACCESSIBILITY.md](OSINT_ACCESSIBILITY.md)
 - [OSINT_PHASE2_VALIDATION.md](OSINT_PHASE2_VALIDATION.md)
+- [OSINT_PROVIDER_RUNTIME.md](OSINT_PROVIDER_RUNTIME.md)
+- [OSINT_CAPABILITY_MODEL.md](OSINT_CAPABILITY_MODEL.md)
+- [OSINT_PROVIDER_ADAPTERS.md](OSINT_PROVIDER_ADAPTERS.md)
+- [OSINT_QUERY_CONTEXT.md](OSINT_QUERY_CONTEXT.md)
+- [OSINT_NORMALIZED_RESULTS.md](OSINT_NORMALIZED_RESULTS.md)
+- [OSINT_PROVIDER_ERRORS.md](OSINT_PROVIDER_ERRORS.md)
+- [OSINT_PROVIDER_SECURITY.md](OSINT_PROVIDER_SECURITY.md)
+- [OSINT_WAYBACK_MIGRATION.md](OSINT_WAYBACK_MIGRATION.md)
+- [OSINT_PHASE3_VALIDATION.md](OSINT_PHASE3_VALIDATION.md)
 - [MAP_LAYERS.md](MAP_LAYERS.md)
 - [MAP_PROVIDER_HARDENING.md](MAP_PROVIDER_HARDENING.md)
 - [APPLE_MUSIC.md](APPLE_MUSIC.md)

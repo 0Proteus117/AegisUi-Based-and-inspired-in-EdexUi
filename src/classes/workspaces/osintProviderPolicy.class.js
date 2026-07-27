@@ -82,6 +82,15 @@
             : denied("INTEGRATION_BLOCKED", "This provider has no approved runtime integration.");
     }
 
+    function canQuery(provider) {
+        if (!provider) return denied("PROVIDER_NOT_FOUND", "Provider record is unavailable.");
+        if (isReferenceOnly(provider)) return denied("REFERENCE_ONLY", "Reference-only entries cannot perform native queries.");
+        if (!provider.integrationAllowed) return denied("INTEGRATION_BLOCKED", "This provider has no approved native runtime integration.");
+        if (provider.accessMode !== "API" || provider.providerStatus !== "ACTIVE") return denied("STATUS_BLOCKED", "This provider is not active for native queries.");
+        if (!provider.runtimeAdapter || provider.runtimeAdapter === "EXTERNAL_WEB") return denied("ADAPTER_UNAVAILABLE", "This provider has no approved query adapter.");
+        return allowed("QUERY_APPROVED_PROVIDER");
+    }
+
     function displayAccess(provider) {
         if (isReferenceOnly(provider)) return "REFERENCE ONLY";
         if (provider && provider.accessMode === "API") return "API";
@@ -99,6 +108,7 @@
         canInstall,
         canConfigure,
         canIntegrate,
+        canQuery,
         displayAccess
     });
 });

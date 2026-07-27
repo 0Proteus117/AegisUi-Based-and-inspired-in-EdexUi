@@ -26,6 +26,7 @@ const CHECKS = [
     "scripts/test-osint-reference-only-policy.js",
     "scripts/test-osint-tool-access-panel.js",
     "scripts/test-osint-native-access-foundation.js",
+    "scripts/test-osint-provider-runtime.js",
     "scripts/test-aegis-gearlab-standalone.js",
     "scripts/test-apple-music-bridge-static.js",
     "scripts/test-apple-music-runtime.js",

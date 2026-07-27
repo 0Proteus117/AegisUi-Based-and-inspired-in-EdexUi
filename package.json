@@ -1,7 +1,7 @@
 {
   "name": "aegis-ui",
   "productName": "AegisUi",
-  "version": "2.3.4",
+  "version": "2.3.5",
   "description": "AegisUi local-first engineering cockpit for Apple Silicon.",
   "keywords": [
     "desktop",
@@ -24,6 +24,7 @@
     "prebuild-windows": "mkdir prebuild-src && xcopy src\\* prebuild-src\\ /E /C /Q /Y && node prebuild-minify.js && cd prebuild-src && npm install",
     "build-linux": "./node_modules/.bin/electron-builder build -l --x64 --ia32 --arm64 --armv7l",
     "build-darwin": "./node_modules/.bin/electron-builder build -m --arm64",
+    "build-local-dmg": "node scripts/build-local-dmg.js",
     "build-windows": "node_modules\\.bin\\electron-builder build -w",
     "postbuild-linux": "rm -R prebuild-src",
     "postbuild-darwin": "rm -R prebuild-src",

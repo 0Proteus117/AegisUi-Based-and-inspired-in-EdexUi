@@ -1,5 +1,19 @@
 # Changelog
 
+## 2.3.5 - 2026-07-23
+
+### OSINT provider runtime and capability architecture
+
+- Added a typed, capability-based OSINT provider runtime with centralized
+  query context, cancellation, health/rate-limit state, normalized results and
+  safe typed errors.
+- Added the first approved native capability: a bounded, user-initiated
+  Wayback Availability check for one public URL or domain at a time.
+- Added policy, schema, factory and UI enforcement so `REFERENCE_ONLY` entries
+  cannot obtain an adapter, query, network request or operational action.
+- Preserved the modern Analyst Desk and the disconnected legacy WebContentsView
+  boundary: no `_boot.js` edit and no new IPC.
+
 ## 2.3.4 - 2026-07-23
 
 ### OSINT functional tool access panel

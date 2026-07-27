@@ -12,7 +12,8 @@
 | Reference reading | `canReadReference(provider)` | Informational reference detail only; it never provides an operational route. |
 | Installation | `canInstall(provider)` | No provider currently receives approval in this phase. |
 | Configuration | `canConfigure(provider)` | Blocked in this catalog-only phase. |
-| Integration | `canIntegrate(provider)` | No provider currently receives runtime integration. |
+| Native query | `canQuery(provider)` | Approved active API provider with an explicit runtime adapter. |
+| Integration | `canIntegrate(provider)` | Explicit provider-runtime approval only. |
 
 The policy returns `{allowed, code, message}`. It does not perform network activity, disk writes, provider execution, scraping, downloads or IPC registration.
 
@@ -28,9 +29,13 @@ An external launch requires an existing non-reference provider with `launchAllow
 
 The UI calls `launchOSINTProvider()` rather than calling `openLink()` directly for OSINT cards. A manipulated call still receives the policy rejection before the existing `workspace-open-link` IPC can be reached.
 
-## Integration boundary
+## Runtime boundary
 
-This policy does not activate an API adapter, create new IPC, connect the old isolated webview, create provider sessions or use credentials. These remain reserved for a future **Provider Runtime** phase, after an explicit provider policy and typed adapter have been reviewed.
+The only Phase 3 query permission is the user-initiated, fixed-endpoint Wayback
+Availability adapter. It does not create IPC, connect the old isolated webview,
+create provider accounts or use credentials. Every other catalog provider
+remains external, local stub, system stub or reference-only until separately
+reviewed.
 
 ## Badge language
 

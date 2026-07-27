@@ -24,6 +24,7 @@ tests remain part of the regression aggregator.
 
 ## Explicit non-goals
 
-No provider API, search adapter, WebContentsView, legacy IPC, external browser
-embedding, account/session storage, evidence object or investigation case is
-introduced in this phase.
+This historical Phase 2 record remains valid for its release. v2.3.5 adds one
+typed Wayback Availability adapter; see `OSINT_PHASE3_VALIDATION.md`. It still
+does not reconnect WebContentsView or legacy IPC, embed external browsers,
+store accounts/sessions, create evidence objects or create investigation cases.
