@@ -6,14 +6,14 @@ Local-first macOS engineering cockpit based on the visual spirit of eDEX-UI.
 [![CodeQL](https://github.com/0Proteus117/AegisUi-Based-and-inspired-in-EdexUi/actions/workflows/codeql-analysis.yml/badge.svg?branch=feature%2Fsystems-online-pass)](https://github.com/0Proteus117/AegisUi-Based-and-inspired-in-EdexUi/actions/workflows/codeql-analysis.yml)
 ![Platform](https://img.shields.io/badge/platform-macOS%20Apple%20Silicon-3BA7FF)
 ![Local first](https://img.shields.io/badge/local--first-yes-7CCBFF)
-![Version](https://img.shields.io/badge/version-2.3.5-13263A)
+![Version](https://img.shields.io/badge/version-2.4.0-13263A)
 
 ## Current status
 
 AegisUi is currently developed on `feature/systems-online-pass`.
 
 The application, bundle display name and release artifacts are branded
-`AegisUi`. The active local release line is `v2.3.x`.
+`AegisUi`. The active local release line is `v2.4.x`.
 
 ## What it is
 
@@ -30,7 +30,10 @@ ACCESS` panel keeps selection, metadata, policy decisions and a private
 in-memory session view separate from external actions. The approved Wayback
 Availability capability additionally supports one manual URL/domain query via a
 fixed endpoint, cancellable and normalized in the renderer; it never opens a
-snapshot automatically or stores query data.
+snapshot automatically. v2.4.0 adds an explicit local Investigation Case layer
+for selected normalized results only: cases, evidence metadata, notes,
+timeline, SHA-256 integrity checks and JSON/Markdown export. It never persists
+the ephemeral session by default or sends case data to a provider.
 - Live systems map with TomTom traffic, AISStream maritime traffic,
   RainViewer radar, Open-Meteo Marine conditions and CelesTrak SAT support.
 - Assistant presence layer with Angie/Gustav/Ares/Aphrodite profiles,

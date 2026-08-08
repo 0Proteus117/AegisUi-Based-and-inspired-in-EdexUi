@@ -39,9 +39,17 @@ accept arrays, objects, private/local targets, file/data/javascript URLs or
 arbitrary endpoints. There is no proxy, crawler, scheduler, batch mode,
 automatic snapshot opening or URL persistence.
 
+## Phase 4 relationship
+
+v2.4.0 consumes the existing Normalized Result contract only after an explicit
+`SAVE TO CASE` action. The new case service does not rerun a query, add a
+provider, widen a context, retain the raw response or send case metadata back
+to a provider. Wayback remains the sole active native adapter.
+
 ## Boundaries
 
-- No new IPC is registered.
+- Case-specific local-persistence IPC is registered separately in the trusted
+  main process; it is not provider IPC and cannot issue a provider query.
 - `_boot.js` and its legacy WebContentsView stay unchanged.
 - No credentials, cookies, account sessions or API keys are handled.
 - No queries survive an app restart.

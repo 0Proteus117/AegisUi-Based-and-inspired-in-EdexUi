@@ -103,6 +103,13 @@ function main() {
         && exists("scripts/test-osint-reference-only-policy.js")
         && exists("scripts/test-osint-tool-access-panel.js")
         && exists("scripts/test-osint-provider-runtime.js");
+    const osintCaseWorkspace = exists("src/classes/workspaces/osintCaseModel.class.js")
+        && exists("src/classes/workspaces/osintCaseStorage.class.js")
+        && exists("src/classes/workspaces/osintCaseServices.class.js")
+        && exists("src/classes/workspaces/osintCaseIpc.class.js")
+        && exists("scripts/test-osint-cases.js")
+        && exists("scripts/test-osint-case-ipc.js")
+        && exists("scripts/test-osint-case-ui.js");
 
     if (!versionsMatch) failures.push("package versions do not match");
     if (!aegisUiBranding) failures.push("AegisUi visible branding files are missing");
@@ -115,6 +122,7 @@ function main() {
     if (!mapProviders) failures.push("map provider files missing");
     if (!engWorkspace) failures.push("ENG workspace files missing");
     if (!osintFoundation) failures.push("OSINT native access foundation files missing");
+    if (!osintCaseWorkspace) failures.push("OSINT investigation case workspace files missing");
 
     print("PACKAGE_VERSION", pkg.version || "UNKNOWN");
     print("SRC_PACKAGE_VERSION", srcPkg.version || "UNKNOWN");
@@ -133,6 +141,7 @@ function main() {
     print("ENG_WORKSPACE", engWorkspace ? "PRESENT" : "MISSING");
     print("OSINT_NATIVE_ACCESS", osintFoundation ? "PRESENT" : "MISSING");
     print("OSINT_PROVIDER_REGISTRY", exists("src/classes/workspaces/osintProviderSchema.class.js") && exists("src/classes/workspaces/osintProviderPolicy.class.js") && exists("src/classes/workspaces/osintToolAccessPanel.class.js") ? "PRESENT" : "MISSING");
+    print("OSINT_CASE_WORKSPACE", osintCaseWorkspace ? "PRESENT" : "MISSING");
     print("RELEASE_HEALTH", failures.length ? "FAIL" : "OK");
 
     if (failures.length) {

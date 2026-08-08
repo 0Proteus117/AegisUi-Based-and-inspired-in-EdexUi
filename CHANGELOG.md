@@ -1,5 +1,21 @@
 # Changelog
 
+## 2.4.0 - 2026-08-08
+
+### OSINT Investigation Cases and Evidence Objects
+
+- Added explicit local Investigation Cases with enum status/priority, light
+  summary index, active-case workspace, notes, timeline and safe archive flow.
+- Added Evidence Objects created only from selected normalized results or
+  manual local entries, with provenance, pre-save redaction and SHA-256
+  integrity verification.
+- Added case and evidence JSON/Markdown export through a constrained
+  main-process save dialog; no generic filesystem bridge is exposed.
+- Preserved the ephemeral Tool Access session, the single bounded Wayback
+  provider, `REFERENCE_ONLY` blocking and the disconnected legacy runtime.
+- Added case model, persistence, IPC and UI validation without changing the
+  intro, other workspaces or external-provider scope.
+
 ## 2.3.5 - 2026-07-23
 
 ### OSINT provider runtime and capability architecture

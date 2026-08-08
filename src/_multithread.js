@@ -4,12 +4,18 @@ if (cluster.isMaster) {
     const electron = require("electron");
     const ipc = electron.ipcMain;
     const signale = require("signale");
+    const {registerOsintCaseIpc} = require("./classes/workspaces/osintCaseIpc.class.js");
     // Also, leave a core available for the renderer process
     const osCPUs = require("os").cpus().length - 1;
     // See #904
     const numCPUs = (osCPUs > 7) ? 7 : osCPUs;
 
     const si = require("systeminformation");
+
+    // OSINT investigation persistence deliberately exposes only narrow,
+    // validated case/evidence operations. It never grants a generic file API
+    // to the renderer and is independent from the legacy OSINT source IPC.
+    registerOsintCaseIpc({ipc, app: electron.app, dialog: electron.dialog});
 
     cluster.setupMaster({
         exec: require("path").join(__dirname, "_multithread.js")

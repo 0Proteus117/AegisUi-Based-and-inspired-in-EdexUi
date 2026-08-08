@@ -1547,13 +1547,24 @@ class WorkspaceManager {
             ? new window.OSINTToolAccessPanel.SessionHistory({maxEntries: 50})
             : null);
         this.osintQueryDrafts = this.osintQueryDrafts || Object.create(null);
+        this.osintLastNormalizedResults = this.osintLastNormalizedResults || Object.create(null);
         this.osintActiveQuery = this.osintActiveQuery || null;
         this.osintState = this.osintState || {
             categoryId: null,
             filters: {providerStatus: "", riskProfile: "", legalStatus: ""}
         };
+        this.osintCaseState = this.osintCaseState || {
+            mode: "CATALOG",
+            loaded: false,
+            loading: false,
+            cases: [],
+            activeCaseId: null,
+            activeCase: null,
+            lastError: null
+        };
         this.osintState.filters = {...{providerStatus: "", riskProfile: "", legalStatus: ""}, ...(this.osintState.filters || {})};
         this.renderOSINTState(view, definition);
+        this.ensureOSINTCasesLoaded();
     }
 
     renderOSINTState(view = this.osintView, definition = this.byId.get("osint")) {
@@ -1564,6 +1575,12 @@ class WorkspaceManager {
         const activeCategory = registry.CATEGORIES.find(category => category.id === this.osintState.categoryId);
         const selectedProvider = this.getSelectedOSINTProvider();
         grid.className = "workspace-grid osint-command-grid";
+
+        if (this.osintCaseState && this.osintCaseState.mode === "CASE") {
+            this.renderOSINTCaseWorkspace(grid);
+            this.bindOSINTDeck(view);
+            return;
+        }
 
         if (!activeCategory) {
             const featured = typeof registry.getFeaturedProviders === "function"
@@ -1576,11 +1593,12 @@ class WorkspaceManager {
                         <small>PUBLIC-SOURCE / EVIDENCE-AWARE RESEARCH</small>
                         <h2>OSINT TOOL CATALOG</h2>
                         <p>Choose an investigation domain. Every entry carries an explicit access and policy state before any external resource can be launched.</p>
+                        <button type="button" class="osint-case-workspace-button" data-osint-case-action="workspace">CASE WORKSPACE</button>
                     </div>
                     <div class="osint-command-stats">
                         <div><small>CATEGORIES</small><strong>${registry.CATEGORIES.length}</strong></div>
                         <div><small>TOOLS</small><strong>${providers.length}</strong></div>
-                        <div><small>MODE</small><strong>POLICY</strong></div>
+                        <div><small>CASES</small><strong>${this.osintCaseState && this.osintCaseState.cases ? this.osintCaseState.cases.length : 0}</strong></div>
                     </div>
                 </section>
                 <section class="osint-category-deck" aria-label="OSINT categories">
@@ -1602,6 +1620,7 @@ class WorkspaceManager {
             grid.innerHTML = `
                 <section class="osint-category-header workspace-panel">
                     <button type="button" class="osint-back-button" data-osint-back>‹ ALL DOMAINS</button>
+                    <button type="button" class="osint-case-workspace-button" data-osint-case-action="workspace">CASE WORKSPACE</button>
                     <span class="osint-category-icon">${this.escape(activeCategory.icon)}</span>
                     <div><small>OSINT DOMAIN / ${this.escape(activeCategory.id)}</small><h2>${this.escape(activeCategory.title)}</h2><p>${this.escape(activeCategory.description)}</p></div>
                     <strong>${providers.length} / ${allCategoryProviders.length} SOURCES</strong>
@@ -1717,7 +1736,7 @@ class WorkspaceManager {
     bindOSINTDeck(view = this.osintView) {
         if (!view || view.dataset.osintDeckBound === "true") return;
         this.boundOSINTDeckClick = event => {
-            const target = event.target.closest("[data-osint-category], [data-osint-back], [data-osint-filter-clear], [data-osint-tool], [data-osint-panel-action], [data-osint-history-clear], [data-osint-query-cancel]");
+            const target = event.target.closest("[data-osint-category], [data-osint-back], [data-osint-filter-clear], [data-osint-tool], [data-osint-panel-action], [data-osint-history-clear], [data-osint-query-cancel], [data-osint-save-result], [data-osint-case-action]");
             if (!target || !view.contains(target)) return;
             if (target.matches("[data-osint-category]")) {
                 this.osintState.categoryId = target.dataset.osintCategory;
@@ -1746,6 +1765,14 @@ class WorkspaceManager {
                 this.cancelActiveOSINTQuery();
                 return;
             }
+            if (target.matches("[data-osint-save-result]")) {
+                this.openOSINTEvidencePromotion(target.dataset.osintSaveResult, target);
+                return;
+            }
+            if (target.matches("[data-osint-case-action]")) {
+                this.handleOSINTCaseAction(target.dataset.osintCaseAction, target);
+                return;
+            }
             if (target.matches("[data-osint-panel-action]")) this.handleOSINTPanelAction(target.dataset.osintPanelAction, target);
         };
         this.boundOSINTDeckChange = event => {
@@ -1765,10 +1792,16 @@ class WorkspaceManager {
         };
         this.boundOSINTDeckSubmit = event => {
             const form = event.target.closest("[data-osint-query-form]");
-            if (!form || !view.contains(form)) return;
+            if (form && view.contains(form)) {
+                event.preventDefault();
+                const provider = this.osintProviderRegistry && this.osintProviderRegistry.getProvider(form.dataset.osintQueryForm);
+                if (provider) this.beginOSINTQuery(provider);
+                return;
+            }
+            const noteForm = event.target.closest("[data-osint-case-note-form]");
+            if (!noteForm || !view.contains(noteForm)) return;
             event.preventDefault();
-            const provider = this.osintProviderRegistry && this.osintProviderRegistry.getProvider(form.dataset.osintQueryForm);
-            if (provider) this.beginOSINTQuery(provider);
+            this.submitOSINTCaseNote(noteForm);
         };
         this.boundOSINTDeckOver = event => {
             const card = event.target.closest("[data-osint-tool]");
@@ -1801,6 +1834,7 @@ class WorkspaceManager {
         delete view.dataset.osintDeckBound;
         this.cancelActiveOSINTQuery({reason: "WORKSPACE_CLOSED", render: false});
         this.closeOSINTDetail();
+        this.closeOSINTCaseDialog();
     }
 
     openOSINTToolById(toolId) {
@@ -1883,8 +1917,9 @@ class WorkspaceManager {
         const lastResult = snapshot.lastResult && snapshot.lastResult.providerId === provider.id ? snapshot.lastResult : null;
         const error = snapshot.lastError && snapshot.lastError.providerId === provider.id ? snapshot.lastError : null;
         const health = this.formatOSINTEnum(runtimeState.health || snapshot.providerHealth || "UNKNOWN");
+        const promotable = lastResult && ["SUCCESS", "EMPTY", "PARTIAL"].includes(lastResult.status) && this.osintLastNormalizedResults && this.osintLastNormalizedResults[provider.id];
         const resultMarkup = lastResult && ["SUCCESS", "EMPTY", "PARTIAL"].includes(lastResult.status)
-            ? `<section class="osint-native-result" data-osint-native-result><header><small>LAST RESULT</small><strong>${this.escape(this.formatOSINTEnum(lastResult.status))}</strong></header><div><small>ARCHIVE</small><strong>${lastResult.available ? "SNAPSHOT AVAILABLE" : "NO SNAPSHOT AVAILABLE"}</strong></div><div><small>CANONICAL URL</small><strong>${this.escape(lastResult.canonicalUrl || "NOT RETURNED")}</strong></div><div><small>SNAPSHOT TIME</small><strong>${this.escape(lastResult.snapshotTimestamp || "NOT RETURNED")}</strong></div>${(lastResult.warnings || []).length ? `<p>${this.escape(lastResult.warnings.join(" · "))}</p>` : ""}<small>Snapshot links are informational only and never open automatically.</small></section>`
+            ? `<section class="osint-native-result" data-osint-native-result><header><small>LAST RESULT</small><strong>${this.escape(this.formatOSINTEnum(lastResult.status))}</strong></header><div><small>ARCHIVE</small><strong>${lastResult.available ? "SNAPSHOT AVAILABLE" : "NO SNAPSHOT AVAILABLE"}</strong></div><div><small>CANONICAL URL</small><strong>${this.escape(lastResult.canonicalUrl || "NOT RETURNED")}</strong></div><div><small>SNAPSHOT TIME</small><strong>${this.escape(lastResult.snapshotTimestamp || "NOT RETURNED")}</strong></div>${(lastResult.warnings || []).length ? `<p>${this.escape(lastResult.warnings.join(" · "))}</p>` : ""}<small>Snapshot links are informational only and never open automatically.</small>${promotable ? `<button type="button" data-osint-save-result="${this.escape(provider.id)}">SAVE TO CASE</button>` : ""}</section>`
             : error
                 ? `<section class="osint-native-result error"><header><small>QUERY RESULT</small><strong>${this.escape(this.formatOSINTEnum(error.code))}</strong></header><p>${this.escape(error.message)}</p></section>`
                 : `<section class="osint-native-result idle"><small>ONE MANUAL URL OR DOMAIN · NO BULK QUERY · NO AUTO-OPEN</small></section>`;
@@ -1917,6 +1952,7 @@ class WorkspaceManager {
         pending.promise.then(result => {
             const stillCurrent = this.osintActiveQuery && this.osintActiveQuery.requestId === pending.requestId;
             if (stillCurrent) this.osintActiveQuery = null;
+            this.osintLastNormalizedResults[provider.id] = result;
             if (this.osintAccess) this.osintAccess.recordQueryResult(provider, result, {
                 querySummary: "Manual historical-archive query",
                 providerHealth: this.getOSINTProviderRuntimeState(provider).health
@@ -1950,11 +1986,18 @@ class WorkspaceManager {
             : "";
         const runtimeState = provider ? this.getOSINTProviderRuntimeState(provider) : null;
         const stateReadout = `<section class="osint-panel-state-readout" aria-label="Tool access state"><div><small>PANEL</small><strong>${state}</strong></div><div><small>QUERY</small><strong>${this.escape(this.formatOSINTEnum(snapshot.queryState, "IDLE"))}</strong></div>${provider ? `<div><small>PROVIDER</small><strong>${this.escape(this.formatOSINTEnum(provider.providerStatus))}</strong></div><div><small>HEALTH</small><strong>${this.escape(this.formatOSINTEnum(runtimeState && runtimeState.health || snapshot.providerHealth || "UNKNOWN"))}</strong></div><div><small>LEGAL</small><strong>${this.escape(this.formatOSINTEnum(provider.legalStatus))}</strong></div>` : ""}</section>`;
-        if (!provider) return `<div class="osint-tool-access" data-osint-tool-access data-panel-state="IDLE">${stateReadout}${previewMarkup}<section class="osint-panel-idle"><strong>SELECT A PROVIDER</strong><p>Choose a catalog entry to inspect its access method, policies, risk context and allowed actions.</p></section><section class="osint-panel-history"><header><small>SESSION HISTORY</small>${historyButton}</header>${historyMarkup}</section></div>`;
+        const caseReadout = this.renderOSINTCaseReadout();
+        if (!provider) return `<div class="osint-tool-access" data-osint-tool-access data-panel-state="IDLE">${stateReadout}${caseReadout}${previewMarkup}<section class="osint-panel-idle"><strong>SELECT A PROVIDER</strong><p>Choose a catalog entry to inspect its access method, policies, risk context and allowed actions.</p></section><section class="osint-panel-history"><header><small>SESSION HISTORY</small>${historyButton}</header>${historyMarkup}</section></div>`;
 
         const referenceOnly = Boolean(this.osintPolicy && this.osintPolicy.isReferenceOnly && this.osintPolicy.isReferenceOnly(provider));
         const actions = this.renderOSINTPanelActions(provider, referenceOnly);
-        return `<div class="osint-tool-access${referenceOnly ? " reference-only" : ""}" data-osint-tool-access data-panel-state="${this.escape(snapshot.panelState)}">${stateReadout}${previewMarkup}<section class="osint-panel-identity"><div><small>ACTIVE PROVIDER</small><h3>${this.escape(provider.name)}</h3><span>${this.escape(provider.shortName)}</span></div><em>${this.escape(referenceOnly ? "REFERENCE ONLY" : this.osintPolicy && this.osintPolicy.displayAccess ? this.osintPolicy.displayAccess(provider) : provider.accessMode)}</em><p>${this.escape(provider.description)}</p><div class="osint-category-tags">${(provider.tags || []).slice(0, 8).map(tag => `<span>${this.escape(tag)}</span>`).join("")}</div></section>${this.renderOSINTProviderMetadata(provider, referenceOnly)}${this.renderOSINTNativeQuery(provider, snapshot)}${snapshot.lastError ? `<section class="osint-panel-error"><strong>${this.escape(this.formatOSINTEnum(snapshot.lastError.code))}</strong><p>${this.escape(snapshot.lastError.message)}</p><small>${this.escape(new Date(snapshot.lastError.timestamp).toLocaleTimeString())}</small></section>` : ""}<section class="osint-panel-actions" aria-label="Allowed provider actions">${actions}</section><section class="osint-panel-history"><header><small>SESSION HISTORY</small>${historyButton}</header>${historyMarkup}</section></div>`;
+        return `<div class="osint-tool-access${referenceOnly ? " reference-only" : ""}" data-osint-tool-access data-panel-state="${this.escape(snapshot.panelState)}">${stateReadout}${caseReadout}${previewMarkup}<section class="osint-panel-identity"><div><small>ACTIVE PROVIDER</small><h3>${this.escape(provider.name)}</h3><span>${this.escape(provider.shortName)}</span></div><em>${this.escape(referenceOnly ? "REFERENCE ONLY" : this.osintPolicy && this.osintPolicy.displayAccess ? this.osintPolicy.displayAccess(provider) : provider.accessMode)}</em><p>${this.escape(provider.description)}</p><div class="osint-category-tags">${(provider.tags || []).slice(0, 8).map(tag => `<span>${this.escape(tag)}</span>`).join("")}</div></section>${this.renderOSINTProviderMetadata(provider, referenceOnly)}${this.renderOSINTNativeQuery(provider, snapshot)}${snapshot.lastError ? `<section class="osint-panel-error"><strong>${this.escape(this.formatOSINTEnum(snapshot.lastError.code))}</strong><p>${this.escape(snapshot.lastError.message)}</p><small>${this.escape(new Date(snapshot.lastError.timestamp).toLocaleTimeString())}</small></section>` : ""}<section class="osint-panel-actions" aria-label="Allowed provider actions">${actions}</section><section class="osint-panel-history"><header><small>SESSION HISTORY</small>${historyButton}</header>${historyMarkup}</section></div>`;
+    }
+
+    renderOSINTCaseReadout() {
+        const state = this.osintCaseState || {};
+        const active = state.activeCase && state.activeCase.case;
+        return `<section class="osint-active-case-readout"><header><small>INVESTIGATION CASE</small><button type="button" data-osint-case-action="workspace">CASE WORKSPACE</button></header>${active ? `<strong>${this.escape(active.title)}</strong><span>${this.escape(this.formatOSINTEnum(active.status))} · ${active.evidenceCount || 0} EVIDENCE</span>` : `<span>NO ACTIVE CASE · RESULTS REMAIN EPHEMERAL</span>`}</section>`;
     }
 
     renderOSINTProviderMetadata(provider, referenceOnly) {
@@ -2129,6 +2172,325 @@ class WorkspaceManager {
         this.osintDetailTrigger = null;
         if (trigger && typeof trigger.setAttribute === "function") trigger.setAttribute("aria-expanded", "false");
         if (trigger && document.contains(trigger) && typeof trigger.focus === "function") trigger.focus({preventScroll: true});
+    }
+
+    async ensureOSINTCasesLoaded() {
+        const state = this.osintCaseState;
+        if (!state || state.loaded || state.loading || !this.ipc || typeof this.ipc.invoke !== "function") return;
+        state.loading = true;
+        try {
+            const response = await this.ipc.invoke("osint-case-list", {});
+            if (!response || !response.ok) throw new Error(response && response.message || "Case storage is unavailable.");
+            state.cases = Array.isArray(response.cases) ? response.cases : [];
+            state.loaded = true;
+            state.lastError = null;
+        } catch (error) {
+            state.lastError = "CASE STORAGE UNAVAILABLE";
+        } finally {
+            state.loading = false;
+            if (this.osintView) this.renderOSINTState();
+        }
+    }
+
+    async refreshOSINTCases(options = {}) {
+        const state = this.osintCaseState;
+        if (!state || !this.ipc || typeof this.ipc.invoke !== "function") return null;
+        const response = await this.ipc.invoke("osint-case-list", {});
+        if (!response || !response.ok) {
+            state.lastError = response && response.code || "STORAGE_UNAVAILABLE";
+            if (this.osintView) this.renderOSINTState();
+            return response;
+        }
+        state.cases = Array.isArray(response.cases) ? response.cases : [];
+        state.loaded = true;
+        state.lastError = null;
+        if (options.readActive && state.activeCaseId) await this.openOSINTCaseById(state.activeCaseId, {render: false, silent: true});
+        if (this.osintView && options.render !== false) this.renderOSINTState();
+        return response;
+    }
+
+    async openOSINTCaseById(caseId, options = {}) {
+        if (!caseId || !this.ipc || typeof this.ipc.invoke !== "function") return null;
+        const response = await this.ipc.invoke("osint-case-read", {caseId});
+        if (!response || !response.ok) {
+            if (this.osintCaseState) this.osintCaseState.lastError = response && response.code || "CASE_NOT_FOUND";
+            if (!options.silent) this.showToast(this.osintView, response && response.message || "CASE UNAVAILABLE");
+            return null;
+        }
+        this.osintCaseState.activeCaseId = response.case.id;
+        this.osintCaseState.activeCase = response;
+        this.osintCaseState.mode = "CASE";
+        this.osintCaseState.lastError = null;
+        if (this.osintAccess && !options.silent) this.osintAccess.recordAction(null, "CASE_OPENED", {state: "CASE", resultSummary: "Local case opened"});
+        if (options.render !== false && this.osintView) this.renderOSINTState();
+        return response;
+    }
+
+    renderOSINTCaseWorkspace(grid) {
+        const state = this.osintCaseState || {};
+        const active = state.activeCase;
+        const cases = Array.isArray(state.cases) ? state.cases : [];
+        const caseList = cases.length
+            ? cases.map(item => `<button type="button" class="osint-case-list-item${active && active.case && active.case.id === item.id ? " selected" : ""}" data-osint-case-action="open" data-osint-case-id="${this.escape(item.id)}"><strong>${this.escape(item.title)}</strong><span>${this.escape(this.formatOSINTEnum(item.status))} · ${this.escape(this.formatOSINTEnum(item.priority))}</span><small>${item.evidenceCount || 0} EVIDENCE · ${this.escape((item.tags || []).join(" · ") || "NO TAGS")}</small></button>`).join("")
+            : `<p class="osint-panel-muted">No local investigations yet. Create a case only when you want to retain selected evidence.</p>`;
+        const evidence = active && Array.isArray(active.evidence) ? active.evidence : [];
+        const timeline = active && Array.isArray(active.timeline) ? active.timeline : [];
+        const notes = active && Array.isArray(active.notes) ? active.notes : [];
+        const activeMarkup = active && active.case
+            ? `<section class="osint-case-active workspace-panel"><header><div><small>ACTIVE INVESTIGATION</small><h2>${this.escape(active.case.title)}</h2><p>${this.escape(active.case.description || "No description recorded.")}</p></div><span>${this.escape(this.formatOSINTEnum(active.case.status))} · ${this.escape(this.formatOSINTEnum(active.case.priority))}</span></header><div class="workspace-panel-content osint-case-metadata"><div><small>EVIDENCE</small><strong>${evidence.length}</strong></div><div><small>TAGS</small><strong>${this.escape((active.case.tags || []).join(" · ") || "NONE")}</strong></div><div><small>UPDATED</small><strong>${this.escape(new Date(active.case.updatedAt).toLocaleString())}</strong></div></div><footer><button type="button" data-osint-case-action="edit" data-osint-case-id="${this.escape(active.case.id)}">EDIT CASE</button><button type="button" data-osint-case-action="archive" data-osint-case-id="${this.escape(active.case.id)}">ARCHIVE</button><button type="button" data-osint-case-action="export-json" data-osint-case-id="${this.escape(active.case.id)}">EXPORT JSON</button><button type="button" data-osint-case-action="export-markdown" data-osint-case-id="${this.escape(active.case.id)}">EXPORT MARKDOWN</button></footer></section>
+                <section class="osint-case-evidence workspace-panel"><header><h2>EVIDENCE</h2><span>${evidence.length} LOCAL OBJECTS</span></header><div class="workspace-panel-content"><button type="button" data-osint-case-action="manual-evidence" data-osint-case-id="${this.escape(active.case.id)}">ADD MANUAL EVIDENCE</button>${evidence.length ? `<ol class="osint-case-evidence-list">${evidence.map(item => `<li class="${item.unreadable || item.integrity && item.integrity.status === "INVALID" ? "invalid" : ""}"><div><strong>${this.escape(item.title || item.id)}</strong><span>${this.escape(this.formatOSINTEnum(item.type || "UNKNOWN"))} · ${this.escape(item.providerName || "MANUAL")}</span><small>${this.escape(this.formatOSINTEnum(item.integrity && item.integrity.status || "UNKNOWN"))} · ${this.escape((item.tags || []).join(" · ") || "NO TAGS")}</small></div><div><button type="button" data-osint-case-action="evidence-view" data-osint-case-id="${this.escape(active.case.id)}" data-osint-evidence-id="${this.escape(item.id)}">VIEW</button><button type="button" data-osint-case-action="evidence-verify" data-osint-case-id="${this.escape(active.case.id)}" data-osint-evidence-id="${this.escape(item.id)}">VERIFY</button><button type="button" data-osint-case-action="evidence-remove" data-osint-case-id="${this.escape(active.case.id)}" data-osint-evidence-id="${this.escape(item.id)}">REMOVE</button></div></li>`).join("")}</ol>` : `<p class="osint-panel-muted">Run a permitted provider query, then use SAVE TO CASE. Results are never persisted automatically.</p>`}</div></section>
+                <section class="osint-case-timeline workspace-panel"><header><h2>CASE TIMELINE</h2><span>PERSISTENT</span></header><div class="workspace-panel-content">${timeline.length ? `<ol class="osint-case-timeline-list">${timeline.slice().reverse().slice(0, 20).map(event => `<li><strong>${this.escape(this.formatOSINTEnum(event.type))}</strong><span>${this.escape(event.summary)}</span><small>${this.escape(new Date(event.timestamp).toLocaleString())}</small></li>`).join("")}</ol>` : `<p class="osint-panel-muted">No persistent case events yet.</p>`}</div></section>
+                <section class="osint-case-notes workspace-panel"><header><h2>NOTES</h2><span>${notes.length} LOCAL NOTES</span></header><div class="workspace-panel-content">${notes.length ? `<ol class="osint-case-notes-list">${notes.slice().reverse().slice(0, 10).map(note => `<li><div><strong>${this.escape(new Date(note.createdAt).toLocaleString())}</strong><span>${this.escape(note.text)}</span><small>${note.evidenceId ? "EVIDENCE NOTE" : "CASE NOTE"}</small></div><button type="button" data-osint-case-action="note-edit" data-osint-case-id="${this.escape(active.case.id)}" data-osint-note-id="${this.escape(note.id)}">EDIT</button></li>`).join("")}</ol>` : `<p class="osint-panel-muted">No local notes yet.</p>`}<form data-osint-case-note-form data-osint-case-id="${this.escape(active.case.id)}"><label><span>ADD CASE NOTE</span><textarea class="aegis-input" name="text" maxlength="${window.OSINTCaseModel ? window.OSINTCaseModel.LIMITS.note : 8000}" required></textarea></label><button type="submit">ADD NOTE</button></form></div></section>`
+            : `<section class="osint-case-empty workspace-panel"><header><h2>NO ACTIVE CASE</h2><span>LOCAL / EXPLICIT</span></header><div class="workspace-panel-content"><p>Create a case to retain selected normalized results. Catalog browsing and provider queries remain ephemeral until you explicitly save an evidence object.</p><button type="button" data-osint-case-action="new">NEW CASE</button></div></section>`;
+        grid.innerHTML = `<section class="osint-case-workspace-header workspace-panel"><button type="button" class="osint-back-button" data-osint-case-action="catalog">‹ OSINT CATALOG</button><div><small>OSINT / PERSISTENT INVESTIGATIONS</small><h2>CASE WORKSPACE</h2><p>Local, explicit, auditable evidence records. No background capture and no automatic provider-result persistence.</p></div><button type="button" data-osint-case-action="new">NEW CASE</button></section><aside class="osint-case-list workspace-panel"><header><h2>INVESTIGATIONS</h2><span>${cases.length} CASES</span></header><div class="workspace-panel-content">${state.loading ? `<p class="osint-panel-muted">LOADING LOCAL CASE INDEX…</p>` : caseList}${state.lastError ? `<p class="osint-panel-error">${this.escape(state.lastError)}</p>` : ""}</div></aside><main class="osint-case-main">${activeMarkup}</main>`;
+    }
+
+    handleOSINTCaseAction(action, trigger) {
+        const caseId = trigger && trigger.dataset.osintCaseId;
+        const evidenceId = trigger && trigger.dataset.osintEvidenceId;
+        const noteId = trigger && trigger.dataset.osintNoteId;
+        if (action === "workspace") { this.osintCaseState.mode = "CASE"; this.renderOSINTState(); return; }
+        if (action === "catalog") { this.osintCaseState.mode = "CATALOG"; this.renderOSINTState(); return; }
+        if (action === "new") return this.openOSINTNewCaseDialog(trigger);
+        if (action === "open") return this.openOSINTCaseById(caseId);
+        if (action === "edit") return this.openOSINTEditCaseDialog(caseId, trigger);
+        if (action === "archive") return this.confirmOSINTCaseArchive(caseId, trigger);
+        if (action === "manual-evidence") return this.openOSINTManualEvidenceDialog(caseId, trigger);
+        if (action === "note-edit") return this.openOSINTEditNoteDialog(caseId, noteId, trigger);
+        if (action === "export-json") return this.exportOSINTCase(caseId, "json");
+        if (action === "export-markdown") return this.exportOSINTCase(caseId, "markdown");
+        if (action === "evidence-view") return this.openOSINTEvidenceDetail(caseId, evidenceId, trigger);
+        if (action === "evidence-verify") return this.verifyOSINTEvidence(caseId, evidenceId);
+        if (action === "evidence-remove") return this.confirmOSINTEvidenceRemoval(caseId, evidenceId, trigger);
+        if (action === "evidence-export-json") return this.exportOSINTEvidence(caseId, evidenceId, "json");
+        if (action === "evidence-export-markdown") return this.exportOSINTEvidence(caseId, evidenceId, "markdown");
+    }
+
+    openOSINTCaseDialog(title, content, trigger, bind) {
+        let overlay = document.getElementById("osint_case_dialog_overlay");
+        if (!overlay) {
+            overlay = document.createElement("section");
+            overlay.id = "osint_case_dialog_overlay";
+            overlay.className = "osint-detail-overlay osint-case-dialog-overlay";
+            overlay.setAttribute("role", "dialog");
+            overlay.setAttribute("aria-modal", "true");
+            document.body.appendChild(overlay);
+        }
+        this.osintCaseDialogTrigger = trigger || document.activeElement;
+        overlay.innerHTML = `<article class="osint-detail-panel osint-case-dialog"><header><div><small>OSINT CASE WORKSPACE</small><h2>${this.escape(title)}</h2></div><button type="button" class="osint-detail-close" data-osint-case-dialog-close aria-label="Close dialog">×</button></header><section class="osint-detail-body">${content}</section></article>`;
+        overlay.classList.add("visible");
+        overlay.setAttribute("aria-hidden", "false");
+        const close = () => this.closeOSINTCaseDialog();
+        // Keep the backdrop handler alive after internal form/button clicks;
+        // only an actual backdrop click can close this focused modal.
+        overlay.onclick = event => { if (event.target === overlay) close(); };
+        overlay.querySelector("[data-osint-case-dialog-close]").addEventListener("click", close);
+        if (this.boundOSINTCaseDialogKeys) document.removeEventListener("keydown", this.boundOSINTCaseDialogKeys);
+        this.boundOSINTCaseDialogKeys = event => {
+            if (event.key === "Escape") return close();
+            if (event.key !== "Tab") return;
+            const focusable = [...overlay.querySelectorAll("button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled])")];
+            if (!focusable.length) return;
+            const current = document.activeElement;
+            const index = focusable.indexOf(current);
+            if (event.shiftKey && (index <= 0)) { event.preventDefault(); focusable[focusable.length - 1].focus(); }
+            else if (!event.shiftKey && index === focusable.length - 1) { event.preventDefault(); focusable[0].focus(); }
+        };
+        document.addEventListener("keydown", this.boundOSINTCaseDialogKeys);
+        if (typeof bind === "function") bind(overlay, close);
+        const first = overlay.querySelector("input, textarea, select, button");
+        if (first) first.focus();
+    }
+
+    closeOSINTCaseDialog() {
+        const overlay = document.getElementById("osint_case_dialog_overlay");
+        if (overlay) { overlay.classList.remove("visible"); overlay.setAttribute("aria-hidden", "true"); }
+        if (this.boundOSINTCaseDialogKeys) document.removeEventListener("keydown", this.boundOSINTCaseDialogKeys);
+        this.boundOSINTCaseDialogKeys = null;
+        const trigger = this.osintCaseDialogTrigger;
+        this.osintCaseDialogTrigger = null;
+        if (trigger && document.contains(trigger) && typeof trigger.focus === "function") trigger.focus({preventScroll: true});
+    }
+
+    openOSINTNewCaseDialog(trigger = null, afterCreate = null) {
+        const priorities = ["LOW", "MEDIUM", "HIGH", "CRITICAL"];
+        this.openOSINTCaseDialog("NEW INVESTIGATION", `<form data-osint-new-case-form><label><span>TITLE</span><input class="aegis-input" name="title" maxlength="160" required></label><label><span>DESCRIPTION</span><textarea class="aegis-input" name="description" maxlength="4000"></textarea></label><label><span>PRIORITY</span><select class="aegis-select" name="priority">${priorities.map(priority => `<option value="${priority}"${priority === "MEDIUM" ? " selected" : ""}>${priority}</option>`).join("")}</select></label><label><span>TAGS · COMMA SEPARATED</span><input class="aegis-input" name="tags" maxlength="500"></label><footer><button type="button" data-osint-case-dialog-close>Cancel</button><button type="submit">CREATE CASE</button></footer></form>`, trigger, (overlay, close) => {
+            overlay.querySelectorAll("[data-osint-case-dialog-close]").forEach(button => button.addEventListener("click", close));
+            overlay.querySelector("[data-osint-new-case-form]").addEventListener("submit", async event => {
+                event.preventDefault();
+                const data = new FormData(event.currentTarget);
+                const response = await this.ipc.invoke("osint-case-create", {title: data.get("title"), description: data.get("description"), priority: data.get("priority"), tags: data.get("tags")});
+                if (!response || !response.ok) return this.showToast(this.osintView, response && response.message || "CASE CREATE FAILED");
+                await this.refreshOSINTCases({render: false});
+                close();
+                await this.openOSINTCaseById(response.case.id, {render: true, silent: true});
+                if (this.osintAccess) this.osintAccess.recordAction(null, "CASE_CREATED", {state: "CASE", resultSummary: "Local investigation created"});
+                if (response.warning === "DUPLICATE_TITLE") this.showToast(this.osintView, "CASE CREATED · DUPLICATE TITLE");
+                if (typeof afterCreate === "function") afterCreate(response.case.id);
+            });
+        });
+    }
+
+    openOSINTEditCaseDialog(caseId, trigger = null) {
+        const current = this.osintCaseState && this.osintCaseState.activeCase && this.osintCaseState.activeCase.case;
+        if (!current || current.id !== caseId) return;
+        this.openOSINTCaseDialog("EDIT INVESTIGATION", `<form data-osint-edit-case-form><label><span>TITLE</span><input class="aegis-input" name="title" maxlength="160" value="${this.escape(current.title)}" required></label><label><span>DESCRIPTION</span><textarea class="aegis-input" name="description" maxlength="4000">${this.escape(current.description || "")}</textarea></label><label><span>PRIORITY</span><select class="aegis-select" name="priority">${["LOW", "MEDIUM", "HIGH", "CRITICAL"].map(priority => `<option value="${priority}"${current.priority === priority ? " selected" : ""}>${priority}</option>`).join("")}</select></label><label><span>STATUS</span><select class="aegis-select" name="status">${["OPEN", "PAUSED", "CLOSED"].map(status => `<option value="${status}"${current.status === status ? " selected" : ""}>${status}</option>`).join("")}</select></label><label><span>TAGS</span><input class="aegis-input" name="tags" value="${this.escape((current.tags || []).join(", "))}" maxlength="500"></label><footer><button type="button" data-osint-case-dialog-close>CANCEL</button><button type="submit">SAVE CASE</button></footer></form>`, trigger, (overlay, close) => {
+            overlay.querySelectorAll("[data-osint-case-dialog-close]").forEach(button => button.addEventListener("click", close));
+            overlay.querySelector("[data-osint-edit-case-form]").addEventListener("submit", async event => {
+                event.preventDefault(); const data = new FormData(event.currentTarget);
+                const response = await this.ipc.invoke("osint-case-update", {caseId, patch: {title: data.get("title"), description: data.get("description"), priority: data.get("priority"), status: data.get("status"), tags: data.get("tags")}});
+                if (!response || !response.ok) return this.showToast(this.osintView, response && response.message || "CASE UPDATE FAILED");
+                close(); await this.refreshOSINTCases({readActive: true}); this.showToast(this.osintView, "CASE UPDATED");
+            });
+        });
+    }
+
+    confirmOSINTCaseArchive(caseId, trigger = null) {
+        const current = this.osintCaseState && this.osintCaseState.activeCase && this.osintCaseState.activeCase.case;
+        if (!current || current.id !== caseId) return;
+        this.openOSINTCaseDialog("ARCHIVE INVESTIGATION", `<p>Archive <strong>${this.escape(current.title)}</strong>? It contains ${current.evidenceCount || 0} evidence objects. Archiving is reversible only in a future phase and prevents new evidence or notes.</p><footer><button type="button" data-osint-case-dialog-close>CANCEL</button><button type="button" data-osint-case-archive-confirm>ARCHIVE CASE</button></footer>`, trigger, (overlay, close) => {
+            overlay.querySelectorAll("[data-osint-case-dialog-close]").forEach(button => button.addEventListener("click", close));
+            overlay.querySelector("[data-osint-case-archive-confirm]").addEventListener("click", async () => {
+                const response = await this.ipc.invoke("osint-case-archive", {caseId, confirmation: true});
+                if (!response || !response.ok) return this.showToast(this.osintView, response && response.message || "CASE ARCHIVE FAILED");
+                close(); await this.refreshOSINTCases({readActive: true}); this.showToast(this.osintView, "CASE ARCHIVED");
+            });
+        });
+    }
+
+    async openOSINTEvidencePromotion(providerId, trigger = null) {
+        const normalized = this.osintLastNormalizedResults && this.osintLastNormalizedResults[providerId];
+        const provider = this.osintProviderRegistry && this.osintProviderRegistry.getProvider(providerId);
+        if (!normalized || !provider || !["SUCCESS", "EMPTY", "PARTIAL"].includes(normalized.status)) return this.showToast(this.osintView, "NO PROMOTABLE RESULT");
+        if (this.osintPolicy && this.osintPolicy.isReferenceOnly && this.osintPolicy.isReferenceOnly(provider)) return this.showToast(this.osintView, "REFERENCE ONLY · EVIDENCE BLOCKED");
+        if (!this.osintCaseState.activeCaseId) return this.openOSINTCaseSelectorForEvidence(providerId, trigger);
+        this.openOSINTEvidencePreview(this.osintCaseState.activeCaseId, providerId, trigger);
+    }
+
+    openOSINTCaseSelectorForEvidence(providerId, trigger = null) {
+        const cases = this.osintCaseState && this.osintCaseState.cases || [];
+        const openCases = cases.filter(item => item.status !== "ARCHIVED");
+        this.openOSINTCaseDialog("SELECT INVESTIGATION", `<p>Select a local case before you save this normalized provider result. Nothing is persisted until you confirm the evidence preview.</p><div class="osint-case-selector">${openCases.map(item => `<button type="button" data-osint-case-select="${this.escape(item.id)}"><strong>${this.escape(item.title)}</strong><span>${this.escape(item.status)} · ${item.evidenceCount || 0} EVIDENCE</span></button>`).join("") || `<p class="osint-panel-muted">No open cases are available.</p>`}</div><footer><button type="button" data-osint-case-dialog-close>CANCEL</button><button type="button" data-osint-case-new-from-result>NEW CASE</button></footer>`, trigger, (overlay, close) => {
+            overlay.querySelectorAll("[data-osint-case-dialog-close]").forEach(button => button.addEventListener("click", close));
+            overlay.querySelectorAll("[data-osint-case-select]").forEach(button => button.addEventListener("click", async () => { const caseId = button.dataset.osintCaseSelect; close(); await this.openOSINTCaseById(caseId, {render: false, silent: true}); this.openOSINTEvidencePreview(caseId, providerId, trigger); }));
+            overlay.querySelector("[data-osint-case-new-from-result]").addEventListener("click", () => { close(); this.openOSINTNewCaseDialog(trigger, caseId => this.openOSINTEvidencePreview(caseId, providerId, trigger)); });
+        });
+    }
+
+    openOSINTEvidencePreview(caseId, providerId, trigger = null) {
+        const normalized = this.osintLastNormalizedResults[providerId];
+        const data = normalized && normalized.data || {};
+        const title = normalized && normalized.summary || "Provider result";
+        const redactions = [
+            ["queryInput", "QUERY INPUT"],
+            ["canonicalUrl", "CANONICAL URL"],
+            ["sourceUrl", "SOURCE URL"],
+            ["data.originalInput", "DATA / ORIGINAL INPUT"],
+            ["data.canonicalUrl", "DATA / CANONICAL URL"],
+            ["data.snapshotUrl", "DATA / SNAPSHOT URL"]
+        ];
+        this.openOSINTCaseDialog("EVIDENCE PREVIEW", `<form data-osint-evidence-preview-form><p>Review the safe normalized metadata. The provider, capability, query timestamp and integrity basis are fixed by the trusted local service.</p><section class="osint-evidence-preview-provenance"><div><small>PROVIDER</small><strong>${this.escape(providerId)}</strong></div><div><small>CAPABILITY</small><strong>${this.escape(normalized.capability)}</strong></div><div><small>STATUS</small><strong>${this.escape(normalized.status)}</strong></div><div><small>QUERIED</small><strong>${this.escape(normalized.queriedAt)}</strong></div></section><label><span>TITLE</span><input class="aegis-input" name="title" value="${this.escape(title)}" maxlength="160" required></label><label><span>SUMMARY</span><textarea class="aegis-input" name="summary" maxlength="4000" required>${this.escape(normalized.summary || "")}</textarea></label><label><span>TAGS</span><input class="aegis-input" name="tags" maxlength="500" value="wayback, historical-archive"></label><label><span>NOTE · OPTIONAL</span><textarea class="aegis-input" name="note" maxlength="8000"></textarea></label><fieldset><legend>REDACT BEFORE LOCAL SAVE</legend>${redactions.map(([field, label]) => `<label><input type="checkbox" name="redactions" value="${field}"> ${label}</label>`).join("")}</fieldset><footer><button type="button" data-osint-case-dialog-close>CANCEL</button><button type="submit">CONFIRM SAVE EVIDENCE</button></footer></form>`, trigger, (overlay, close) => {
+            overlay.querySelectorAll("[data-osint-case-dialog-close]").forEach(button => button.addEventListener("click", close));
+            overlay.querySelector("[data-osint-evidence-preview-form]").addEventListener("submit", async event => {
+                event.preventDefault(); const form = new FormData(event.currentTarget);
+                const response = await this.ipc.invoke("osint-evidence-create", {caseId, normalizedResult: normalized, draft: {title: form.get("title"), summary: form.get("summary"), tags: form.get("tags"), note: form.get("note"), redactions: form.getAll("redactions")}});
+                if (!response || !response.ok) return this.showToast(this.osintView, response && response.message || "EVIDENCE SAVE FAILED");
+                close(); await this.openOSINTCaseById(caseId, {render: true, silent: true});
+                if (this.osintAccess) this.osintAccess.recordAction(null, "EVIDENCE_SAVED", {state: "CASE", resultSummary: "Normalized provider result saved locally"});
+                this.showToast(this.osintView, `EVIDENCE SAVED · ${response.evidence.id}`);
+            });
+        });
+    }
+
+    openOSINTManualEvidenceDialog(caseId, trigger = null) {
+        this.openOSINTCaseDialog("ADD MANUAL EVIDENCE", `<form data-osint-manual-evidence-form><p>Record a local observation or a neutral web reference. This does not open, fetch or capture any remote content.</p><label><span>TYPE</span><select class="aegis-select" name="type"><option value="MANUAL_OBSERVATION">MANUAL OBSERVATION</option><option value="WEB_REFERENCE">WEB REFERENCE</option><option value="USER_NOTE">USER NOTE</option></select></label><label><span>TITLE</span><input class="aegis-input" name="title" maxlength="160" required></label><label><span>SUMMARY</span><textarea class="aegis-input" name="summary" maxlength="4000" required></textarea></label><label><span>REFERENCE URL · WEB REFERENCE ONLY</span><input class="aegis-input" name="sourceUrl" maxlength="2048" placeholder="https://example.org/"></label><label><span>TAGS</span><input class="aegis-input" name="tags" maxlength="500"></label><footer><button type="button" data-osint-case-dialog-close>CANCEL</button><button type="submit">SAVE MANUAL EVIDENCE</button></footer></form>`, trigger, (overlay, close) => {
+            overlay.querySelectorAll("[data-osint-case-dialog-close]").forEach(button => button.addEventListener("click", close));
+            overlay.querySelector("[data-osint-manual-evidence-form]").addEventListener("submit", async event => {
+                event.preventDefault(); const form = new FormData(event.currentTarget);
+                const response = await this.ipc.invoke("osint-evidence-create", {caseId, manual: {type: form.get("type"), title: form.get("title"), summary: form.get("summary"), sourceUrl: form.get("sourceUrl"), tags: form.get("tags")}});
+                if (!response || !response.ok) return this.showToast(this.osintView, response && response.message || "MANUAL EVIDENCE SAVE FAILED");
+                close(); await this.openOSINTCaseById(caseId, {render: true, silent: true}); this.showToast(this.osintView, `MANUAL EVIDENCE SAVED · ${response.evidence.id}`);
+            });
+        });
+    }
+
+    async openOSINTEvidenceDetail(caseId, evidenceId, trigger = null) {
+        const response = await this.ipc.invoke("osint-evidence-read", {caseId, evidenceId});
+        if (!response || !response.ok) return this.showToast(this.osintView, response && response.message || "EVIDENCE UNAVAILABLE");
+        const evidence = response.evidence;
+        this.openOSINTCaseDialog("EVIDENCE DETAIL", `<section class="osint-evidence-detail"><header><strong>${this.escape(evidence.title)}</strong><span>${this.escape(this.formatOSINTEnum(evidence.integrity && evidence.integrity.status || "UNKNOWN"))}</span></header><p>${this.escape(evidence.summary)}</p><div class="osint-detail-readout"><div><small>TYPE</small><strong>${this.escape(this.formatOSINTEnum(evidence.type))}</strong></div><div><small>PROVIDER</small><strong>${this.escape(evidence.providerName || "MANUAL")}</strong></div><div><small>CAPABILITY</small><strong>${this.escape(this.formatOSINTEnum(evidence.capability || "NOT_APPLICABLE"))}</strong></div><div><small>ACQUIRED</small><strong>${this.escape(evidence.acquisitionMethod)}</strong></div><div><small>QUERIED</small><strong>${this.escape(evidence.queriedAt || "NOT APPLICABLE")}</strong></div><div><small>CAPTURED</small><strong>${this.escape(evidence.capturedAt)}</strong></div><div><small>CONFIDENCE</small><strong>${this.escape(evidence.confidence)}</strong></div><div><small>LEGAL / RISK</small><strong>${this.escape(evidence.legalContext)} · ${this.escape(evidence.riskContext)}</strong></div></div><section><small>PROVENANCE</small><p>${this.escape(evidence.source && evidence.source.provider || "MANUAL")} · ${this.escape(evidence.source && evidence.source.type || "LOCAL")}</p></section><section><small>NORMALIZED DATA</small><p>${this.escape(JSON.stringify(evidence.data || {}))}</p></section><section><small>WARNINGS</small><p>${this.escape((evidence.warnings || []).join(" · ") || "NONE")}</p></section><section><small>REDACTIONS</small><p>${this.escape((evidence.redactions || []).map(item => item.field).join(" · ") || "NONE")}</p></section><section><small>INTEGRITY HASH</small><p>${this.escape(evidence.integrity && evidence.integrity.value || "NOT AVAILABLE")}</p>${evidence.integrity && evidence.integrity.status === "INVALID" ? `<p class="osint-panel-error">INTEGRITY INVALID — export remains available but is marked as damaged metadata.</p>` : ""}</section><form data-osint-evidence-note-form data-osint-case-id="${this.escape(caseId)}" data-osint-evidence-id="${this.escape(evidenceId)}"><label><span>ADD EVIDENCE NOTE</span><textarea class="aegis-input" name="text" maxlength="${window.OSINTCaseModel ? window.OSINTCaseModel.LIMITS.note : 8000}" required></textarea></label><button type="submit">ADD NOTE</button></form><footer><button type="button" data-osint-case-action="evidence-export-json" data-osint-case-id="${this.escape(caseId)}" data-osint-evidence-id="${this.escape(evidenceId)}">EXPORT JSON</button><button type="button" data-osint-case-action="evidence-export-markdown" data-osint-case-id="${this.escape(caseId)}" data-osint-evidence-id="${this.escape(evidenceId)}">EXPORT MARKDOWN</button><button type="button" data-osint-evidence-detail-verify>VERIFY INTEGRITY</button><button type="button" data-osint-case-dialog-close>CLOSE</button></footer></section>`, trigger, (overlay, close) => {
+            overlay.querySelectorAll("[data-osint-case-dialog-close]").forEach(button => button.addEventListener("click", close));
+            overlay.querySelector("[data-osint-evidence-detail-verify]").addEventListener("click", async () => { await this.verifyOSINTEvidence(caseId, evidenceId); close(); });
+            overlay.querySelectorAll("[data-osint-case-action]").forEach(button => button.addEventListener("click", () => this.handleOSINTCaseAction(button.dataset.osintCaseAction, button)));
+            overlay.querySelector("[data-osint-evidence-note-form]").addEventListener("submit", async event => {
+                event.preventDefault();
+                const response = await this.ipc.invoke("osint-case-note-create", {caseId, evidenceId, text: new FormData(event.currentTarget).get("text"), tags: []});
+                if (!response || !response.ok) return this.showToast(this.osintView, response && response.message || "NOTE SAVE FAILED");
+                close(); await this.refreshOSINTCases({readActive: true}); this.showToast(this.osintView, "EVIDENCE NOTE ADDED");
+            });
+        });
+    }
+
+    async verifyOSINTEvidence(caseId, evidenceId) {
+        const response = await this.ipc.invoke("osint-evidence-verify", {caseId, evidenceId});
+        if (!response || !response.ok) return this.showToast(this.osintView, response && response.message || "INTEGRITY CHECK FAILED");
+        await this.refreshOSINTCases({readActive: true});
+        if (this.osintAccess) this.osintAccess.recordAction(null, "EVIDENCE_VERIFIED", {state: "CASE", resultSummary: `Integrity ${response.evidence.integrity.status}`});
+        this.showToast(this.osintView, `INTEGRITY · ${response.evidence.integrity.status}`);
+        return response;
+    }
+
+    confirmOSINTEvidenceRemoval(caseId, evidenceId, trigger = null) {
+        this.openOSINTCaseDialog("REMOVE EVIDENCE", `<p>Remove this evidence from the active case? This action deletes the local evidence file and cannot be undone in this phase.</p><footer><button type="button" data-osint-case-dialog-close>CANCEL</button><button type="button" data-osint-evidence-remove-confirm>REMOVE EVIDENCE</button></footer>`, trigger, (overlay, close) => {
+            overlay.querySelectorAll("[data-osint-case-dialog-close]").forEach(button => button.addEventListener("click", close));
+            overlay.querySelector("[data-osint-evidence-remove-confirm]").addEventListener("click", async () => {
+                const response = await this.ipc.invoke("osint-evidence-remove", {caseId, evidenceId, confirmation: true});
+                if (!response || !response.ok) return this.showToast(this.osintView, response && response.message || "EVIDENCE REMOVE FAILED");
+                close(); await this.refreshOSINTCases({readActive: true}); this.showToast(this.osintView, "EVIDENCE REMOVED");
+            });
+        });
+    }
+
+    async submitOSINTCaseNote(form) {
+        const caseId = form.dataset.osintCaseId;
+        const text = form.querySelector("textarea[name='text']").value;
+        const response = await this.ipc.invoke("osint-case-note-create", {caseId, text, tags: []});
+        if (!response || !response.ok) return this.showToast(this.osintView, response && response.message || "NOTE SAVE FAILED");
+        form.reset(); await this.refreshOSINTCases({readActive: true});
+        if (this.osintAccess) this.osintAccess.recordAction(null, "CASE_NOTE_ADDED", {state: "CASE", resultSummary: "Local case note added"});
+        this.showToast(this.osintView, "CASE NOTE ADDED");
+    }
+
+    openOSINTEditNoteDialog(caseId, noteId, trigger = null) {
+        const active = this.osintCaseState && this.osintCaseState.activeCase;
+        const note = active && (active.notes || []).find(item => item.id === noteId);
+        if (!note) return;
+        this.openOSINTCaseDialog("EDIT NOTE", `<form data-osint-edit-note-form><label><span>NOTE</span><textarea class="aegis-input" name="text" maxlength="${window.OSINTCaseModel ? window.OSINTCaseModel.LIMITS.note : 8000}" required>${this.escape(note.text)}</textarea></label><label><span>TAGS</span><input class="aegis-input" name="tags" maxlength="500" value="${this.escape((note.tags || []).join(", "))}"></label><footer><button type="button" data-osint-case-dialog-close>CANCEL</button><button type="submit">SAVE NOTE</button></footer></form>`, trigger, (overlay, close) => {
+            overlay.querySelectorAll("[data-osint-case-dialog-close]").forEach(button => button.addEventListener("click", close));
+            overlay.querySelector("[data-osint-edit-note-form]").addEventListener("submit", async event => {
+                event.preventDefault(); const form = new FormData(event.currentTarget);
+                const response = await this.ipc.invoke("osint-case-note-update", {caseId, noteId, patch: {text: form.get("text"), tags: form.get("tags")}});
+                if (!response || !response.ok) return this.showToast(this.osintView, response && response.message || "NOTE UPDATE FAILED");
+                close(); await this.refreshOSINTCases({readActive: true}); this.showToast(this.osintView, "NOTE UPDATED");
+            });
+        });
+    }
+
+    async exportOSINTCase(caseId, format) {
+        const response = await this.ipc.invoke("osint-case-export", {caseId, format});
+        if (!response || !response.ok) return this.showToast(this.osintView, response && response.code === "EXPORT_CANCELLED" ? "EXPORT CANCELLED" : response && response.message || "EXPORT FAILED");
+        await this.refreshOSINTCases({readActive: true});
+        if (this.osintAccess) this.osintAccess.recordAction(null, "CASE_EXPORT_CREATED", {state: "CASE", resultSummary: `Local ${format} export created`});
+        this.showToast(this.osintView, response.warning === "INTEGRITY_INVALID" ? `CASE EXPORTED AS DAMAGED METADATA · ${response.fileName}` : `CASE EXPORTED · ${response.fileName}`);
+        return response;
+    }
+
+    async exportOSINTEvidence(caseId, evidenceId, format) {
+        const response = await this.ipc.invoke("osint-evidence-export", {caseId, evidenceId, format});
+        if (!response || !response.ok) return this.showToast(this.osintView, response && response.code === "EXPORT_CANCELLED" ? "EXPORT CANCELLED" : response && response.message || "EVIDENCE EXPORT FAILED");
+        await this.refreshOSINTCases({readActive: true});
+        this.showToast(this.osintView, response.warning === "INTEGRITY_INVALID" ? `EVIDENCE EXPORTED AS DAMAGED METADATA · ${response.fileName}` : `EVIDENCE EXPORTED · ${response.fileName}`);
+        return response;
     }
 
     renderFoundation(view, definition) {
