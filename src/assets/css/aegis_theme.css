@@ -12,6 +12,9 @@
     --aegis-surface: #101820;
     --aegis-surface-raised: #13263a;
     --aegis-surface-muted: #0a131d;
+    --aegis-surface-status: #0d1c29;
+    --aegis-surface-selected: #16354d;
+    --aegis-surface-visual: #0b1721;
     --aegis-surface-input: #07101a;
     --aegis-border: #24445f;
     --aegis-border-subtle: rgba(55, 130, 184, .36);
@@ -40,6 +43,9 @@ html[data-aegis-appearance="light"] {
     --aegis-surface: #ffffff;
     --aegis-surface-raised: #f7fbfe;
     --aegis-surface-muted: #eaf2f7;
+    --aegis-surface-status: #eef5f9;
+    --aegis-surface-selected: #dceef9;
+    --aegis-surface-visual: #e3eef5;
     --aegis-surface-input: #fbfdff;
     --aegis-border: #94b6ca;
     --aegis-border-subtle: rgba(44, 112, 153, .34);
@@ -244,7 +250,233 @@ html[data-aegis-appearance="light"] .engineering-mode .osint-category-tile:hover
 html[data-aegis-appearance="light"] .engineering-mode .osint-tool-card:hover,
 html[data-aegis-appearance="light"] .engineering-mode .osint-tool-card.selected {
     border-color: var(--aegis-accent) !important;
-    background: #e2f2fb !important;
+    background: var(--aegis-surface-selected) !important;
+}
+
+/* HUB legacy controls use opaque dark fills in the inherited eDEX rules.
+   These are ordinary data/control surfaces, unlike the map canvas and
+   terminal, so they resolve through the same semantic palette as the rest of
+   the Light cockpit.  The selectors intentionally live here, after the
+   legacy CSS, to keep the approved Dark styling untouched. */
+html[data-aegis-appearance="light"] .engineering-mode .eng-map-layer-toggle,
+html[data-aegis-appearance="light"] .engineering-mode .eng-map-config-actions .eng-map-icon-button,
+html[data-aegis-appearance="light"] .engineering-mode .eng-map-layer-readout,
+html[data-aegis-appearance="light"] .engineering-mode .eng-map-layer-readout article,
+html[data-aegis-appearance="light"] .engineering-mode .eng-project,
+html[data-aegis-appearance="light"] .engineering-mode .eng-music-diagnostics,
+html[data-aegis-appearance="light"] .engineering-mode .eng-music-controls .eng-music-toggle,
+html[data-aegis-appearance="light"] .engineering-mode #eng_playlists,
+html[data-aegis-appearance="light"] .engineering-mode .eng-calendar-picker,
+html[data-aegis-appearance="light"] .engineering-mode button.eng-calendar-choice,
+html[data-aegis-appearance="light"] .engineering-mode .eng-app-tile {
+    color: var(--aegis-text) !important;
+    border-color: var(--aegis-border-subtle) !important;
+    background: var(--aegis-surface-raised) !important;
+    box-shadow: none;
+}
+
+html[data-aegis-appearance="light"] .engineering-mode .eng-map-layer-toggle.active,
+html[data-aegis-appearance="light"] .engineering-mode .eng-map-config-actions .eng-map-icon-button.active,
+html[data-aegis-appearance="light"] .engineering-mode .eng-project:hover,
+html[data-aegis-appearance="light"] .engineering-mode .eng-music-controls .eng-music-toggle.active,
+html[data-aegis-appearance="light"] .engineering-mode .eng-playlist.active,
+html[data-aegis-appearance="light"] .engineering-mode .eng-playlist.loading,
+html[data-aegis-appearance="light"] .engineering-mode button.eng-calendar-choice.active {
+    color: var(--aegis-text) !important;
+    border-color: var(--aegis-accent) !important;
+    background: var(--aegis-surface-selected) !important;
+    box-shadow: inset 0 0 0 1px rgba(7, 110, 168, .08);
+}
+
+html[data-aegis-appearance="light"] .engineering-mode .eng-map-layer-toggle strong,
+html[data-aegis-appearance="light"] .engineering-mode .eng-map-layer-toggle small,
+html[data-aegis-appearance="light"] .engineering-mode .eng-map-layer-readout > strong,
+html[data-aegis-appearance="light"] .engineering-mode .eng-map-layer-readout > span,
+html[data-aegis-appearance="light"] .engineering-mode .eng-map-layer-readout article,
+html[data-aegis-appearance="light"] .engineering-mode .eng-project header h2,
+html[data-aegis-appearance="light"] .engineering-mode .eng-project header p,
+html[data-aegis-appearance="light"] .engineering-mode .eng-music-diagnostics span,
+html[data-aegis-appearance="light"] .engineering-mode .eng-music-diagnostics strong,
+html[data-aegis-appearance="light"] .engineering-mode #eng_playlists > h3,
+html[data-aegis-appearance="light"] .engineering-mode .eng-playlist strong,
+html[data-aegis-appearance="light"] .engineering-mode .eng-milestone {
+    color: var(--aegis-text) !important;
+}
+
+html[data-aegis-appearance="light"] .engineering-mode .eng-map-layer-toggle small,
+html[data-aegis-appearance="light"] .engineering-mode .eng-project header p,
+html[data-aegis-appearance="light"] .engineering-mode .eng-music-diagnostics span,
+html[data-aegis-appearance="light"] .engineering-mode .eng-playlist span,
+html[data-aegis-appearance="light"] .engineering-mode .eng-milestone span,
+html[data-aegis-appearance="light"] .engineering-mode .eng-milestone em {
+    color: var(--aegis-text-muted) !important;
+    opacity: 1;
+}
+
+html[data-aegis-appearance="light"] .engineering-mode .eng-project-progress {
+    background: var(--aegis-surface-status);
+}
+
+html[data-aegis-appearance="light"] .engineering-mode .eng-project-progress span {
+    box-shadow: 0 0 .55vh rgba(7, 110, 168, .38);
+}
+
+html[data-aegis-appearance="light"] .engineering-mode #eng_equalizer {
+    background: linear-gradient(0deg, rgba(7, 110, 168, .11), transparent);
+}
+
+/* Workspace and popup completion pass.  These selectors cover the nested
+   legacy controls that sit inside already-themed panels.  They intentionally
+   use semantic surfaces rather than changing the source modules, so Dark mode
+   keeps its approved cockpit treatment and visual/media canvases remain dark. */
+html[data-aegis-appearance="light"] .engineering-mode .workspace-nav-button,
+html[data-aegis-appearance="light"] .engineering-mode .workspace-nav-button.workspace-nav-hub,
+html[data-aegis-appearance="light"] .engineering-mode .workspace-nav-button span,
+html[data-aegis-appearance="light"] .engineering-mode .launch-bay-stage,
+html[data-aegis-appearance="light"] .engineering-mode .launch-bay-detail,
+html[data-aegis-appearance="light"] .engineering-mode .launch-bay-card,
+html[data-aegis-appearance="light"] .engineering-mode .launch-bay-cover,
+html[data-aegis-appearance="light"] .engineering-mode .launch-bay-tags em,
+html[data-aegis-appearance="light"] .engineering-mode .eng-command-hero,
+html[data-aegis-appearance="light"] .engineering-mode .eng-command-stats div,
+html[data-aegis-appearance="light"] .engineering-mode .eng-category-tile span,
+html[data-aegis-appearance="light"] .engineering-mode .eng-tool-icon,
+html[data-aegis-appearance="light"] .engineering-mode .eng-tool-card b,
+html[data-aegis-appearance="light"] .engineering-mode .eng-detail-panel > header,
+html[data-aegis-appearance="light"] .engineering-mode .eng-detail-panel > footer,
+html[data-aegis-appearance="light"] .engineering-mode .eng-detail-readout div,
+html[data-aegis-appearance="light"] .engineering-mode .eng-material-card-detail,
+html[data-aegis-appearance="light"] .engineering-mode .eng-thread-table div,
+html[data-aegis-appearance="light"] .engineering-mode #eng_project_editor,
+html[data-aegis-appearance="light"] .engineering-mode .eng-project-editor-header,
+html[data-aegis-appearance="light"] .engineering-mode .eng-project-navigator,
+html[data-aegis-appearance="light"] .engineering-mode .eng-milestone-editor-row,
+html[data-aegis-appearance="light"] .engineering-mode .eng-project-editor-footer,
+html[data-aegis-appearance="light"] .engineering-mode .developer-git-summary > div,
+html[data-aegis-appearance="light"] .engineering-mode .developer-health-list > div,
+html[data-aegis-appearance="light"] .engineering-mode .developer-file-list > div,
+html[data-aegis-appearance="light"] .engineering-mode .developer-log-lines p,
+html[data-aegis-appearance="light"] .engineering-mode .agent-command-agent-card,
+html[data-aegis-appearance="light"] .engineering-mode .agent-command-agent-card span,
+html[data-aegis-appearance="light"] .engineering-mode .agent-command-task-state em,
+html[data-aegis-appearance="light"] .engineering-mode .agent-command-task-card,
+html[data-aegis-appearance="light"] .engineering-mode .agent-command-agent-head,
+html[data-aegis-appearance="light"] .engineering-mode .agent-command-prompt,
+html[data-aegis-appearance="light"] .engineering-mode .agent-command-output,
+html[data-aegis-appearance="light"] .engineering-mode .agent-command-permissions > div,
+html[data-aegis-appearance="light"] .engineering-mode .agent-command-metrics > div,
+html[data-aegis-appearance="light"] .engineering-mode .agent-command-context span,
+html[data-aegis-appearance="light"] .engineering-mode .agent-command-flow p,
+html[data-aegis-appearance="light"] .engineering-mode .agent-command-locks p {
+    color: var(--aegis-text) !important;
+    border-color: var(--aegis-border-subtle) !important;
+    background: var(--aegis-surface-raised) !important;
+}
+
+html[data-aegis-appearance="light"] .engineering-mode .launch-bay-backdrop {
+    opacity: .34;
+    background:
+        radial-gradient(circle at 38% 36%, rgba(7, 110, 168, .14), transparent 32%),
+        linear-gradient(115deg, var(--aegis-surface-muted), var(--aegis-surface-visual));
+}
+
+html[data-aegis-appearance="light"] .engineering-mode #eng_map_settings_modal,
+html[data-aegis-appearance="light"] .engineering-mode .eng-map-settings-header,
+html[data-aegis-appearance="light"] .engineering-mode .eng-map-settings-footer,
+html[data-aegis-appearance="light"] .engineering-mode .eng-map-settings-section,
+html[data-aegis-appearance="light"] .engineering-mode .eng-map-settings-section label.eng-map-checkbox,
+html[data-aegis-appearance="light"] .engineering-mode .eng-map-settings-switch,
+html[data-aegis-appearance="light"] .engineering-mode .eng-map-settings-status,
+html[data-aegis-appearance="light"] .engineering-mode .eng-cockpit-select-menu,
+html[data-aegis-appearance="light"] .engineering-mode .aegis-calc-control,
+html[data-aegis-appearance="light"] .engineering-mode .aegis-field {
+    color: var(--aegis-text) !important;
+    border-color: var(--aegis-border-subtle) !important;
+    background: var(--aegis-surface-raised) !important;
+}
+
+html[data-aegis-appearance="light"] .engineering-mode #eng_map_settings_modal {
+    box-shadow: 0 .9vh 3.4vh var(--aegis-shadow) !important;
+}
+
+html[data-aegis-appearance="light"] .engineering-mode .eng-map-settings-header h1,
+html[data-aegis-appearance="light"] .engineering-mode .eng-map-settings-section h2,
+html[data-aegis-appearance="light"] .engineering-mode .aegis-calc-control label,
+html[data-aegis-appearance="light"] .engineering-mode .aegis-field {
+    color: var(--aegis-accent) !important;
+}
+
+html[data-aegis-appearance="light"] .engineering-mode .eng-map-settings-section small,
+html[data-aegis-appearance="light"] .engineering-mode .eng-map-settings-section p,
+html[data-aegis-appearance="light"] .engineering-mode .eng-map-settings-header small,
+html[data-aegis-appearance="light"] .engineering-mode .eng-map-settings-footer span,
+html[data-aegis-appearance="light"] .engineering-mode .aegis-calc-control label em {
+    color: var(--aegis-text-muted) !important;
+}
+
+html[data-aegis-appearance="light"] .engineering-mode .workspace-nav-button:hover,
+html[data-aegis-appearance="light"] .engineering-mode .workspace-nav-button.active,
+html[data-aegis-appearance="light"] .engineering-mode .launch-bay-card.selected,
+html[data-aegis-appearance="light"] .engineering-mode .eng-tool-card.eng-tool-special,
+html[data-aegis-appearance="light"] .engineering-mode .agent-command-agent-card.selected,
+html[data-aegis-appearance="light"] .engineering-mode .agent-command-agent-card:hover {
+    color: var(--aegis-text) !important;
+    background: var(--aegis-surface-selected) !important;
+}
+
+html[data-aegis-appearance="light"] .engineering-mode #eng_project_editor,
+html[data-aegis-appearance="light"] .engineering-mode .eng-detail-panel,
+html[data-aegis-appearance="light"] .engineering-mode .eng-project-editor-header,
+html[data-aegis-appearance="light"] .engineering-mode .eng-project-editor-footer {
+    box-shadow: 0 .8vh 3vh var(--aegis-shadow) !important;
+}
+
+html[data-aegis-appearance="light"] .engineering-mode .workspace-nav-button strong,
+html[data-aegis-appearance="light"] .engineering-mode .launch-bay-card strong,
+html[data-aegis-appearance="light"] .engineering-mode .launch-bay-selected h2,
+html[data-aegis-appearance="light"] .engineering-mode .eng-command-title h2,
+html[data-aegis-appearance="light"] .engineering-mode .eng-command-stats strong,
+html[data-aegis-appearance="light"] .engineering-mode .eng-category-tile strong,
+html[data-aegis-appearance="light"] .engineering-mode .eng-tool-card strong,
+html[data-aegis-appearance="light"] .engineering-mode .eng-detail-readout strong,
+html[data-aegis-appearance="light"] .engineering-mode .eng-project-editor-header h1,
+html[data-aegis-appearance="light"] .engineering-mode .eng-milestone-editor-title h2,
+html[data-aegis-appearance="light"] .engineering-mode .developer-git-summary strong,
+html[data-aegis-appearance="light"] .engineering-mode .developer-health-list strong,
+html[data-aegis-appearance="light"] .engineering-mode .agent-command-agent-card strong,
+html[data-aegis-appearance="light"] .engineering-mode .agent-command-task-main strong,
+html[data-aegis-appearance="light"] .engineering-mode .agent-command-agent-head strong,
+html[data-aegis-appearance="light"] .engineering-mode .agent-command-permissions span,
+html[data-aegis-appearance="light"] .engineering-mode .agent-command-metrics strong {
+    color: var(--aegis-text) !important;
+}
+
+html[data-aegis-appearance="light"] .engineering-mode .workspace-nav-button small,
+html[data-aegis-appearance="light"] .engineering-mode .launch-bay-card small,
+html[data-aegis-appearance="light"] .engineering-mode .launch-bay-selected p,
+html[data-aegis-appearance="light"] .engineering-mode .launch-bay-selected small,
+html[data-aegis-appearance="light"] .engineering-mode .eng-command-title p,
+html[data-aegis-appearance="light"] .engineering-mode .eng-command-stats small,
+html[data-aegis-appearance="light"] .engineering-mode .eng-category-tile small,
+html[data-aegis-appearance="light"] .engineering-mode .eng-tool-card small,
+html[data-aegis-appearance="light"] .engineering-mode .eng-project-editor-header small,
+html[data-aegis-appearance="light"] .engineering-mode .eng-milestone-editor-title small,
+html[data-aegis-appearance="light"] .engineering-mode .agent-command-agent-card small,
+html[data-aegis-appearance="light"] .engineering-mode .agent-command-task-main small,
+html[data-aegis-appearance="light"] .engineering-mode .agent-command-agent-head small,
+html[data-aegis-appearance="light"] .engineering-mode .agent-command-flow p,
+html[data-aegis-appearance="light"] .engineering-mode .agent-command-locks p {
+    color: var(--aegis-text-muted) !important;
+}
+
+/* Project Control and the ENG detail overlay are modal UI, not a map/canvas.
+   Their dimmed backdrops may remain dark for focus, while the dialog body and
+   every interactive row use the light semantic surface above. */
+html[data-aegis-appearance="light"] .engineering-mode #eng_project_editor_overlay,
+html[data-aegis-appearance="light"] .engineering-mode .eng-detail-overlay,
+html[data-aegis-appearance="light"] .engineering-mode .osint-detail-overlay,
+html[data-aegis-appearance="light"] .assistant-chat-overlay {
+    background: rgba(24, 53, 72, .36) !important;
 }
 
 /* Inputs retain compact Aegis treatment instead of native white controls. */

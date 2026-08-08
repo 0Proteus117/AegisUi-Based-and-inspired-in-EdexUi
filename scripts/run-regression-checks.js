@@ -10,6 +10,8 @@ const ROOT = path.resolve(__dirname, "..");
 const CHECKS = [
     "scripts/test-aegisui-branding.js",
     "scripts/test-aegis-theme-integrity.js",
+    "scripts/test-calendar-theme-integrity.js",
+    "scripts/test-packaged-calendar-helper.js",
     "scripts/test-boot-splash-integrity.js",
     "scripts/test-packaged-node-pty-helper.js",
     "scripts/release-health-check.js",

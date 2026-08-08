@@ -69,6 +69,56 @@ function print(key, passed, detail = "") {
 
 async function prepareSurface(socket) {
     const target = surface;
+    await evaluate(socket, `(() => {
+        window.workspaceManager?.closeEngineeringDetail?.();
+        window.engineeringDashboard?.projectsPanel?.closeEditor?.();
+        document.getElementById('eng_map_settings_close')?.click();
+        document.querySelector('.osint-detail-close')?.click();
+        document.querySelector('[data-osint-case-dialog-close]')?.click();
+        window.assistantPresence?.panel?.closeExpandedChat?.();
+        return true;
+    })()`);
+    await delay(120);
+    if (target === "eng-detail") {
+        await evaluate(socket, `(() => {
+            window.workspaceManager.activate('engineer', false);
+            window.workspaceManager.openEngineeringToolById('gear-ratio');
+            return Boolean(document.querySelector('.eng-detail-overlay.visible .eng-detail-panel'));
+        })()`);
+        return;
+    }
+    if (target === "project-control") {
+        await evaluate(socket, `(() => {
+            window.workspaceManager.activate('hub', false);
+            window.engineeringDashboard?.projectsPanel?.openEditor();
+            return Boolean(document.getElementById('eng_project_editor'));
+        })()`);
+        return;
+    }
+    if (target === "map-settings") {
+        await evaluate(socket, `(() => {
+            window.workspaceManager.activate('hub', false);
+            document.getElementById('eng_map_settings')?.click();
+            return Boolean(document.getElementById('eng_map_settings_modal'));
+        })()`);
+        return;
+    }
+    if (target === "osint-tool") {
+        await evaluate(socket, `(() => {
+            window.workspaceManager.activate('osint', false);
+            document.querySelector('.osint-tool-card')?.click();
+            return Boolean(document.querySelector('.osint-detail-overlay.visible .osint-detail-panel'));
+        })()`);
+        return;
+    }
+    if (target === "assistant-expanded") {
+        await evaluate(socket, `(() => {
+            window.assistantPresence?.panel?.setOpen(true);
+            document.querySelector('[data-action="expand-chat"]')?.click();
+            return Boolean(document.querySelector('.assistant-chat-overlay.visible .assistant-chat-expanded'));
+        })()`);
+        return;
+    }
     if (target === "assistant") {
         await evaluate(socket, `(() => {
             document.querySelector('[data-osint-case-dialog-close]')?.click();
@@ -167,6 +217,13 @@ async function main() {
             };
             const active = document.querySelector('.osint-case-active');
             const evidenceDialog = document.querySelector('.osint-case-dialog-overlay.visible .osint-case-dialog');
+            const popup = document.querySelector(
+                '.eng-detail-overlay.visible .eng-detail-panel, '
+                + '#eng_project_editor_overlay #eng_project_editor, '
+                + '#eng_map_settings_overlay #eng_map_settings_modal, '
+                + '.osint-detail-overlay.visible .osint-detail-panel, '
+                + '.assistant-chat-overlay.visible .assistant-chat-expanded'
+            );
             const report = {
                 appearance: root.dataset.aegisAppearance,
                 preference: root.dataset.aegisAppearancePreference,
@@ -187,6 +244,7 @@ async function main() {
                     metadata: rect(evidenceDialog.querySelector('.osint-detail-readout')),
                     actions: rect(evidenceDialog.querySelector('.osint-evidence-detail-actions'))
                 } : null,
+                popup: popup ? rect(popup) : null,
                 controlVisible: visible(document.querySelector('.workspace-nav-button, .assistant-panel button, .workspace-panel button'))
             };
             report.activeFlow = !report.activeCase || (!intersect(report.activeCase.title, report.activeCase.status)
@@ -197,12 +255,16 @@ async function main() {
                 && report.evidenceDetail.title.bottom <= report.evidenceDetail.metadata.top + 1
                 && report.evidenceDetail.metadata.bottom <= report.evidenceDetail.actions.top + 1
                 && report.evidenceDetail.actions.bottom <= report.evidenceDetail.dialog.bottom + 1);
+            report.popupFlow = !report.popup || (report.popup.width > 0 && report.popup.height > 0
+                && report.popup.left >= -1 && report.popup.top >= -1
+                && report.popup.right <= innerWidth + 1 && report.popup.bottom <= innerHeight + 1);
             return report;
         })()`);
         failures.push(!print("LIVE_THEME_APPEARANCE", report.appearance === expectedAppearance && report.preference === appearance, JSON.stringify({appearance: report.appearance, preference: report.preference, expectedAppearance, expectedPreference: appearance})));
         failures.push(!print("LIVE_THEME_CONTROL_VISIBLE", report.controlVisible));
         failures.push(!print("LIVE_THEME_CASE_FLOW", report.activeFlow));
         failures.push(!print("LIVE_THEME_EVIDENCE_FLOW", report.evidenceFlow));
+        failures.push(!print("LIVE_THEME_POPUP_FLOW", report.popupFlow, report.popup ? JSON.stringify(report.popup) : ""));
         console.log(`LIVE_THEME_VIEWPORT: ${JSON.stringify(report.viewport)}`);
         console.log(`LIVE_THEME_SURFACE: ${surface}`);
         if (screenshotPath) {
