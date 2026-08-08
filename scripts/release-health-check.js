@@ -109,7 +109,8 @@ function main() {
         && exists("src/classes/workspaces/osintCaseIpc.class.js")
         && exists("scripts/test-osint-cases.js")
         && exists("scripts/test-osint-case-ipc.js")
-        && exists("scripts/test-osint-case-ui.js");
+        && exists("scripts/test-osint-case-ui.js")
+        && exists("scripts/test-osint-case-layout.js");
 
     if (!versionsMatch) failures.push("package versions do not match");
     if (!aegisUiBranding) failures.push("AegisUi visible branding files are missing");

@@ -39,6 +39,9 @@ check("CASE_UI_CASE_NOTE", manager.includes("ADD CASE NOTE") && manager.includes
 check("CASE_UI_EVIDENCE_NOTE", manager.includes("ADD EVIDENCE NOTE") && manager.includes("data-osint-evidence-note-form"));
 check("CASE_UI_EVIDENCE_EXPORT", manager.includes("osint-evidence-export") && manager.includes("EXPORT MARKDOWN"));
 check("CASE_UI_STYLED_INPUTS", css.includes(".osint-case-dialog .aegis-input") && css.includes(".osint-case-workspace-header"));
+check("CASE_UI_CASE_LAYOUT_FLOW", manager.includes("osint-case-active-content") && manager.includes("osint-case-panel-content"));
+check("CASE_UI_EVIDENCE_LAYOUT_HIERARCHY", manager.includes("OSINT / CASE / WORKSPACE") && manager.includes("osint-evidence-detail-header"));
+check("CASE_UI_EVIDENCE_ACTIONS_REACHABLE", manager.includes("osint-evidence-detail-actions") && css.includes(".engineering-mode .osint-evidence-detail-actions"));
 check("CASE_UI_NO_LEGACY_RUNTIME_RECONNECT", !manager.includes("OsintAccessController") && !manager.includes('ipc.invoke("osint-native-query"'));
 check("CASE_UI_NO_RAW_RESPONSE_RENDER", !/rawResponse|raw response|responseHeaders|authorization/i.test(manager));
 
