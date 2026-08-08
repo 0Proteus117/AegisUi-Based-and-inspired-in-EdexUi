@@ -111,6 +111,10 @@ function main() {
         && exists("scripts/test-osint-case-ipc.js")
         && exists("scripts/test-osint-case-ui.js")
         && exists("scripts/test-osint-case-layout.js");
+    const themeIntegrity = exists("src/assets/css/aegis_theme.css")
+        && exists("scripts/test-aegis-theme-integrity.js")
+        && fs.readFileSync(path.join(ROOT, "src/ui.html"), "utf8").includes("assets/css/aegis_theme.css")
+        && fs.readFileSync(path.join(ROOT, "src/_renderer.js"), "utf8").includes("aegisAppearance");
 
     if (!versionsMatch) failures.push("package versions do not match");
     if (!aegisUiBranding) failures.push("AegisUi visible branding files are missing");
@@ -124,6 +128,7 @@ function main() {
     if (!engWorkspace) failures.push("ENG workspace files missing");
     if (!osintFoundation) failures.push("OSINT native access foundation files missing");
     if (!osintCaseWorkspace) failures.push("OSINT investigation case workspace files missing");
+    if (!themeIntegrity) failures.push("Aegis semantic theme integrity files missing");
 
     print("PACKAGE_VERSION", pkg.version || "UNKNOWN");
     print("SRC_PACKAGE_VERSION", srcPkg.version || "UNKNOWN");
@@ -143,6 +148,7 @@ function main() {
     print("OSINT_NATIVE_ACCESS", osintFoundation ? "PRESENT" : "MISSING");
     print("OSINT_PROVIDER_REGISTRY", exists("src/classes/workspaces/osintProviderSchema.class.js") && exists("src/classes/workspaces/osintProviderPolicy.class.js") && exists("src/classes/workspaces/osintToolAccessPanel.class.js") ? "PRESENT" : "MISSING");
     print("OSINT_CASE_WORKSPACE", osintCaseWorkspace ? "PRESENT" : "MISSING");
+    print("AEGIS_THEME_INTEGRITY", themeIntegrity ? "PRESENT" : "MISSING");
     print("RELEASE_HEALTH", failures.length ? "FAIL" : "OK");
 
     if (failures.length) {

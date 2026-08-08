@@ -6,7 +6,7 @@ Local-first macOS engineering cockpit based on the visual spirit of eDEX-UI.
 [![CodeQL](https://github.com/0Proteus117/AegisUi-Based-and-inspired-in-EdexUi/actions/workflows/codeql-analysis.yml/badge.svg?branch=feature%2Fsystems-online-pass)](https://github.com/0Proteus117/AegisUi-Based-and-inspired-in-EdexUi/actions/workflows/codeql-analysis.yml)
 ![Platform](https://img.shields.io/badge/platform-macOS%20Apple%20Silicon-3BA7FF)
 ![Local first](https://img.shields.io/badge/local--first-yes-7CCBFF)
-![Version](https://img.shields.io/badge/version-2.4.0-13263A)
+![Version](https://img.shields.io/badge/version-2.4.1-13263A)
 
 ## Current status
 
@@ -14,6 +14,15 @@ AegisUi is currently developed on `feature/systems-online-pass`.
 
 The application, bundle display name and release artifacts are branded
 `AegisUi`. The active local release line is `v2.4.x`.
+
+### Appearance
+
+AegisUi has one local appearance preference in its existing `settings.json`:
+`System` (default), `Light` or `Dark`. It updates the cockpit live without
+reloading providers, mutating local OSINT Cases/Evidence records or changing
+the selected terminal theme. The terminal canvas deliberately remains dark for
+legibility. See [AEGIS_LIGHT_MODE.md](AEGIS_LIGHT_MODE.md) and
+[AEGIS_THEME_ARCHITECTURE.md](AEGIS_THEME_ARCHITECTURE.md).
 
 ## What it is
 

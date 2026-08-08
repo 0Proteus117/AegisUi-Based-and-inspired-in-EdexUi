@@ -53,6 +53,66 @@ window.settings = require(settingsFile);
 window.shortcuts = require(shortcutsFile);
 window.lastWindowState = require(lastWindowStateFile);
 
+/*
+ * Aegis appearance is deliberately separate from the legacy terminal-theme
+ * file name. Both values live in the existing settings.json: changing the
+ * cockpit's Light/Dark/System presentation must not replace fonts, terminal
+ * colours, providers, workspace state or any local OSINT record.
+ */
+const AEGIS_APPEARANCE_MODES = new Set(["light", "dark", "system"]);
+const aegisAppearanceMedia = window.matchMedia
+    ? window.matchMedia("(prefers-color-scheme: dark)")
+    : null;
+
+window.getAegisAppearancePreference = () => {
+    const preference = String(window.settings.aegisAppearance || "system").toLowerCase();
+    return AEGIS_APPEARANCE_MODES.has(preference) ? preference : "system";
+};
+
+window.resolveAegisAppearance = preference => {
+    const normalized = AEGIS_APPEARANCE_MODES.has(preference) ? preference : "system";
+    if (normalized !== "system") return normalized;
+    return aegisAppearanceMedia && aegisAppearanceMedia.matches ? "dark" : "light";
+};
+
+window.applyAegisAppearance = (preference = window.getAegisAppearancePreference()) => {
+    const selected = AEGIS_APPEARANCE_MODES.has(preference) ? preference : "system";
+    const resolved = window.resolveAegisAppearance(selected);
+    const root = document.documentElement;
+    root.dataset.aegisAppearance = resolved;
+    root.dataset.aegisAppearancePreference = selected;
+    if (document.body) {
+        document.body.dataset.aegisAppearance = resolved;
+        document.body.dataset.aegisAppearancePreference = selected;
+    }
+    // The established boot-splash controller consumes this value before UI
+    // construction. It keeps first paint and the subsequent cockpit aligned.
+    window.__aegisBootMode = resolved;
+    return {preference: selected, resolved};
+};
+
+window.setAegisAppearance = preference => {
+    const normalized = String(preference || "").toLowerCase();
+    if (!AEGIS_APPEARANCE_MODES.has(normalized)) return false;
+    window.settings.aegisAppearance = normalized;
+    fs.writeFileSync(settingsFile, JSON.stringify(window.settings, "", 4));
+    window.applyAegisAppearance(normalized);
+    return true;
+};
+
+if (aegisAppearanceMedia) {
+    const syncSystemAppearance = () => {
+        if (window.getAegisAppearancePreference() === "system") window.applyAegisAppearance("system");
+    };
+    if (typeof aegisAppearanceMedia.addEventListener === "function") {
+        aegisAppearanceMedia.addEventListener("change", syncSystemAppearance);
+    } else if (typeof aegisAppearanceMedia.addListener === "function") {
+        aegisAppearanceMedia.addListener(syncSystemAppearance);
+    }
+}
+
+window.applyAegisAppearance();
+
 // Load CLI parameters
 if (remote.process.argv.includes("--nointro")) {
     window.settings.nointroOverride = true;
@@ -705,6 +765,14 @@ window.openSettings = async () => {
                         </select></td>
                     </tr>
                     <tr>
+                        <td>aegisAppearance</td>
+                        <td>Cockpit appearance: follows macOS, light or dark</td>
+                        <td><select id="settingsEditor-aegisAppearance">
+                            <option>${window.getAegisAppearancePreference()}</option>
+                            ${["system", "light", "dark"].filter(mode => mode !== window.getAegisAppearancePreference()).map(mode => `<option>${mode}</option>`).join("")}
+                        </select></td>
+                    </tr>
+                    <tr>
                         <td>termFontSize</td>
                         <td>Size of the terminal text in pixels</td>
                         <td><input type="number" id="settingsEditor-termFontSize" value="${window.settings.termFontSize}"></td>
@@ -868,6 +936,7 @@ window.writeSettingsFile = () => {
         username: document.getElementById("settingsEditor-username").value,
         keyboard: document.getElementById("settingsEditor-keyboard").value,
         theme: document.getElementById("settingsEditor-theme").value,
+        aegisAppearance: document.getElementById("settingsEditor-aegisAppearance").value,
         termFontSize: Number(document.getElementById("settingsEditor-termFontSize").value),
         audio: (document.getElementById("settingsEditor-audio").value === "true"),
         audioVolume: Number(document.getElementById("settingsEditor-audioVolume").value),
@@ -896,6 +965,7 @@ window.writeSettingsFile = () => {
     });
 
     fs.writeFileSync(settingsFile, JSON.stringify(window.settings, "", 4));
+    window.applyAegisAppearance(window.settings.aegisAppearance);
     document.getElementById("settingsEditorStatus").innerText = "New values written to settings.json file at "+new Date().toTimeString();
 };
 
