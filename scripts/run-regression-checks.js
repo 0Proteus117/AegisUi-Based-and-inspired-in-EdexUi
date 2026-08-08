@@ -30,6 +30,7 @@ const CHECKS = [
     "scripts/test-osint-cases.js",
     "scripts/test-osint-case-ipc.js",
     "scripts/test-osint-case-ui.js",
+    "scripts/test-osint-case-layout.js",
     "scripts/test-aegis-gearlab-standalone.js",
     "scripts/test-apple-music-bridge-static.js",
     "scripts/test-apple-music-runtime.js",

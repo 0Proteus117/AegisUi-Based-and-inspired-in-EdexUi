@@ -12,6 +12,7 @@ Run the focused suite with:
 node scripts/test-osint-cases.js
 node scripts/test-osint-case-ipc.js
 node scripts/test-osint-case-ui.js
+node scripts/test-osint-case-layout.js
 ```
 
 Then run `node scripts/run-regression-checks.js` and
@@ -22,3 +23,8 @@ the OSINT Phase 4 result and are not changed by this feature.
 Manual validation includes catalog/Tool Access, Wayback result, new/edit/archive
 case, preview/redaction, evidence detail/verify/note/export, reference-only
 blocking, light/dark/system themes, responsive view and packaged DMG behavior.
+
+The subsequent focused layout-integrity pass is recorded in
+`OSINT_CASE_EVIDENCE_LAYOUT.md`. It verifies that Cases/Evidence maintain
+content-led flow across normal and stress content instead of depending on the
+absolute fixed-panel primitive used elsewhere in the dashboard.
