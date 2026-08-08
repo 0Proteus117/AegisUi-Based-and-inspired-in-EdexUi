@@ -63,7 +63,8 @@ close it, then focus returns to the invoking control.
 
 ## Boundaries
 
-The panel does not register IPC, connect `WebContentsView`, revive
-`osint-source-*` or `osint-native-query`, persist a case or collect
-credentials. It uses a typed renderer-side adapter only for the approved
-Wayback Availability capability.
+The panel does not register provider IPC, connect `WebContentsView` or revive
+`osint-source-*` / legacy `osint-native-query`. In v2.4.0 a permitted
+normalized result can explicitly open the separate Case Workspace promotion
+flow; the panel itself still has no persistent session history, credentials or
+raw response storage.

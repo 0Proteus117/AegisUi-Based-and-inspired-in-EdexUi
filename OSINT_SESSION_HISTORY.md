@@ -12,6 +12,6 @@ third-party data.
 - Privacy: the selected provider remains visible after clearing so the operator
   does not lose the context they explicitly selected.
 
-This is not an Evidence Object, Investigation Case, query store or audit log.
-Those concepts require their own explicit privacy and retention policy before
-they can be introduced.
+This is not an Evidence Object, Investigation Case, query store or persistent
+audit log. v2.4.0 introduces those as a separate opt-in local layer; only
+explicit case/evidence actions are recorded there.
