@@ -1,5 +1,20 @@
 # Changelog
 
+## 2.4.1 - 2026-08-08
+
+### AegisUi Light Mode and theme integrity
+
+- Added a complete semantic Light Mode presentation layer across the cockpit,
+  HUB, workspace decks, OSINT catalog and Cases/Evidence surfaces, Assistant,
+  music, Calendar, Timeline, map controls and compact dialogs.
+- Preserved the approved Dark baseline and added `System`, `Light` and `Dark`
+  appearance selection through the existing local `settings.json` only.
+- Kept terminal content intentionally dark and left all provider URLs, keys,
+  runtime state, OSINT policies, local Cases/Evidence persistence and IPC
+  allowlists unchanged.
+- Preserved the v2.4.0 structural Cases/Evidence layout protections while
+  adding theme integrity and regression checks.
+
 ## 2.4.0 - 2026-08-08
 
 ### OSINT Investigation Cases and Evidence Objects

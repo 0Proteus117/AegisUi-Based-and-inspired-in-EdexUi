@@ -1,0 +1,367 @@
+/*
+ * AegisUi semantic appearance layer
+ *
+ * This sheet intentionally loads after module styles. It maps the inherited
+ * eDEX palette and Aegis workspace surfaces to stable semantic roles, rather
+ * than inverting colours or introducing a second theme store.
+ */
+:root {
+    color-scheme: dark;
+    --aegis-app-bg: #070b10;
+    --aegis-shell-bg: #080e15;
+    --aegis-surface: #101820;
+    --aegis-surface-raised: #13263a;
+    --aegis-surface-muted: #0a131d;
+    --aegis-surface-input: #07101a;
+    --aegis-border: #24445f;
+    --aegis-border-subtle: rgba(55, 130, 184, .36);
+    --aegis-text: #d8f1ff;
+    --aegis-text-muted: #91abc0;
+    --aegis-text-faint: #6f879b;
+    --aegis-accent: #3ba7ff;
+    --aegis-accent-soft: #7ccbff;
+    --aegis-accent-ink: #04111c;
+    --aegis-success: #48c98a;
+    --aegis-warning: #c9912f;
+    --aegis-danger: #d96a6a;
+    --aegis-terminal-bg: #02060a;
+    --aegis-shadow: rgba(2, 13, 22, .18);
+    --aegis-grid-line: rgba(59, 167, 255, .055);
+}
+
+html[data-aegis-appearance="dark"] {
+    color-scheme: dark;
+}
+
+html[data-aegis-appearance="light"] {
+    color-scheme: light;
+    --aegis-app-bg: #e7eef4;
+    --aegis-shell-bg: #f5f9fc;
+    --aegis-surface: #ffffff;
+    --aegis-surface-raised: #f7fbfe;
+    --aegis-surface-muted: #eaf2f7;
+    --aegis-surface-input: #fbfdff;
+    --aegis-border: #94b6ca;
+    --aegis-border-subtle: rgba(44, 112, 153, .34);
+    --aegis-text: #112637;
+    --aegis-text-muted: #3f647b;
+    --aegis-text-faint: #607c90;
+    --aegis-accent: #076ea8;
+    --aegis-accent-soft: #167eb8;
+    --aegis-accent-ink: #f6fbff;
+    --aegis-success: #08784e;
+    --aegis-warning: #926300;
+    --aegis-danger: #b33d49;
+    --aegis-terminal-bg: #07111b;
+    --aegis-shadow: rgba(33, 77, 104, .12);
+    --aegis-grid-line: rgba(7, 110, 168, .075);
+
+    /* Legacy variable bridge. The selector outranks the runtime :root theme
+       injection, allowing all untouched eDEX rules to consume light values. */
+    --color_r: 7;
+    --color_g: 110;
+    --color_b: 168;
+    --color_black: #f7fbfe;
+    --color_light_black: #edf4f8;
+    --color_grey: #dbe8ef;
+    --color_red: #b33d49;
+    --color_yellow: #926300;
+}
+
+html[data-aegis-appearance="light"] body,
+html[data-aegis-appearance="light"] body.solidBackground,
+html[data-aegis-appearance="light"] body.engineering-mode {
+    background-color: var(--aegis-app-bg) !important;
+    color: var(--aegis-text);
+}
+
+html[data-aegis-appearance="light"] body.engineering-mode {
+    --color_r: 7;
+    --color_g: 110;
+    --color_b: 168;
+    --color_black: #f7fbfe;
+    --color_light_black: #edf4f8;
+    --color_grey: #dbe8ef;
+    --eng-blue: var(--aegis-accent);
+    --eng-blue-soft: var(--aegis-accent-soft);
+    --eng-blue-deep: #dcebf4;
+    --eng-panel: var(--aegis-surface);
+    --eng-border: var(--aegis-border);
+}
+
+html[data-aegis-appearance="light"] body.engineering-mode::before {
+    background-image:
+        linear-gradient(var(--aegis-grid-line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--aegis-grid-line) 1px, transparent 1px);
+}
+
+/* Shell and native eDEX sections. The terminal remains intentionally dark:
+   it is a content surface with its own terminal palette, not a cockpit panel. */
+html[data-aegis-appearance="light"] .engineering-mode section#main_shell,
+html[data-aegis-appearance="light"] .engineering-mode ul#main_shell_tabs > li,
+html[data-aegis-appearance="light"] .engineering-mode div#main_shell_innercontainer,
+html[data-aegis-appearance="light"] .engineering-mode div#main_shell_innercontainer pre,
+html[data-aegis-appearance="light"] .engineering-mode .terminal .xterm-viewport,
+html[data-aegis-appearance="light"] .engineering-mode .xterm .xterm-viewport {
+    background: var(--aegis-terminal-bg) !important;
+}
+
+html[data-aegis-appearance="light"] .engineering-mode ul#main_shell_tabs > li.active {
+    background: var(--aegis-accent);
+    color: var(--aegis-accent-ink);
+}
+
+html[data-aegis-appearance="light"] .engineering-mode section#mod_column_left,
+html[data-aegis-appearance="light"] .engineering-mode section#mod_column_left > *,
+html[data-aegis-appearance="light"] .engineering-mode .mod_column,
+html[data-aegis-appearance="light"] .engineering-mode #workspace_navigation,
+html[data-aegis-appearance="light"] .engineering-mode #workspace_views,
+html[data-aegis-appearance="light"] .engineering-mode .workspace-view {
+    color: var(--aegis-text);
+}
+
+/* Reusable cockpit panels: HUB, ENG, OSINT, the remaining decks and cases. */
+html[data-aegis-appearance="light"] .engineering-mode .eng-panel,
+html[data-aegis-appearance="light"] .engineering-mode .workspace-panel,
+html[data-aegis-appearance="light"] .engineering-mode .eng-detail-panel,
+html[data-aegis-appearance="light"] .engineering-mode .eng-detail-overlay > article,
+html[data-aegis-appearance="light"] .engineering-mode .osint-detail-panel,
+html[data-aegis-appearance="light"] .engineering-mode .osint-tool-access,
+html[data-aegis-appearance="light"] .engineering-mode .osint-native-query,
+html[data-aegis-appearance="light"] .engineering-mode .osint-native-result,
+html[data-aegis-appearance="light"] .engineering-mode .assistant-panel,
+html[data-aegis-appearance="light"] .assistant-chat-expanded,
+html[data-aegis-appearance="light"] div.modal_popup {
+    color: var(--aegis-text);
+    border-color: var(--aegis-border) !important;
+    background:
+        linear-gradient(145deg, rgba(7, 110, 168, .055), transparent 48%),
+        var(--aegis-surface) !important;
+    box-shadow: 0 .35vh 1.4vh var(--aegis-shadow);
+}
+
+html[data-aegis-appearance="light"] .engineering-mode .eng-panel > h3.title,
+html[data-aegis-appearance="light"] .engineering-mode .workspace-panel > header,
+html[data-aegis-appearance="light"] .engineering-mode .workspace-header,
+html[data-aegis-appearance="light"] .engineering-mode .osint-case-active header,
+html[data-aegis-appearance="light"] .engineering-mode .osint-evidence-detail-header,
+html[data-aegis-appearance="light"] .engineering-mode .osint-case-dialog > header,
+html[data-aegis-appearance="light"] .assistant-panel-header,
+html[data-aegis-appearance="light"] .assistant-chat-expanded > header,
+html[data-aegis-appearance="light"] div.modal_popup > h1 {
+    color: var(--aegis-text);
+    border-color: var(--aegis-border-subtle) !important;
+    background: var(--aegis-surface-muted) !important;
+}
+
+html[data-aegis-appearance="light"] .engineering-mode .workspace-panel > header h2,
+html[data-aegis-appearance="light"] .engineering-mode .workspace-header h1,
+html[data-aegis-appearance="light"] .engineering-mode .osint-command-hero h2,
+html[data-aegis-appearance="light"] .engineering-mode .osint-category-header h2,
+html[data-aegis-appearance="light"] .engineering-mode .osint-case-workspace-header h2,
+html[data-aegis-appearance="light"] .engineering-mode .osint-case-active h2,
+html[data-aegis-appearance="light"] .engineering-mode .osint-evidence-detail-header strong,
+html[data-aegis-appearance="light"] .assistant-panel h1,
+html[data-aegis-appearance="light"] .assistant-chat-expanded h1 {
+    color: var(--aegis-accent) !important;
+}
+
+html[data-aegis-appearance="light"] .engineering-mode p,
+html[data-aegis-appearance="light"] .engineering-mode small,
+html[data-aegis-appearance="light"] .engineering-mode .workspace-panel-description,
+html[data-aegis-appearance="light"] .engineering-mode .osint-panel-muted,
+html[data-aegis-appearance="light"] .assistant-panel p,
+html[data-aegis-appearance="light"] .assistant-panel small,
+html[data-aegis-appearance="light"] .assistant-chat-expanded p,
+html[data-aegis-appearance="light"] .assistant-chat-expanded small {
+    color: var(--aegis-text-muted) !important;
+}
+
+html[data-aegis-appearance="light"] .engineering-mode strong,
+html[data-aegis-appearance="light"] .engineering-mode h1,
+html[data-aegis-appearance="light"] .engineering-mode h2,
+html[data-aegis-appearance="light"] .engineering-mode h3,
+html[data-aegis-appearance="light"] .assistant-panel strong,
+html[data-aegis-appearance="light"] .assistant-chat-expanded strong {
+    color: var(--aegis-text);
+}
+
+/* Cards, records, readouts and OSINT evidence surfaces. */
+html[data-aegis-appearance="light"] .engineering-mode .workspace-action,
+html[data-aegis-appearance="light"] .engineering-mode .workspace-project-row,
+html[data-aegis-appearance="light"] .engineering-mode .workspace-status-list > div,
+html[data-aegis-appearance="light"] .engineering-mode .eng-tool-card,
+html[data-aegis-appearance="light"] .engineering-mode .eng-category-tile,
+html[data-aegis-appearance="light"] .engineering-mode .osint-category-tile,
+html[data-aegis-appearance="light"] .engineering-mode .osint-tool-card,
+html[data-aegis-appearance="light"] .engineering-mode .osint-scope-readout div,
+html[data-aegis-appearance="light"] .engineering-mode .osint-detail-readout div,
+html[data-aegis-appearance="light"] .engineering-mode .osint-panel-state-readout div,
+html[data-aegis-appearance="light"] .engineering-mode .osint-panel-metadata-grid > div,
+html[data-aegis-appearance="light"] .engineering-mode .osint-panel-idle,
+html[data-aegis-appearance="light"] .engineering-mode .osint-panel-hover-preview,
+html[data-aegis-appearance="light"] .engineering-mode .osint-panel-policy-note,
+html[data-aegis-appearance="light"] .engineering-mode .osint-panel-identity,
+html[data-aegis-appearance="light"] .engineering-mode .osint-native-query,
+html[data-aegis-appearance="light"] .engineering-mode .osint-native-result,
+html[data-aegis-appearance="light"] .engineering-mode .osint-evidence-detail-section,
+html[data-aegis-appearance="light"] .engineering-mode .osint-evidence-preview-provenance div,
+html[data-aegis-appearance="light"] .engineering-mode .osint-case-metadata > div,
+html[data-aegis-appearance="light"] .engineering-mode .osint-case-list-item,
+html[data-aegis-appearance="light"] .engineering-mode .osint-case-evidence li,
+html[data-aegis-appearance="light"] .engineering-mode .osint-case-timeline-list li,
+html[data-aegis-appearance="light"] .engineering-mode .osint-case-notes-list li,
+html[data-aegis-appearance="light"] .assistant-chat-transcript article,
+html[data-aegis-appearance="light"] .assistant-chat-expanded-log article,
+html[data-aegis-appearance="light"] .assistant-panel-status,
+html[data-aegis-appearance="light"] .assistant-panel-response p,
+html[data-aegis-appearance="light"] .assistant-chat-empty,
+html[data-aegis-appearance="light"] .assistant-memory-status > div,
+html[data-aegis-appearance="light"] .assistant-chat-memory-status > div,
+html[data-aegis-appearance="light"] .assistant-command-router-status > div,
+html[data-aegis-appearance="light"] .assistant-ai-provider-status > div {
+    color: var(--aegis-text);
+    border-color: var(--aegis-border-subtle) !important;
+    background: var(--aegis-surface-raised) !important;
+}
+
+html[data-aegis-appearance="light"] .engineering-mode .osint-panel-idle p,
+html[data-aegis-appearance="light"] .engineering-mode .osint-panel-hover-preview span,
+html[data-aegis-appearance="light"] .engineering-mode .osint-panel-policy-note p,
+html[data-aegis-appearance="light"] .engineering-mode .osint-panel-identity p,
+html[data-aegis-appearance="light"] .engineering-mode .osint-panel-state-readout strong,
+html[data-aegis-appearance="light"] .engineering-mode .osint-panel-metadata-grid strong,
+html[data-aegis-appearance="light"] .engineering-mode .osint-native-result strong,
+html[data-aegis-appearance="light"] .assistant-panel-response p,
+html[data-aegis-appearance="light"] .assistant-chat-transcript p {
+    color: var(--aegis-text) !important;
+}
+
+html[data-aegis-appearance="light"] .engineering-mode .workspace-action:hover,
+html[data-aegis-appearance="light"] .engineering-mode .eng-tool-card:hover,
+html[data-aegis-appearance="light"] .engineering-mode .eng-category-tile:hover,
+html[data-aegis-appearance="light"] .engineering-mode .osint-category-tile:hover,
+html[data-aegis-appearance="light"] .engineering-mode .osint-tool-card:hover,
+html[data-aegis-appearance="light"] .engineering-mode .osint-tool-card.selected {
+    border-color: var(--aegis-accent) !important;
+    background: #e2f2fb !important;
+}
+
+/* Inputs retain compact Aegis treatment instead of native white controls. */
+html[data-aegis-appearance="light"] .engineering-mode input,
+html[data-aegis-appearance="light"] .engineering-mode select,
+html[data-aegis-appearance="light"] .engineering-mode textarea,
+html[data-aegis-appearance="light"] .assistant-panel input,
+html[data-aegis-appearance="light"] .assistant-panel select,
+html[data-aegis-appearance="light"] .assistant-panel textarea,
+html[data-aegis-appearance="light"] .assistant-chat-expanded textarea,
+html[data-aegis-appearance="light"] div.modal_popup input,
+html[data-aegis-appearance="light"] div.modal_popup select,
+html[data-aegis-appearance="light"] div.modal_popup textarea {
+    color: var(--aegis-text) !important;
+    background: var(--aegis-surface-input) !important;
+    border-color: var(--aegis-border) !important;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .45);
+}
+
+html[data-aegis-appearance="light"] .engineering-mode input:focus,
+html[data-aegis-appearance="light"] .engineering-mode select:focus,
+html[data-aegis-appearance="light"] .engineering-mode textarea:focus,
+html[data-aegis-appearance="light"] .assistant-panel input:focus,
+html[data-aegis-appearance="light"] .assistant-panel select:focus,
+html[data-aegis-appearance="light"] .assistant-panel textarea:focus,
+html[data-aegis-appearance="light"] .assistant-chat-expanded textarea:focus,
+html[data-aegis-appearance="light"] div.modal_popup input:focus,
+html[data-aegis-appearance="light"] div.modal_popup select:focus,
+html[data-aegis-appearance="light"] div.modal_popup textarea:focus {
+    outline: .12vh solid rgba(7, 110, 168, .45) !important;
+    box-shadow: 0 0 .8vh rgba(7, 110, 168, .24) !important;
+}
+
+html[data-aegis-appearance="light"] .engineering-mode button,
+html[data-aegis-appearance="light"] .assistant-panel button,
+html[data-aegis-appearance="light"] .assistant-chat-expanded button,
+html[data-aegis-appearance="light"] div.modal_popup button {
+    color: var(--aegis-accent) !important;
+    border-color: var(--aegis-border) !important;
+    background: var(--aegis-surface-raised) !important;
+}
+
+html[data-aegis-appearance="light"] .engineering-mode button:hover,
+html[data-aegis-appearance="light"] .assistant-panel button:hover,
+html[data-aegis-appearance="light"] .assistant-chat-expanded button:hover,
+html[data-aegis-appearance="light"] div.modal_popup button:hover,
+html[data-aegis-appearance="light"] .assistant-panel button.primary,
+html[data-aegis-appearance="light"] .assistant-chat-expanded button.primary {
+    color: var(--aegis-accent-ink) !important;
+    border-color: var(--aegis-accent) !important;
+    background: var(--aegis-accent) !important;
+}
+
+html[data-aegis-appearance="light"] .engineering-mode input[type="range"] {
+    accent-color: var(--aegis-accent);
+}
+
+/* Meaningful states keep their identity in both schemes. */
+html[data-aegis-appearance="light"] .engineering-mode .online,
+html[data-aegis-appearance="light"] .engineering-mode .ready,
+html[data-aegis-appearance="light"] .assistant-panel [data-status="READY"] strong {
+    color: var(--aegis-success) !important;
+}
+
+html[data-aegis-appearance="light"] .engineering-mode .offline,
+html[data-aegis-appearance="light"] .engineering-mode .placeholder,
+html[data-aegis-appearance="light"] .engineering-mode .not-configured {
+    color: var(--aegis-text-faint) !important;
+}
+
+html[data-aegis-appearance="light"] .engineering-mode .warning,
+html[data-aegis-appearance="light"] .engineering-mode .login-required,
+html[data-aegis-appearance="light"] .engineering-mode .reference-only,
+html[data-aegis-appearance="light"] .assistant-panel [data-status="MODEL_NOT_FOUND"] strong,
+html[data-aegis-appearance="light"] .assistant-panel [data-status="OLLAMA_OFFLINE"] strong {
+    color: var(--aegis-warning) !important;
+}
+
+html[data-aegis-appearance="light"] .engineering-mode .error,
+html[data-aegis-appearance="light"] .assistant-panel [data-status="ERROR"] strong {
+    color: var(--aegis-danger) !important;
+}
+
+/* Map visual filters are presentation-only. Provider URLs, keys, layers and
+   runtime state are untouched. */
+html[data-aegis-appearance="light"] .engineering-mode .eng-base-map,
+html[data-aegis-appearance="light"] .engineering-mode .eng-base-map-osm,
+html[data-aegis-appearance="light"] .engineering-mode .eng-base-map-tomtom {
+    filter: grayscale(.32) brightness(1.08) contrast(.96);
+}
+
+html[data-aegis-appearance="light"] .engineering-mode .leaflet-control-zoom a,
+html[data-aegis-appearance="light"] .engineering-mode .leaflet-control-attribution,
+html[data-aegis-appearance="light"] .engineering-mode .eng-map-provider-popup .leaflet-popup-content-wrapper,
+html[data-aegis-appearance="light"] .engineering-mode .eng-map-provider-popup .leaflet-popup-tip {
+    color: var(--aegis-text) !important;
+    border-color: var(--aegis-border) !important;
+    background: var(--aegis-surface) !important;
+}
+
+html[data-aegis-appearance="light"] .engineering-mode .workspace-toast {
+    color: var(--aegis-text);
+    border-color: var(--aegis-accent);
+    background: var(--aegis-surface) !important;
+}
+
+/* The legacy terminal itself intentionally stays dark; its canvas colours are
+   supplied by the user-selected terminal theme and are not mutated here. */
+html[data-aegis-appearance="light"] .terminal,
+html[data-aegis-appearance="light"] .terminal * {
+    color-scheme: dark;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html[data-aegis-appearance] *,
+    html[data-aegis-appearance] *::before,
+    html[data-aegis-appearance] *::after {
+        transition-duration: .01ms !important;
+    }
+}
