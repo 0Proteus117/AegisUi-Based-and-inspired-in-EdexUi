@@ -26,6 +26,8 @@ const outputDir = path.join(dist, "mac-arm64");
 const app = path.join(outputDir, "AegisUi.app");
 const appResources = path.join(app, "Contents", "Resources");
 const stagedApp = path.join(appResources, "app");
+const calendarHelperSource = path.join(ROOT, "src", "native", "EdexUiEngCalendar.app");
+const calendarHelperDestination = path.join(appResources, "AegisUiCalendar.app");
 const dmg = path.join(dist, `AegisUi-${version}-arm64.dmg`);
 
 function run(file, args, options = {}) {
@@ -76,6 +78,15 @@ if (!fs.existsSync(path.join(ROOT, "src", "node_modules"))) {
     throw new Error("src/node_modules is required for local packaging.");
 }
 
+// electron-builder normally builds/copies this extra resource. The local
+// fallback must preserve the same Calendar contract or the packaged renderer
+// will correctly report CALENDAR LINK UNAVAILABLE because its native helper is
+// absent. The helper is read-only and is signed again with the final bundle.
+run(process.execPath, [path.join(ROOT, "build", "build-calendar-helper.js")]);
+if (!fs.existsSync(calendarHelperSource)) {
+    throw new Error("Calendar helper build did not produce EdexUiEngCalendar.app.");
+}
+
 fs.mkdirSync(outputDir, {recursive: true});
 fs.rmSync(app, {recursive: true, force: true});
 fs.rmSync(dmg, {force: true});
@@ -90,6 +101,7 @@ copy(path.join(ROOT, "src"), stagedApp, {
     filter: source => path.basename(source) !== "node_modules"
 });
 copy(path.join(ROOT, "src", "node_modules"), path.join(stagedApp, "node_modules"));
+copy(calendarHelperSource, calendarHelperDestination);
 
 const executable = path.join(app, "Contents", "MacOS", "Electron");
 const brandedExecutable = path.join(app, "Contents", "MacOS", "AegisUi");
@@ -119,6 +131,10 @@ helpers.forEach(helper => {
     fs.chmodSync(helper, 0o755);
     run("/usr/bin/codesign", ["--force", "--sign", "-", "--timestamp=none", helper], {stdio: "ignore"});
 });
+const calendarHelperExecutable = path.join(calendarHelperDestination, "Contents", "MacOS", "calendar-helper");
+if (!fs.existsSync(calendarHelperExecutable)) throw new Error("Calendar helper executable missing from staged application.");
+fs.chmodSync(calendarHelperExecutable, 0o755);
+run("/usr/bin/codesign", ["--force", "--deep", "--sign", "-", "--timestamp=none", calendarHelperDestination], {stdio: "ignore"});
 run("/usr/bin/codesign", ["--force", "--deep", "--sign", "-", "--timestamp=none", app], {stdio: "ignore"});
 run("/usr/bin/hdiutil", ["create", "-volname", `AegisUi ${version}`, "-srcfolder", app, "-ov", "-format", "UDZO", dmg]);
 

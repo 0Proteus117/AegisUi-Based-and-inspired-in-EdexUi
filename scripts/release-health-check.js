@@ -113,6 +113,7 @@ function main() {
         && exists("scripts/test-osint-case-layout.js");
     const themeIntegrity = exists("src/assets/css/aegis_theme.css")
         && exists("scripts/test-aegis-theme-integrity.js")
+        && exists("scripts/test-calendar-theme-integrity.js")
         && fs.readFileSync(path.join(ROOT, "src/ui.html"), "utf8").includes("assets/css/aegis_theme.css")
         && fs.readFileSync(path.join(ROOT, "src/_renderer.js"), "utf8").includes("aegisAppearance");
 
@@ -149,6 +150,8 @@ function main() {
     print("OSINT_PROVIDER_REGISTRY", exists("src/classes/workspaces/osintProviderSchema.class.js") && exists("src/classes/workspaces/osintProviderPolicy.class.js") && exists("src/classes/workspaces/osintToolAccessPanel.class.js") ? "PRESENT" : "MISSING");
     print("OSINT_CASE_WORKSPACE", osintCaseWorkspace ? "PRESENT" : "MISSING");
     print("AEGIS_THEME_INTEGRITY", themeIntegrity ? "PRESENT" : "MISSING");
+    print("CALENDAR_THEME_INTEGRITY", exists("scripts/test-calendar-theme-integrity.js") ? "PRESENT" : "MISSING");
+    print("PACKAGED_CALENDAR_HELPER", exists("scripts/test-packaged-calendar-helper.js") ? "PRESENT" : "MISSING");
     print("RELEASE_HEALTH", failures.length ? "FAIL" : "OK");
 
     if (failures.length) {

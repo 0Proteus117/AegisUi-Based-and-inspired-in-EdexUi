@@ -1,5 +1,27 @@
 # Changelog
 
+## 2.4.2 - 2026-08-08
+
+### Light Mode correction and Calendar regression recovery
+
+- Corrected inherited dark fills on ordinary HUB controls and data cards in
+  Light Mode, including map layer controls, Project Timeline cards, Apple
+  Music diagnostics and playlists, Calendar picker surfaces and application
+  tiles.
+- Extended the semantic appearance layer with status, selected and visual
+  surface roles while preserving the approved Dark baseline and intentionally
+  dark terminal/map visualization surfaces.
+- Audited Calendar against the v2.4.0 pre-Light-Mode baseline. Its renderer,
+  IPC route, native helper and account contract were unchanged; a direct
+  native helper probe returned authorized local calendar data. Added a focused
+  regression check so appearance changes cannot own Calendar lifecycle or
+  local connection state.
+- Repaired the local macOS DMG fallback so it builds, stages and ad-hoc signs
+  the existing Calendar helper inside the final app bundle; Calendar failures
+  remain isolated to the Calendar panel.
+- Preserved all provider, map, Apple Music, OSINT, Assistant and workspace
+  behavior. No credentials, provider logic or IPC contracts changed.
+
 ## 2.4.1 - 2026-08-08
 
 ### AegisUi Light Mode and theme integrity
