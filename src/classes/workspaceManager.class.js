@@ -2047,16 +2047,22 @@ class WorkspaceManager {
 
     disposeOSINTDeck() {
         const view = this.osintView;
-        if (!view || view.dataset.osintDeckBound !== "true") return;
-        view.removeEventListener("click", this.boundOSINTDeckClick);
-        view.removeEventListener("change", this.boundOSINTDeckChange);
-        view.removeEventListener("input", this.boundOSINTDeckInput);
-        view.removeEventListener("submit", this.boundOSINTDeckSubmit);
-        view.removeEventListener("pointerover", this.boundOSINTDeckOver);
-        view.removeEventListener("pointerout", this.boundOSINTDeckOut);
-        delete view.dataset.osintDeckBound;
+        if (view && view.dataset.osintDeckBound === "true") {
+            view.removeEventListener("click", this.boundOSINTDeckClick);
+            view.removeEventListener("change", this.boundOSINTDeckChange);
+            view.removeEventListener("input", this.boundOSINTDeckInput);
+            view.removeEventListener("submit", this.boundOSINTDeckSubmit);
+            view.removeEventListener("pointerover", this.boundOSINTDeckOver);
+            view.removeEventListener("pointerout", this.boundOSINTDeckOut);
+            delete view.dataset.osintDeckBound;
+        }
+        // Every provider-backed OSINT surface owns an AbortController through
+        // the shared runtime. Leaving the workspace must cancel each active
+        // request, even if its delegated DOM bindings were already removed.
         this.cancelActiveOSINTQuery({reason: "WORKSPACE_CLOSED", render: false});
         this.cancelOSINTGeoVerification(false);
+        this.cancelOSINTDomainInfrastructureVerification(false);
+        this.cancelOSINTResearchVerification(false);
         this.releaseOSINTMediaPreview();
         this.closeOSINTDetail();
         this.closeOSINTCaseDialog();
@@ -3293,6 +3299,7 @@ class WorkspaceManager {
 
     async openOSINTCaseById(caseId, options = {}) {
         if (!caseId || !this.ipc || typeof this.ipc.invoke !== "function") return null;
+        const previousCaseId = this.osintCaseState && this.osintCaseState.activeCaseId;
         const response = await this.ipc.invoke("osint-case-read", {caseId});
         if (!response || !response.ok) {
             if (this.osintCaseState) this.osintCaseState.lastError = response && response.code || "CASE_NOT_FOUND";
@@ -3303,7 +3310,11 @@ class WorkspaceManager {
         this.osintCaseState.activeCase = response;
         this.osintCaseState.mode = "CASE";
         this.osintCaseState.lastError = null;
-        this.updateOSINTInvestigationContext({activeCaseId: response.case.id});
+        // Context is case-owned and ephemeral. A selection/provenance chain
+        // from another case cannot be reused as if it belonged to this case.
+        this.updateOSINTInvestigationContext(previousCaseId && previousCaseId !== response.case.id
+            ? {activeCaseId: response.case.id, selectedObjectId: null, selectedObjectType: "UNKNOWN", originatingCapability: null, provenance: null}
+            : {activeCaseId: response.case.id});
         if (this.osintAccess && !options.silent) this.osintAccess.recordAction(null, "CASE_OPENED", {state: "CASE", resultSummary: "Local case opened"});
         if (options.render !== false && this.osintView) this.renderOSINTState();
         return response;

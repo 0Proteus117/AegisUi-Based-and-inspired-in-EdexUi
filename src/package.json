@@ -1,7 +1,7 @@
 {
   "name": "aegis-ui",
   "productName": "AegisUi",
-  "version": "2.5.7",
+  "version": "2.6.0",
   "description": "AegisUi local-first engineering cockpit",
   "keywords": [
     "desktop",
