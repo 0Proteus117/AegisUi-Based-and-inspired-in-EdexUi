@@ -13,11 +13,12 @@
         legalStatus: Object.freeze(["GENERALLY_LEGAL", "AUTHORIZATION_REQUIRED", "CONTEXT_DEPENDENT", "JURISDICTION_DEPENDENT", "POTENTIALLY_ILLEGAL", "UNKNOWN"]),
         sourceConfidence: Object.freeze(["VERIFIED_OFFICIAL", "VERIFIED_PUBLIC", "MULTIPLE_PUBLIC_SOURCES", "UNVERIFIED", "HISTORICAL"])
     });
-    const RUNTIME_ADAPTERS = Object.freeze(["EXTERNAL_WEB", "WAYBACK_AVAILABILITY", "OPEN_METEO_GEOCODING", "GOOGLE_DNS_DOH", "RIPESTAT_NETWORK_INFO", "LOCAL_TOOL", "SYSTEM_INTEGRATION", "REFERENCE_ONLY"]);
+    const RUNTIME_ADAPTERS = Object.freeze(["EXTERNAL_WEB", "WAYBACK_AVAILABILITY", "OPEN_METEO_GEOCODING", "GOOGLE_DNS_DOH", "RIPESTAT_NETWORK_INFO", "CROSSREF_WORKS", "LOCAL_TOOL", "SYSTEM_INTEGRATION", "REFERENCE_ONLY"]);
 
     const CAPABILITIES = Object.freeze([
         "RESEARCH_DISCOVERY",
         "HISTORICAL_ARCHIVE",
+        "SOURCE_VERIFICATION",
         "EVIDENCE_PRESERVATION",
         "INFRASTRUCTURE_CONTEXT",
         "THREAT_REPUTATION",
@@ -184,9 +185,19 @@
                 errors.push("RIPESTAT_NETWORK_INFO runtimeAdapter requires the approved non-launchable public-IP REST API provider configuration");
             }
         }
+        if (provider.runtimeAdapter === "CROSSREF_WORKS") {
+            if (provider.id !== "crossref-works" || provider.providerType !== "REST_API" || provider.accessMode !== "API" || !provider.integrationAllowed || !provider.capabilities.includes("SOURCE_VERIFICATION") || provider.launchAllowed || provider.copyUrlAllowed) {
+                errors.push("CROSSREF_WORKS runtimeAdapter requires the approved non-launchable DOI metadata REST API provider configuration");
+            }
+        }
         if (provider.runtimeAdapter === "LOCAL_TOOL" && provider.id === "local-media-inspection") {
             if (provider.providerType !== "LOCAL_TOOL" || provider.accessMode !== "LOCAL" || !provider.integrationAllowed || !provider.capabilities.includes("VISUAL_MEDIA_VERIFICATION") || provider.launchAllowed || provider.copyUrlAllowed) {
                 errors.push("local-media-inspection must remain an integrated, non-launchable LOCAL_TOOL for VISUAL_MEDIA_VERIFICATION");
+            }
+        }
+        if (provider.runtimeAdapter === "LOCAL_TOOL" && provider.id === "local-pdf-inspection") {
+            if (provider.providerType !== "LOCAL_TOOL" || provider.accessMode !== "LOCAL" || !provider.integrationAllowed || !provider.capabilities.includes("SOURCE_VERIFICATION") || provider.launchAllowed || provider.copyUrlAllowed) {
+                errors.push("local-pdf-inspection must remain an integrated, non-launchable LOCAL_TOOL for SOURCE_VERIFICATION");
             }
         }
         return errors;

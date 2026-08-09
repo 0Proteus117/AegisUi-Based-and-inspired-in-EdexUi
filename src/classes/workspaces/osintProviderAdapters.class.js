@@ -11,7 +11,9 @@
         || (typeof require === "function" ? require("./osintProviderPolicy.class.js") : null);
     const DomainInfrastructure = (typeof window !== "undefined" && window.OSINTDomainInfrastructure)
         || (typeof require === "function" ? require("./osintDomainInfrastructure.class.js") : null);
-    if (!Runtime || !Policy || !DomainInfrastructure) throw new Error("OSINT provider runtime, policy and domain module must load before adapters.");
+    const ResearchSource = (typeof window !== "undefined" && window.OSINTResearchSourceVerification)
+        || (typeof require === "function" ? require("./osintResearchSourceVerification.class.js") : null);
+    if (!Runtime || !Policy || !DomainInfrastructure || !ResearchSource) throw new Error("OSINT provider runtime, policy, domain and source modules must load before adapters.");
 
     const WAYBACK_AVAILABILITY_ENDPOINT = "https://archive.org/wayback/available";
     const WAYBACK_TIMEOUT_MS = 9000;
@@ -21,6 +23,8 @@
     const GOOGLE_DNS_TIMEOUT_MS = 8000;
     const RIPESTAT_NETWORK_INFO_ENDPOINT = "https://stat.ripe.net/data/network-info/data.json";
     const RIPESTAT_TIMEOUT_MS = 8000;
+    const CROSSREF_WORKS_ENDPOINT = "https://api.crossref.org/works/";
+    const CROSSREF_TIMEOUT_MS = 8000;
 
     function safeText(value, fallback = "Provider request failed.") {
         return String(value || fallback).replace(/https?:\/\/[^\s]+/gi, "[URL REDACTED]").replace(/\s+/g, " ").trim().slice(0, 240) || fallback;
@@ -306,6 +310,39 @@
         }
     }
 
+    // One DOI maps to one fixed Crossref works endpoint. This is deliberately
+    // not a search, pagination, crawler or generic scholarly-data adapter.
+    class CrossrefWorksAdapter extends RestApiAdapter {
+        validateInput(input) {
+            if (input && typeof input === "object" && input.sourceType === "DOI" && input.identifiers && input.identifiers.doi) return input;
+            return ResearchSource.normalizeDoi(input);
+        }
+        buildRequest(source) {
+            return `${CROSSREF_WORKS_ENDPOINT}${encodeURIComponent(source.identifiers.doi)}`;
+        }
+        async checkHealth(context) {
+            if (!context || !context.userInitiated) return {status: "UNKNOWN", checkedAt: new Date().toISOString()};
+            return {status: "UNKNOWN", checkedAt: new Date().toISOString(), note: "Health is evaluated only by one explicit DOI query; no background polling occurs."};
+        }
+        async query(input, context) {
+            const source = this.validateInput(input);
+            const raw = await this.fetchJson(this.buildRequest(source), context, CROSSREF_TIMEOUT_MS);
+            return this.normalizeResult(raw, context, source);
+        }
+        normalizeResult(raw, context, source) {
+            const metadata = ResearchSource.normalizeCrossrefMetadata(raw, source.identifiers.doi);
+            const completedAt = new Date().toISOString();
+            return Runtime.createNormalizedResult({
+                requestId: context.requestId, providerId: context.providerId, capability: context.capability,
+                status: metadata.title ? "SUCCESS" : "PARTIAL", queriedAt: context.startedAt, completedAt,
+                durationMs: Math.max(0, new Date(completedAt).getTime() - new Date(context.startedAt).getTime()),
+                summary: metadata.title ? "Crossref returned bounded metadata for the explicit DOI." : "Crossref returned an incomplete metadata record for the explicit DOI.",
+                data: {source, metadata, provider: "Crossref", queriedAt: context.startedAt, completedAt, confidence: "PROVIDER_REPORTED", warnings: []}, warnings: [],
+                source: {provider: "Crossref", type: "PUBLIC_SCHOLARLY_METADATA_API"}, confidence: "PROVIDER_REPORTED"
+            });
+        }
+    }
+
     class AdapterFactory {
         constructor(options = {}) {
             this.providerRegistry = options.providerRegistry;
@@ -323,6 +360,7 @@
             if (provider.runtimeAdapter === "OPEN_METEO_GEOCODING") return new OpenMeteoGeocodingAdapter(provider, {fetchImpl: this.fetchImpl});
             if (provider.runtimeAdapter === "GOOGLE_DNS_DOH") return new GooglePublicDnsAdapter(provider, {fetchImpl: this.fetchImpl});
             if (provider.runtimeAdapter === "RIPESTAT_NETWORK_INFO") return new RIPEstatNetworkInfoAdapter(provider, {fetchImpl: this.fetchImpl});
+            if (provider.runtimeAdapter === "CROSSREF_WORKS") return new CrossrefWorksAdapter(provider, {fetchImpl: this.fetchImpl});
             if (provider.runtimeAdapter === "EXTERNAL_WEB") return new ExternalWebAdapter(provider, {fetchImpl: this.fetchImpl});
             if (provider.runtimeAdapter === "LOCAL_TOOL") return new LocalToolAdapter(provider, {fetchImpl: this.fetchImpl});
             if (provider.runtimeAdapter === "SYSTEM_INTEGRATION") return new SystemIntegrationAdapter(provider, {fetchImpl: this.fetchImpl});
@@ -336,5 +374,5 @@
         }
     }
 
-    return Object.freeze({WAYBACK_AVAILABILITY_ENDPOINT, WAYBACK_TIMEOUT_MS, OPEN_METEO_GEOCODING_ENDPOINT, OPEN_METEO_TIMEOUT_MS, GOOGLE_DNS_DOH_ENDPOINT, GOOGLE_DNS_TIMEOUT_MS, RIPESTAT_NETWORK_INFO_ENDPOINT, RIPESTAT_TIMEOUT_MS, ProviderAdapter, ExternalWebAdapter, RestApiAdapter, LocalToolAdapter, SystemIntegrationAdapter, ReferenceOnlyAdapter, WaybackAdapter, OpenMeteoGeocodingAdapter, GooglePublicDnsAdapter, RIPEstatNetworkInfoAdapter, AdapterFactory, validateWaybackInput, validateOpenMeteoPlaceInput, safeText});
+    return Object.freeze({WAYBACK_AVAILABILITY_ENDPOINT, WAYBACK_TIMEOUT_MS, OPEN_METEO_GEOCODING_ENDPOINT, OPEN_METEO_TIMEOUT_MS, GOOGLE_DNS_DOH_ENDPOINT, GOOGLE_DNS_TIMEOUT_MS, RIPESTAT_NETWORK_INFO_ENDPOINT, RIPESTAT_TIMEOUT_MS, CROSSREF_WORKS_ENDPOINT, CROSSREF_TIMEOUT_MS, ProviderAdapter, ExternalWebAdapter, RestApiAdapter, LocalToolAdapter, SystemIntegrationAdapter, ReferenceOnlyAdapter, WaybackAdapter, OpenMeteoGeocodingAdapter, GooglePublicDnsAdapter, RIPEstatNetworkInfoAdapter, CrossrefWorksAdapter, AdapterFactory, validateWaybackInput, validateOpenMeteoPlaceInput, safeText});
 });

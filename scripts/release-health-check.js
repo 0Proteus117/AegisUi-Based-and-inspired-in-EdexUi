@@ -106,7 +106,9 @@ function main() {
         && exists("src/classes/workspaces/osintVisualMediaVerification.class.js")
         && exists("scripts/test-osint-visual-media-verification.js")
         && exists("src/classes/workspaces/osintDomainInfrastructure.class.js")
-        && exists("scripts/test-osint-domain-infrastructure.js");
+        && exists("scripts/test-osint-domain-infrastructure.js")
+        && exists("src/classes/workspaces/osintResearchSourceVerification.class.js")
+        && exists("scripts/test-osint-research-source-verification.js");
     const osintCaseWorkspace = exists("src/classes/workspaces/osintCaseModel.class.js")
         && exists("src/classes/workspaces/osintCaseStorage.class.js")
         && exists("src/classes/workspaces/osintCaseServices.class.js")
@@ -125,6 +127,10 @@ function main() {
         && exists("scripts/test-osint-domain-infrastructure.js")
         && fs.readFileSync(path.join(ROOT, "src/classes/workspaces/osintTools.registry.js"), "utf8").includes("google-public-dns")
         && fs.readFileSync(path.join(ROOT, "src/classes/workspaces/osintTools.registry.js"), "utf8").includes("ripestat-network-info");
+    const osintResearchSourceVerification = exists("src/classes/workspaces/osintResearchSourceVerification.class.js")
+        && exists("scripts/test-osint-research-source-verification.js")
+        && fs.readFileSync(path.join(ROOT, "src/classes/workspaces/osintTools.registry.js"), "utf8").includes("crossref-works")
+        && fs.readFileSync(path.join(ROOT, "src/classes/workspaces/osintTools.registry.js"), "utf8").includes("local-pdf-inspection");
     const themeIntegrity = exists("src/assets/css/aegis_theme.css")
         && exists("scripts/test-aegis-theme-integrity.js")
         && exists("scripts/test-calendar-theme-integrity.js")
@@ -146,6 +152,7 @@ function main() {
     if (!osintGeospatialVerification) failures.push("OSINT geospatial verification files missing");
     if (!osintVisualMediaVerification) failures.push("OSINT visual media verification files missing");
     if (!osintDomainInfrastructure) failures.push("OSINT domain infrastructure files missing");
+    if (!osintResearchSourceVerification) failures.push("OSINT research source verification files missing");
     if (!themeIntegrity) failures.push("Aegis semantic theme integrity files missing");
 
     print("PACKAGE_VERSION", pkg.version || "UNKNOWN");
@@ -169,6 +176,7 @@ function main() {
     print("OSINT_GEOSPATIAL_VERIFICATION", osintGeospatialVerification ? "PRESENT" : "MISSING");
     print("OSINT_VISUAL_MEDIA_VERIFICATION", osintVisualMediaVerification ? "PRESENT" : "MISSING");
     print("OSINT_DOMAIN_INFRASTRUCTURE", osintDomainInfrastructure ? "PRESENT" : "MISSING");
+    print("OSINT_RESEARCH_SOURCE_VERIFICATION", osintResearchSourceVerification ? "PRESENT" : "MISSING");
     print("AEGIS_THEME_INTEGRITY", themeIntegrity ? "PRESENT" : "MISSING");
     print("CALENDAR_THEME_INTEGRITY", exists("scripts/test-calendar-theme-integrity.js") ? "PRESENT" : "MISSING");
     print("PACKAGED_CALENDAR_HELPER", exists("scripts/test-packaged-calendar-helper.js") ? "PRESENT" : "MISSING");

@@ -6,7 +6,7 @@ Local-first macOS engineering cockpit based on the visual spirit of eDEX-UI.
 [![CodeQL](https://github.com/0Proteus117/AegisUi-Based-and-inspired-in-EdexUi/actions/workflows/codeql-analysis.yml/badge.svg?branch=feature%2Fsystems-online-pass)](https://github.com/0Proteus117/AegisUi-Based-and-inspired-in-EdexUi/actions/workflows/codeql-analysis.yml)
 ![Platform](https://img.shields.io/badge/platform-macOS%20Apple%20Silicon-3BA7FF)
 ![Local first](https://img.shields.io/badge/local--first-yes-7CCBFF)
-![Version](https://img.shields.io/badge/version-2.5.3-13263A)
+![Version](https://img.shields.io/badge/version-2.5.4-13263A)
 
 ## Current status
 
@@ -43,7 +43,13 @@ snapshot automatically. v2.4.0 adds an explicit local Investigation Case layer
 for selected normalized results only: cases, evidence metadata, notes,
 timeline, SHA-256 integrity checks and JSON/Markdown export. It never persists
 the ephemeral session by default or sends case data to a provider.
-  v2.5.3 adds an explicit, passive Domain & Infrastructure Context for one
+  v2.5.4 adds an explicit Research / Documents / Source Verification surface
+  for one public URL, DOI or local PDF at a time. Crossref retrieves metadata
+  for a DOI through one fixed endpoint; URL archive availability reuses the
+  existing explicit Wayback action, and PDF inspection is local and bounded.
+  It preserves field-level provenance, short analyst excerpts and only
+  redaction-reviewed normalized Evidence; it is not a crawler, scraper,
+  downloader or generic web browser. v2.5.3 adds an explicit, passive Domain & Infrastructure Context for one
   public domain or IP at a time. It uses a bounded fixed DNS record set and
   explicit network lookup only; it is not a scanner, crawler or monitor.
   v2.5.2 hardens Visual & Media Verification for one explicitly selected local
@@ -145,7 +151,14 @@ See [OSINT_PROVIDER_SCHEMA.md](OSINT_PROVIDER_SCHEMA.md),
 [OSINT_MEDIA_EVIDENCE_MODEL.md](OSINT_MEDIA_EVIDENCE_MODEL.md),
 [OSINT_MEDIA_GEO_HANDOFF.md](OSINT_MEDIA_GEO_HANDOFF.md),
 [OSINT_MEDIA_SECURITY.md](OSINT_MEDIA_SECURITY.md) and
-[OSINT_PHASE3_VALIDATION.md](OSINT_PHASE3_VALIDATION.md).
+[OSINT_PHASE3_VALIDATION.md](OSINT_PHASE3_VALIDATION.md),
+[OSINT_SOURCE_VERIFICATION.md](OSINT_SOURCE_VERIFICATION.md),
+[OSINT_RESEARCH_QUERY_MODEL.md](OSINT_RESEARCH_QUERY_MODEL.md),
+[OSINT_RESEARCH_PROVENANCE.md](OSINT_RESEARCH_PROVENANCE.md),
+[OSINT_RESEARCH_EVIDENCE.md](OSINT_RESEARCH_EVIDENCE.md),
+[OSINT_RESEARCH_SECURITY.md](OSINT_RESEARCH_SECURITY.md),
+[OSINT_RESEARCH_PROVIDER_DISCOVERY.md](OSINT_RESEARCH_PROVIDER_DISCOVERY.md) and
+[OSINT_PHASE8_VALIDATION.md](OSINT_PHASE8_VALIDATION.md).
 
 ## Assistant
 
