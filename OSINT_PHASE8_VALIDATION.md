@@ -28,6 +28,20 @@ redaction fields are presented by the existing preview workflow. No real local
 document, user path, case, note, provider result or credentials was used in
 release evidence.
 
+## v2.5.5 layout hotfix
+
+The original Phase 8 grid used a flexible `minmax(0, 1fr)` content track inside
+each dynamic panel. That let a long source readout or excerpt control render
+beyond the height contributed to the parent grid row at compact widths. The
+fix changes panel body tracks and every responsive research-grid row to
+content-sized tracks. This is a shared layout correction, not a margin or
+screenshot-specific offset.
+
+Electron development validation uses the same synthetic long title, publisher,
+authors, excerpt and location fixture at 1200 x 780 @1x. It verifies that
+neighbouring panels do not intersect and that inputs remain within their
+containing panel; outer command-deck scrolling provides access to lower rows.
+
 ## Packaging decision
 
 No preload, native helper, startup or packaging path changed. Packaged-runtime
