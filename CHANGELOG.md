@@ -1,5 +1,25 @@
 # Changelog
 
+## 2.5.0 - 2026-08-09
+
+### OSINT Geospatial Verification
+
+- Added an explicit geospatial verification surface inside OSINT with strict
+  decimal/DMS/place-text input parsing, explainable verification states and
+  confidence reasoning.
+- Added one bounded public native provider: Open-Meteo Geocoding. It accepts a
+  single user-initiated place query through a fixed endpoint; raw responses,
+  query history and credentials are not persisted.
+- Added explicit local investigator observations and reviewed Case evidence
+  capture with optional pre-hash geo-field redaction.
+- Kept the global map unchanged: Phase 5 contains no map handoff, map mutation,
+  new IPC, generic network proxy, scraping or legacy runtime reconnection.
+- Preserved the Phase 4 Cases/Evidence model, Dark/Light/System appearance,
+  existing OSINT catalog policy, other workspaces and packaged build flow.
+- Hardened the local DMG fallback for removable volumes by creating the disk
+  image on the local APFS staging volume before copying the finished artifact
+  to the external release directory.
+
 ## 2.4.2 - 2026-08-08
 
 ### Light Mode correction and Calendar regression recovery

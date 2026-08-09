@@ -1562,6 +1562,17 @@ class WorkspaceManager {
             activeCase: null,
             lastError: null
         };
+        this.osintGeoState = this.osintGeoState || {
+            mode: "CATALOG",
+            input: "",
+            phase: "IDLE",
+            verification: null,
+            selectedCandidateIndex: 0,
+            activeRequestId: null,
+            lastError: null,
+            investigatorNote: "",
+            investigatorAssessment: "INCONCLUSIVE"
+        };
         this.osintState.filters = {...{providerStatus: "", riskProfile: "", legalStatus: ""}, ...(this.osintState.filters || {})};
         this.renderOSINTState(view, definition);
         this.ensureOSINTCasesLoaded();
@@ -1582,6 +1593,12 @@ class WorkspaceManager {
             return;
         }
 
+        if (this.osintGeoState && this.osintGeoState.mode === "GEO") {
+            this.renderOSINTGeospatialWorkspace(grid);
+            this.bindOSINTDeck(view);
+            return;
+        }
+
         if (!activeCategory) {
             const featured = typeof registry.getFeaturedProviders === "function"
                 ? registry.getFeaturedProviders()
@@ -1593,7 +1610,7 @@ class WorkspaceManager {
                         <small>PUBLIC-SOURCE / EVIDENCE-AWARE RESEARCH</small>
                         <h2>OSINT TOOL CATALOG</h2>
                         <p>Choose an investigation domain. Every entry carries an explicit access and policy state before any external resource can be launched.</p>
-                        <button type="button" class="osint-case-workspace-button" data-osint-case-action="workspace">CASE WORKSPACE</button>
+                        <div class="osint-hero-actions"><button type="button" class="osint-case-workspace-button" data-osint-case-action="workspace">CASE WORKSPACE</button><button type="button" class="osint-case-workspace-button" data-osint-geo-action="open">GEO VERIFICATION</button></div>
                     </div>
                     <div class="osint-command-stats">
                         <div><small>CATEGORIES</small><strong>${registry.CATEGORIES.length}</strong></div>
@@ -1620,7 +1637,7 @@ class WorkspaceManager {
             grid.innerHTML = `
                 <section class="osint-category-header workspace-panel">
                     <button type="button" class="osint-back-button" data-osint-back>‹ ALL DOMAINS</button>
-                    <button type="button" class="osint-case-workspace-button" data-osint-case-action="workspace">CASE WORKSPACE</button>
+                    <div class="osint-hero-actions"><button type="button" class="osint-case-workspace-button" data-osint-case-action="workspace">CASE WORKSPACE</button>${activeCategory.id === "geospatial" ? `<button type="button" class="osint-case-workspace-button" data-osint-geo-action="open">GEO VERIFICATION</button>` : ""}</div>
                     <span class="osint-category-icon">${this.escape(activeCategory.icon)}</span>
                     <div><small>OSINT DOMAIN / ${this.escape(activeCategory.id)}</small><h2>${this.escape(activeCategory.title)}</h2><p>${this.escape(activeCategory.description)}</p></div>
                     <strong>${providers.length} / ${allCategoryProviders.length} SOURCES</strong>
@@ -1736,7 +1753,7 @@ class WorkspaceManager {
     bindOSINTDeck(view = this.osintView) {
         if (!view || view.dataset.osintDeckBound === "true") return;
         this.boundOSINTDeckClick = event => {
-            const target = event.target.closest("[data-osint-category], [data-osint-back], [data-osint-filter-clear], [data-osint-tool], [data-osint-panel-action], [data-osint-history-clear], [data-osint-query-cancel], [data-osint-save-result], [data-osint-case-action]");
+            const target = event.target.closest("[data-osint-category], [data-osint-back], [data-osint-filter-clear], [data-osint-tool], [data-osint-panel-action], [data-osint-history-clear], [data-osint-query-cancel], [data-osint-save-result], [data-osint-case-action], [data-osint-geo-action]");
             if (!target || !view.contains(target)) return;
             if (target.matches("[data-osint-category]")) {
                 this.osintState.categoryId = target.dataset.osintCategory;
@@ -1773,15 +1790,41 @@ class WorkspaceManager {
                 this.handleOSINTCaseAction(target.dataset.osintCaseAction, target);
                 return;
             }
+            if (target.matches("[data-osint-geo-action]")) {
+                this.handleOSINTGeoAction(target.dataset.osintGeoAction, target);
+                return;
+            }
             if (target.matches("[data-osint-panel-action]")) this.handleOSINTPanelAction(target.dataset.osintPanelAction, target);
         };
         this.boundOSINTDeckChange = event => {
+            const geoCandidate = event.target.closest("[data-osint-geo-candidate]");
+            if (geoCandidate && view.contains(geoCandidate)) {
+                this.osintGeoState.selectedCandidateIndex = Math.max(0, Number(geoCandidate.value) || 0);
+                this.rebuildOSINTGeoVerification();
+                this.renderOSINTState(view);
+                return;
+            }
+            const geoAssessment = event.target.closest("[data-osint-geo-assessment]");
+            if (geoAssessment && view.contains(geoAssessment)) {
+                this.osintGeoState.investigatorAssessment = geoAssessment.value;
+                return;
+            }
             const select = event.target.closest("[data-osint-filter]");
             if (!select || !view.contains(select)) return;
             this.osintState.filters[select.dataset.osintFilter] = select.value;
             this.renderOSINTState(view);
         };
         this.boundOSINTDeckInput = event => {
+            const geoInput = event.target.closest("[data-osint-geo-input]");
+            if (geoInput && view.contains(geoInput)) {
+                this.osintGeoState.input = geoInput.value.slice(0, 240);
+                return;
+            }
+            const geoNote = event.target.closest("[data-osint-geo-note]");
+            if (geoNote && view.contains(geoNote)) {
+                this.osintGeoState.investigatorNote = geoNote.value.slice(0, 1200);
+                return;
+            }
             const input = event.target.closest("[data-osint-query-input]");
             if (!input || !view.contains(input)) return;
             this.osintQueryDrafts[input.dataset.osintQueryInput] = input.value.slice(0, 2048);
@@ -1791,6 +1834,18 @@ class WorkspaceManager {
             if (submit && provider) submit.disabled = !this.validateOSINTQueryDraft(provider, input.value).valid || Boolean(this.osintActiveQuery);
         };
         this.boundOSINTDeckSubmit = event => {
+            const geoForm = event.target.closest("[data-osint-geo-form]");
+            if (geoForm && view.contains(geoForm)) {
+                event.preventDefault();
+                this.beginOSINTGeoVerification();
+                return;
+            }
+            const geoObservationForm = event.target.closest("[data-osint-geo-observation-form]");
+            if (geoObservationForm && view.contains(geoObservationForm)) {
+                event.preventDefault();
+                this.addOSINTGeoInvestigatorObservation(geoObservationForm);
+                return;
+            }
             const form = event.target.closest("[data-osint-query-form]");
             if (form && view.contains(form)) {
                 event.preventDefault();
@@ -1833,6 +1888,7 @@ class WorkspaceManager {
         view.removeEventListener("pointerout", this.boundOSINTDeckOut);
         delete view.dataset.osintDeckBound;
         this.cancelActiveOSINTQuery({reason: "WORKSPACE_CLOSED", render: false});
+        this.cancelOSINTGeoVerification(false);
         this.closeOSINTDetail();
         this.closeOSINTCaseDialog();
     }
@@ -1992,6 +2048,153 @@ class WorkspaceManager {
         const referenceOnly = Boolean(this.osintPolicy && this.osintPolicy.isReferenceOnly && this.osintPolicy.isReferenceOnly(provider));
         const actions = this.renderOSINTPanelActions(provider, referenceOnly);
         return `<div class="osint-tool-access${referenceOnly ? " reference-only" : ""}" data-osint-tool-access data-panel-state="${this.escape(snapshot.panelState)}">${stateReadout}${caseReadout}${previewMarkup}<section class="osint-panel-identity"><div><small>ACTIVE PROVIDER</small><h3>${this.escape(provider.name)}</h3><span>${this.escape(provider.shortName)}</span></div><em>${this.escape(referenceOnly ? "REFERENCE ONLY" : this.osintPolicy && this.osintPolicy.displayAccess ? this.osintPolicy.displayAccess(provider) : provider.accessMode)}</em><p>${this.escape(provider.description)}</p><div class="osint-category-tags">${(provider.tags || []).slice(0, 8).map(tag => `<span>${this.escape(tag)}</span>`).join("")}</div></section>${this.renderOSINTProviderMetadata(provider, referenceOnly)}${this.renderOSINTNativeQuery(provider, snapshot)}${snapshot.lastError ? `<section class="osint-panel-error"><strong>${this.escape(this.formatOSINTEnum(snapshot.lastError.code))}</strong><p>${this.escape(snapshot.lastError.message)}</p><small>${this.escape(new Date(snapshot.lastError.timestamp).toLocaleTimeString())}</small></section>` : ""}<section class="osint-panel-actions" aria-label="Allowed provider actions">${actions}</section><section class="osint-panel-history"><header><small>SESSION HISTORY</small>${historyButton}</header>${historyMarkup}</section></div>`;
+    }
+
+    getOSINTGeoModule() { return window.OSINTGeospatialVerification || null; }
+
+    getOSINTGeoProvider() {
+        return this.osintProviderRegistry && this.osintProviderRegistry.getProvider("open-meteo-geocoding");
+    }
+
+    handleOSINTGeoAction(action, trigger = null) {
+        if (!this.osintGeoState) return;
+        if (action === "open") {
+            this.osintGeoState.mode = "GEO";
+            this.osintState.categoryId = "geospatial";
+            this.renderOSINTState();
+            return;
+        }
+        if (action === "catalog") {
+            this.cancelOSINTGeoVerification(false);
+            this.osintGeoState.mode = "CATALOG";
+            this.renderOSINTState();
+            return;
+        }
+        if (action === "clear") {
+            this.cancelOSINTGeoVerification(false);
+            this.osintGeoState = {...this.osintGeoState, input: "", phase: "IDLE", verification: null, providerResult: null, selectedCandidateIndex: 0, activeRequestId: null, lastError: null, investigatorNote: "", investigatorAssessment: "INCONCLUSIVE"};
+            this.renderOSINTState();
+            return;
+        }
+        if (action === "cancel") return this.cancelOSINTGeoVerification(true);
+        if (action === "add-observation") return this.addOSINTGeoInvestigatorObservation(null, trigger);
+        if (action === "save") return this.promoteOSINTGeoEvidence(trigger);
+    }
+
+    geoLocationLabel(location) {
+        if (!location) return "NOT NORMALIZED";
+        const text = [location.displayName, location.locality, location.region, location.country].filter(Boolean).join(" · ");
+        return text || `${location.latitude.toFixed(5)}, ${location.longitude.toFixed(5)}`;
+    }
+
+    renderOSINTGeospatialWorkspace(grid) {
+        const Geo = this.getOSINTGeoModule();
+        const state = this.osintGeoState || {};
+        const verification = state.verification;
+        const location = verification && verification.normalizedLocation;
+        const observations = verification && verification.providerObservations || [];
+        const candidates = state.providerResult && state.providerResult.data && state.providerResult.data.geoCandidates || [];
+        const loading = state.phase === "LOADING";
+        const error = state.lastError;
+        const status = verification && verification.verificationStatus || "UNVERIFIED";
+        const confidence = verification && verification.confidence || "LOW";
+        const canSave = Boolean(verification && location && observations.length && ["PARTIALLY_VERIFIED", "CONSISTENT", "INCONSISTENT"].includes(status));
+        const stateText = loading ? "VERIFYING" : error ? error.code || "ERROR" : verification ? status : "READY";
+        const locationMarkup = location ? `<section class="osint-geo-location"><header><small>NORMALIZED LOCATION</small><strong>${this.escape(this.geoLocationLabel(location))}</strong></header><div class="osint-geo-readout"><div><small>LATITUDE</small><strong>${this.escape(location.latitude.toFixed(6))}</strong></div><div><small>LONGITUDE</small><strong>${this.escape(location.longitude.toFixed(6))}</strong></div><div><small>FORMAT</small><strong>${this.escape(location.coordinateFormat || "DECIMAL")}</strong></div><div><small>COUNTRY</small><strong>${this.escape(location.country || "NOT RETURNED")}</strong></div>${location.elevationM !== null && location.elevationM !== undefined ? `<div><small>ELEVATION</small><strong>${this.escape(String(location.elevationM))} M</strong></div>` : ""}</div></section>` : `<section class="osint-geo-empty"><strong>NO NORMALIZED LOCATION</strong><span>Coordinates normalize locally. Place text is sent only to the approved public geocoding provider after you select VERIFY.</span></section>`;
+        const providerMarkup = candidates.length ? `<label class="osint-geo-candidate"><span>PROVIDER CANDIDATE</span><select class="aegis-select" data-osint-geo-candidate>${candidates.map((candidate, index) => `<option value="${index}"${index === state.selectedCandidateIndex ? " selected" : ""}>${this.escape(candidate.displayName || `${candidate.latitude}, ${candidate.longitude}`)}</option>`).join("")}</select></label>` : observations.length ? `<ol class="osint-geo-observations">${observations.map(item => `<li><strong>${this.escape(item.providerName)}</strong><span>${this.escape(item.displayName || `${item.latitude.toFixed(5)}, ${item.longitude.toFixed(5)}`)}</span><small>${this.escape(item.type)} · ${this.escape(item.observedAt)}</small></li>`).join("")}</ol>` : `<p class="osint-panel-muted">No provider observation is present. A local coordinate parse is not treated as external verification.</p>`;
+        const investigationObservations = verification && verification.investigatorObservations || [];
+        grid.innerHTML = `<section class="osint-geo-header workspace-panel"><button type="button" class="osint-back-button" data-osint-geo-action="catalog">‹ OSINT CATALOG</button><div><small>OSINT / GEOSPATIAL VERIFICATION</small><h2>LOCATION CONTEXT CHECK</h2><p>Explicit, passive normalization only. No tracking, no background lookup, no hidden query history and no automatic map mutation.</p></div><div class="osint-geo-status"><small>STATE</small><strong>${this.escape(this.formatOSINTEnum(stateText))}</strong><span>CONFIDENCE · ${this.escape(confidence)}</span></div></section>
+            <section class="osint-geo-query workspace-panel"><header><h2>LOCATION INPUT</h2><span>EPHEMERAL / USER INITIATED</span></header><div class="workspace-panel-content"><form data-osint-geo-form novalidate><label><span>COORDINATES OR PUBLIC PLACE TEXT</span><input class="aegis-input" data-osint-geo-input maxlength="240" autocomplete="off" spellcheck="false" value="${this.escape(state.input || "")}" placeholder="51.5074, -0.1278 · 51° 30' 26.6\" N, 0° 7' 39.2\" W · London"></label><small>Accepted: latitude/longitude decimal coordinates, common DMS, or a short public place name. URLs, scripts and ambiguous forms are rejected.</small><footer><button type="submit" ${loading ? "disabled" : ""}>${loading ? "VERIFYING…" : "VERIFY LOCATION"}</button>${loading ? `<button type="button" data-osint-geo-action="cancel">CANCEL</button>` : ""}<button type="button" data-osint-geo-action="clear">CLEAR</button></footer></form>${error ? `<section class="osint-panel-error"><strong>${this.escape(this.formatOSINTEnum(error.code || "ERROR"))}</strong><p>${this.escape(error.message || "Geospatial verification did not complete.")}</p></section>` : ""}</div></section>
+            <section class="osint-geo-result workspace-panel"><header><h2>VERIFICATION RESULT</h2><span>${this.escape(this.formatOSINTEnum(status))} · ${this.escape(confidence)}</span></header><div class="workspace-panel-content">${locationMarkup}<section class="osint-geo-reasoning"><small>ASSESSMENT</small><ul>${(verification && verification.reasoning || ["Awaiting explicit input."]).map(reason => `<li>${this.escape(reason)}</li>`).join("")}</ul></section>${providerMarkup}<footer>${canSave ? `<button type="button" data-osint-geo-action="save">ADD TO CASE</button>` : `<span class="osint-action-unavailable">ADD TO CASE AVAILABLE AFTER A REVIEWED PROVIDER OBSERVATION</span>`}</footer></div></section>
+            <section class="osint-geo-observation workspace-panel"><header><h2>INVESTIGATOR OBSERVATION</h2><span>LOCAL / EXPLICIT</span></header><div class="workspace-panel-content"><form data-osint-geo-observation-form><label><span>ASSESSMENT</span><select class="aegis-select" data-osint-geo-assessment><option value="SUPPORTS"${state.investigatorAssessment === "SUPPORTS" ? " selected" : ""}>SUPPORTS</option><option value="CONTRADICTS"${state.investigatorAssessment === "CONTRADICTS" ? " selected" : ""}>CONTRADICTS</option><option value="INCONCLUSIVE"${state.investigatorAssessment === "INCONCLUSIVE" ? " selected" : ""}>INCONCLUSIVE</option></select></label><label><span>NOTE · LOCAL UNTIL EXPLICIT EVIDENCE CAPTURE</span><textarea class="aegis-input" name="note" data-osint-geo-note maxlength="1200" ${verification ? "" : "disabled"}>${this.escape(state.investigatorNote || "")}</textarea></label><button type="submit" ${verification ? "" : "disabled"}>ADD OBSERVATION</button></form>${investigationObservations.length ? `<ol class="osint-geo-observations">${investigationObservations.map(item => `<li><strong>${this.escape(item.assessment)}</strong><span>${this.escape(item.note || "No note supplied.")}</span><small>${this.escape(item.recordedAt)}</small></li>`).join("")}</ol>` : `<p class="osint-panel-muted">No local investigator observations have been added to this ephemeral verification.</p>`}</div></section>
+            <aside class="osint-geo-policy workspace-panel"><header><h2>PROVIDER POLICY</h2><span>PASSIVE / FIXED ENDPOINT</span></header><div class="workspace-panel-content"><p><strong>Open-Meteo Geocoding</strong> is the sole Phase 5 native adapter. It accepts one explicit place text query, uses a fixed public endpoint and returns a bounded normalized candidate list.</p><p>Coordinate parsing happens locally. Nominatim and the broader Geo catalog remain link-only because their policies or access model are not appropriate for this native runtime.</p><small>MAP HANDOFF · NOT ENABLED IN THIS PHASE. No global map state is changed.</small></div></aside>`;
+    }
+
+    async beginOSINTGeoVerification() {
+        const Geo = this.getOSINTGeoModule();
+        const state = this.osintGeoState;
+        const provider = this.getOSINTGeoProvider();
+        if (!Geo || !state) return;
+        let parsed;
+        try { parsed = Geo.parseInput(state.input); }
+        catch (error) { state.lastError = {code: error.code || "INVALID_INPUT", message: error.message || "Enter a valid location."}; state.phase = "ERROR"; this.renderOSINTState(); return; }
+        this.cancelOSINTGeoVerification(false);
+        state.lastError = null;
+        state.providerResult = null;
+        state.selectedCandidateIndex = 0;
+        if (parsed.kind === "COORDINATES") {
+            state.verification = Geo.createVerification({parsed});
+            state.phase = "COMPLETE";
+            this.renderOSINTState();
+            return;
+        }
+        if (!provider || !this.osintRuntime) { state.phase = "ERROR"; state.lastError = {code: "PROVIDER_UNAVAILABLE", message: "The approved geospatial provider is unavailable."}; this.renderOSINTState(); return; }
+        state.phase = "LOADING";
+        this.renderOSINTState();
+        const pending = this.osintRuntime.startQuery(provider.id, parsed, {capability: "GEOSPATIAL_VERIFICATION", locale: navigator.language || "en", timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC", networkAllowed: true, userInitiated: true, sessionId: "ephemeral-geo"});
+        state.activeRequestId = pending.requestId;
+        const result = await pending.promise;
+        if (!this.osintGeoState || this.osintGeoState.activeRequestId !== pending.requestId) return;
+        state.activeRequestId = null;
+        if (!result || !["SUCCESS", "EMPTY", "PARTIAL"].includes(result.status)) {
+            state.phase = result && result.status === "CANCELLED" ? "IDLE" : "ERROR";
+            state.lastError = {code: result && result.error && result.error.code || result && result.status || "ERROR", message: result && result.summary || "Geospatial verification did not complete."};
+            this.renderOSINTState();
+            return;
+        }
+        state.providerResult = result;
+        this.rebuildOSINTGeoVerification(parsed);
+        state.phase = "COMPLETE";
+        this.renderOSINTState();
+    }
+
+    rebuildOSINTGeoVerification(parsed = null) {
+        const Geo = this.getOSINTGeoModule();
+        const state = this.osintGeoState;
+        if (!Geo || !state) return null;
+        const source = parsed || Geo.parseInput(state.input);
+        const candidates = state.providerResult && state.providerResult.data && state.providerResult.data.geoCandidates || [];
+        const candidate = candidates[state.selectedCandidateIndex] || candidates[0];
+        if (!candidate) {
+            state.verification = Geo.createVerification({parsed: source, investigatorObservations: state.verification && state.verification.investigatorObservations || []});
+            return state.verification;
+        }
+        const prior = state.verification && state.verification.investigatorObservations || [];
+        const observation = {...candidate, providerId: "open-meteo-geocoding", providerName: "Open-Meteo Geocoding", type: "PUBLIC_GEOCODING_API", observedAt: state.providerResult.completedAt, confidence: state.providerResult.confidence};
+        state.verification = Geo.createVerification({parsed: source, providerObservations: [observation], investigatorObservations: prior});
+        return state.verification;
+    }
+
+    cancelOSINTGeoVerification(render = true) {
+        const state = this.osintGeoState;
+        if (!state || !state.activeRequestId || !this.osintRuntime) return false;
+        const cancelled = this.osintRuntime.cancel(state.activeRequestId);
+        state.activeRequestId = null;
+        state.phase = "IDLE";
+        if (render) this.renderOSINTState();
+        return cancelled;
+    }
+
+    addOSINTGeoInvestigatorObservation(form = null) {
+        const Geo = this.getOSINTGeoModule();
+        const state = this.osintGeoState;
+        if (!Geo || !state || !state.verification) return;
+        const note = form ? new FormData(form).get("note") : state.investigatorNote;
+        const prior = state.verification.investigatorObservations || [];
+        state.verification = Geo.createVerification({parsed: Geo.parseInput(state.input), normalizedLocation: state.verification.normalizedLocation, providerObservations: state.verification.providerObservations, investigatorObservations: [...prior, {assessment: state.investigatorAssessment, note, recordedAt: new Date().toISOString()}]});
+        state.investigatorNote = "";
+        state.investigatorAssessment = "INCONCLUSIVE";
+        this.renderOSINTState();
+    }
+
+    promoteOSINTGeoEvidence(trigger = null) {
+        const Geo = this.getOSINTGeoModule();
+        const state = this.osintGeoState;
+        const provider = this.getOSINTGeoProvider();
+        if (!Geo || !state || !state.verification || !provider || !state.verification.providerObservations.length) return this.showToast(this.osintView, "NO PROMOTABLE GEO RESULT");
+        const data = Geo.toEvidenceData(state.verification);
+        this.osintLastNormalizedResults[provider.id] = Object.freeze({requestId: `geo-evidence-${Date.now().toString(36)}`, providerId: provider.id, capability: "GEOSPATIAL_VERIFICATION", status: "SUCCESS", queriedAt: data.queriedAt, completedAt: data.completedAt, durationMs: 0, summary: `Geospatial verification: ${this.geoLocationLabel(state.verification.normalizedLocation)}.`, data, warnings: state.verification.reasoning.slice(), source: {provider: data.provider, type: "LOCAL_NORMALIZATION_WITH_PUBLIC_PROVIDER"}, confidence: state.verification.confidence, rawAvailable: false, error: null});
+        this.openOSINTEvidencePromotion(provider.id, trigger);
     }
 
     renderOSINTCaseReadout() {
@@ -2381,15 +2584,17 @@ class WorkspaceManager {
         const normalized = this.osintLastNormalizedResults[providerId];
         const data = normalized && normalized.data || {};
         const title = normalized && normalized.summary || "Provider result";
+        const geo = normalized && normalized.capability === "GEOSPATIAL_VERIFICATION";
         const redactions = [
             ["queryInput", "QUERY INPUT"],
             ["canonicalUrl", "CANONICAL URL"],
             ["sourceUrl", "SOURCE URL"],
             ["data.originalInput", "DATA / ORIGINAL INPUT"],
             ["data.canonicalUrl", "DATA / CANONICAL URL"],
-            ["data.snapshotUrl", "DATA / SNAPSHOT URL"]
+            ["data.snapshotUrl", "DATA / SNAPSHOT URL"],
+            ...(geo ? [["data.geo.latitude", "GEO / LATITUDE"], ["data.geo.longitude", "GEO / LONGITUDE"], ["data.geo.displayName", "GEO / DISPLAY NAME"], ["data.geo.locality", "GEO / LOCALITY"], ["data.geo.region", "GEO / REGION"], ["data.geo.country", "GEO / COUNTRY"], ["data.geo.countryCode", "GEO / COUNTRY CODE"], ["data.geo.elevationM", "GEO / ELEVATION"], ["data.geo.observations", "GEO / PROVIDER OBSERVATIONS"]] : [])
         ];
-        this.openOSINTCaseDialog("EVIDENCE PREVIEW", `<form data-osint-evidence-preview-form><p>Review the safe normalized metadata. The provider, capability, query timestamp and integrity basis are fixed by the trusted local service.</p><section class="osint-evidence-preview-provenance"><div><small>PROVIDER</small><strong>${this.escape(providerId)}</strong></div><div><small>CAPABILITY</small><strong>${this.escape(normalized.capability)}</strong></div><div><small>STATUS</small><strong>${this.escape(normalized.status)}</strong></div><div><small>QUERIED</small><strong>${this.escape(normalized.queriedAt)}</strong></div></section><label><span>TITLE</span><input class="aegis-input" name="title" value="${this.escape(title)}" maxlength="160" required></label><label><span>SUMMARY</span><textarea class="aegis-input" name="summary" maxlength="4000" required>${this.escape(normalized.summary || "")}</textarea></label><label><span>TAGS</span><input class="aegis-input" name="tags" maxlength="500" value="wayback, historical-archive"></label><label><span>NOTE · OPTIONAL</span><textarea class="aegis-input" name="note" maxlength="8000"></textarea></label><fieldset><legend>REDACT BEFORE LOCAL SAVE</legend>${redactions.map(([field, label]) => `<label><input type="checkbox" name="redactions" value="${field}"> ${label}</label>`).join("")}</fieldset><footer><button type="button" data-osint-case-dialog-close>CANCEL</button><button type="submit">CONFIRM SAVE EVIDENCE</button></footer></form>`, trigger, (overlay, close) => {
+        this.openOSINTCaseDialog("EVIDENCE PREVIEW", `<form data-osint-evidence-preview-form><p>Review the safe normalized metadata. The provider, capability, query timestamp and integrity basis are fixed by the trusted local service.</p><section class="osint-evidence-preview-provenance"><div><small>PROVIDER</small><strong>${this.escape(providerId)}</strong></div><div><small>CAPABILITY</small><strong>${this.escape(normalized.capability)}</strong></div><div><small>STATUS</small><strong>${this.escape(normalized.status)}</strong></div><div><small>QUERIED</small><strong>${this.escape(normalized.queriedAt)}</strong></div></section><label><span>TITLE</span><input class="aegis-input" name="title" value="${this.escape(title)}" maxlength="160" required></label><label><span>SUMMARY</span><textarea class="aegis-input" name="summary" maxlength="4000" required>${this.escape(normalized.summary || "")}</textarea></label><label><span>TAGS</span><input class="aegis-input" name="tags" maxlength="500" value="${geo ? "geospatial, verification" : "wayback, historical-archive"}"></label><label><span>NOTE · OPTIONAL</span><textarea class="aegis-input" name="note" maxlength="8000"></textarea></label><fieldset><legend>REDACT BEFORE LOCAL SAVE</legend>${redactions.map(([field, label]) => `<label><input type="checkbox" name="redactions" value="${field}"> ${label}</label>`).join("")}</fieldset><footer><button type="button" data-osint-case-dialog-close>CANCEL</button><button type="submit">CONFIRM SAVE EVIDENCE</button></footer></form>`, trigger, (overlay, close) => {
             overlay.querySelectorAll("[data-osint-case-dialog-close]").forEach(button => button.addEventListener("click", close));
             overlay.querySelector("[data-osint-evidence-preview-form]").addEventListener("submit", async event => {
                 event.preventDefault(); const form = new FormData(event.currentTarget);

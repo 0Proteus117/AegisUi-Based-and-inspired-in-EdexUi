@@ -14,7 +14,7 @@
     const TIMELINE_EVENTS = Object.freeze(["CASE_CREATED", "CASE_UPDATED", "CASE_STATUS_CHANGED", "EVIDENCE_ADDED", "EVIDENCE_UPDATED", "EVIDENCE_REMOVED", "NOTE_ADDED", "NOTE_UPDATED", "EXPORT_CREATED", "INTEGRITY_WARNING", "CASE_IMPORTED"]);
     const ERROR_CODES = Object.freeze(["CASE_NOT_FOUND", "CASE_ALREADY_EXISTS", "CASE_INVALID", "CASE_BUSY", "CASE_ARCHIVED", "EVIDENCE_NOT_FOUND", "EVIDENCE_INVALID", "EVIDENCE_INTEGRITY_FAILED", "STORAGE_UNAVAILABLE", "STORAGE_WRITE_FAILED", "STORAGE_READ_FAILED", "INDEX_CORRUPTED", "EXPORT_CANCELLED", "EXPORT_FAILED", "UNSUPPORTED_SCHEMA_VERSION", "PATH_REJECTED", "PAYLOAD_TOO_LARGE", "POLICY_BLOCKED"]);
     const LIMITS = Object.freeze({title: 160, description: 4000, note: 8000, tags: 12, tag: 40, evidenceBytes: 65536, caseEvidence: 500, timeline: 1000, exportBytes: 10485760, payloadBytes: 65536, objectDepth: 10});
-    const REDACTABLE_FIELDS = Object.freeze(["queryInput", "canonicalUrl", "sourceUrl", "data.originalInput", "data.canonicalUrl", "data.snapshotUrl"]);
+    const REDACTABLE_FIELDS = Object.freeze(["queryInput", "canonicalUrl", "sourceUrl", "data.originalInput", "data.canonicalUrl", "data.snapshotUrl", "data.geo.latitude", "data.geo.longitude", "data.geo.displayName", "data.geo.locality", "data.geo.region", "data.geo.country", "data.geo.countryCode", "data.geo.elevationM", "data.geo.observations"]);
 
     class CaseError extends Error {
         constructor(code, message, details = null) {
@@ -208,11 +208,27 @@
     function sanitizeNormalizedResult(value) {
         assertAllowedKeys(value, ["requestId", "providerId", "capability", "status", "queriedAt", "completedAt", "durationMs", "summary", "data", "warnings", "source", "confidence", "rawAvailable", "error"], "Normalized result");
         if (!["SUCCESS", "EMPTY", "PARTIAL"].includes(value.status)) throw new CaseError("POLICY_BLOCKED", "Only successful, empty or partial results can become evidence.");
-        const allowedData = ["available", "originalInput", "canonicalUrl", "snapshotUrl", "snapshotTimestamp", "provider", "queriedAt", "completedAt", "confidence", "warnings"];
+        const allowedData = ["available", "originalInput", "canonicalUrl", "snapshotUrl", "snapshotTimestamp", "provider", "queriedAt", "completedAt", "confidence", "warnings", "geo"];
         const data = value.data && typeof value.data === "object" && !Array.isArray(value.data) ? value.data : {};
         assertAllowedKeys(data, allowedData, "Normalized result data");
         const source = value.source && typeof value.source === "object" && !Array.isArray(value.source) ? value.source : {};
         assertAllowedKeys(source, ["provider", "type"], "Normalized result source");
+        const geo = data.geo === undefined || data.geo === null ? null : sanitizeGeoEvidenceData(data.geo);
+        const normalizedData = {
+            available: data.available === true,
+            originalInput: nullableText(data.originalInput, 2048, "Original input"),
+            canonicalUrl: safeUrl(data.canonicalUrl, "Canonical URL"),
+            snapshotUrl: safeUrl(data.snapshotUrl, "Snapshot URL", {allowArchive: true}),
+            snapshotTimestamp: nullableText(data.snapshotTimestamp, 64, "Snapshot timestamp"),
+            provider: nullableText(data.provider, 96, "Data provider"),
+            queriedAt: data.queriedAt ? assertTimestamp(data.queriedAt, "Data query timestamp") : null,
+            completedAt: data.completedAt ? assertTimestamp(data.completedAt, "Data completion timestamp") : null,
+            confidence: nullableText(data.confidence, 80, "Data confidence"),
+            warnings: Array.isArray(data.warnings) ? data.warnings.map(item => plainText(String(item), 240, "Warning")) : []
+        };
+        // Keep prior evidence shapes stable: legacy provider evidence does not
+        // acquire a synthetic `geo: null` property during this migration.
+        if (geo !== null) normalizedData.geo = geo;
         return {
             providerId: plainText(value.providerId, 80, "Provider identifier"),
             capability: plainText(value.capability, 80, "Capability"),
@@ -220,22 +236,46 @@
             queriedAt: assertTimestamp(value.queriedAt, "Query timestamp"),
             completedAt: value.completedAt ? assertTimestamp(value.completedAt, "Completion timestamp") : null,
             summary: plainText(value.summary || "Provider result", 360, "Result summary"),
-            data: {
-                available: data.available === true,
-                originalInput: nullableText(data.originalInput, 2048, "Original input"),
-                canonicalUrl: safeUrl(data.canonicalUrl, "Canonical URL"),
-                snapshotUrl: safeUrl(data.snapshotUrl, "Snapshot URL", {allowArchive: true}),
-                snapshotTimestamp: nullableText(data.snapshotTimestamp, 64, "Snapshot timestamp"),
-                provider: nullableText(data.provider, 96, "Data provider"),
-                queriedAt: data.queriedAt ? assertTimestamp(data.queriedAt, "Data query timestamp") : null,
-                completedAt: data.completedAt ? assertTimestamp(data.completedAt, "Data completion timestamp") : null,
-                confidence: nullableText(data.confidence, 80, "Data confidence"),
-                warnings: Array.isArray(data.warnings) ? data.warnings.map(item => plainText(String(item), 240, "Warning")) : []
-            },
+            data: normalizedData,
             warnings: Array.isArray(value.warnings) ? value.warnings.map(item => plainText(String(item), 240, "Warning")) : [],
             source: {provider: nullableText(source.provider, 96, "Source provider"), type: nullableText(source.type, 80, "Source type")},
             confidence: nullableText(value.confidence, 80, "Confidence") || "UNKNOWN"
         };
+    }
+
+    function safeGeoNumber(value, minimum, maximum, label) {
+        if (!Number.isFinite(value) || value < minimum || value > maximum) throw new CaseError("CASE_INVALID", `${label} is invalid.`);
+        return Number(value.toFixed(7));
+    }
+
+    function sanitizeGeoEvidenceData(value, options = {}) {
+        assertAllowedKeys(value, ["latitude", "longitude", "coordinateFormat", "displayName", "locality", "region", "country", "countryCode", "elevationM", "verificationStatus", "verificationConfidence", "observations"], "Geospatial normalized data");
+        const observations = Array.isArray(value.observations) ? value.observations : [];
+        const has = key => Object.prototype.hasOwnProperty.call(value, key);
+        if (observations.length > 8) throw new CaseError("PAYLOAD_TOO_LARGE", "Too many geospatial provider observations.");
+        const requireCoordinates = options.requireCoordinates !== false;
+        if (requireCoordinates && (!Object.prototype.hasOwnProperty.call(value, "latitude") || !Object.prototype.hasOwnProperty.call(value, "longitude"))) {
+            throw new CaseError("CASE_INVALID", "Geospatial normalized data requires latitude and longitude.");
+        }
+        const output = {
+            latitude: has("latitude") ? safeGeoNumber(value.latitude, -90, 90, "Geospatial latitude") : undefined,
+            longitude: has("longitude") ? safeGeoNumber(value.longitude, -180, 180, "Geospatial longitude") : undefined,
+            coordinateFormat: has("coordinateFormat") ? nullableText(value.coordinateFormat, 24, "Coordinate format") : undefined,
+            displayName: has("displayName") ? nullableText(value.displayName, 240, "Geospatial display name") : undefined,
+            locality: has("locality") ? nullableText(value.locality, 180, "Geospatial locality") : undefined,
+            region: has("region") ? nullableText(value.region, 180, "Geospatial region") : undefined,
+            country: has("country") ? nullableText(value.country, 180, "Geospatial country") : undefined,
+            countryCode: has("countryCode") ? nullableText(value.countryCode, 12, "Geospatial country code") : undefined,
+            elevationM: !has("elevationM") ? undefined : value.elevationM === null || value.elevationM === undefined ? null : safeGeoNumber(value.elevationM, -12000, 12000, "Geospatial elevation"),
+            verificationStatus: has("verificationStatus") ? nullableText(value.verificationStatus, 40, "Geospatial verification status") : undefined,
+            verificationConfidence: has("verificationConfidence") ? nullableText(value.verificationConfidence, 40, "Geospatial verification confidence") : undefined,
+            observations: has("observations") ? observations.map(item => {
+                assertAllowedKeys(item, ["providerId", "providerName", "latitude", "longitude", "observedAt"], "Geospatial provider observation");
+                return {providerId: nullableText(item.providerId, 80, "Geospatial provider identifier"), providerName: nullableText(item.providerName, 120, "Geospatial provider name"), latitude: safeGeoNumber(item.latitude, -90, 90, "Observation latitude"), longitude: safeGeoNumber(item.longitude, -180, 180, "Observation longitude"), observedAt: item.observedAt ? assertTimestamp(item.observedAt, "Observation timestamp") : null};
+            }) : undefined
+        };
+        Object.keys(output).forEach(key => output[key] === undefined && delete output[key]);
+        return output;
     }
 
     function applyRedactions(draft, fields, clock) {
@@ -243,11 +283,18 @@
         const redactions = [];
         (Array.isArray(fields) ? fields : []).forEach(field => {
             if (!REDACTABLE_FIELDS.includes(field)) throw new CaseError("CASE_INVALID", "Redaction field is not allowed.");
-            const [top, nested] = field.split(".");
+            const path = field.split(".");
+            const [top, nested, deeplyNested] = path;
             if (nested) {
                 if (!target[top] || typeof target[top] !== "object" || !Object.prototype.hasOwnProperty.call(target[top], nested)) return;
-                if (target[top][nested] === null || target[top][nested] === undefined) return;
-                delete target[top][nested];
+                if (deeplyNested) {
+                    if (!target[top][nested] || typeof target[top][nested] !== "object" || !Object.prototype.hasOwnProperty.call(target[top][nested], deeplyNested)) return;
+                    if (target[top][nested][deeplyNested] === null || target[top][nested][deeplyNested] === undefined) return;
+                    delete target[top][nested][deeplyNested];
+                } else {
+                    if (target[top][nested] === null || target[top][nested] === undefined) return;
+                    delete target[top][nested];
+                }
             } else {
                 if (!Object.prototype.hasOwnProperty.call(target, top) || target[top] === null || target[top] === undefined) return;
                 delete target[top];
@@ -319,9 +366,11 @@
     function validateEvidenceRecord(value) {
         assertAllowedKeys(value, ["id", "caseId", "type", "title", "summary", "providerId", "providerName", "capability", "source", "sourceUrl", "canonicalUrl", "acquisitionMethod", "queryInput", "queriedAt", "capturedAt", "createdAt", "confidence", "warnings", "data", "notes", "tags", "integrity", "schemaVersion", "redactions", "legalContext", "riskContext"], "Evidence");
         if (value.schemaVersion !== CASE_SCHEMA_VERSION) throw new CaseError("UNSUPPORTED_SCHEMA_VERSION", "Evidence schema version is not supported.");
-        const evidenceDataKeys = ["available", "originalInput", "canonicalUrl", "snapshotUrl", "snapshotTimestamp", "provider", "queriedAt", "completedAt", "confidence", "warnings", "status", "runtimeStatus"];
+        const evidenceDataKeys = ["available", "originalInput", "canonicalUrl", "snapshotUrl", "snapshotTimestamp", "provider", "queriedAt", "completedAt", "confidence", "warnings", "geo", "status", "runtimeStatus"];
         assertAllowedKeys(value.source && typeof value.source === "object" ? value.source : {}, ["provider", "type"], "Evidence source");
         assertAllowedKeys(value.data && typeof value.data === "object" ? value.data : {}, evidenceDataKeys, "Evidence data");
+        const normalizedData = value.data && typeof value.data === "object" ? canonicalize(value.data) : {};
+        if (normalizedData.geo) normalizedData.geo = sanitizeGeoEvidenceData(normalizedData.geo, {requireCoordinates: false});
         const evidence = {...value,
             id: safeId(value.id, "evidence"), caseId: safeId(value.caseId, "case"), type: assertEnum(value.type, EVIDENCE_TYPES, "Evidence type"),
             title: plainText(value.title, LIMITS.title, "Evidence title"), summary: plainText(value.summary, LIMITS.description, "Evidence summary"),
@@ -330,7 +379,7 @@
             acquisitionMethod: assertEnum(value.acquisitionMethod, ACQUISITION_METHODS, "Acquisition method"),
             queriedAt: value.queriedAt ? assertTimestamp(value.queriedAt, "Query timestamp") : null, capturedAt: assertTimestamp(value.capturedAt, "Capture timestamp"), createdAt: assertTimestamp(value.createdAt, "Evidence created timestamp"),
             confidence: plainText(value.confidence, 80, "Confidence"), warnings: Array.isArray(value.warnings) ? value.warnings.map(item => plainText(String(item), 240, "Warning")) : [],
-            data: value.data && typeof value.data === "object" ? canonicalize(value.data) : {}, notes: Array.isArray(value.notes) ? value.notes.map(id => safeId(id, "note")) : [], tags: normalizeTags(value.tags),
+            data: normalizedData, notes: Array.isArray(value.notes) ? value.notes.map(id => safeId(id, "note")) : [], tags: normalizeTags(value.tags),
             schemaVersion: CASE_SCHEMA_VERSION, redactions: Array.isArray(value.redactions) ? value.redactions.map(item => ({field: plainText(item.field, 80, "Redaction field"), reason: nullableText(item.reason, 240, "Redaction reason"), redactedAt: assertTimestamp(item.redactedAt, "Redaction timestamp")})) : [],
             legalContext: plainText(value.legalContext || "UNKNOWN", 80, "Legal context"), riskContext: plainText(value.riskContext || "PASSIVE", 80, "Risk context")
         };

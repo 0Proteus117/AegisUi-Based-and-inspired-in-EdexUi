@@ -17,6 +17,20 @@ arbitrary UI input.
 The snapshot URL is never opened automatically. The adapter does not download
 archived content, discover URLs, issue multiple requests or follow links.
 
+## Open-Meteo Geocoding
+
+- Provider: `open-meteo-geocoding`
+- Capability: `GEOSPATIAL_VERIFICATION`
+- Endpoint: `https://geocoding-api.open-meteo.com/v1/search`
+- Input: one manually entered bounded place text
+- Timeout: bounded centrally at 8 seconds
+- Output: bounded normalized geographic candidates only
+
+The adapter has no key, account, arbitrary URL, arbitrary query parameter,
+headers, proxy or batch path. It uses an explicit user action and cancellation;
+raw provider JSON is discarded after adapter normalization. It does not update
+the global Map or persist queries outside an explicit Case evidence capture.
+
 ## Stub families
 
 Local tools and system integrations are represented by explicit blocked

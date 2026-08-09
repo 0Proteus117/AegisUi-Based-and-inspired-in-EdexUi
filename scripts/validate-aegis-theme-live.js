@@ -111,6 +111,63 @@ async function prepareSurface(socket) {
         })()`);
         return;
     }
+    if (target === "geo" || target === "geo-stress" || target === "geo-provider" || target === "geo-evidence") {
+        await evaluate(socket, `(() => {
+            window.workspaceManager.activate('osint', false);
+            window.workspaceManager.osintGeoState.mode = 'GEO';
+            window.workspaceManager.osintGeoState.input = 'London';
+            if (${JSON.stringify(target)} === 'geo-stress') {
+                const Geo = window.OSINTGeospatialVerification;
+                const parsed = Geo.parseInput('51.5074, -0.1278');
+                const providerObservation = {
+                    providerId: 'open-meteo-geocoding',
+                    providerName: 'Open-Meteo Geocoding — a deliberately long provider label for layout verification',
+                    latitude: 51.5074,
+                    longitude: -0.1278,
+                    observedAt: '2026-08-09T12:00:00.000Z'
+                };
+                const investigatorObservation = {
+                    providerId: 'investigator',
+                    providerName: 'Investigator observation',
+                    latitude: 51.526,
+                    longitude: -0.151,
+                    observedAt: '2026-08-09T12:01:00.000Z',
+                    note: 'A deliberately long but legitimate investigator note confirms that long analytical content wraps without colliding with nearby controls.'
+                };
+                window.workspaceManager.osintGeoState.input = '51.5074, -0.1278';
+                window.workspaceManager.osintGeoState.verification = Geo.createVerification({
+                    parsed,
+                    providerObservations: [providerObservation],
+                    investigatorObservations: [investigatorObservation]
+                });
+                window.workspaceManager.osintGeoState.providerResult = {data: {geoCandidates: [{
+                    displayName: 'London, Greater London, England, United Kingdom',
+                    locality: 'London', region: 'Greater London', country: 'United Kingdom', countryCode: 'GB',
+                    latitude: 51.5074, longitude: -0.1278, elevationM: 14
+                }]}};
+            }
+            window.workspaceManager.renderOSINTState();
+            if (${JSON.stringify(target)} === 'geo-provider' || ${JSON.stringify(target)} === 'geo-evidence') {
+                return window.workspaceManager.beginOSINTGeoVerification().then(async () => {
+                    if (${JSON.stringify(target)} === 'geo-evidence') {
+                        const manager = window.workspaceManager;
+                        const created = await manager.ipc.invoke('osint-case-create', {
+                            title: 'Disposable Geo validation case',
+                            description: 'Temporary local visual-validation fixture only.',
+                            priority: 'LOW', tags: 'geo, validation'
+                        });
+                        if (!created || !created.ok) throw new Error('Geo validation case fixture unavailable');
+                        await manager.refreshOSINTCases({render: false});
+                        await manager.openOSINTCaseById(created.case.id, {render: false, silent: true});
+                        manager.promoteOSINTGeoEvidence(document.body);
+                    }
+                    return Boolean(document.querySelector('.osint-geo-header'));
+                });
+            }
+            return Boolean(document.querySelector('.osint-geo-header'));
+        })()`);
+        return;
+    }
     if (target === "assistant-expanded") {
         await evaluate(socket, `(() => {
             window.assistantPresence?.panel?.setOpen(true);
@@ -216,7 +273,12 @@ async function main() {
                 return value && value.width > 0 && value.height > 0 && value.bottom > 0 && value.right > 0 && value.top < innerHeight && value.left < innerWidth;
             };
             const active = document.querySelector('.osint-case-active');
+            const geoHeader = document.querySelector('.osint-geo-header');
+            const geoInput = document.querySelector('[data-osint-geo-input]');
+            const geoResult = document.querySelector('.osint-geo-result');
+            const geoObservation = document.querySelector('.osint-geo-observation');
             const evidenceDialog = document.querySelector('.osint-case-dialog-overlay.visible .osint-case-dialog');
+            const evidenceDetailRoot = evidenceDialog && evidenceDialog.querySelector('.osint-evidence-detail');
             const popup = document.querySelector(
                 '.eng-detail-overlay.visible .eng-detail-panel, '
                 + '#eng_project_editor_overlay #eng_project_editor, '
@@ -225,24 +287,26 @@ async function main() {
                 + '.assistant-chat-overlay.visible .assistant-chat-expanded'
             );
             const report = {
+                target: ${JSON.stringify(surface)},
                 appearance: root.dataset.aegisAppearance,
                 preference: root.dataset.aegisAppearancePreference,
                 bodyBackground: style.backgroundColor,
                 bodyColor: style.color,
                 viewport: {width: innerWidth, height: innerHeight, dpr: devicePixelRatio},
                 workspace: window.workspaceManager && window.workspaceManager.activeId,
+                geo: geoHeader && geoInput && geoResult && geoObservation ? {header: rect(geoHeader), input: rect(geoInput), result: rect(geoResult), observation: rect(geoObservation)} : null,
                 activeCase: active ? {
                     title: rect(active.querySelector('h2')),
                     status: rect(active.querySelector('.osint-case-status')),
                     metadata: rect(active.querySelector('.osint-case-metadata')),
                     actions: rect(active.querySelector('footer'))
                 } : null,
-                evidenceDetail: evidenceDialog ? {
+                evidenceDetail: evidenceDetailRoot ? {
                     dialog: rect(evidenceDialog),
                     context: rect(evidenceDialog.querySelector(':scope > header')),
-                    title: rect(evidenceDialog.querySelector('.osint-evidence-detail-header')),
-                    metadata: rect(evidenceDialog.querySelector('.osint-detail-readout')),
-                    actions: rect(evidenceDialog.querySelector('.osint-evidence-detail-actions'))
+                    title: rect(evidenceDetailRoot.querySelector('.osint-evidence-detail-header')),
+                    metadata: rect(evidenceDetailRoot.querySelector('.osint-detail-readout')),
+                    actions: rect(evidenceDetailRoot.querySelector('.osint-evidence-detail-actions'))
                 } : null,
                 popup: popup ? rect(popup) : null,
                 controlVisible: visible(document.querySelector('.workspace-nav-button, .assistant-panel button, .workspace-panel button'))
@@ -258,6 +322,13 @@ async function main() {
             report.popupFlow = !report.popup || (report.popup.width > 0 && report.popup.height > 0
                 && report.popup.left >= -1 && report.popup.top >= -1
                 && report.popup.right <= innerWidth + 1 && report.popup.bottom <= innerHeight + 1);
+            report.geoAvailable = !['geo', 'geo-stress', 'geo-provider', 'geo-evidence'].includes(report.target) || Boolean(report.geo);
+            report.geoFlow = report.target === 'geo-evidence'
+                ? Boolean(report.popup)
+                : report.geoAvailable && (!report.geo || (!intersect(report.geo.header, report.geo.input)
+                && !intersect(report.geo.header, report.geo.result)
+                && !intersect(report.geo.result, report.geo.observation)
+                && visible(geoInput)));
             return report;
         })()`);
         failures.push(!print("LIVE_THEME_APPEARANCE", report.appearance === expectedAppearance && report.preference === appearance, JSON.stringify({appearance: report.appearance, preference: report.preference, expectedAppearance, expectedPreference: appearance})));
@@ -265,6 +336,7 @@ async function main() {
         failures.push(!print("LIVE_THEME_CASE_FLOW", report.activeFlow));
         failures.push(!print("LIVE_THEME_EVIDENCE_FLOW", report.evidenceFlow));
         failures.push(!print("LIVE_THEME_POPUP_FLOW", report.popupFlow, report.popup ? JSON.stringify(report.popup) : ""));
+        failures.push(!print("LIVE_THEME_GEO_FLOW", report.geoFlow));
         console.log(`LIVE_THEME_VIEWPORT: ${JSON.stringify(report.viewport)}`);
         console.log(`LIVE_THEME_SURFACE: ${surface}`);
         if (screenshotPath) {

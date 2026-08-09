@@ -30,6 +30,7 @@ const CHECKS = [
     "scripts/test-osint-tool-access-panel.js",
     "scripts/test-osint-native-access-foundation.js",
     "scripts/test-osint-provider-runtime.js",
+    "scripts/test-osint-geospatial-verification.js",
     "scripts/test-osint-cases.js",
     "scripts/test-osint-case-ipc.js",
     "scripts/test-osint-case-ui.js",

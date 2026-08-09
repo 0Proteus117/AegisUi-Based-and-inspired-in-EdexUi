@@ -20,8 +20,10 @@ The Phase 3 registry declares:
 
 Each definition documents supported inputs/outputs, cancellation/evidence
 support and an initial risk class. The registry can report matching providers
-and a preferred provider without granting an action. In v2.3.5 only
-`HISTORICAL_ARCHIVE` has a live, approved provider query path.
+and a preferred provider without granting an action. In v2.5.0,
+`HISTORICAL_ARCHIVE` and `GEOSPATIAL_VERIFICATION` have one bounded approved
+provider query path each. The latter accepts decimal/DMS coordinates locally
+and optional manually entered place text through its fixed adapter.
 
 Future capability work must add an explicit provider policy and adapter; a
 capability label alone never authorizes networking, integration or launch.
