@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.5.2 - 2026-08-09
+
+### OSINT Visual & Media Verification hotfix
+
+- Replaced the Electron-incompatible local blob URL preview path with an
+  in-memory `FileReader` data URL that is decoded before rendering.
+- Kept the selected-file label visible after the explicit inspection rerender;
+  no file path or original media is persisted.
+- Corrected the medium/compact Verification Context layout so Assessment Limits
+  and its actions remain in normal flow within the metadata panel.
+- Added live layout assertions for a real browser `File` preview and metadata
+  assessment bounds in Dark, Light and System-resolved validation.
+
 ## 2.5.1 - 2026-08-09
 
 ### OSINT Visual & Media Verification

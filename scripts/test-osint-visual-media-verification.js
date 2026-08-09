@@ -121,7 +121,9 @@ async function main() {
     check("MEDIA_UI_LOAD_ORDER", ui.includes("osintVisualMediaVerification.class.js") && ui.indexOf("osintVisualMediaVerification.class.js") < ui.indexOf("workspaceManager.class.js"));
     check("MEDIA_LAYOUT_NORMAL_FLOW", css.includes(".osint-command-grid:has(.osint-media-header)") && css.includes('"media-header media-header media-header"') && !/\.osint-media-header\s*\{[^}]*position:\s*absolute/s.test(css));
     check("MEDIA_LAYOUT_PREVIEW_BOUNDED", css.includes(".osint-media-preview img") && css.includes("max-width: 100%") && css.includes("object-fit: contain"));
+    check("MEDIA_PREVIEW_BROWSER_SAFE", managerSource.includes("createOSINTMediaPreview(file)") && managerSource.includes("FileReader") && managerSource.includes("preview.onload") && !managerSource.includes("URL.createObjectURL(file)"));
     check("MEDIA_LAYOUT_LONG_CONTENT_SAFE", css.includes(".osint-media-readout-group strong") && css.includes("overflow-wrap: anywhere") && css.includes(".osint-media-metadata footer") && css.includes("flex-wrap: wrap"));
+    check("MEDIA_ASSESSMENT_CONTAINED", css.includes(".osint-media-metadata .workspace-panel-content") && css.includes("grid-template-rows: max-content max-content max-content") && css.includes("overflow-y: auto") && css.includes("scrollbar-gutter: stable") && css.includes("grid-template-columns: repeat(4, minmax(0, 1fr))"));
     check("MEDIA_LAYOUT_COMPACT_FLOW", css.includes('"media-header"\n            "media-input"\n            "media-preview"\n            "media-metadata"'));
 
     console.log(`OSINT_VISUAL_MEDIA_VERIFICATION: ${failures.length ? "FAIL" : "OK"}`);

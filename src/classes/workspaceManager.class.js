@@ -2091,8 +2091,29 @@ class WorkspaceManager {
 
     releaseOSINTMediaPreview() {
         const state = this.osintMediaState;
-        if (state && state.previewUrl && typeof URL !== "undefined" && typeof URL.revokeObjectURL === "function") URL.revokeObjectURL(state.previewUrl);
+        // Preview data is an ephemeral FileReader data URL. Do not retain the
+        // selected File or a filesystem path after the visible session state is cleared.
         if (state) state.previewUrl = null;
+    }
+
+    createOSINTMediaPreview(file) {
+        return new Promise((resolve, reject) => {
+            if (typeof FileReader === "undefined") {
+                reject(Object.assign(new Error("Local preview support is unavailable."), {code: "PREVIEW_UNAVAILABLE"}));
+                return;
+            }
+            const reader = new FileReader();
+            reader.onerror = () => reject(Object.assign(new Error("The selected image could not be prepared for preview."), {code: "PREVIEW_UNAVAILABLE"}));
+            reader.onload = () => {
+                const source = typeof reader.result === "string" ? reader.result : null;
+                if (!source) return reject(Object.assign(new Error("The selected image could not be prepared for preview."), {code: "PREVIEW_UNAVAILABLE"}));
+                const preview = new Image();
+                preview.onload = () => resolve(source);
+                preview.onerror = () => reject(Object.assign(new Error("The selected image metadata was read, but its preview could not be decoded."), {code: "PREVIEW_UNAVAILABLE"}));
+                preview.src = source;
+            };
+            reader.readAsDataURL(file);
+        });
     }
 
     handleOSINTMediaAction(action, trigger = null) {
@@ -2155,7 +2176,15 @@ class WorkspaceManager {
             state.result = result;
             state.phase = "COMPLETE";
             state.selectedFile = {name: Media.safeLabel(file.name), type: result.file.mediaType, size: result.file.byteSize};
-            if (typeof URL !== "undefined" && typeof URL.createObjectURL === "function") state.previewUrl = URL.createObjectURL(file);
+            try {
+                state.previewUrl = await this.createOSINTMediaPreview(file);
+            } catch (previewError) {
+                state.previewUrl = null;
+                result.warnings = [...(result.warnings || []), {
+                    code: "PREVIEW_UNAVAILABLE",
+                    message: "Metadata was read locally, but a visual preview could not be decoded."
+                }];
+            }
         } catch (error) {
             state.phase = "ERROR";
             state.lastError = {code: error && error.code || "ERROR", message: error && error.userMessage || error && error.message || "The selected media could not be inspected."};
@@ -2180,7 +2209,7 @@ class WorkspaceManager {
             ? `<ul>${result.warnings.map(warning => `<li>${this.escape(warning.message || warning.code || warning)}</li>`).join("")}</ul>`
             : `<p>Metadata is contextual. Its presence or absence does not prove authenticity, location, capture time or editing history.</p>`;
         grid.innerHTML = `<section class="osint-media-header workspace-panel"><button type="button" class="osint-back-button" data-osint-media-action="catalog">‹ OSINT CATALOG</button><div><small>OSINT / VISUAL &amp; MEDIA VERIFICATION</small><h2>PASSIVE MEDIA CONTEXT</h2><p>One explicit local image. Inspection and SHA-256 run in-process; no upload, background query, hidden path history or automatic map action.</p></div><div class="osint-media-status"><small>STATE</small><strong>${this.escape(this.formatOSINTEnum(status))}</strong><span>${this.escape(result && result.confidence || "LOW")} CONFIDENCE</span></div></section>
-            <section class="osint-media-input workspace-panel"><header><h2>MEDIA INPUT</h2><span>EXPLICIT / LOCAL</span></header><div class="workspace-panel-content"><label class="osint-media-file-input"><span>JPEG · PNG · WEBP · 20 MB MAX</span><input class="aegis-input" type="file" accept="image/jpeg,image/png,image/webp" data-osint-media-file></label><p>Only the selected file bytes are inspected. Original media remains outside Aegis persistence; ADD TO CASE stores a redaction-reviewable normalized record, not the image.</p><footer><button type="button" data-osint-media-action="clear"${state.phase === "INSPECTING" ? " disabled" : ""}>CLEAR</button></footer>${state.lastError ? `<section class="osint-panel-error"><strong>${this.escape(this.formatOSINTEnum(state.lastError.code))}</strong><p>${this.escape(state.lastError.message)}</p></section>` : ""}</div></section>
+            <section class="osint-media-input workspace-panel"><header><h2>MEDIA INPUT</h2><span>EXPLICIT / LOCAL</span></header><div class="workspace-panel-content"><label class="osint-media-file-input"><span>JPEG · PNG · WEBP · 20 MB MAX</span><input class="aegis-input" type="file" accept="image/jpeg,image/png,image/webp" data-osint-media-file></label>${state.selectedFile ? `<small class="osint-media-selected-file">SELECTED · ${this.escape(state.selectedFile.name)} · ${this.escape(state.selectedFile.type)} · ${this.escape(state.selectedFile.size)} BYTES</small>` : ""}<p>Only the selected file bytes are inspected. Original media remains outside Aegis persistence; ADD TO CASE stores a redaction-reviewable normalized record, not the image.</p><footer><button type="button" data-osint-media-action="clear"${state.phase === "INSPECTING" ? " disabled" : ""}>CLEAR</button></footer>${state.lastError ? `<section class="osint-panel-error"><strong>${this.escape(this.formatOSINTEnum(state.lastError.code))}</strong><p>${this.escape(state.lastError.message)}</p></section>` : ""}</div></section>
             <section class="osint-media-preview workspace-panel"><header><h2>VISUAL PREVIEW</h2><span>${this.escape(media && media.displayLabel || "NO FILE")}</span></header><div class="workspace-panel-content"><figure>${preview}<figcaption>Preview is bounded to preserve analytical context and does not alter the original supplied bytes.</figcaption></figure></div></section>
             <section class="osint-media-metadata workspace-panel"><header><h2>VERIFICATION CONTEXT</h2><span>${this.escape(this.formatOSINTEnum(result && result.status || "UNVERIFIED"))}</span></header><div class="workspace-panel-content"><section class="osint-media-readout"><div class="osint-media-readout-group"><header>FILE</header>${readout("TYPE", media && media.mediaType)}${readout("SIZE", media ? `${media.byteSize} BYTES` : null)}${readout("DIMENSIONS", image ? `${image.width} × ${image.height}` : null)}${readout("ASPECT", image && image.aspectRatio)}</div><div class="osint-media-readout-group"><header>CAPTURE</header>${readout("TIMESTAMP", exif && exif.captureTimestamp)}${readout("TIMEZONE", exif && exif.timezoneStatus)}${readout("CAMERA", [exif && exif.cameraMake, exif && exif.cameraModel].filter(Boolean).join(" ") || null)}${readout("LENS", exif && exif.lens)}</div><div class="osint-media-readout-group"><header>LOCATION</header>${readout("GPS", hasGeo ? `${geo.latitude.toFixed(6)}, ${geo.longitude.toFixed(6)}` : null)}${readout("ALTITUDE", geo && geo.altitudeM !== null && geo.altitudeM !== undefined ? `${geo.altitudeM} M` : null)}${readout("DIRECTION", geo && geo.directionDegrees !== null && geo.directionDegrees !== undefined ? `${geo.directionDegrees}°` : null)}${readout("SOURCE", geo && geo.source)}</div><div class="osint-media-readout-group"><header>INTEGRITY</header>${readout("SHA-256", integrity && integrity.originalMediaHash)}${readout("HASH SCOPE", integrity && integrity.scope)}${readout("SOFTWARE TAG", software && software.tag)}</div></section><section class="osint-media-warnings"><small>ASSESSMENT LIMITS</small>${warningMarkup}</section><footer><button type="button" data-osint-media-action="verify-location"${hasGeo ? "" : " disabled"}>VERIFY LOCATION</button>${result ? `<button type="button" data-osint-media-action="save">ADD TO CASE</button>` : ""}</footer></div></section>
             <section class="osint-media-observation workspace-panel"><header><h2>ANALYST OBSERVATION</h2><span>EPHEMERAL UNTIL ADD TO CASE</span></header><div class="workspace-panel-content"><label><span>ANALYST NOTE · NOT EXTRACTED FACT</span><textarea class="aegis-input" data-osint-media-observation maxlength="4000" ${result ? "" : "disabled"}>${this.escape(state.analystObservation || "")}</textarea></label><p>Observation text cannot change verification status and triggers no provider query. Sensitive metadata can be redacted during the established Evidence Preview.</p></div></section>
