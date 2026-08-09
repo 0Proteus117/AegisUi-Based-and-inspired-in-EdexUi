@@ -1590,6 +1590,9 @@ class WorkspaceManager {
         this.osintEntityState = this.osintEntityState || (window.OSINTEntityResolution
             ? window.OSINTEntityResolution.createState({mode: "CATALOG"})
             : {mode: "CATALOG", entities: [], relationships: [], selectedEntityId: null, analystNote: "", filters: {type: "", status: "", relationshipType: ""}, lastError: null});
+        this.osintInvestigationContext = this.osintInvestigationContext || (window.OSINTInvestigationOrchestration
+            ? window.OSINTInvestigationOrchestration.createContext({activeCaseId: this.osintCaseState.activeCaseId})
+            : null);
         this.osintState.filters = {...{providerStatus: "", riskProfile: "", legalStatus: ""}, ...(this.osintState.filters || {})};
         this.renderOSINTState(view, definition);
         this.ensureOSINTCasesLoaded();
@@ -1603,6 +1606,12 @@ class WorkspaceManager {
         const activeCategory = registry.CATEGORIES.find(category => category.id === this.osintState.categoryId);
         const selectedProvider = this.getSelectedOSINTProvider();
         grid.className = "workspace-grid osint-command-grid";
+
+        if (this.osintCaseState && this.osintCaseState.mode === "OVERVIEW") {
+            this.renderOSINTCaseOverview(grid);
+            this.bindOSINTDeck(view);
+            return;
+        }
 
         if (this.osintCaseState && this.osintCaseState.mode === "CASE") {
             this.renderOSINTCaseWorkspace(grid);
@@ -1794,7 +1803,7 @@ class WorkspaceManager {
     bindOSINTDeck(view = this.osintView) {
         if (!view || view.dataset.osintDeckBound === "true") return;
         this.boundOSINTDeckClick = event => {
-            const target = event.target.closest("[data-osint-category], [data-osint-back], [data-osint-filter-clear], [data-osint-tool], [data-osint-panel-action], [data-osint-history-clear], [data-osint-query-cancel], [data-osint-save-result], [data-osint-case-action], [data-osint-geo-action], [data-osint-media-action], [data-osint-domain-action], [data-osint-research-action], [data-osint-entity-action]");
+            const target = event.target.closest("[data-osint-category], [data-osint-back], [data-osint-filter-clear], [data-osint-tool], [data-osint-panel-action], [data-osint-history-clear], [data-osint-query-cancel], [data-osint-save-result], [data-osint-case-action], [data-osint-geo-action], [data-osint-media-action], [data-osint-domain-action], [data-osint-research-action], [data-osint-entity-action], [data-osint-investigation-action]");
             if (!target || !view.contains(target)) return;
             if (target.matches("[data-osint-category]")) {
                 this.osintState.categoryId = target.dataset.osintCategory;
@@ -1849,6 +1858,10 @@ class WorkspaceManager {
             }
             if (target.matches("[data-osint-entity-action]")) {
                 this.handleOSINTEntityAction(target.dataset.osintEntityAction, target);
+                return;
+            }
+            if (target.matches("[data-osint-investigation-action]")) {
+                this.handleOSINTInvestigationAction(target.dataset.osintInvestigationAction, target);
                 return;
             }
             if (target.matches("[data-osint-panel-action]")) this.handleOSINTPanelAction(target.dataset.osintPanelAction, target);
@@ -2269,22 +2282,11 @@ class WorkspaceManager {
         if (action === "verify-location") {
             const geo = state.result && state.result.geo;
             if (!geo) return this.showToast(this.osintView, "NO IMAGE METADATA LOCATION AVAILABLE");
-            this.osintGeoState = {
-                ...this.osintGeoState,
-                mode: "GEO",
-                input: `${geo.latitude}, ${geo.longitude}`,
-                phase: "IDLE",
-                verification: null,
-                providerResult: null,
-                selectedCandidateIndex: 0,
-                activeRequestId: null,
-                lastError: null,
-                investigatorNote: "",
-                investigatorAssessment: "INCONCLUSIVE",
-                handoff: {provenance: "IMAGE_METADATA", originalMediaHash: state.result.integrity && state.result.integrity.originalMediaHash || null}
-            };
-            this.renderOSINTState();
-            return;
+            return this.beginOSINTInvestigationHandoff({
+                id: "media-gps-handoff", type: "MEDIA", label: state.result.file && state.result.file.displayLabel || "Selected media",
+                capability: "VISUAL_MEDIA_VERIFICATION", payload: {latitude: geo.latitude, longitude: geo.longitude},
+                provenance: {sourceCapability: "VISUAL_MEDIA_VERIFICATION", sourceType: "IMAGE_METADATA"}
+            }, "VERIFY_LOCATION");
         }
         if (action === "save") this.promoteOSINTMediaEvidence(trigger);
     }
@@ -2644,7 +2646,7 @@ class WorkspaceManager {
         const fieldProvenanceMarkup = context && context.fieldProvenance && context.fieldProvenance.length ? `<section class="osint-research-field-provenance"><small>FIELD → SOURCE</small>${context.fieldProvenance.map(item => `<div><strong>${this.escape(item.field)}</strong><span>${this.escape(item.source)} · ${this.escape(item.kind)}</span></div>`).join("")}</section>` : "";
         const provenanceMarkup = context && context.providerObservations && context.providerObservations.length ? `${fieldProvenanceMarkup}<ol class="osint-research-provenance">${context.providerObservations.map(item => `<li><strong>${this.escape(item.providerName || item.providerId || "SOURCE")}</strong><span>${this.escape(item.summary || "Provider observation")}</span><small>${this.escape(item.type || "OBSERVATION")} · ${this.escape(item.observedAt || "UNKNOWN TIME")}</small></li>`).join("")}</ol>` : `${fieldProvenanceMarkup || `<p class="osint-panel-muted">No provider observation yet. A normalized URL remains local until an explicit archive check; local PDF inspection and DOI retrieval produce their own provenance.</p>`}`;
         const localMarkup = local ? `<section class="osint-research-document-readout">${readout("TYPE", local.mediaType)}${readout("SIZE", `${local.byteSize} BYTES`)}${readout("PAGES", local.pageCount)}${readout("TITLE", local.title)}${readout("AUTHOR", local.author)}${readout("CREATOR", local.creator)}${readout("PRODUCER", local.producer)}${readout("SHA-256", local.originalDocumentHash)}</section>` : `<p class="osint-panel-muted">Local document metadata is available only after you explicitly select one PDF. Original documents and local paths are not persisted.</p>`;
-        grid.innerHTML = `<section class="osint-research-header workspace-panel"><button type="button" class="osint-back-button" data-osint-research-action="catalog">‹ OSINT CATALOG</button><div><small>OSINT / RESEARCH · DOCUMENTS · SOURCE VERIFICATION</small><h2>PASSIVE SOURCE CONTEXT</h2><p>One explicit public URL, DOI or local PDF. No crawler, bulk download, web scraping, credentials, hidden history or automatic archive query.</p></div><div class="osint-research-status"><small>STATE</small><strong>${this.escape(this.formatOSINTEnum(status))}</strong><span>CONFIDENCE · ${this.escape(context && context.confidence || "LOW")}</span></div></section>
+        grid.innerHTML = `<section class="osint-research-header workspace-panel"><button type="button" class="osint-back-button" data-osint-research-action="catalog">‹ OSINT CATALOG</button><div><small>OSINT / RESEARCH · DOCUMENTS · SOURCE VERIFICATION</small><h2>PASSIVE SOURCE CONTEXT</h2><p>One explicit public URL, DOI or local PDF. No crawler, bulk download, web scraping, credentials, hidden history or automatic archive query.</p>${this.renderOSINTHandoffNotice(state.handoff)}</div><div class="osint-research-status"><small>STATE</small><strong>${this.escape(this.formatOSINTEnum(status))}</strong><span>CONFIDENCE · ${this.escape(context && context.confidence || "LOW")}</span></div></section>
             <section class="osint-research-input workspace-panel"><header><h2>SOURCE INPUT</h2><span>EXPLICIT / EPHEMERAL</span></header><div class="workspace-panel-content"><form data-osint-research-form novalidate><label><span>INPUT TYPE</span><select class="aegis-select" data-osint-research-kind><option value="URL"${state.sourceKind === "URL" ? " selected" : ""}>PUBLIC URL</option><option value="DOI"${state.sourceKind === "DOI" ? " selected" : ""}>DOI</option><option value="LOCAL_PDF"${state.sourceKind === "LOCAL_PDF" ? " selected" : ""}>LOCAL PDF</option></select></label>${sourceInput}<small>${state.sourceKind === "URL" ? "URL analysis normalizes locally only. Metadata retrieval from arbitrary pages is intentionally unavailable; CHECK ARCHIVE is separate and explicit." : state.sourceKind === "DOI" ? "One DOI is sent only to the approved fixed Crossref Works endpoint after ANALYZE." : "Only selected PDF bytes are inspected locally. No path, original document or text body is persisted."}</small><footer>${state.sourceKind === "LOCAL_PDF" ? "" : `<button type="submit" ${loading ? "disabled" : ""}>${loading ? "ANALYZING…" : "ANALYZE"}</button>`}${loading ? `<button type="button" data-osint-research-action="cancel">CANCEL</button>` : ""}<button type="button" data-osint-research-action="clear">CLEAR</button></footer></form>${state.lastError ? `<section class="osint-panel-error"><strong>${this.escape(this.formatOSINTEnum(state.lastError.code || "ERROR"))}</strong><p>${this.escape(state.lastError.message || "Source verification did not complete.")}</p></section>` : ""}</div></section>
             <section class="osint-research-context workspace-panel"><header><h2>SOURCE CONTEXT</h2><span>${this.escape(source && source.sourceType || "AWAITING INPUT")}</span></header><div class="workspace-panel-content"><section class="osint-research-readout">${readout("ORIGINAL INPUT", source && source.originalInput, "NOT ANALYZED")}${readout("NORMALIZED URL", source && source.normalizedUrl, "NOT ANALYZED")}${readout("HOST", source && source.hostname)}${readout("DOI", source && source.identifiers && source.identifiers.doi)}${readout("TITLE", metadata.title)}${readout("PUBLISHER", metadata.publisher)}${readout("AUTHORS", metadata.authors && metadata.authors.join(" · "))}${readout("PUBLISHED", metadata.publishedAt)}${readout("UPDATED", metadata.updatedAt)}${readout("CONTAINER", metadata.container)}${readout("TYPE", metadata.workType)}</section></div></section>
             <section class="osint-research-archive workspace-panel"><header><h2>ARCHIVE CONTEXT</h2><span>WAYBACK / EXPLICIT</span></header><div class="workspace-panel-content">${archiveMarkup}<footer><button type="button" data-osint-research-action="archive"${canArchive ? "" : " disabled"}>CHECK ARCHIVE</button></footer></div></section>
@@ -2780,25 +2782,89 @@ class WorkspaceManager {
         } catch (error) { this.osintEntityState = {...state, lastError: error.message || "RELATIONSHIP CREATE FAILED"}; this.renderOSINTState(); }
     }
 
+    getOSINTInvestigationModule() { return window.OSINTInvestigationOrchestration || null; }
+
+    renderOSINTHandoffNotice(handoff) {
+        if (!handoff || !handoff.explicit || !handoff.provenance) return "";
+        const source = this.escape(handoff.provenance.sourceCapability || "NORMALIZED OBSERVATION");
+        const kind = this.escape(handoff.provenance.sourceType || "EXPLICIT HANDOFF");
+        return `<small class="osint-orchestration-handoff">SOURCE · ${source} · ${kind} · PREFILLED ONLY / NO PROVIDER QUERY HAS RUN</small>`;
+    }
+
+    updateOSINTInvestigationContext(context = {}) {
+        const Orchestration = this.getOSINTInvestigationModule();
+        if (!Orchestration) return null;
+        this.osintInvestigationContext = Orchestration.createContext({...context, activeCaseId: context.activeCaseId || this.osintCaseState && this.osintCaseState.activeCaseId});
+        return this.osintInvestigationContext;
+    }
+
+    beginOSINTInvestigationHandoff(object, actionId) {
+        const Orchestration = this.getOSINTInvestigationModule();
+        if (!Orchestration) return this.showToast(this.osintView, "INVESTIGATION ORCHESTRATION UNAVAILABLE");
+        let handoff;
+        try {
+            const normalizedObject = Orchestration.createObject(object);
+            const context = this.updateOSINTInvestigationContext({
+                selectedObjectId: normalizedObject.id,
+                selectedObjectType: normalizedObject.type,
+                originatingCapability: normalizedObject.capability,
+                provenance: normalizedObject.provenance
+            });
+            handoff = Orchestration.createHandoff(context, normalizedObject, actionId);
+        } catch (error) {
+            return this.showToast(this.osintView, error && error.message || "HANDOFF BLOCKED");
+        }
+        return this.applyOSINTInvestigationHandoff(handoff);
+    }
+
+    applyOSINTInvestigationHandoff(handoff) {
+        if (!handoff || !handoff.explicit) return this.showToast(this.osintView, "HANDOFF BLOCKED");
+        const payload = handoff.normalizedPayload || {};
+        // A handoff is explicit navigation away from the derived Case Overview.
+        // Keep the active Case data intact, but relinquish the overview render mode
+        // so the destination capability can render its prefilled, idle state.
+        this.osintCaseState = {...this.osintCaseState, mode: "CATALOG"};
+        this.osintGeoState = {...this.osintGeoState, mode: "CATALOG"};
+        this.osintMediaState = {...this.osintMediaState, mode: "CATALOG"};
+        this.osintDomainState = {...this.osintDomainState, mode: "CATALOG"};
+        this.osintResearchState = {...this.osintResearchState, mode: "CATALOG"};
+        this.osintEntityState = {...this.osintEntityState, mode: "CATALOG"};
+        if (handoff.destinationCapability === "DOMAIN_INFRASTRUCTURE_CONTEXT") {
+            this.cancelOSINTDomainInfrastructureVerification(false);
+            this.osintDomainState = {...this.osintDomainState, mode: "DOMAIN", input: payload.target || "", phase: "IDLE", verification: null, activeRequestId: null, lastError: null, analystObservation: "", selectedPublicIp: "", handoff};
+        } else if (handoff.destinationCapability === "GEOSPATIAL_VERIFICATION") {
+            this.cancelOSINTGeoVerification(false);
+            this.osintGeoState = {...this.osintGeoState, mode: "GEO", input: `${payload.latitude}, ${payload.longitude}`, phase: "IDLE", verification: null, providerResult: null, selectedCandidateIndex: 0, activeRequestId: null, lastError: null, investigatorNote: "", investigatorAssessment: "INCONCLUSIVE", handoff};
+        } else if (handoff.destinationCapability === "SOURCE_VERIFICATION") {
+            this.cancelOSINTResearchVerification(false);
+            this.osintResearchState = {mode: "SOURCE", sourceKind: payload.sourceKind === "DOI" ? "DOI" : "URL", input: payload.sourceInput || "", phase: "IDLE", context: null, activeRequestId: null, lastError: null, analystObservation: "", excerpt: "", excerptLocation: "", claimRelationship: "UNKNOWN", selectedFile: null, handoff};
+        } else if (handoff.destinationCapability === "ENTITY_RESOLUTION") {
+            this.osintEntityState = {...this.osintEntityState, mode: "ENTITY", selectedEntityId: payload.entityId || this.osintEntityState && this.osintEntityState.selectedEntityId || null, orchestrationHandoff: handoff};
+        } else if (handoff.destinationCapability === "EVIDENCE_DETAIL") {
+            if (!handoff.caseId || !payload.evidenceId) return this.showToast(this.osintView, "EVIDENCE HANDOFF UNAVAILABLE");
+            return this.openOSINTEvidenceDetail(handoff.caseId, payload.evidenceId);
+        } else return this.showToast(this.osintView, "HANDOFF DESTINATION BLOCKED");
+        this.renderOSINTState();
+        return handoff;
+    }
+
     handoffOSINTEntity(entityId) {
         const entity = this.osintEntityState && this.osintEntityState.entities.find(item => item.id === entityId);
         if (!entity) return;
-        if (["DOMAIN", "IP"].includes(entity.type)) {
-            this.osintDomainState = {...this.osintDomainState, mode: "DOMAIN", input: entity.label, verification: null, lastError: null};
-            this.renderOSINTState();
-            return;
+        const attributes = entity.attributes || [];
+        const domain = attributes.find(item => String(item.field || "").toUpperCase().includes("DOMAIN"));
+        const location = attributes.find(item => String(item.field || "").toUpperCase().includes("LOCATION"));
+        const source = attributes.find(item => String(item.field || "").toUpperCase().includes("SOURCE") || String(item.field || "").toUpperCase().includes("URL"));
+        const payload = {label: entity.label, target: (domain && domain.value) || (["DOMAIN", "IP"].includes(entity.type) ? entity.label : ""), sourceInput: (source && source.value) || (entity.type === "SOURCE" ? entity.label : ""), sourceKind: "URL"};
+        if (location && /^-?\d+(?:\.\d+)?\s*,\s*-?\d+(?:\.\d+)?$/.test(location.value || "")) {
+            const [latitude, longitude] = location.value.split(",").map(Number); payload.latitude = latitude; payload.longitude = longitude;
         }
-        if (entity.type === "LOCATION") {
-            this.osintGeoState = {...this.osintGeoState, mode: "GEO", input: entity.label, verification: null, lastError: null};
-            this.renderOSINTState();
-            return;
-        }
-        if (entity.type === "SOURCE") {
-            this.osintResearchState = {...this.osintResearchState, mode: "SOURCE", sourceKind: "URL", input: entity.label, context: null, lastError: null};
-            this.renderOSINTState();
-            return;
-        }
-        this.showToast(this.osintView, "NO EXPLICIT HANDOFF FOR THIS ENTITY TYPE");
+        const object = {id: entity.id, sourceObjectId: entity.id, type: entity.type, label: entity.label, capability: "ENTITY_RESOLUTION", status: entity.status, confidence: entity.confidence, payload, provenance: {sourceCapability: "ENTITY_RESOLUTION", sourceObjectId: entity.id, sourceType: "LOCAL_ENTITY_RESOLUTION"}};
+        const Orchestration = this.getOSINTInvestigationModule();
+        const actions = Orchestration && Orchestration.availableHandoffs(Orchestration.createObject(object)) || [];
+        const preferred = actions.find(item => item.id === "OPEN_DOMAIN_CONTEXT") || actions.find(item => item.id === "VERIFY_LOCATION") || actions.find(item => item.id === "OPEN_SOURCE_VERIFICATION");
+        if (!preferred) return this.showToast(this.osintView, "NO EXPLICIT HANDOFF FOR THIS ENTITY TYPE");
+        return this.beginOSINTInvestigationHandoff(object, preferred.id);
     }
 
     promoteOSINTEntityEvidence(trigger = null) {
@@ -2815,9 +2881,16 @@ class WorkspaceManager {
 
     renderOSINTEntityWorkspace(grid) {
         const Engine = this.getOSINTEntityModule(); const state = this.osintEntityState || {};
+        const orchestrationHandoff = state.orchestrationHandoff || null;
+        const handoffPayload = orchestrationHandoff && orchestrationHandoff.normalizedPayload || {};
+        const handoffProvenance = orchestrationHandoff && orchestrationHandoff.provenance || {};
+        const handoffLabel = handoffPayload.label || handoffPayload.target || handoffPayload.sourceInput || "";
+        const handoffIdentifier = handoffProvenance.sourceEvidenceId || handoffProvenance.sourceObjectId || "ANALYST ENTERED";
+        const handoffNotice = this.renderOSINTHandoffNotice(orchestrationHandoff);
         const graph = Engine ? Engine.graph(state, {type: state.typeFilter, relationshipStatus: state.relationshipFilter}) : {nodes: [], edges: [], limits: {nodes: 0, edges: 0}};
         const selected = state.entities && state.entities.find(item => item.id === state.selectedEntityId) || null;
         const entityTypes = Engine ? Engine.ENTITY_TYPES : []; const relationTypes = Engine ? Engine.RELATIONSHIP_TYPES : [];
+        const handoffEntityType = orchestrationHandoff && entityTypes.includes(orchestrationHandoff.sourceObjectType) ? orchestrationHandoff.sourceObjectType : "";
         const readout = (label, value, fallback = "NOT AVAILABLE") => `<div><small>${this.escape(label)}</small><strong>${this.escape(value === null || value === undefined || value === "" ? fallback : String(value))}</strong></div>`;
         const positions = new Map(graph.nodes.map((node, index) => {
             const angle = (Math.PI * 2 * index / Math.max(graph.nodes.length, 1)) - Math.PI / 2;
@@ -2831,8 +2904,8 @@ class WorkspaceManager {
         const hints = Engine ? Engine.exactDuplicateHints(state.entities || []) : [];
         const duplicateMarkup = hints.length ? `<section class="osint-entity-duplicates"><small>EXACT IDENTIFIER CANDIDATES · ANALYST REVIEW REQUIRED</small>${hints.map(hint => { const [first, second] = hint.entityIds; const firstEntity = state.entities.find(item => item.id === first); const secondEntity = state.entities.find(item => item.id === second); return `<div><span>${this.escape(hint.key)}</span><strong>${this.escape(firstEntity && firstEntity.label)} ↔ ${this.escape(secondEntity && secondEntity.label)}</strong><button type="button" data-osint-entity-action="potential-link" data-osint-entity-id="${this.escape(first)}" data-osint-entity-target="${this.escape(second)}">LINK POTENTIALLY SAME</button><button type="button" data-osint-entity-action="merge" data-osint-entity-id="${this.escape(first)}" data-osint-entity-target="${this.escape(second)}">MERGE CONFIRMED</button></div>`; }).join("")}</section>` : "";
         const handoffAllowed = selected && ["DOMAIN", "IP", "LOCATION", "SOURCE"].includes(selected.type);
-        grid.innerHTML = `<section class="osint-entity-header workspace-panel"><button type="button" class="osint-back-button" data-osint-entity-action="catalog">‹ OSINT CATALOG</button><div><small>OSINT / IDENTITY · ENTITY RESOLUTION</small><h2>PROVENANCE-AWARE ENTITY CONTEXT</h2><p>Explicit local entity modeling for one investigation. No people search, biometric matching, social crawling, email probing, hidden enrichment or background query.</p></div><div class="osint-entity-status"><small>GRAPH LIMIT</small><strong>${graph.nodes.length} / ${graph.limits.nodes} ENTITIES</strong><span>${graph.edges.length} / ${graph.limits.edges} RELATIONSHIPS</span></div></section>
-            <section class="osint-entity-create workspace-panel"><header><h2>CREATE ENTITY</h2><span>EXPLICIT / EPHEMERAL</span></header><div class="workspace-panel-content"><form data-osint-entity-create-form><label><span>TYPE</span><select class="aegis-select" name="type">${entityTypes.map(type => `<option value="${type}">${this.escape(this.formatOSINTEnum(type))}</option>`).join("")}</select></label><label><span>PREFERRED LABEL</span><input class="aegis-input" name="label" maxlength="240" required placeholder="Synthetic Example Organization"></label><label><span>ATTRIBUTE FIELD / VALUE</span><div class="osint-entity-inline-fields"><input class="aegis-input" name="field" maxlength="80" value="IDENTIFIER"><input class="aegis-input" name="value" maxlength="320" required placeholder="Explicitly supplied value"></div></label><label><span>PROVENANCE</span><div class="osint-entity-inline-fields"><select class="aegis-select" name="sourceType"><option value="ANALYST_OBSERVATION">ANALYST OBSERVATION</option><option value="SOURCE_METADATA">SOURCE METADATA</option><option value="DOMAIN_CONTEXT">DOMAIN CONTEXT</option><option value="GEO_CONTEXT">GEO CONTEXT</option><option value="MEDIA_METADATA">MEDIA METADATA</option><option value="CASE_EVIDENCE">CASE EVIDENCE</option></select><input class="aegis-input" name="sourceIdentifier" maxlength="160" value="ANALYST ENTERED"></div></label><label><span>CONFIDENCE</span><select class="aegis-select" name="confidence"><option>LOW</option><option>MEDIUM</option><option>HIGH</option></select></label><label><span>ALIASES · OPTIONAL</span><input class="aegis-input" name="aliases" maxlength="1200" placeholder="comma separated"></label><footer><button type="submit">CREATE ENTITY</button><button type="button" data-osint-entity-action="clear">CLEAR EPHEMERAL GRAPH</button></footer></form>${state.lastError ? `<section class="osint-panel-error"><strong>ENTITY INPUT REJECTED</strong><p>${this.escape(state.lastError)}</p></section>` : ""}</div></section>
+        grid.innerHTML = `<section class="osint-entity-header workspace-panel"><button type="button" class="osint-back-button" data-osint-entity-action="catalog">‹ OSINT CATALOG</button><div><small>OSINT / IDENTITY · ENTITY RESOLUTION</small><h2>PROVENANCE-AWARE ENTITY CONTEXT</h2><p>Explicit local entity modeling for one investigation. No people search, biometric matching, social crawling, email probing, hidden enrichment or background query.</p>${handoffNotice}</div><div class="osint-entity-status"><small>GRAPH LIMIT</small><strong>${graph.nodes.length} / ${graph.limits.nodes} ENTITIES</strong><span>${graph.edges.length} / ${graph.limits.edges} RELATIONSHIPS</span></div></section>
+            <section class="osint-entity-create workspace-panel"><header><h2>CREATE ENTITY</h2><span>EXPLICIT / EPHEMERAL</span></header><div class="workspace-panel-content"><form data-osint-entity-create-form><label><span>TYPE</span><select class="aegis-select" name="type">${entityTypes.map(type => `<option value="${type}"${handoffEntityType === type ? " selected" : ""}>${this.escape(this.formatOSINTEnum(type))}</option>`).join("")}</select></label><label><span>PREFERRED LABEL</span><input class="aegis-input" name="label" maxlength="240" required placeholder="Synthetic Example Organization" value="${this.escape(handoffLabel)}"></label><label><span>ATTRIBUTE FIELD / VALUE</span><div class="osint-entity-inline-fields"><input class="aegis-input" name="field" maxlength="80" value="${handoffLabel ? "SOURCE_REFERENCE" : "IDENTIFIER"}"><input class="aegis-input" name="value" maxlength="320" required placeholder="Explicitly supplied value" value="${this.escape(handoffLabel)}"></div></label><label><span>PROVENANCE</span><div class="osint-entity-inline-fields"><select class="aegis-select" name="sourceType"><option value="ANALYST_OBSERVATION"${orchestrationHandoff ? "" : " selected"}>ANALYST OBSERVATION</option><option value="SOURCE_METADATA">SOURCE METADATA</option><option value="DOMAIN_CONTEXT">DOMAIN CONTEXT</option><option value="GEO_CONTEXT">GEO CONTEXT</option><option value="MEDIA_METADATA">MEDIA METADATA</option><option value="CASE_EVIDENCE"${orchestrationHandoff ? " selected" : ""}>CASE EVIDENCE</option></select><input class="aegis-input" name="sourceIdentifier" maxlength="160" value="${this.escape(handoffIdentifier)}"></div></label><label><span>CONFIDENCE</span><select class="aegis-select" name="confidence"><option>LOW</option><option>MEDIUM</option><option>HIGH</option></select></label><label><span>ALIASES · OPTIONAL</span><input class="aegis-input" name="aliases" maxlength="1200" placeholder="comma separated"></label><footer><button type="submit">CREATE ENTITY</button><button type="button" data-osint-entity-action="clear">CLEAR EPHEMERAL GRAPH</button></footer></form>${state.lastError ? `<section class="osint-panel-error"><strong>ENTITY INPUT REJECTED</strong><p>${this.escape(state.lastError)}</p></section>` : ""}</div></section>
             <section class="osint-entity-graph-panel workspace-panel"><header><h2>RELATIONSHIP GRAPH</h2><span>BOUNDED / LOCAL</span></header><div class="workspace-panel-content"><div class="osint-entity-filters"><label><span>TYPE</span><select class="aegis-select" data-osint-entity-filter="type"><option value="">ALL TYPES</option>${entityTypes.map(type => `<option value="${type}"${state.typeFilter === type ? " selected" : ""}>${this.escape(this.formatOSINTEnum(type))}</option>`).join("")}</select></label><label><span>RELATIONSHIP STATUS</span><select class="aegis-select" data-osint-entity-filter="relationshipStatus"><option value="">ALL STATES</option>${["UNVERIFIED", "PARTIALLY_RESOLVED", "CONSISTENT", "INCONSISTENT", "AMBIGUOUS", "CONFIRMED_BY_ANALYST"].map(status => `<option value="${status}"${state.relationshipFilter === status ? " selected" : ""}>${this.escape(this.formatOSINTEnum(status))}</option>`).join("")}</select></label></div><figure class="osint-entity-graph" aria-label="Bounded entity relationship graph"><svg viewBox="0 0 1000 500" role="img">${edgeMarkup}${nodeMarkup}<text x="500" y="470" text-anchor="middle" class="osint-entity-graph-caption">SELECT AN ENTITY FROM THE KEY BELOW TO REVIEW PROVENANCE</text></svg></figure><div class="osint-entity-node-list" role="list">${nodeList}</div></div></section>
             <section class="osint-entity-detail workspace-panel"><header><h2>ENTITY DETAIL</h2><span>${this.escape(selected ? selected.type : "NO SELECTION")}</span></header><div class="workspace-panel-content">${selected ? `<section class="osint-entity-identity">${readout("LABEL", selected.label)}${readout("STATUS", selected.status)}${readout("CONFIDENCE", selected.confidence)}${readout("ALIASES", selected.aliases.join(" · "), "NONE")}</section><section class="osint-entity-attributes"><small>ATTRIBUTES / FIELD-LEVEL PROVENANCE</small><ul>${attributes}</ul></section><section class="osint-entity-relationships"><small>RELATIONSHIPS / EVIDENCE-BACKED</small><ul>${relationships || "<li>NO RELATIONSHIPS RECORDED</li>"}</ul></section><label><span>ANALYST NOTE · NOT EXTRACTED FACT</span><textarea class="aegis-input" data-osint-entity-note maxlength="4000">${this.escape(state.analystNote || "")}</textarea></label><footer><button type="button" data-osint-entity-action="edit" data-osint-entity-id="${this.escape(selected.id)}">EDIT ENTITY</button><button type="button" data-osint-entity-action="save">ADD TO CASE</button>${handoffAllowed ? `<button type="button" data-osint-entity-action="handoff" data-osint-entity-id="${this.escape(selected.id)}">OPEN CONTEXT</button>` : ""}<button type="button" data-osint-entity-action="archive" data-osint-entity-id="${this.escape(selected.id)}">ARCHIVE ENTITY</button></footer>` : `<p class="osint-panel-muted">Select an entity to inspect provenance, relationships, contradictions and explicit handoff options.</p>`}</div></section>
             <section class="osint-entity-relationship workspace-panel"><header><h2>LINK ENTITIES</h2><span>EVIDENCE REQUIRED</span></header><div class="workspace-panel-content">${state.entities.length >= 2 ? `<form data-osint-entity-relationship-form><label><span>FROM / TO</span><div class="osint-entity-inline-fields"><select class="aegis-select" name="fromId">${state.entities.map(entity => `<option value="${this.escape(entity.id)}"${entity.id === state.selectedEntityId ? " selected" : ""}>${this.escape(entity.label)}</option>`).join("")}</select><select class="aegis-select" name="toId">${state.entities.map(entity => `<option value="${this.escape(entity.id)}">${this.escape(entity.label)}</option>`).join("")}</select></div></label><label><span>RELATIONSHIP / CONFIDENCE</span><div class="osint-entity-inline-fields"><select class="aegis-select" name="type">${relationTypes.map(type => `<option value="${type}">${this.escape(this.formatOSINTEnum(type))}</option>`).join("")}</select><select class="aegis-select" name="confidence"><option>LOW</option><option>MEDIUM</option><option>HIGH</option></select></div></label><label><span>STATUS</span><select class="aegis-select" name="status"><option>PARTIALLY_RESOLVED</option><option>CONSISTENT</option><option>INCONSISTENT</option><option>AMBIGUOUS</option></select></label><label><span>SUPPORTING OBSERVATION</span><textarea class="aegis-input" name="evidence" maxlength="500" required></textarea></label><label><span>OBSERVATION PROVENANCE</span><div class="osint-entity-inline-fields"><select class="aegis-select" name="sourceType"><option value="ANALYST_OBSERVATION">ANALYST OBSERVATION</option><option value="SOURCE_METADATA">SOURCE METADATA</option><option value="DOMAIN_CONTEXT">DOMAIN CONTEXT</option><option value="CASE_EVIDENCE">CASE EVIDENCE</option></select><input class="aegis-input" name="sourceIdentifier" maxlength="160" value="ANALYST ENTERED"></div></label><label><span>CONTRADICTIONS · OPTIONAL / ONE PER LINE</span><textarea class="aegis-input" name="contradictions" maxlength="2000"></textarea></label><footer><button type="submit">LINK WITH EVIDENCE</button></footer></form>` : `<p class="osint-panel-muted">Create two entities before a relationship can be modeled. A relationship without at least one supporting observation is rejected.</p>`}</div></section>
@@ -2850,7 +2923,7 @@ class WorkspaceManager {
         const dnsMarkup = records.length ? `<div class="osint-domain-records">${records.map(record => `<section><header><strong>${this.escape(record.type)}</strong><span>${this.escape(record.status)}</span></header>${record.values && record.values.length ? `<ul>${record.values.map(value => `<li>${this.escape(value)}</li>`).join("")}</ul>` : `<p>NO VALUES</p>`}</section>`).join("")}</div>` : `<p class="osint-panel-muted">DNS is queried only for an explicit domain using six fixed record types. No recursive lookup or enumeration is available.</p>`;
         const networkMarkup = verification && verification.network ? `<section class="osint-domain-network-readout">${readout("PUBLIC IP", verification.network.ip)}${readout("ASN", (verification.network.asns || []).join(" · "))}${readout("PREFIX", verification.network.prefix)}${readout("RIR CONTEXT", verification.network.rir)}${readout("ALLOCATION", verification.network.allocationContext)}</section>` : target && target.targetType === "DOMAIN" && addresses.length ? `<section class="osint-domain-network-select"><label><span>DNS-OBSERVED PUBLIC ADDRESS</span><select class="aegis-select" data-osint-domain-ip><option value="">SELECT ONE ADDRESS</option>${addresses.map(ip => `<option value="${this.escape(ip)}"${state.selectedPublicIp === ip ? " selected" : ""}>${this.escape(ip)}</option>`).join("")}</select></label><button type="button" data-osint-domain-action="network"${state.selectedPublicIp ? "" : " disabled"}>GET SELECTED NETWORK CONTEXT</button><small>Explicit second action only. AegisUI does not automatically fan out from DNS results.</small></section>` : `<p class="osint-panel-muted">Network/ASN context is available for an explicitly entered public IP, or after you explicitly select one DNS-observed public address.</p>`;
         const status = loading ? "ANALYZING" : state.lastError ? state.lastError.code || "ERROR" : verification ? verification.verificationStatus : "READY";
-        grid.innerHTML = `<section class="osint-domain-header workspace-panel"><button type="button" class="osint-back-button" data-osint-domain-action="catalog">‹ OSINT CATALOG</button><div><small>OSINT / DOMAIN &amp; INFRASTRUCTURE CONTEXT</small><h2>PASSIVE DOMAIN CONTEXT</h2><p>One public domain or public IP, explicitly supplied by the analyst. No scan, probing, brute force, crawler, monitoring or hidden target history.</p></div><div class="osint-domain-status"><small>STATE</small><strong>${this.escape(this.formatOSINTEnum(status))}</strong><span>CONFIDENCE · ${this.escape(verification && verification.confidence || "LOW")}</span></div></section>
+        grid.innerHTML = `<section class="osint-domain-header workspace-panel"><button type="button" class="osint-back-button" data-osint-domain-action="catalog">‹ OSINT CATALOG</button><div><small>OSINT / DOMAIN &amp; INFRASTRUCTURE CONTEXT</small><h2>PASSIVE DOMAIN CONTEXT</h2><p>One public domain or public IP, explicitly supplied by the analyst. No scan, probing, brute force, crawler, monitoring or hidden target history.</p>${this.renderOSINTHandoffNotice(state.handoff)}</div><div class="osint-domain-status"><small>STATE</small><strong>${this.escape(this.formatOSINTEnum(status))}</strong><span>CONFIDENCE · ${this.escape(verification && verification.confidence || "LOW")}</span></div></section>
             <section class="osint-domain-query workspace-panel"><header><h2>TARGET INPUT</h2><span>EXPLICIT / EPHEMERAL</span></header><div class="workspace-panel-content"><form data-osint-domain-form novalidate><label><span>PUBLIC DOMAIN, PUBLIC IPv4, PUBLIC IPv6 OR HTTP(S) URL</span><input class="aegis-input" data-osint-domain-input maxlength="512" autocomplete="off" spellcheck="false" value="${this.escape(state.input || "")}" placeholder="example.org · 8.8.8.8 · 2001:4860:4860::8888"></label><small>Private, reserved, loopback, CIDR, wildcard, multiple targets, credentials and non-HTTP(S) URI schemes are rejected before any provider request.</small><footer><button type="submit" ${loading ? "disabled" : ""}>${loading ? "ANALYZING…" : "ANALYZE"}</button>${loading ? `<button type="button" data-osint-domain-action="cancel">CANCEL</button>` : ""}<button type="button" data-osint-domain-action="clear">CLEAR</button></footer></form>${state.lastError ? `<section class="osint-panel-error"><strong>${this.escape(this.formatOSINTEnum(state.lastError.code || "ERROR"))}</strong><p>${this.escape(state.lastError.message || "Infrastructure context did not complete.")}</p></section>` : ""}</div></section>
             <section class="osint-domain-target workspace-panel"><header><h2>NORMALIZED TARGET</h2><span>${this.escape(target && target.source || "AWAITING INPUT")}</span></header><div class="workspace-panel-content osint-domain-target-readout">${readout("ORIGINAL INPUT", target && target.originalInput, "NOT QUERIED")}${readout("NORMALIZED TARGET", target && target.normalizedTarget, "NOT QUERIED")}${readout("TYPE", target && target.targetType, "NOT QUERIED")}</div></section>
             <section class="osint-domain-dns workspace-panel"><header><h2>DNS CONTEXT</h2><span>FIXED / BOUNDED</span></header><div class="workspace-panel-content">${dnsMarkup}</div></section>
@@ -2908,7 +2981,7 @@ class WorkspaceManager {
         const locationMarkup = location ? `<section class="osint-geo-location"><header><small>NORMALIZED LOCATION</small><strong>${this.escape(this.geoLocationLabel(location))}</strong></header><div class="osint-geo-readout"><div><small>LATITUDE</small><strong>${this.escape(location.latitude.toFixed(6))}</strong></div><div><small>LONGITUDE</small><strong>${this.escape(location.longitude.toFixed(6))}</strong></div><div><small>FORMAT</small><strong>${this.escape(location.coordinateFormat || "DECIMAL")}</strong></div><div><small>COUNTRY</small><strong>${this.escape(location.country || "NOT RETURNED")}</strong></div>${location.elevationM !== null && location.elevationM !== undefined ? `<div><small>ELEVATION</small><strong>${this.escape(String(location.elevationM))} M</strong></div>` : ""}</div></section>` : `<section class="osint-geo-empty"><strong>NO NORMALIZED LOCATION</strong><span>Coordinates normalize locally. Place text is sent only to the approved public geocoding provider after you select VERIFY.</span></section>`;
         const providerMarkup = candidates.length ? `<label class="osint-geo-candidate"><span>PROVIDER CANDIDATE</span><select class="aegis-select" data-osint-geo-candidate>${candidates.map((candidate, index) => `<option value="${index}"${index === state.selectedCandidateIndex ? " selected" : ""}>${this.escape(candidate.displayName || `${candidate.latitude}, ${candidate.longitude}`)}</option>`).join("")}</select></label>` : observations.length ? `<ol class="osint-geo-observations">${observations.map(item => `<li><strong>${this.escape(item.providerName)}</strong><span>${this.escape(item.displayName || `${item.latitude.toFixed(5)}, ${item.longitude.toFixed(5)}`)}</span><small>${this.escape(item.type)} · ${this.escape(item.observedAt)}</small></li>`).join("")}</ol>` : `<p class="osint-panel-muted">No provider observation is present. A local coordinate parse is not treated as external verification.</p>`;
         const investigationObservations = verification && verification.investigatorObservations || [];
-        const handoffMarkup = state.handoff && state.handoff.provenance === "IMAGE_METADATA" ? `<small class="osint-geo-handoff">SOURCE · IMAGE METADATA · Explicit handoff only; no provider query has run.</small>` : "";
+        const handoffMarkup = this.renderOSINTHandoffNotice(state.handoff);
         grid.innerHTML = `<section class="osint-geo-header workspace-panel"><button type="button" class="osint-back-button" data-osint-geo-action="catalog">‹ OSINT CATALOG</button><div><small>OSINT / GEOSPATIAL VERIFICATION</small><h2>LOCATION CONTEXT CHECK</h2><p>Explicit, passive normalization only. No tracking, no background lookup, no hidden query history and no automatic map mutation.</p>${handoffMarkup}</div><div class="osint-geo-status"><small>STATE</small><strong>${this.escape(this.formatOSINTEnum(stateText))}</strong><span>CONFIDENCE · ${this.escape(confidence)}</span></div></section>
             <section class="osint-geo-query workspace-panel"><header><h2>LOCATION INPUT</h2><span>EPHEMERAL / USER INITIATED</span></header><div class="workspace-panel-content"><form data-osint-geo-form novalidate><label><span>COORDINATES OR PUBLIC PLACE TEXT</span><input class="aegis-input" data-osint-geo-input maxlength="240" autocomplete="off" spellcheck="false" value="${this.escape(state.input || "")}" placeholder="51.5074, -0.1278 · 51° 30' 26.6\" N, 0° 7' 39.2\" W · London"></label><small>Accepted: latitude/longitude decimal coordinates, common DMS, or a short public place name. URLs, scripts and ambiguous forms are rejected.</small><footer><button type="submit" ${loading ? "disabled" : ""}>${loading ? "VERIFYING…" : "VERIFY LOCATION"}</button>${loading ? `<button type="button" data-osint-geo-action="cancel">CANCEL</button>` : ""}<button type="button" data-osint-geo-action="clear">CLEAR</button></footer></form>${error ? `<section class="osint-panel-error"><strong>${this.escape(this.formatOSINTEnum(error.code || "ERROR"))}</strong><p>${this.escape(error.message || "Geospatial verification did not complete.")}</p></section>` : ""}</div></section>
             <section class="osint-geo-result workspace-panel"><header><h2>VERIFICATION RESULT</h2><span>${this.escape(this.formatOSINTEnum(status))} · ${this.escape(confidence)}</span></header><div class="workspace-panel-content">${locationMarkup}<section class="osint-geo-reasoning"><small>ASSESSMENT</small><ul>${(verification && verification.reasoning || ["Awaiting explicit input."]).map(reason => `<li>${this.escape(reason)}</li>`).join("")}</ul></section>${providerMarkup}<footer>${canSave ? `<button type="button" data-osint-geo-action="save">ADD TO CASE</button>` : `<span class="osint-action-unavailable">ADD TO CASE AVAILABLE AFTER A REVIEWED PROVIDER OBSERVATION</span>`}</footer></div></section>
@@ -3230,9 +3303,60 @@ class WorkspaceManager {
         this.osintCaseState.activeCase = response;
         this.osintCaseState.mode = "CASE";
         this.osintCaseState.lastError = null;
+        this.updateOSINTInvestigationContext({activeCaseId: response.case.id});
         if (this.osintAccess && !options.silent) this.osintAccess.recordAction(null, "CASE_OPENED", {state: "CASE", resultSummary: "Local case opened"});
         if (options.render !== false && this.osintView) this.renderOSINTState();
         return response;
+    }
+
+    getOSINTCaseOverview() {
+        const Orchestration = this.getOSINTInvestigationModule();
+        if (!Orchestration) return null;
+        return Orchestration.deriveCaseOverview({activeCase: this.osintCaseState && this.osintCaseState.activeCase, entityState: this.osintEntityState});
+    }
+
+    renderOSINTCaseOverview(grid) {
+        const overview = this.getOSINTCaseOverview();
+        const activeCase = overview && overview.case;
+        if (!overview || !activeCase) {
+            this.osintCaseState.mode = "CASE";
+            return this.renderOSINTCaseWorkspace(grid);
+        }
+        const context = this.osintInvestigationContext || this.updateOSINTInvestigationContext({activeCaseId: activeCase.id});
+        const selected = overview.objects.find(item => item.id === context.selectedObjectId) || null;
+        const Orchestration = this.getOSINTInvestigationModule();
+        const actions = selected && Orchestration ? Orchestration.availableHandoffs(selected) : [];
+        const readout = (label, value) => `<div><small>${this.escape(label)}</small><strong>${this.escape(String(value))}</strong></div>`;
+        const objectList = overview.categories.map(group => `<section class="osint-investigation-object-group"><header><h3>${this.escape(this.formatOSINTEnum(group.type))}</h3><span>${group.count}</span></header><div>${group.objects.map(item => `<button type="button" class="osint-investigation-object${selected && selected.id === item.id ? " selected" : ""}" data-osint-investigation-action="select-object" data-osint-object-id="${this.escape(item.id)}"><strong>${this.escape(item.label)}</strong><span>${this.escape(this.formatOSINTEnum(item.status))} · ${this.escape(item.confidence)} · ${this.escape(this.formatOSINTEnum(item.capability))}</span><small>${this.escape(item.provenance.sourceCapability)} · ${this.escape(item.evidenceId || "EPHEMERAL")}</small></button>`).join("")}</div></section>`).join("") || `<p class="osint-panel-muted">No normalized investigation objects are associated with this case yet. Explicitly promote a reviewed result through Evidence Preview.</p>`;
+        const actionMarkup = selected ? `<section class="osint-investigation-selected"><small>SELECTED OBJECT</small><strong>${this.escape(selected.label)}</strong><span>${this.escape(this.formatOSINTEnum(selected.type))} · ${this.escape(selected.provenance.sourceCapability)}</span><p>Opening another capability transfers normalized context only. It never starts a provider request or persists a new record.</p><footer>${actions.length ? actions.map(item => `<button type="button" data-osint-investigation-action="handoff" data-osint-object-id="${this.escape(selected.id)}" data-osint-handoff-action="${this.escape(item.id)}">${this.escape(item.label)}</button>`).join("") : `<span class="osint-action-unavailable">NO COMPATIBLE EXPLICIT ACTION</span>`}${selected.evidenceId ? `<button type="button" data-osint-investigation-action="view-evidence" data-osint-evidence-id="${this.escape(selected.evidenceId)}">VIEW EVIDENCE</button>` : ""}</footer></section>` : `<p class="osint-panel-muted">Select an object to see only the actions that its normalized type and provenance permit.</p>`;
+        const questions = overview.openQuestions.length ? `<ol class="osint-investigation-question-list">${overview.openQuestions.map(item => `<li><strong>${this.escape(this.formatOSINTEnum(item.kind))}</strong><span>${this.escape(item.label)}</span><small>${this.escape(item.detail)}</small></li>`).join("")}</ol>` : `<p class="osint-panel-muted">No unresolved normalized observations or recorded contradictions are currently derived from this case.</p>`;
+        const activity = overview.recentActivity.length ? `<ol class="osint-case-timeline-list">${overview.recentActivity.map(item => `<li><strong>${this.escape(this.formatOSINTEnum(item.type))}</strong><span>${this.escape(item.summary)}</span><small>${this.escape(new Date(item.timestamp).toLocaleString())}</small></li>`).join("")}</ol>` : `<p class="osint-panel-muted">No persistent case activity yet. Ephemeral navigation is intentionally not written to the timeline.</p>`;
+        grid.innerHTML = `<section class="osint-investigation-header workspace-panel"><button type="button" class="osint-back-button" data-osint-investigation-action="case">‹ CASE WORKSPACE</button><div><small>OSINT / CASE / EXPLICIT ORCHESTRATION</small><h2>CASE OVERVIEW</h2><p>${this.escape(activeCase.title)} · a local inventory of explicit evidence, context and unresolved observations. No autonomous query chain, hidden history or automatic persistence.</p></div><span>${this.escape(this.formatOSINTEnum(activeCase.status))} · ${this.escape(this.formatOSINTEnum(activeCase.priority))}</span></section>
+            <section class="osint-investigation-summary workspace-panel"><header><h2>INVESTIGATION STATUS</h2><span>DERIVED / LOCAL</span></header><div class="workspace-panel-content osint-investigation-readout">${readout("EVIDENCE", overview.counts.evidence)}${readout("EPHEMERAL ENTITIES", overview.counts.entities)}${readout("RELATIONSHIPS", overview.counts.relationships)}${readout("NOTES", overview.counts.notes)}${readout("TIMELINE EVENTS", overview.counts.timeline)}${readout("NORMALIZED OBJECTS", overview.counts.objects)}</div></section>
+            <section class="osint-investigation-index workspace-panel"><header><h2>INVESTIGATION OBJECT INDEX</h2><span>CASE-DERIVED</span></header><div class="workspace-panel-content">${objectList}</div></section>
+            <section class="osint-investigation-actions workspace-panel"><header><h2>AVAILABLE ACTIONS</h2><span>EXPLICIT / NO AUTO QUERY</span></header><div class="workspace-panel-content">${actionMarkup}</div></section>
+            <section class="osint-investigation-questions workspace-panel"><header><h2>OPEN QUESTIONS</h2><span>${overview.openQuestions.length} UNRESOLVED</span></header><div class="workspace-panel-content">${questions}</div></section>
+            <section class="osint-investigation-activity workspace-panel"><header><h2>RECENT ACTIVITY</h2><span>PERSISTENT CASE TIMELINE</span></header><div class="workspace-panel-content">${activity}</div></section>
+            <section class="osint-investigation-provenance workspace-panel"><header><h2>PROVENANCE HEALTH</h2><span>INVENTORY ONLY</span></header><div class="workspace-panel-content osint-investigation-readout">${readout("WITH PROVENANCE", overview.provenanceHealth.withProvenance)}${readout("MISSING USEFUL PROVENANCE", overview.provenanceHealth.missingProvenance)}${readout("INTEGRITY VALID", overview.provenanceHealth.evidenceIntegrityChecked)}${readout("INTEGRITY INVALID", overview.provenanceHealth.integrityInvalid)}<p>Case Overview does not resolve contradictions, create entities, create relationships or bypass Evidence Preview. Those remain explicit analyst actions in their owning capability.</p></div></section>`;
+    }
+
+    handleOSINTInvestigationAction(action, trigger) {
+        const overview = this.getOSINTCaseOverview();
+        if (action === "case") { this.osintCaseState.mode = "CASE"; this.renderOSINTState(); return; }
+        if (!overview) return;
+        if (action === "select-object") {
+            const object = overview.objects.find(item => item.id === trigger.dataset.osintObjectId);
+            if (!object) return;
+            this.updateOSINTInvestigationContext({activeCaseId: overview.case && overview.case.id, selectedObjectId: object.id, selectedObjectType: object.type, originatingCapability: object.capability, provenance: object.provenance});
+            this.renderOSINTState();
+            return;
+        }
+        if (action === "view-evidence") return this.openOSINTEvidenceDetail(this.osintCaseState.activeCaseId, trigger.dataset.osintEvidenceId, trigger);
+        if (action === "handoff") {
+            const object = overview.objects.find(item => item.id === trigger.dataset.osintObjectId);
+            if (!object) return this.showToast(this.osintView, "INVESTIGATION OBJECT UNAVAILABLE");
+            return this.beginOSINTInvestigationHandoff(object, trigger.dataset.osintHandoffAction);
+        }
     }
 
     renderOSINTCaseWorkspace(grid) {
@@ -3246,7 +3370,7 @@ class WorkspaceManager {
         const timeline = active && Array.isArray(active.timeline) ? active.timeline : [];
         const notes = active && Array.isArray(active.notes) ? active.notes : [];
         const activeMarkup = active && active.case
-            ? `<section class="osint-case-active workspace-panel"><header><div><small>ACTIVE INVESTIGATION</small><h2>${this.escape(active.case.title)}</h2><p>${this.escape(active.case.description || "No description recorded.")}</p></div><span class="osint-case-status">${this.escape(this.formatOSINTEnum(active.case.status))} · ${this.escape(this.formatOSINTEnum(active.case.priority))}</span></header><div class="osint-case-active-content"><div class="osint-case-metadata"><div><small>EVIDENCE</small><strong>${evidence.length}</strong></div><div><small>TAGS</small><strong>${this.escape((active.case.tags || []).join(" · ") || "NONE")}</strong></div><div><small>UPDATED</small><strong>${this.escape(new Date(active.case.updatedAt).toLocaleString())}</strong></div></div><footer><button type="button" data-osint-case-action="edit" data-osint-case-id="${this.escape(active.case.id)}">EDIT CASE</button><button type="button" data-osint-case-action="archive" data-osint-case-id="${this.escape(active.case.id)}">ARCHIVE</button><button type="button" data-osint-case-action="export-json" data-osint-case-id="${this.escape(active.case.id)}">EXPORT JSON</button><button type="button" data-osint-case-action="export-markdown" data-osint-case-id="${this.escape(active.case.id)}">EXPORT MARKDOWN</button></footer></div></section>
+            ? `<section class="osint-case-active workspace-panel"><header><div><small>ACTIVE INVESTIGATION</small><h2>${this.escape(active.case.title)}</h2><p>${this.escape(active.case.description || "No description recorded.")}</p></div><span class="osint-case-status">${this.escape(this.formatOSINTEnum(active.case.status))} · ${this.escape(this.formatOSINTEnum(active.case.priority))}</span></header><div class="osint-case-active-content"><div class="osint-case-metadata"><div><small>EVIDENCE</small><strong>${evidence.length}</strong></div><div><small>TAGS</small><strong>${this.escape((active.case.tags || []).join(" · ") || "NONE")}</strong></div><div><small>UPDATED</small><strong>${this.escape(new Date(active.case.updatedAt).toLocaleString())}</strong></div></div><footer><button type="button" data-osint-case-action="overview" data-osint-case-id="${this.escape(active.case.id)}">CASE OVERVIEW</button><button type="button" data-osint-case-action="edit" data-osint-case-id="${this.escape(active.case.id)}">EDIT CASE</button><button type="button" data-osint-case-action="archive" data-osint-case-id="${this.escape(active.case.id)}">ARCHIVE</button><button type="button" data-osint-case-action="export-json" data-osint-case-id="${this.escape(active.case.id)}">EXPORT JSON</button><button type="button" data-osint-case-action="export-markdown" data-osint-case-id="${this.escape(active.case.id)}">EXPORT MARKDOWN</button></footer></div></section>
                 <section class="osint-case-evidence workspace-panel"><header><h2>EVIDENCE</h2><span>${evidence.length} LOCAL OBJECTS</span></header><div class="osint-case-panel-content"><button type="button" data-osint-case-action="manual-evidence" data-osint-case-id="${this.escape(active.case.id)}">ADD MANUAL EVIDENCE</button>${evidence.length ? `<ol class="osint-case-evidence-list">${evidence.map(item => `<li class="${item.unreadable || item.integrity && item.integrity.status === "INVALID" ? "invalid" : ""}"><div><strong>${this.escape(item.title || item.id)}</strong><span>${this.escape(this.formatOSINTEnum(item.type || "UNKNOWN"))} · ${this.escape(item.providerName || "MANUAL")}</span><small>${this.escape(this.formatOSINTEnum(item.integrity && item.integrity.status || "UNKNOWN"))} · ${this.escape((item.tags || []).join(" · ") || "NO TAGS")}</small></div><div><button type="button" data-osint-case-action="evidence-view" data-osint-case-id="${this.escape(active.case.id)}" data-osint-evidence-id="${this.escape(item.id)}">VIEW</button><button type="button" data-osint-case-action="evidence-verify" data-osint-case-id="${this.escape(active.case.id)}" data-osint-evidence-id="${this.escape(item.id)}">VERIFY</button><button type="button" data-osint-case-action="evidence-remove" data-osint-case-id="${this.escape(active.case.id)}" data-osint-evidence-id="${this.escape(item.id)}">REMOVE</button></div></li>`).join("")}</ol>` : `<p class="osint-panel-muted">Run a permitted provider query, then use SAVE TO CASE. Results are never persisted automatically.</p>`}</div></section>
                 <section class="osint-case-timeline workspace-panel"><header><h2>CASE TIMELINE</h2><span>PERSISTENT</span></header><div class="osint-case-panel-content">${timeline.length ? `<ol class="osint-case-timeline-list">${timeline.slice().reverse().slice(0, 20).map(event => `<li><strong>${this.escape(this.formatOSINTEnum(event.type))}</strong><span>${this.escape(event.summary)}</span><small>${this.escape(new Date(event.timestamp).toLocaleString())}</small></li>`).join("")}</ol>` : `<p class="osint-panel-muted">No persistent case events yet.</p>`}</div></section>
                 <section class="osint-case-notes workspace-panel"><header><h2>NOTES</h2><span>${notes.length} LOCAL NOTES</span></header><div class="osint-case-panel-content">${notes.length ? `<ol class="osint-case-notes-list">${notes.slice().reverse().slice(0, 10).map(note => `<li><div class="osint-case-note-content"><strong>${this.escape(new Date(note.createdAt).toLocaleString())}</strong><span>${this.escape(note.text)}</span><small>${note.evidenceId ? "EVIDENCE NOTE" : "CASE NOTE"}</small></div><button type="button" data-osint-case-action="note-edit" data-osint-case-id="${this.escape(active.case.id)}" data-osint-note-id="${this.escape(note.id)}">EDIT</button></li>`).join("")}</ol>` : `<p class="osint-panel-muted">No local notes yet.</p>`}<form data-osint-case-note-form data-osint-case-id="${this.escape(active.case.id)}"><label><span>ADD CASE NOTE</span><textarea class="aegis-input" name="text" maxlength="${window.OSINTCaseModel ? window.OSINTCaseModel.LIMITS.note : 8000}" required></textarea></label><button type="submit">ADD NOTE</button></form></div></section>`
@@ -3259,6 +3383,7 @@ class WorkspaceManager {
         const evidenceId = trigger && trigger.dataset.osintEvidenceId;
         const noteId = trigger && trigger.dataset.osintNoteId;
         if (action === "workspace") { this.osintCaseState.mode = "CASE"; this.renderOSINTState(); return; }
+        if (action === "overview") { if (this.osintCaseState.activeCase) { this.osintCaseState.mode = "OVERVIEW"; this.updateOSINTInvestigationContext({activeCaseId: this.osintCaseState.activeCaseId}); this.renderOSINTState(); } return; }
         if (action === "catalog") { this.osintCaseState.mode = "CATALOG"; this.renderOSINTState(); return; }
         if (action === "new") return this.openOSINTNewCaseDialog(trigger);
         if (action === "open") return this.openOSINTCaseById(caseId);

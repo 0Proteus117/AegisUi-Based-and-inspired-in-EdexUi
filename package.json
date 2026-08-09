@@ -1,7 +1,7 @@
 {
   "name": "aegis-ui",
   "productName": "AegisUi",
-  "version": "2.5.6",
+  "version": "2.5.7",
   "description": "AegisUi local-first engineering cockpit for Apple Silicon.",
   "keywords": [
     "desktop",
