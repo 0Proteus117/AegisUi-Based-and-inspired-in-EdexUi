@@ -24,8 +24,13 @@ registry.PROVIDERS.forEach(provider => {
     if (!provider.id || !provider.name || !provider.category || !provider.providerType || !provider.accessMode) {
         failures.push(`INVALID_PROVIDER:${provider.id || "unknown"}`);
     }
-    if (!referenceOnly && (!provider.officialUrl || !["WEB", "API"].includes(provider.accessMode))) {
+    const externalProvider = ["WEB", "API"].includes(provider.accessMode);
+    const localProvider = provider.accessMode === "LOCAL" && provider.providerType === "LOCAL_TOOL";
+    if (!referenceOnly && externalProvider && !provider.officialUrl) {
         failures.push(`INVALID_LAUNCHABLE_PROVIDER:${provider.id}`);
+    }
+    if (!referenceOnly && !externalProvider && !localProvider) {
+        failures.push(`INVALID_PROVIDER_ACCESS_POLICY:${provider.id}`);
     }
     if (referenceOnly && (provider.officialUrl || provider.launchAllowed || provider.copyUrlAllowed)) {
         failures.push(`INVALID_REFERENCE_PROVIDER:${provider.id}`);

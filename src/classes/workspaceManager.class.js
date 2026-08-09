@@ -1571,7 +1571,12 @@ class WorkspaceManager {
             activeRequestId: null,
             lastError: null,
             investigatorNote: "",
-            investigatorAssessment: "INCONCLUSIVE"
+            investigatorAssessment: "INCONCLUSIVE",
+            handoff: null
+        };
+        this.osintMediaState = this.osintMediaState || {
+            mode: "CATALOG", phase: "IDLE", result: null, previewUrl: null,
+            analystObservation: "", lastError: null, selectedFile: null
         };
         this.osintState.filters = {...{providerStatus: "", riskProfile: "", legalStatus: ""}, ...(this.osintState.filters || {})};
         this.renderOSINTState(view, definition);
@@ -1599,6 +1604,12 @@ class WorkspaceManager {
             return;
         }
 
+        if (this.osintMediaState && this.osintMediaState.mode === "MEDIA") {
+            this.renderOSINTVisualMediaWorkspace(grid);
+            this.bindOSINTDeck(view);
+            return;
+        }
+
         if (!activeCategory) {
             const featured = typeof registry.getFeaturedProviders === "function"
                 ? registry.getFeaturedProviders()
@@ -1610,7 +1621,7 @@ class WorkspaceManager {
                         <small>PUBLIC-SOURCE / EVIDENCE-AWARE RESEARCH</small>
                         <h2>OSINT TOOL CATALOG</h2>
                         <p>Choose an investigation domain. Every entry carries an explicit access and policy state before any external resource can be launched.</p>
-                        <div class="osint-hero-actions"><button type="button" class="osint-case-workspace-button" data-osint-case-action="workspace">CASE WORKSPACE</button><button type="button" class="osint-case-workspace-button" data-osint-geo-action="open">GEO VERIFICATION</button></div>
+                        <div class="osint-hero-actions"><button type="button" class="osint-case-workspace-button" data-osint-case-action="workspace">CASE WORKSPACE</button><button type="button" class="osint-case-workspace-button" data-osint-geo-action="open">GEO VERIFICATION</button><button type="button" class="osint-case-workspace-button" data-osint-media-action="open">VISUAL VERIFICATION</button></div>
                     </div>
                     <div class="osint-command-stats">
                         <div><small>CATEGORIES</small><strong>${registry.CATEGORIES.length}</strong></div>
@@ -1637,7 +1648,7 @@ class WorkspaceManager {
             grid.innerHTML = `
                 <section class="osint-category-header workspace-panel">
                     <button type="button" class="osint-back-button" data-osint-back>‹ ALL DOMAINS</button>
-                    <div class="osint-hero-actions"><button type="button" class="osint-case-workspace-button" data-osint-case-action="workspace">CASE WORKSPACE</button>${activeCategory.id === "geospatial" ? `<button type="button" class="osint-case-workspace-button" data-osint-geo-action="open">GEO VERIFICATION</button>` : ""}</div>
+                    <div class="osint-hero-actions"><button type="button" class="osint-case-workspace-button" data-osint-case-action="workspace">CASE WORKSPACE</button>${activeCategory.id === "geospatial" ? `<button type="button" class="osint-case-workspace-button" data-osint-geo-action="open">GEO VERIFICATION</button><button type="button" class="osint-case-workspace-button" data-osint-media-action="open">VISUAL VERIFICATION</button>` : ""}</div>
                     <span class="osint-category-icon">${this.escape(activeCategory.icon)}</span>
                     <div><small>OSINT DOMAIN / ${this.escape(activeCategory.id)}</small><h2>${this.escape(activeCategory.title)}</h2><p>${this.escape(activeCategory.description)}</p></div>
                     <strong>${providers.length} / ${allCategoryProviders.length} SOURCES</strong>
@@ -1753,7 +1764,7 @@ class WorkspaceManager {
     bindOSINTDeck(view = this.osintView) {
         if (!view || view.dataset.osintDeckBound === "true") return;
         this.boundOSINTDeckClick = event => {
-            const target = event.target.closest("[data-osint-category], [data-osint-back], [data-osint-filter-clear], [data-osint-tool], [data-osint-panel-action], [data-osint-history-clear], [data-osint-query-cancel], [data-osint-save-result], [data-osint-case-action], [data-osint-geo-action]");
+            const target = event.target.closest("[data-osint-category], [data-osint-back], [data-osint-filter-clear], [data-osint-tool], [data-osint-panel-action], [data-osint-history-clear], [data-osint-query-cancel], [data-osint-save-result], [data-osint-case-action], [data-osint-geo-action], [data-osint-media-action]");
             if (!target || !view.contains(target)) return;
             if (target.matches("[data-osint-category]")) {
                 this.osintState.categoryId = target.dataset.osintCategory;
@@ -1794,9 +1805,19 @@ class WorkspaceManager {
                 this.handleOSINTGeoAction(target.dataset.osintGeoAction, target);
                 return;
             }
+            if (target.matches("[data-osint-media-action]")) {
+                this.handleOSINTMediaAction(target.dataset.osintMediaAction, target);
+                return;
+            }
             if (target.matches("[data-osint-panel-action]")) this.handleOSINTPanelAction(target.dataset.osintPanelAction, target);
         };
         this.boundOSINTDeckChange = event => {
+            const mediaFile = event.target.closest("[data-osint-media-file]");
+            if (mediaFile && view.contains(mediaFile)) {
+                const selected = mediaFile.files && mediaFile.files[0];
+                if (selected) this.inspectOSINTMediaFile(selected);
+                return;
+            }
             const geoCandidate = event.target.closest("[data-osint-geo-candidate]");
             if (geoCandidate && view.contains(geoCandidate)) {
                 this.osintGeoState.selectedCandidateIndex = Math.max(0, Number(geoCandidate.value) || 0);
@@ -1815,6 +1836,11 @@ class WorkspaceManager {
             this.renderOSINTState(view);
         };
         this.boundOSINTDeckInput = event => {
+            const mediaObservation = event.target.closest("[data-osint-media-observation]");
+            if (mediaObservation && view.contains(mediaObservation)) {
+                this.osintMediaState.analystObservation = mediaObservation.value.slice(0, 4000);
+                return;
+            }
             const geoInput = event.target.closest("[data-osint-geo-input]");
             if (geoInput && view.contains(geoInput)) {
                 this.osintGeoState.input = geoInput.value.slice(0, 240);
@@ -1889,6 +1915,7 @@ class WorkspaceManager {
         delete view.dataset.osintDeckBound;
         this.cancelActiveOSINTQuery({reason: "WORKSPACE_CLOSED", render: false});
         this.cancelOSINTGeoVerification(false);
+        this.releaseOSINTMediaPreview();
         this.closeOSINTDetail();
         this.closeOSINTCaseDialog();
     }
@@ -2056,6 +2083,120 @@ class WorkspaceManager {
         return this.osintProviderRegistry && this.osintProviderRegistry.getProvider("open-meteo-geocoding");
     }
 
+    getOSINTVisualMediaModule() { return window.OSINTVisualMediaVerification || null; }
+
+    getOSINTVisualMediaProvider() {
+        return this.osintProviderRegistry && this.osintProviderRegistry.getProvider("local-media-inspection");
+    }
+
+    releaseOSINTMediaPreview() {
+        const state = this.osintMediaState;
+        if (state && state.previewUrl && typeof URL !== "undefined" && typeof URL.revokeObjectURL === "function") URL.revokeObjectURL(state.previewUrl);
+        if (state) state.previewUrl = null;
+    }
+
+    handleOSINTMediaAction(action, trigger = null) {
+        const state = this.osintMediaState;
+        if (!state) return;
+        if (action === "open") {
+            state.mode = "MEDIA";
+            this.osintState.categoryId = "geospatial";
+            this.renderOSINTState();
+            return;
+        }
+        if (action === "catalog") {
+            this.releaseOSINTMediaPreview();
+            this.osintMediaState = {mode: "CATALOG", phase: "IDLE", result: null, previewUrl: null, analystObservation: "", lastError: null, selectedFile: null};
+            this.renderOSINTState();
+            return;
+        }
+        if (action === "clear") {
+            this.releaseOSINTMediaPreview();
+            this.osintMediaState = {mode: "MEDIA", phase: "IDLE", result: null, previewUrl: null, analystObservation: "", lastError: null, selectedFile: null};
+            this.renderOSINTState();
+            return;
+        }
+        if (action === "verify-location") {
+            const geo = state.result && state.result.geo;
+            if (!geo) return this.showToast(this.osintView, "NO IMAGE METADATA LOCATION AVAILABLE");
+            this.osintGeoState = {
+                ...this.osintGeoState,
+                mode: "GEO",
+                input: `${geo.latitude}, ${geo.longitude}`,
+                phase: "IDLE",
+                verification: null,
+                providerResult: null,
+                selectedCandidateIndex: 0,
+                activeRequestId: null,
+                lastError: null,
+                investigatorNote: "",
+                investigatorAssessment: "INCONCLUSIVE",
+                handoff: {provenance: "IMAGE_METADATA", originalMediaHash: state.result.integrity && state.result.integrity.originalMediaHash || null}
+            };
+            this.renderOSINTState();
+            return;
+        }
+        if (action === "save") this.promoteOSINTMediaEvidence(trigger);
+    }
+
+    async inspectOSINTMediaFile(file) {
+        const Media = this.getOSINTVisualMediaModule();
+        const state = this.osintMediaState;
+        if (!Media || !state || !file || typeof file.arrayBuffer !== "function") return;
+        this.releaseOSINTMediaPreview();
+        state.phase = "INSPECTING";
+        state.lastError = null;
+        state.result = null;
+        state.selectedFile = null;
+        this.renderOSINTState();
+        try {
+            const bytes = await file.arrayBuffer();
+            const result = await Media.inspectMedia({name: file.name, type: file.type, bytes});
+            state.result = result;
+            state.phase = "COMPLETE";
+            state.selectedFile = {name: Media.safeLabel(file.name), type: result.file.mediaType, size: result.file.byteSize};
+            if (typeof URL !== "undefined" && typeof URL.createObjectURL === "function") state.previewUrl = URL.createObjectURL(file);
+        } catch (error) {
+            state.phase = "ERROR";
+            state.lastError = {code: error && error.code || "ERROR", message: error && error.userMessage || error && error.message || "The selected media could not be inspected."};
+        }
+        this.renderOSINTState();
+    }
+
+    renderOSINTVisualMediaWorkspace(grid) {
+        const state = this.osintMediaState || {};
+        const result = state.result;
+        const media = result && result.file;
+        const image = result && result.image;
+        const exif = result && result.exif;
+        const geo = result && result.geo;
+        const software = result && result.software;
+        const integrity = result && result.integrity;
+        const hasGeo = Boolean(geo && Number.isFinite(geo.latitude) && Number.isFinite(geo.longitude));
+        const status = state.phase === "INSPECTING" ? "INSPECTING" : state.lastError ? state.lastError.code || "ERROR" : result ? result.status : "READY";
+        const readout = (label, value, fallback = "ABSENT") => `<div><small>${this.escape(label)}</small><strong>${this.escape(value === null || value === undefined || value === "" ? fallback : String(value))}</strong></div>`;
+        const preview = state.previewUrl ? `<img src="${this.escape(state.previewUrl)}" alt="Explicitly selected visual evidence preview">` : `<div class="osint-media-preview-empty"><strong>NO MEDIA SELECTED</strong><span>Select one JPEG, PNG or WebP file for local inspection.</span></div>`;
+        const warningMarkup = result && result.warnings && result.warnings.length
+            ? `<ul>${result.warnings.map(warning => `<li>${this.escape(warning.message || warning.code || warning)}</li>`).join("")}</ul>`
+            : `<p>Metadata is contextual. Its presence or absence does not prove authenticity, location, capture time or editing history.</p>`;
+        grid.innerHTML = `<section class="osint-media-header workspace-panel"><button type="button" class="osint-back-button" data-osint-media-action="catalog">‹ OSINT CATALOG</button><div><small>OSINT / VISUAL &amp; MEDIA VERIFICATION</small><h2>PASSIVE MEDIA CONTEXT</h2><p>One explicit local image. Inspection and SHA-256 run in-process; no upload, background query, hidden path history or automatic map action.</p></div><div class="osint-media-status"><small>STATE</small><strong>${this.escape(this.formatOSINTEnum(status))}</strong><span>${this.escape(result && result.confidence || "LOW")} CONFIDENCE</span></div></section>
+            <section class="osint-media-input workspace-panel"><header><h2>MEDIA INPUT</h2><span>EXPLICIT / LOCAL</span></header><div class="workspace-panel-content"><label class="osint-media-file-input"><span>JPEG · PNG · WEBP · 20 MB MAX</span><input class="aegis-input" type="file" accept="image/jpeg,image/png,image/webp" data-osint-media-file></label><p>Only the selected file bytes are inspected. Original media remains outside Aegis persistence; ADD TO CASE stores a redaction-reviewable normalized record, not the image.</p><footer><button type="button" data-osint-media-action="clear"${state.phase === "INSPECTING" ? " disabled" : ""}>CLEAR</button></footer>${state.lastError ? `<section class="osint-panel-error"><strong>${this.escape(this.formatOSINTEnum(state.lastError.code))}</strong><p>${this.escape(state.lastError.message)}</p></section>` : ""}</div></section>
+            <section class="osint-media-preview workspace-panel"><header><h2>VISUAL PREVIEW</h2><span>${this.escape(media && media.displayLabel || "NO FILE")}</span></header><div class="workspace-panel-content"><figure>${preview}<figcaption>Preview is bounded to preserve analytical context and does not alter the original supplied bytes.</figcaption></figure></div></section>
+            <section class="osint-media-metadata workspace-panel"><header><h2>VERIFICATION CONTEXT</h2><span>${this.escape(this.formatOSINTEnum(result && result.status || "UNVERIFIED"))}</span></header><div class="workspace-panel-content"><section class="osint-media-readout"><div class="osint-media-readout-group"><header>FILE</header>${readout("TYPE", media && media.mediaType)}${readout("SIZE", media ? `${media.byteSize} BYTES` : null)}${readout("DIMENSIONS", image ? `${image.width} × ${image.height}` : null)}${readout("ASPECT", image && image.aspectRatio)}</div><div class="osint-media-readout-group"><header>CAPTURE</header>${readout("TIMESTAMP", exif && exif.captureTimestamp)}${readout("TIMEZONE", exif && exif.timezoneStatus)}${readout("CAMERA", [exif && exif.cameraMake, exif && exif.cameraModel].filter(Boolean).join(" ") || null)}${readout("LENS", exif && exif.lens)}</div><div class="osint-media-readout-group"><header>LOCATION</header>${readout("GPS", hasGeo ? `${geo.latitude.toFixed(6)}, ${geo.longitude.toFixed(6)}` : null)}${readout("ALTITUDE", geo && geo.altitudeM !== null && geo.altitudeM !== undefined ? `${geo.altitudeM} M` : null)}${readout("DIRECTION", geo && geo.directionDegrees !== null && geo.directionDegrees !== undefined ? `${geo.directionDegrees}°` : null)}${readout("SOURCE", geo && geo.source)}</div><div class="osint-media-readout-group"><header>INTEGRITY</header>${readout("SHA-256", integrity && integrity.originalMediaHash)}${readout("HASH SCOPE", integrity && integrity.scope)}${readout("SOFTWARE TAG", software && software.tag)}</div></section><section class="osint-media-warnings"><small>ASSESSMENT LIMITS</small>${warningMarkup}</section><footer><button type="button" data-osint-media-action="verify-location"${hasGeo ? "" : " disabled"}>VERIFY LOCATION</button>${result ? `<button type="button" data-osint-media-action="save">ADD TO CASE</button>` : ""}</footer></div></section>
+            <section class="osint-media-observation workspace-panel"><header><h2>ANALYST OBSERVATION</h2><span>EPHEMERAL UNTIL ADD TO CASE</span></header><div class="workspace-panel-content"><label><span>ANALYST NOTE · NOT EXTRACTED FACT</span><textarea class="aegis-input" data-osint-media-observation maxlength="4000" ${result ? "" : "disabled"}>${this.escape(state.analystObservation || "")}</textarea></label><p>Observation text cannot change verification status and triggers no provider query. Sensitive metadata can be redacted during the established Evidence Preview.</p></div></section>
+            <aside class="osint-media-policy workspace-panel"><header><h2>MEDIA POLICY</h2><span>PASSIVE / FAIL-CLOSED</span></header><div class="workspace-panel-content"><p>No facial recognition, person identification, reverse-image upload, OCR-driven account search, directory scan or hidden persistence is available here.</p><p>GPS handoff is explicit. It transfers normalized coordinates with <strong>IMAGE METADATA</strong> provenance only after you choose VERIFY LOCATION; it does not query a provider or mutate the global map.</p><small>ORIGINAL MEDIA ATTACHMENT · DEFERRED</small></div></aside>`;
+    }
+
+    promoteOSINTMediaEvidence(trigger = null) {
+        const Media = this.getOSINTVisualMediaModule();
+        const state = this.osintMediaState;
+        const provider = this.getOSINTVisualMediaProvider();
+        if (!Media || !state || !state.result || !provider) return this.showToast(this.osintView, "NO PROMOTABLE MEDIA RESULT");
+        const data = Media.toEvidenceData(state.result, state.analystObservation || "");
+        this.osintLastNormalizedResults[provider.id] = Object.freeze({requestId: `media-evidence-${Date.now().toString(36)}`, providerId: provider.id, capability: "VISUAL_MEDIA_VERIFICATION", status: "SUCCESS", queriedAt: new Date().toISOString(), completedAt: new Date().toISOString(), durationMs: 0, summary: `Visual media inspection: ${data.media.displayLabel || "selected image"}.`, data, warnings: state.result.warnings.slice(), source: {provider: "Local media inspection", type: "EXPLICIT_LOCAL_FILE"}, confidence: state.result.confidence, rawAvailable: false, error: null});
+        this.openOSINTEvidencePromotion(provider.id, trigger);
+    }
+
     handleOSINTGeoAction(action, trigger = null) {
         if (!this.osintGeoState) return;
         if (action === "open") {
@@ -2072,7 +2213,7 @@ class WorkspaceManager {
         }
         if (action === "clear") {
             this.cancelOSINTGeoVerification(false);
-            this.osintGeoState = {...this.osintGeoState, input: "", phase: "IDLE", verification: null, providerResult: null, selectedCandidateIndex: 0, activeRequestId: null, lastError: null, investigatorNote: "", investigatorAssessment: "INCONCLUSIVE"};
+            this.osintGeoState = {...this.osintGeoState, input: "", phase: "IDLE", verification: null, providerResult: null, selectedCandidateIndex: 0, activeRequestId: null, lastError: null, investigatorNote: "", investigatorAssessment: "INCONCLUSIVE", handoff: null};
             this.renderOSINTState();
             return;
         }
@@ -2103,7 +2244,8 @@ class WorkspaceManager {
         const locationMarkup = location ? `<section class="osint-geo-location"><header><small>NORMALIZED LOCATION</small><strong>${this.escape(this.geoLocationLabel(location))}</strong></header><div class="osint-geo-readout"><div><small>LATITUDE</small><strong>${this.escape(location.latitude.toFixed(6))}</strong></div><div><small>LONGITUDE</small><strong>${this.escape(location.longitude.toFixed(6))}</strong></div><div><small>FORMAT</small><strong>${this.escape(location.coordinateFormat || "DECIMAL")}</strong></div><div><small>COUNTRY</small><strong>${this.escape(location.country || "NOT RETURNED")}</strong></div>${location.elevationM !== null && location.elevationM !== undefined ? `<div><small>ELEVATION</small><strong>${this.escape(String(location.elevationM))} M</strong></div>` : ""}</div></section>` : `<section class="osint-geo-empty"><strong>NO NORMALIZED LOCATION</strong><span>Coordinates normalize locally. Place text is sent only to the approved public geocoding provider after you select VERIFY.</span></section>`;
         const providerMarkup = candidates.length ? `<label class="osint-geo-candidate"><span>PROVIDER CANDIDATE</span><select class="aegis-select" data-osint-geo-candidate>${candidates.map((candidate, index) => `<option value="${index}"${index === state.selectedCandidateIndex ? " selected" : ""}>${this.escape(candidate.displayName || `${candidate.latitude}, ${candidate.longitude}`)}</option>`).join("")}</select></label>` : observations.length ? `<ol class="osint-geo-observations">${observations.map(item => `<li><strong>${this.escape(item.providerName)}</strong><span>${this.escape(item.displayName || `${item.latitude.toFixed(5)}, ${item.longitude.toFixed(5)}`)}</span><small>${this.escape(item.type)} · ${this.escape(item.observedAt)}</small></li>`).join("")}</ol>` : `<p class="osint-panel-muted">No provider observation is present. A local coordinate parse is not treated as external verification.</p>`;
         const investigationObservations = verification && verification.investigatorObservations || [];
-        grid.innerHTML = `<section class="osint-geo-header workspace-panel"><button type="button" class="osint-back-button" data-osint-geo-action="catalog">‹ OSINT CATALOG</button><div><small>OSINT / GEOSPATIAL VERIFICATION</small><h2>LOCATION CONTEXT CHECK</h2><p>Explicit, passive normalization only. No tracking, no background lookup, no hidden query history and no automatic map mutation.</p></div><div class="osint-geo-status"><small>STATE</small><strong>${this.escape(this.formatOSINTEnum(stateText))}</strong><span>CONFIDENCE · ${this.escape(confidence)}</span></div></section>
+        const handoffMarkup = state.handoff && state.handoff.provenance === "IMAGE_METADATA" ? `<small class="osint-geo-handoff">SOURCE · IMAGE METADATA · Explicit handoff only; no provider query has run.</small>` : "";
+        grid.innerHTML = `<section class="osint-geo-header workspace-panel"><button type="button" class="osint-back-button" data-osint-geo-action="catalog">‹ OSINT CATALOG</button><div><small>OSINT / GEOSPATIAL VERIFICATION</small><h2>LOCATION CONTEXT CHECK</h2><p>Explicit, passive normalization only. No tracking, no background lookup, no hidden query history and no automatic map mutation.</p>${handoffMarkup}</div><div class="osint-geo-status"><small>STATE</small><strong>${this.escape(this.formatOSINTEnum(stateText))}</strong><span>CONFIDENCE · ${this.escape(confidence)}</span></div></section>
             <section class="osint-geo-query workspace-panel"><header><h2>LOCATION INPUT</h2><span>EPHEMERAL / USER INITIATED</span></header><div class="workspace-panel-content"><form data-osint-geo-form novalidate><label><span>COORDINATES OR PUBLIC PLACE TEXT</span><input class="aegis-input" data-osint-geo-input maxlength="240" autocomplete="off" spellcheck="false" value="${this.escape(state.input || "")}" placeholder="51.5074, -0.1278 · 51° 30' 26.6\" N, 0° 7' 39.2\" W · London"></label><small>Accepted: latitude/longitude decimal coordinates, common DMS, or a short public place name. URLs, scripts and ambiguous forms are rejected.</small><footer><button type="submit" ${loading ? "disabled" : ""}>${loading ? "VERIFYING…" : "VERIFY LOCATION"}</button>${loading ? `<button type="button" data-osint-geo-action="cancel">CANCEL</button>` : ""}<button type="button" data-osint-geo-action="clear">CLEAR</button></footer></form>${error ? `<section class="osint-panel-error"><strong>${this.escape(this.formatOSINTEnum(error.code || "ERROR"))}</strong><p>${this.escape(error.message || "Geospatial verification did not complete.")}</p></section>` : ""}</div></section>
             <section class="osint-geo-result workspace-panel"><header><h2>VERIFICATION RESULT</h2><span>${this.escape(this.formatOSINTEnum(status))} · ${this.escape(confidence)}</span></header><div class="workspace-panel-content">${locationMarkup}<section class="osint-geo-reasoning"><small>ASSESSMENT</small><ul>${(verification && verification.reasoning || ["Awaiting explicit input."]).map(reason => `<li>${this.escape(reason)}</li>`).join("")}</ul></section>${providerMarkup}<footer>${canSave ? `<button type="button" data-osint-geo-action="save">ADD TO CASE</button>` : `<span class="osint-action-unavailable">ADD TO CASE AVAILABLE AFTER A REVIEWED PROVIDER OBSERVATION</span>`}</footer></div></section>
             <section class="osint-geo-observation workspace-panel"><header><h2>INVESTIGATOR OBSERVATION</h2><span>LOCAL / EXPLICIT</span></header><div class="workspace-panel-content"><form data-osint-geo-observation-form><label><span>ASSESSMENT</span><select class="aegis-select" data-osint-geo-assessment><option value="SUPPORTS"${state.investigatorAssessment === "SUPPORTS" ? " selected" : ""}>SUPPORTS</option><option value="CONTRADICTS"${state.investigatorAssessment === "CONTRADICTS" ? " selected" : ""}>CONTRADICTS</option><option value="INCONCLUSIVE"${state.investigatorAssessment === "INCONCLUSIVE" ? " selected" : ""}>INCONCLUSIVE</option></select></label><label><span>NOTE · LOCAL UNTIL EXPLICIT EVIDENCE CAPTURE</span><textarea class="aegis-input" name="note" data-osint-geo-note maxlength="1200" ${verification ? "" : "disabled"}>${this.escape(state.investigatorNote || "")}</textarea></label><button type="submit" ${verification ? "" : "disabled"}>ADD OBSERVATION</button></form>${investigationObservations.length ? `<ol class="osint-geo-observations">${investigationObservations.map(item => `<li><strong>${this.escape(item.assessment)}</strong><span>${this.escape(item.note || "No note supplied.")}</span><small>${this.escape(item.recordedAt)}</small></li>`).join("")}</ol>` : `<p class="osint-panel-muted">No local investigator observations have been added to this ephemeral verification.</p>`}</div></section>
@@ -2123,7 +2265,7 @@ class WorkspaceManager {
         state.providerResult = null;
         state.selectedCandidateIndex = 0;
         if (parsed.kind === "COORDINATES") {
-            state.verification = Geo.createVerification({parsed});
+            state.verification = Geo.createVerification({parsed, provenance: state.handoff && state.handoff.provenance || "MANUAL_INPUT"});
             state.phase = "COMPLETE";
             this.renderOSINTState();
             return;
@@ -2156,12 +2298,12 @@ class WorkspaceManager {
         const candidates = state.providerResult && state.providerResult.data && state.providerResult.data.geoCandidates || [];
         const candidate = candidates[state.selectedCandidateIndex] || candidates[0];
         if (!candidate) {
-            state.verification = Geo.createVerification({parsed: source, investigatorObservations: state.verification && state.verification.investigatorObservations || []});
+            state.verification = Geo.createVerification({parsed: source, provenance: state.handoff && state.handoff.provenance || "MANUAL_INPUT", investigatorObservations: state.verification && state.verification.investigatorObservations || []});
             return state.verification;
         }
         const prior = state.verification && state.verification.investigatorObservations || [];
         const observation = {...candidate, providerId: "open-meteo-geocoding", providerName: "Open-Meteo Geocoding", type: "PUBLIC_GEOCODING_API", observedAt: state.providerResult.completedAt, confidence: state.providerResult.confidence};
-        state.verification = Geo.createVerification({parsed: source, providerObservations: [observation], investigatorObservations: prior});
+        state.verification = Geo.createVerification({parsed: source, provenance: state.handoff && state.handoff.provenance || "MANUAL_INPUT", providerObservations: [observation], investigatorObservations: prior});
         return state.verification;
     }
 
@@ -2181,7 +2323,7 @@ class WorkspaceManager {
         if (!Geo || !state || !state.verification) return;
         const note = form ? new FormData(form).get("note") : state.investigatorNote;
         const prior = state.verification.investigatorObservations || [];
-        state.verification = Geo.createVerification({parsed: Geo.parseInput(state.input), normalizedLocation: state.verification.normalizedLocation, providerObservations: state.verification.providerObservations, investigatorObservations: [...prior, {assessment: state.investigatorAssessment, note, recordedAt: new Date().toISOString()}]});
+        state.verification = Geo.createVerification({parsed: Geo.parseInput(state.input), provenance: state.handoff && state.handoff.provenance || "MANUAL_INPUT", normalizedLocation: state.verification.normalizedLocation, providerObservations: state.verification.providerObservations, investigatorObservations: [...prior, {assessment: state.investigatorAssessment, note, recordedAt: new Date().toISOString()}]});
         state.investigatorNote = "";
         state.investigatorAssessment = "INCONCLUSIVE";
         this.renderOSINTState();

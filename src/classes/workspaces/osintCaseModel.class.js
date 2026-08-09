@@ -9,12 +9,12 @@
     const CASE_STATUSES = Object.freeze(["OPEN", "PAUSED", "CLOSED", "ARCHIVED"]);
     const CASE_PRIORITIES = Object.freeze(["LOW", "MEDIUM", "HIGH", "CRITICAL"]);
     const EVIDENCE_TYPES = Object.freeze(["PROVIDER_RESULT", "WEB_REFERENCE", "USER_NOTE", "USER_ATTACHMENT_METADATA", "MANUAL_OBSERVATION"]);
-    const ACQUISITION_METHODS = Object.freeze(["NATIVE_PROVIDER_QUERY", "EXTERNAL_REFERENCE", "MANUAL_ENTRY", "USER_NOTE", "IMPORTED_CASE"]);
+    const ACQUISITION_METHODS = Object.freeze(["NATIVE_PROVIDER_QUERY", "LOCAL_MEDIA_INSPECTION", "EXTERNAL_REFERENCE", "MANUAL_ENTRY", "USER_NOTE", "IMPORTED_CASE"]);
     const INTEGRITY_STATES = Object.freeze(["VALID", "INVALID", "UNKNOWN"]);
     const TIMELINE_EVENTS = Object.freeze(["CASE_CREATED", "CASE_UPDATED", "CASE_STATUS_CHANGED", "EVIDENCE_ADDED", "EVIDENCE_UPDATED", "EVIDENCE_REMOVED", "NOTE_ADDED", "NOTE_UPDATED", "EXPORT_CREATED", "INTEGRITY_WARNING", "CASE_IMPORTED"]);
     const ERROR_CODES = Object.freeze(["CASE_NOT_FOUND", "CASE_ALREADY_EXISTS", "CASE_INVALID", "CASE_BUSY", "CASE_ARCHIVED", "EVIDENCE_NOT_FOUND", "EVIDENCE_INVALID", "EVIDENCE_INTEGRITY_FAILED", "STORAGE_UNAVAILABLE", "STORAGE_WRITE_FAILED", "STORAGE_READ_FAILED", "INDEX_CORRUPTED", "EXPORT_CANCELLED", "EXPORT_FAILED", "UNSUPPORTED_SCHEMA_VERSION", "PATH_REJECTED", "PAYLOAD_TOO_LARGE", "POLICY_BLOCKED"]);
     const LIMITS = Object.freeze({title: 160, description: 4000, note: 8000, tags: 12, tag: 40, evidenceBytes: 65536, caseEvidence: 500, timeline: 1000, exportBytes: 10485760, payloadBytes: 65536, objectDepth: 10});
-    const REDACTABLE_FIELDS = Object.freeze(["queryInput", "canonicalUrl", "sourceUrl", "data.originalInput", "data.canonicalUrl", "data.snapshotUrl", "data.geo.latitude", "data.geo.longitude", "data.geo.displayName", "data.geo.locality", "data.geo.region", "data.geo.country", "data.geo.countryCode", "data.geo.elevationM", "data.geo.observations"]);
+    const REDACTABLE_FIELDS = Object.freeze(["queryInput", "canonicalUrl", "sourceUrl", "data.originalInput", "data.canonicalUrl", "data.snapshotUrl", "data.geo.latitude", "data.geo.longitude", "data.geo.displayName", "data.geo.locality", "data.geo.region", "data.geo.country", "data.geo.countryCode", "data.geo.elevationM", "data.geo.observations", "data.media.displayLabel", "data.media.captureTimestamp", "data.media.normalizedTimestamp", "data.media.cameraMake", "data.media.cameraModel", "data.media.lens", "data.media.geo", "data.media.softwareTag", "data.media.analystObservation"]);
 
     class CaseError extends Error {
         constructor(code, message, details = null) {
@@ -208,12 +208,13 @@
     function sanitizeNormalizedResult(value) {
         assertAllowedKeys(value, ["requestId", "providerId", "capability", "status", "queriedAt", "completedAt", "durationMs", "summary", "data", "warnings", "source", "confidence", "rawAvailable", "error"], "Normalized result");
         if (!["SUCCESS", "EMPTY", "PARTIAL"].includes(value.status)) throw new CaseError("POLICY_BLOCKED", "Only successful, empty or partial results can become evidence.");
-        const allowedData = ["available", "originalInput", "canonicalUrl", "snapshotUrl", "snapshotTimestamp", "provider", "queriedAt", "completedAt", "confidence", "warnings", "geo"];
+        const allowedData = ["available", "originalInput", "canonicalUrl", "snapshotUrl", "snapshotTimestamp", "provider", "queriedAt", "completedAt", "confidence", "warnings", "geo", "media"];
         const data = value.data && typeof value.data === "object" && !Array.isArray(value.data) ? value.data : {};
         assertAllowedKeys(data, allowedData, "Normalized result data");
         const source = value.source && typeof value.source === "object" && !Array.isArray(value.source) ? value.source : {};
         assertAllowedKeys(source, ["provider", "type"], "Normalized result source");
         const geo = data.geo === undefined || data.geo === null ? null : sanitizeGeoEvidenceData(data.geo);
+        const media = data.media === undefined || data.media === null ? null : sanitizeMediaEvidenceData(data.media);
         const normalizedData = {
             available: data.available === true,
             originalInput: nullableText(data.originalInput, 2048, "Original input"),
@@ -229,6 +230,7 @@
         // Keep prior evidence shapes stable: legacy provider evidence does not
         // acquire a synthetic `geo: null` property during this migration.
         if (geo !== null) normalizedData.geo = geo;
+        if (media !== null) normalizedData.media = media;
         return {
             providerId: plainText(value.providerId, 80, "Provider identifier"),
             capability: plainText(value.capability, 80, "Capability"),
@@ -249,7 +251,7 @@
     }
 
     function sanitizeGeoEvidenceData(value, options = {}) {
-        assertAllowedKeys(value, ["latitude", "longitude", "coordinateFormat", "displayName", "locality", "region", "country", "countryCode", "elevationM", "verificationStatus", "verificationConfidence", "observations"], "Geospatial normalized data");
+        assertAllowedKeys(value, ["latitude", "longitude", "coordinateFormat", "displayName", "locality", "region", "country", "countryCode", "elevationM", "verificationStatus", "verificationConfidence", "provenance", "observations"], "Geospatial normalized data");
         const observations = Array.isArray(value.observations) ? value.observations : [];
         const has = key => Object.prototype.hasOwnProperty.call(value, key);
         if (observations.length > 8) throw new CaseError("PAYLOAD_TOO_LARGE", "Too many geospatial provider observations.");
@@ -269,6 +271,7 @@
             elevationM: !has("elevationM") ? undefined : value.elevationM === null || value.elevationM === undefined ? null : safeGeoNumber(value.elevationM, -12000, 12000, "Geospatial elevation"),
             verificationStatus: has("verificationStatus") ? nullableText(value.verificationStatus, 40, "Geospatial verification status") : undefined,
             verificationConfidence: has("verificationConfidence") ? nullableText(value.verificationConfidence, 40, "Geospatial verification confidence") : undefined,
+            provenance: has("provenance") ? nullableText(value.provenance, 40, "Geospatial provenance") : undefined,
             observations: has("observations") ? observations.map(item => {
                 assertAllowedKeys(item, ["providerId", "providerName", "latitude", "longitude", "observedAt"], "Geospatial provider observation");
                 return {providerId: nullableText(item.providerId, 80, "Geospatial provider identifier"), providerName: nullableText(item.providerName, 120, "Geospatial provider name"), latitude: safeGeoNumber(item.latitude, -90, 90, "Observation latitude"), longitude: safeGeoNumber(item.longitude, -180, 180, "Observation longitude"), observedAt: item.observedAt ? assertTimestamp(item.observedAt, "Observation timestamp") : null};
@@ -276,6 +279,34 @@
         };
         Object.keys(output).forEach(key => output[key] === undefined && delete output[key]);
         return output;
+    }
+
+    function sanitizeMediaEvidenceData(value) {
+        assertAllowedKeys(value, ["displayLabel", "mediaType", "byteSize", "width", "height", "aspectRatio", "orientation", "colorProfile", "hasAlpha", "captureTimestamp", "normalizedTimestamp", "timezoneStatus", "cameraMake", "cameraModel", "lens", "focalLengthMm", "exposureSeconds", "aperture", "iso", "flash", "geo", "softwareTag", "originalMediaHash", "metadataStatus", "analystObservation"], "Visual media normalized data");
+        const number = (field, low, high) => value[field] === null || value[field] === undefined ? null : safeGeoNumber(Number(value[field]), low, high, `Media ${field}`);
+        const geo = value.geo === null || value.geo === undefined ? null : (() => {
+            assertAllowedKeys(value.geo, ["latitude", "longitude", "altitudeM", "directionDegrees", "source"], "Media geospatial metadata");
+            return {
+                latitude: safeGeoNumber(value.geo.latitude, -90, 90, "Media latitude"), longitude: safeGeoNumber(value.geo.longitude, -180, 180, "Media longitude"),
+                altitudeM: value.geo.altitudeM === null || value.geo.altitudeM === undefined ? null : safeGeoNumber(value.geo.altitudeM, -12000, 12000, "Media altitude"),
+                directionDegrees: value.geo.directionDegrees === null || value.geo.directionDegrees === undefined ? null : safeGeoNumber(value.geo.directionDegrees, 0, 360, "Media direction"), source: plainText(value.geo.source || "IMAGE_METADATA", 40, "Media geo source")
+            };
+        })();
+        const byteSize = Number(value.byteSize);
+        const width = Number(value.width); const height = Number(value.height); const aspectRatio = Number(value.aspectRatio);
+        if (!Number.isInteger(byteSize) || byteSize < 1 || byteSize > 20971520) throw new CaseError("CASE_INVALID", "Media byte size is invalid.");
+        if (!Number.isInteger(width) || !Number.isInteger(height) || width < 1 || height < 1 || width * height > 100000000) throw new CaseError("CASE_INVALID", "Media dimensions are invalid.");
+        if (!Number.isFinite(aspectRatio) || aspectRatio <= 0 || aspectRatio > 100) throw new CaseError("CASE_INVALID", "Media aspect ratio is invalid.");
+        const hash = plainText(value.originalMediaHash, 64, "Original media hash");
+        if (!/^[a-f0-9]{64}$/i.test(hash)) throw new CaseError("CASE_INVALID", "Original media hash must be SHA-256.");
+        return {
+            displayLabel: nullableText(value.displayLabel, 160, "Media display label"), mediaType: plainText(value.mediaType, 80, "Media type"), byteSize, width, height, aspectRatio: Number(aspectRatio.toFixed(5)),
+            orientation: value.orientation === null || value.orientation === undefined ? null : nullableText(String(value.orientation), 40, "Media orientation"), colorProfile: nullableText(value.colorProfile, 80, "Media color profile"), hasAlpha: value.hasAlpha === true,
+            captureTimestamp: nullableText(value.captureTimestamp, 80, "Media capture timestamp"), normalizedTimestamp: nullableText(value.normalizedTimestamp, 80, "Media normalized timestamp"), timezoneStatus: plainText(value.timezoneStatus || "ABSENT", 40, "Media timezone status"),
+            cameraMake: nullableText(value.cameraMake, 160, "Media camera make"), cameraModel: nullableText(value.cameraModel, 160, "Media camera model"), lens: nullableText(value.lens, 160, "Media lens"),
+            focalLengthMm: number("focalLengthMm", 0, 100000), exposureSeconds: number("exposureSeconds", 0, 100000), aperture: number("aperture", 0, 1000), iso: number("iso", 0, 10000000), flash: number("flash", 0, 65535),
+            geo, softwareTag: nullableText(value.softwareTag, 240, "Media software tag"), originalMediaHash: hash.toLowerCase(), metadataStatus: plainText(value.metadataStatus, 40, "Media metadata status"), analystObservation: nullableText(value.analystObservation, 4000, "Media analyst observation")
+        };
     }
 
     function applyRedactions(draft, fields, clock) {
@@ -323,7 +354,7 @@
             source: result.source,
             sourceUrl,
             canonicalUrl: result.data.canonicalUrl || null,
-            acquisitionMethod: "NATIVE_PROVIDER_QUERY",
+            acquisitionMethod: result.capability === "VISUAL_MEDIA_VERIFICATION" ? "LOCAL_MEDIA_INSPECTION" : "NATIVE_PROVIDER_QUERY",
             queryInput: result.data.originalInput || null,
             queriedAt: result.queriedAt,
             capturedAt: timestamp,
@@ -366,11 +397,12 @@
     function validateEvidenceRecord(value) {
         assertAllowedKeys(value, ["id", "caseId", "type", "title", "summary", "providerId", "providerName", "capability", "source", "sourceUrl", "canonicalUrl", "acquisitionMethod", "queryInput", "queriedAt", "capturedAt", "createdAt", "confidence", "warnings", "data", "notes", "tags", "integrity", "schemaVersion", "redactions", "legalContext", "riskContext"], "Evidence");
         if (value.schemaVersion !== CASE_SCHEMA_VERSION) throw new CaseError("UNSUPPORTED_SCHEMA_VERSION", "Evidence schema version is not supported.");
-        const evidenceDataKeys = ["available", "originalInput", "canonicalUrl", "snapshotUrl", "snapshotTimestamp", "provider", "queriedAt", "completedAt", "confidence", "warnings", "geo", "status", "runtimeStatus"];
+        const evidenceDataKeys = ["available", "originalInput", "canonicalUrl", "snapshotUrl", "snapshotTimestamp", "provider", "queriedAt", "completedAt", "confidence", "warnings", "geo", "media", "status", "runtimeStatus"];
         assertAllowedKeys(value.source && typeof value.source === "object" ? value.source : {}, ["provider", "type"], "Evidence source");
         assertAllowedKeys(value.data && typeof value.data === "object" ? value.data : {}, evidenceDataKeys, "Evidence data");
         const normalizedData = value.data && typeof value.data === "object" ? canonicalize(value.data) : {};
         if (normalizedData.geo) normalizedData.geo = sanitizeGeoEvidenceData(normalizedData.geo, {requireCoordinates: false});
+        if (normalizedData.media) normalizedData.media = sanitizeMediaEvidenceData(normalizedData.media);
         const evidence = {...value,
             id: safeId(value.id, "evidence"), caseId: safeId(value.caseId, "case"), type: assertEnum(value.type, EVIDENCE_TYPES, "Evidence type"),
             title: plainText(value.title, LIMITS.title, "Evidence title"), summary: plainText(value.summary, LIMITS.description, "Evidence summary"),
@@ -421,5 +453,5 @@
         };
     }
 
-    return Object.freeze({CASE_SCHEMA_VERSION, CASE_STATUSES, CASE_PRIORITIES, EVIDENCE_TYPES, ACQUISITION_METHODS, INTEGRITY_STATES, TIMELINE_EVENTS, ERROR_CODES, LIMITS, REDACTABLE_FIELDS, CaseError, now, bytesOf, rejectUnsafeObject, assertAllowedKeys, plainText, nullableText, safeId, generateId, normalizeTags, assertEnum, assertTimestamp, safeUrl, canonicalize, canonicalStringify, sha256, integrityPayload, createIntegrity, validateIntegrity, validateCaseRecord, createCase, updateCase, sanitizeNormalizedResult, applyRedactions, createProviderEvidence, createManualEvidence, validateEvidenceRecord, createTimelineEvent, createNote, updateNote});
+    return Object.freeze({CASE_SCHEMA_VERSION, CASE_STATUSES, CASE_PRIORITIES, EVIDENCE_TYPES, ACQUISITION_METHODS, INTEGRITY_STATES, TIMELINE_EVENTS, ERROR_CODES, LIMITS, REDACTABLE_FIELDS, CaseError, now, bytesOf, rejectUnsafeObject, assertAllowedKeys, plainText, nullableText, safeId, generateId, normalizeTags, assertEnum, assertTimestamp, safeUrl, canonicalize, canonicalStringify, sha256, integrityPayload, createIntegrity, validateIntegrity, validateCaseRecord, createCase, updateCase, sanitizeNormalizedResult, sanitizeMediaEvidenceData, applyRedactions, createProviderEvidence, createManualEvidence, validateEvidenceRecord, createTimelineEvent, createNote, updateNote});
 });

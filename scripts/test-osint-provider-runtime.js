@@ -36,11 +36,11 @@ async function main() {
     const reference = registry.getProvider("cobalt-strike-reference");
     const expectedCapabilities = [
         "RESEARCH_DISCOVERY", "HISTORICAL_ARCHIVE", "EVIDENCE_PRESERVATION", "INFRASTRUCTURE_CONTEXT",
-        "THREAT_REPUTATION", "GEOSPATIAL_VERIFICATION", "MEDIA_VERIFICATION", "ENTITY_RESEARCH",
+        "THREAT_REPUTATION", "GEOSPATIAL_VERIFICATION", "VISUAL_MEDIA_VERIFICATION", "MEDIA_VERIFICATION", "ENTITY_RESEARCH",
         "PUBLIC_PRESENCE", "TRANSPORT_MONITORING", "DATA_ANALYSIS"
     ];
 
-    check("RUNTIME_CAPABILITIES", expectedCapabilities.every(id => capabilityRegistry.getCapability(id)), `${capabilityRegistry.getCapabilities().length}/11`);
+    check("RUNTIME_CAPABILITIES", expectedCapabilities.every(id => capabilityRegistry.getCapability(id)), `${capabilityRegistry.getCapabilities().length}/12`);
     check("RUNTIME_CAPABILITY_PROVIDER_MAP", capabilityRegistry.getProviders("HISTORICAL_ARCHIVE").some(provider => provider.id === "wayback"));
     check("RUNTIME_PREFERRED_PROVIDER", capabilityRegistry.getPreferredProvider("HISTORICAL_ARCHIVE").id === "wayback");
     check("RUNTIME_WAYBACK_POLICY", policy.canQuery(wayback).allowed && !policy.canLaunch(wayback).allowed);

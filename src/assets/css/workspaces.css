@@ -3358,7 +3358,7 @@ button.eng-thread-row.active {
 .engineering-mode .osint-command-grid:has(.osint-geo-header) {
     display: grid;
     grid-template-columns: minmax(0, 1.08fr) minmax(0, 1.25fr) minmax(17vw, .72fr);
-    grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-rows: auto auto auto;
     grid-template-areas:
         "geo-header geo-header geo-header"
         "geo-query geo-result geo-observation"
@@ -3432,6 +3432,124 @@ button.eng-thread-row.active {
 .engineering-mode .osint-geo-observations strong { color: var(--aegis-accent-soft); font: .62vh var(--font_mono); }
 .engineering-mode .osint-geo-observations span { color: var(--aegis-text); font: .64vh var(--font_main); overflow-wrap: anywhere; }
 .engineering-mode .osint-geo-observations small { color: var(--aegis-text-faint); font: .52vh var(--font_mono); overflow-wrap: anywhere; }
+
+/* Phase 6: an explicit local image stays bounded inside the analyst workspace.
+   This shares the Geo surface's normal-flow grid rather than relying on media-sized offsets. */
+.engineering-mode .osint-media-header,
+.engineering-mode .osint-media-input,
+.engineering-mode .osint-media-preview,
+.engineering-mode .osint-media-metadata,
+.engineering-mode .osint-media-observation,
+.engineering-mode .osint-media-policy {
+    min-width: 0;
+    border-color: var(--aegis-border-subtle);
+    background: linear-gradient(145deg, rgba(59, 167, 255, .08), transparent 48%), var(--aegis-surface);
+    color: var(--aegis-text);
+}
+
+.engineering-mode .workspace-grid.osint-command-grid:has(.osint-media-header) {
+    display: grid;
+    grid-template-columns: minmax(15rem, .86fr) minmax(20rem, 1.15fr) minmax(18rem, 1fr);
+    grid-template-areas:
+        "media-header media-header media-header"
+        "media-input media-preview media-metadata"
+        "media-observation media-preview media-policy";
+    /* Media content determines the row heights; forcing a flexible middle row
+       leaves metadata and analyst controls below the visible workspace. */
+    grid-template-rows: auto auto auto;
+    gap: .85vh;
+    min-height: 0;
+    overflow: auto;
+    align-content: start;
+}
+
+.engineering-mode .osint-media-header { grid-area: media-header; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 1vh; align-items: center; padding: 1vh 1.15vh; }
+.engineering-mode .osint-media-input { grid-area: media-input; }
+.engineering-mode .osint-media-preview { grid-area: media-preview; }
+.engineering-mode .osint-media-metadata { grid-area: media-metadata; }
+.engineering-mode .osint-media-observation { grid-area: media-observation; }
+.engineering-mode .osint-media-policy { grid-area: media-policy; align-self: end; }
+.engineering-mode .osint-media-input,
+.engineering-mode .osint-media-preview,
+.engineering-mode .osint-media-metadata,
+.engineering-mode .osint-media-observation,
+.engineering-mode .osint-media-policy {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    min-height: min-content;
+    overflow: visible;
+}
+.engineering-mode .osint-media-header > div,
+.engineering-mode .osint-media-input .workspace-panel-content,
+.engineering-mode .osint-media-preview .workspace-panel-content,
+.engineering-mode .osint-media-metadata .workspace-panel-content,
+.engineering-mode .osint-media-observation .workspace-panel-content,
+.engineering-mode .osint-media-policy .workspace-panel-content { min-width: 0; }
+.engineering-mode .osint-media-header small,
+.engineering-mode .osint-media-file-input > span,
+.engineering-mode .osint-media-observation label > span,
+.engineering-mode .osint-media-status small,
+.engineering-mode .osint-media-readout small,
+.engineering-mode .osint-media-warnings small { display: block; color: var(--aegis-text-faint); font: .56vh var(--font_mono); letter-spacing: .1em; }
+.engineering-mode .osint-media-header h2 { margin: .16vh 0; color: var(--aegis-text); font: 1.45vh var(--font_main); font-weight: normal; letter-spacing: .08em; overflow-wrap: anywhere; }
+.engineering-mode .osint-media-header p,
+.engineering-mode .osint-media-input p,
+.engineering-mode .osint-media-observation p,
+.engineering-mode .osint-media-policy p { margin: 0; color: var(--aegis-text-muted); font: .68vh var(--font_main); line-height: 1.4; overflow-wrap: anywhere; }
+.engineering-mode .osint-media-status { display: grid; gap: .28vh; min-width: 12vh; padding: .52vh .68vh; border-left: .12vh solid var(--aegis-accent); text-align: right; }
+.engineering-mode .osint-media-status strong { color: var(--aegis-accent-soft); font: .76vh var(--font_mono); letter-spacing: .08em; }
+.engineering-mode .osint-media-status span { color: var(--aegis-text-muted); font: .54vh var(--font_mono); }
+.engineering-mode .osint-media-input .workspace-panel-content,
+.engineering-mode .osint-media-preview .workspace-panel-content,
+.engineering-mode .osint-media-metadata .workspace-panel-content,
+.engineering-mode .osint-media-observation .workspace-panel-content,
+.engineering-mode .osint-media-policy .workspace-panel-content {
+    position: relative;
+    inset: auto;
+    display: grid;
+    align-content: start;
+    gap: .85vh;
+    min-height: min-content;
+    padding: .82vh;
+    overflow: visible;
+}
+.engineering-mode .osint-media-file-input,
+.engineering-mode .osint-media-observation label { display: grid; gap: .42vh; min-width: 0; }
+.engineering-mode .osint-media-file-input .aegis-input,
+.engineering-mode .osint-media-observation .aegis-input { width: 100%; min-width: 0; box-sizing: border-box; color: var(--aegis-text); border-color: var(--aegis-border); background: var(--aegis-surface-input); }
+.engineering-mode .osint-media-file-input input[type="file"] { padding: .48vh; font: .58vh var(--font_mono); }
+.engineering-mode .osint-media-observation textarea { min-height: 10vh; resize: vertical; }
+.engineering-mode .osint-media-input footer,
+.engineering-mode .osint-media-metadata footer { display: flex; flex-wrap: wrap; gap: .55vh; align-items: center; }
+.engineering-mode .osint-media-input button,
+.engineering-mode .osint-media-metadata button { border: .08vh solid var(--aegis-border); color: var(--aegis-accent-soft); background: var(--aegis-surface-raised); padding: .52vh .7vh; font: .6vh var(--font_main); letter-spacing: .08em; }
+.engineering-mode .osint-media-preview figure {
+    display: grid;
+    place-items: center;
+    gap: .55vh;
+    min-width: 0;
+    min-height: 0;
+    height: clamp(11rem, 23vh, 16rem);
+    margin: 0;
+    padding: .75vh;
+    box-sizing: border-box;
+    border: .08vh solid var(--aegis-border-subtle);
+    background: var(--aegis-surface-muted);
+}
+.engineering-mode .osint-media-preview img { display: block; width: auto; max-width: 100%; max-height: min(20vh, 13rem); object-fit: contain; border: .08vh solid var(--aegis-border); background: var(--aegis-surface-raised); }
+.engineering-mode .osint-media-preview figcaption,
+.engineering-mode .osint-media-preview-empty span { color: var(--aegis-text-faint); font: .57vh var(--font_main_light); line-height: 1.35; text-align: center; }
+.engineering-mode .osint-media-preview-empty { display: grid; gap: .5vh; justify-items: center; text-align: center; }
+.engineering-mode .osint-media-preview-empty strong { color: var(--aegis-text); font: .74vh var(--font_main); font-weight: normal; }
+.engineering-mode .osint-media-readout { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .58vh; }
+.engineering-mode .osint-media-readout-group { display: grid; gap: .42vh; min-width: 0; padding: .64vh; border-left: .12vh solid var(--aegis-accent); background: var(--aegis-surface-muted); }
+.engineering-mode .osint-media-readout-group > header { color: var(--aegis-accent-soft); font: .62vh var(--font_mono); letter-spacing: .08em; }
+.engineering-mode .osint-media-readout-group > div { min-width: 0; }
+.engineering-mode .osint-media-readout-group strong { display: block; margin-top: .16vh; color: var(--aegis-text); font: .61vh var(--font_mono); line-height: 1.28; overflow-wrap: anywhere; }
+.engineering-mode .osint-media-warnings { display: grid; gap: .42vh; padding: .65vh; border: .08vh solid var(--aegis-border-subtle); background: var(--aegis-surface-muted); }
+.engineering-mode .osint-media-warnings p,
+.engineering-mode .osint-media-warnings ul { margin: 0; color: var(--aegis-text-muted); font: .61vh var(--font_main); line-height: 1.36; }
+.engineering-mode .osint-media-warnings ul { display: grid; gap: .3vh; padding-left: 1.5vh; }
 
 .engineering-mode .osint-command-deck {
     grid-template-rows: 8.8vh 5.1vh minmax(0, 1fr);
@@ -4862,6 +4980,15 @@ button.eng-thread-row.active {
             "geo-query geo-result"
             "geo-observation geo-policy";
     }
+
+    .engineering-mode .workspace-grid.osint-command-grid:has(.osint-media-header) {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        grid-template-areas:
+            "media-header media-header"
+            "media-input media-preview"
+            "media-metadata media-observation"
+            "media-policy media-policy";
+    }
 }
 
 @media (max-width: 900px), (max-aspect-ratio: 5/4) {
@@ -4915,6 +5042,22 @@ button.eng-thread-row.active {
     .engineering-mode .osint-geo-header { grid-template-columns: minmax(0, 1fr); }
     .engineering-mode .osint-geo-status { text-align: left; }
     .engineering-mode .osint-geo-readout { grid-template-columns: minmax(0, 1fr); }
+
+    .engineering-mode .workspace-grid.osint-command-grid:has(.osint-media-header) {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: repeat(6, auto);
+        grid-template-areas:
+            "media-header"
+            "media-input"
+            "media-preview"
+            "media-metadata"
+            "media-observation"
+            "media-policy";
+    }
+    .engineering-mode .osint-media-header { grid-template-columns: minmax(0, 1fr); }
+    .engineering-mode .osint-media-status { text-align: left; }
+    .engineering-mode .osint-media-readout { grid-template-columns: minmax(0, 1fr); }
+    .engineering-mode .osint-media-preview figure { height: min(28vh, 16rem); }
 }
 
 @media (max-aspect-ratio: 16/10) {

@@ -12,6 +12,7 @@ The Phase 3 registry declares:
 - `INFRASTRUCTURE_CONTEXT`
 - `THREAT_REPUTATION`
 - `GEOSPATIAL_VERIFICATION`
+- `VISUAL_MEDIA_VERIFICATION`
 - `MEDIA_VERIFICATION`
 - `ENTITY_RESEARCH`
 - `PUBLIC_PRESENCE`
@@ -21,7 +22,8 @@ The Phase 3 registry declares:
 Each definition documents supported inputs/outputs, cancellation/evidence
 support and an initial risk class. The registry can report matching providers
 and a preferred provider without granting an action. In v2.5.0,
-`HISTORICAL_ARCHIVE` and `GEOSPATIAL_VERIFICATION` have one bounded approved
+`HISTORICAL_ARCHIVE`, `GEOSPATIAL_VERIFICATION` and
+`VISUAL_MEDIA_VERIFICATION` have bounded approved
 provider query path each. The latter accepts decimal/DMS coordinates locally
 and optional manually entered place text through its fixed adapter.
 
