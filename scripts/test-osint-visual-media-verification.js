@@ -112,7 +112,10 @@ async function main() {
     check("MEDIA_GEO_HANDOFF_PROVENANCE", handoff.provenance === "IMAGE_METADATA" && handoff.verificationStatus === "UNVERIFIED");
     const managerSource = fs.readFileSync(path.join(ROOT, "src/classes/workspaceManager.class.js"), "utf8");
     const mediaModuleSource = fs.readFileSync(path.join(ROOT, "src/classes/workspaces/osintVisualMediaVerification.class.js"), "utf8");
-    const mediaManagerBlock = managerSource.match(/getOSINTVisualMediaModule[\s\S]*?handleOSINTGeoAction/)?.[0] || "";
+    // Keep the no-auto-query assertion scoped to Media itself. Domain Context
+    // legitimately owns a separate, user-initiated provider lifecycle below
+    // this block and must not change the Media security invariant.
+    const mediaManagerBlock = managerSource.match(/getOSINTVisualMediaModule[\s\S]*?getOSINTDomainInfrastructureModule/)?.[0] || "";
     check("MEDIA_NO_NEW_IPC", !/ipc\.invoke\(\s*["']osint-media-|ipcMain\.handle\(\s*["']osint-media-/.test(managerSource));
     check("MEDIA_NO_AUTOMATIC_GEO_QUERY", !/startQuery\(/.test(mediaManagerBlock));
     check("MEDIA_NO_GLOBAL_MAP_MUTATION", !/\b(?:mapManager|leaflet|\.flyTo\(|\.setView\(|map\.set)/i.test(mediaManagerBlock));

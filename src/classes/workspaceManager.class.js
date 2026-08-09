@@ -1578,6 +1578,10 @@ class WorkspaceManager {
             mode: "CATALOG", phase: "IDLE", result: null, previewUrl: null,
             analystObservation: "", lastError: null, selectedFile: null
         };
+        this.osintDomainState = this.osintDomainState || {
+            mode: "CATALOG", input: "", phase: "IDLE", verification: null,
+            activeRequestId: null, lastError: null, analystObservation: "", selectedPublicIp: ""
+        };
         this.osintState.filters = {...{providerStatus: "", riskProfile: "", legalStatus: ""}, ...(this.osintState.filters || {})};
         this.renderOSINTState(view, definition);
         this.ensureOSINTCasesLoaded();
@@ -1610,6 +1614,12 @@ class WorkspaceManager {
             return;
         }
 
+        if (this.osintDomainState && this.osintDomainState.mode === "DOMAIN") {
+            this.renderOSINTDomainInfrastructureWorkspace(grid);
+            this.bindOSINTDeck(view);
+            return;
+        }
+
         if (!activeCategory) {
             const featured = typeof registry.getFeaturedProviders === "function"
                 ? registry.getFeaturedProviders()
@@ -1621,7 +1631,7 @@ class WorkspaceManager {
                         <small>PUBLIC-SOURCE / EVIDENCE-AWARE RESEARCH</small>
                         <h2>OSINT TOOL CATALOG</h2>
                         <p>Choose an investigation domain. Every entry carries an explicit access and policy state before any external resource can be launched.</p>
-                        <div class="osint-hero-actions"><button type="button" class="osint-case-workspace-button" data-osint-case-action="workspace">CASE WORKSPACE</button><button type="button" class="osint-case-workspace-button" data-osint-geo-action="open">GEO VERIFICATION</button><button type="button" class="osint-case-workspace-button" data-osint-media-action="open">VISUAL VERIFICATION</button></div>
+                        <div class="osint-hero-actions"><button type="button" class="osint-case-workspace-button" data-osint-case-action="workspace">CASE WORKSPACE</button><button type="button" class="osint-case-workspace-button" data-osint-geo-action="open">GEO VERIFICATION</button><button type="button" class="osint-case-workspace-button" data-osint-media-action="open">VISUAL VERIFICATION</button><button type="button" class="osint-case-workspace-button" data-osint-domain-action="open">DOMAIN CONTEXT</button></div>
                     </div>
                     <div class="osint-command-stats">
                         <div><small>CATEGORIES</small><strong>${registry.CATEGORIES.length}</strong></div>
@@ -1648,7 +1658,7 @@ class WorkspaceManager {
             grid.innerHTML = `
                 <section class="osint-category-header workspace-panel">
                     <button type="button" class="osint-back-button" data-osint-back>‹ ALL DOMAINS</button>
-                    <div class="osint-hero-actions"><button type="button" class="osint-case-workspace-button" data-osint-case-action="workspace">CASE WORKSPACE</button>${activeCategory.id === "geospatial" ? `<button type="button" class="osint-case-workspace-button" data-osint-geo-action="open">GEO VERIFICATION</button><button type="button" class="osint-case-workspace-button" data-osint-media-action="open">VISUAL VERIFICATION</button>` : ""}</div>
+                    <div class="osint-hero-actions"><button type="button" class="osint-case-workspace-button" data-osint-case-action="workspace">CASE WORKSPACE</button>${activeCategory.id === "geospatial" ? `<button type="button" class="osint-case-workspace-button" data-osint-geo-action="open">GEO VERIFICATION</button><button type="button" class="osint-case-workspace-button" data-osint-media-action="open">VISUAL VERIFICATION</button>` : ""}${activeCategory.id === "infrastructure" ? `<button type="button" class="osint-case-workspace-button" data-osint-domain-action="open">DOMAIN CONTEXT</button>` : ""}</div>
                     <span class="osint-category-icon">${this.escape(activeCategory.icon)}</span>
                     <div><small>OSINT DOMAIN / ${this.escape(activeCategory.id)}</small><h2>${this.escape(activeCategory.title)}</h2><p>${this.escape(activeCategory.description)}</p></div>
                     <strong>${providers.length} / ${allCategoryProviders.length} SOURCES</strong>
@@ -1764,7 +1774,7 @@ class WorkspaceManager {
     bindOSINTDeck(view = this.osintView) {
         if (!view || view.dataset.osintDeckBound === "true") return;
         this.boundOSINTDeckClick = event => {
-            const target = event.target.closest("[data-osint-category], [data-osint-back], [data-osint-filter-clear], [data-osint-tool], [data-osint-panel-action], [data-osint-history-clear], [data-osint-query-cancel], [data-osint-save-result], [data-osint-case-action], [data-osint-geo-action], [data-osint-media-action]");
+            const target = event.target.closest("[data-osint-category], [data-osint-back], [data-osint-filter-clear], [data-osint-tool], [data-osint-panel-action], [data-osint-history-clear], [data-osint-query-cancel], [data-osint-save-result], [data-osint-case-action], [data-osint-geo-action], [data-osint-media-action], [data-osint-domain-action]");
             if (!target || !view.contains(target)) return;
             if (target.matches("[data-osint-category]")) {
                 this.osintState.categoryId = target.dataset.osintCategory;
@@ -1809,6 +1819,10 @@ class WorkspaceManager {
                 this.handleOSINTMediaAction(target.dataset.osintMediaAction, target);
                 return;
             }
+            if (target.matches("[data-osint-domain-action]")) {
+                this.handleOSINTDomainAction(target.dataset.osintDomainAction, target);
+                return;
+            }
             if (target.matches("[data-osint-panel-action]")) this.handleOSINTPanelAction(target.dataset.osintPanelAction, target);
         };
         this.boundOSINTDeckChange = event => {
@@ -1828,6 +1842,11 @@ class WorkspaceManager {
             const geoAssessment = event.target.closest("[data-osint-geo-assessment]");
             if (geoAssessment && view.contains(geoAssessment)) {
                 this.osintGeoState.investigatorAssessment = geoAssessment.value;
+                return;
+            }
+            const domainIp = event.target.closest("[data-osint-domain-ip]");
+            if (domainIp && view.contains(domainIp)) {
+                this.osintDomainState.selectedPublicIp = domainIp.value;
                 return;
             }
             const select = event.target.closest("[data-osint-filter]");
@@ -1851,6 +1870,16 @@ class WorkspaceManager {
                 this.osintGeoState.investigatorNote = geoNote.value.slice(0, 1200);
                 return;
             }
+            const domainInput = event.target.closest("[data-osint-domain-input]");
+            if (domainInput && view.contains(domainInput)) {
+                this.osintDomainState.input = domainInput.value.slice(0, 512);
+                return;
+            }
+            const domainNote = event.target.closest("[data-osint-domain-note]");
+            if (domainNote && view.contains(domainNote)) {
+                this.osintDomainState.analystObservation = domainNote.value.slice(0, 4000);
+                return;
+            }
             const input = event.target.closest("[data-osint-query-input]");
             if (!input || !view.contains(input)) return;
             this.osintQueryDrafts[input.dataset.osintQueryInput] = input.value.slice(0, 2048);
@@ -1870,6 +1899,12 @@ class WorkspaceManager {
             if (geoObservationForm && view.contains(geoObservationForm)) {
                 event.preventDefault();
                 this.addOSINTGeoInvestigatorObservation(geoObservationForm);
+                return;
+            }
+            const domainForm = event.target.closest("[data-osint-domain-form]");
+            if (domainForm && view.contains(domainForm)) {
+                event.preventDefault();
+                this.beginOSINTDomainInfrastructureVerification();
                 return;
             }
             const form = event.target.closest("[data-osint-query-form]");
@@ -2224,6 +2259,140 @@ class WorkspaceManager {
         const data = Media.toEvidenceData(state.result, state.analystObservation || "");
         this.osintLastNormalizedResults[provider.id] = Object.freeze({requestId: `media-evidence-${Date.now().toString(36)}`, providerId: provider.id, capability: "VISUAL_MEDIA_VERIFICATION", status: "SUCCESS", queriedAt: new Date().toISOString(), completedAt: new Date().toISOString(), durationMs: 0, summary: `Visual media inspection: ${data.media.displayLabel || "selected image"}.`, data, warnings: state.result.warnings.slice(), source: {provider: "Local media inspection", type: "EXPLICIT_LOCAL_FILE"}, confidence: state.result.confidence, rawAvailable: false, error: null});
         this.openOSINTEvidencePromotion(provider.id, trigger);
+    }
+
+    getOSINTDomainInfrastructureModule() { return window.OSINTDomainInfrastructure || null; }
+
+    getOSINTDomainInfrastructureProvider(id) {
+        return this.osintProviderRegistry && this.osintProviderRegistry.getProvider(id);
+    }
+
+    handleOSINTDomainAction(action, trigger = null) {
+        const state = this.osintDomainState;
+        if (!state) return;
+        if (action === "open") {
+            state.mode = "DOMAIN";
+            this.osintState.categoryId = "infrastructure";
+            this.renderOSINTState();
+            return;
+        }
+        if (action === "catalog") {
+            this.cancelOSINTDomainInfrastructureVerification(false);
+            this.osintDomainState = {mode: "CATALOG", input: "", phase: "IDLE", verification: null, activeRequestId: null, lastError: null, analystObservation: "", selectedPublicIp: ""};
+            this.renderOSINTState();
+            return;
+        }
+        if (action === "clear") {
+            this.cancelOSINTDomainInfrastructureVerification(false);
+            this.osintDomainState = {mode: "DOMAIN", input: "", phase: "IDLE", verification: null, activeRequestId: null, lastError: null, analystObservation: "", selectedPublicIp: ""};
+            this.renderOSINTState();
+            return;
+        }
+        if (action === "cancel") return this.cancelOSINTDomainInfrastructureVerification(true);
+        if (action === "network") return this.beginOSINTDomainSelectedNetworkContext();
+        if (action === "save") return this.promoteOSINTDomainInfrastructureEvidence(trigger);
+    }
+
+    async beginOSINTDomainInfrastructureVerification() {
+        const Domain = this.getOSINTDomainInfrastructureModule();
+        const state = this.osintDomainState;
+        if (!Domain || !state) return;
+        let target;
+        try { target = Domain.normalizeInput(state.input); }
+        catch (error) { state.phase = "ERROR"; state.lastError = {code: error.code || "INVALID_INPUT", message: error.message || "Enter one valid public domain or public IP."}; this.renderOSINTState(); return; }
+        this.cancelOSINTDomainInfrastructureVerification(false);
+        state.lastError = null;
+        state.verification = null;
+        state.selectedPublicIp = "";
+        return this.runOSINTDomainInfrastructureQuery(target, false);
+    }
+
+    async beginOSINTDomainSelectedNetworkContext() {
+        const Domain = this.getOSINTDomainInfrastructureModule();
+        const state = this.osintDomainState;
+        if (!Domain || !state || !state.selectedPublicIp || !state.verification) return this.showToast(this.osintView, "SELECT ONE PUBLIC ADDRESS FIRST");
+        let selected;
+        try { selected = Domain.normalizeInput(state.selectedPublicIp); }
+        catch (error) { return this.showToast(this.osintView, "SELECTED ADDRESS IS NOT PUBLIC"); }
+        if (!["IPv4", "IPv6"].includes(selected.targetType)) return this.showToast(this.osintView, "SELECT ONE PUBLIC ADDRESS FIRST");
+        this.cancelOSINTDomainInfrastructureVerification(false);
+        return this.runOSINTDomainInfrastructureQuery(selected, true);
+    }
+
+    async runOSINTDomainInfrastructureQuery(target, isExplicitDomainFollowUp) {
+        const Domain = this.getOSINTDomainInfrastructureModule();
+        const state = this.osintDomainState;
+        const providerId = target.targetType === "DOMAIN" ? "google-public-dns" : "ripestat-network-info";
+        const provider = this.getOSINTDomainInfrastructureProvider(providerId);
+        if (!Domain || !state || !provider || !this.osintRuntime) {
+            state.phase = "ERROR"; state.lastError = {code: "PROVIDER_UNAVAILABLE", message: "The approved passive infrastructure provider is unavailable."}; this.renderOSINTState(); return;
+        }
+        state.phase = "LOADING";
+        this.renderOSINTState();
+        const pending = this.osintRuntime.startQuery(provider.id, target, {capability: "INFRASTRUCTURE_CONTEXT", networkAllowed: true, userInitiated: true, sessionId: "ephemeral-domain-infrastructure"});
+        state.activeRequestId = pending.requestId;
+        const result = await pending.promise;
+        if (!this.osintDomainState || this.osintDomainState.activeRequestId !== pending.requestId) return;
+        state.activeRequestId = null;
+        if (!result || !["SUCCESS", "EMPTY", "PARTIAL"].includes(result.status)) {
+            state.phase = result && result.status === "CANCELLED" ? "IDLE" : "ERROR";
+            state.lastError = {code: result && result.error && result.error.code || result && result.status || "ERROR", message: result && result.summary || "Passive infrastructure context did not complete."};
+            this.renderOSINTState();
+            return;
+        }
+        const observation = {providerId: provider.id, providerName: provider.name, type: result.source && result.source.type || "PUBLIC_PROVIDER", observedAt: result.completedAt, status: result.status, summary: result.summary};
+        if (isExplicitDomainFollowUp && state.verification) {
+            const previous = state.verification;
+            state.verification = Domain.createVerification({target: previous.target, dns: previous.dns, network: result.data.network, providerObservations: [...previous.providerObservations, observation], analystObservation: state.analystObservation});
+        } else if (target.targetType === "DOMAIN") {
+            state.verification = Domain.createVerification({target, dns: result.data, providerObservations: [observation], analystObservation: state.analystObservation});
+        } else {
+            state.verification = Domain.createVerification({target, network: result.data.network, providerObservations: [observation], analystObservation: state.analystObservation});
+        }
+        state.phase = "COMPLETE";
+        this.renderOSINTState();
+    }
+
+    cancelOSINTDomainInfrastructureVerification(render = true) {
+        const state = this.osintDomainState;
+        if (!state || !state.activeRequestId || !this.osintRuntime) return false;
+        const cancelled = this.osintRuntime.cancel(state.activeRequestId);
+        state.activeRequestId = null;
+        state.phase = "IDLE";
+        if (render) this.renderOSINTState();
+        return cancelled;
+    }
+
+    promoteOSINTDomainInfrastructureEvidence(trigger = null) {
+        const Domain = this.getOSINTDomainInfrastructureModule();
+        const state = this.osintDomainState;
+        if (!Domain || !state || !state.verification || !state.verification.providerObservations.length) return this.showToast(this.osintView, "NO PROMOTABLE INFRASTRUCTURE RESULT");
+        const data = Domain.toEvidenceData(state.verification, state.analystObservation || "");
+        const providerId = state.verification.providerObservations[0].providerId;
+        this.osintLastNormalizedResults[providerId] = Object.freeze({requestId: `infrastructure-evidence-${Date.now().toString(36)}`, providerId, capability: "INFRASTRUCTURE_CONTEXT", status: "SUCCESS", queriedAt: data.queriedAt, completedAt: data.completedAt, durationMs: 0, summary: `Passive infrastructure context: ${data.infrastructure.normalizedTarget}.`, data, warnings: [], source: {provider: data.provider, type: "NORMALIZED_PASSIVE_OBSERVATIONS"}, confidence: state.verification.confidence, rawAvailable: false, error: null});
+        this.openOSINTEvidencePromotion(providerId, trigger);
+    }
+
+    renderOSINTDomainInfrastructureWorkspace(grid) {
+        const state = this.osintDomainState || {};
+        const verification = state.verification;
+        const target = verification && verification.target;
+        const loading = state.phase === "LOADING";
+        const records = verification && verification.dns && verification.dns.records || [];
+        const addresses = [...new Set(records.filter(record => ["A", "AAAA"].includes(record.type)).flatMap(record => record.values || []))].filter(value => /^([0-9]{1,3}\.){3}[0-9]{1,3}$|^[0-9a-f:]+$/i.test(value)).slice(0, 8);
+        const readout = (label, value, fallback = "NOT RETURNED") => `<div><small>${this.escape(label)}</small><strong>${this.escape(value === null || value === undefined || value === "" ? fallback : String(value))}</strong></div>`;
+        const dnsMarkup = records.length ? `<div class="osint-domain-records">${records.map(record => `<section><header><strong>${this.escape(record.type)}</strong><span>${this.escape(record.status)}</span></header>${record.values && record.values.length ? `<ul>${record.values.map(value => `<li>${this.escape(value)}</li>`).join("")}</ul>` : `<p>NO VALUES</p>`}</section>`).join("")}</div>` : `<p class="osint-panel-muted">DNS is queried only for an explicit domain using six fixed record types. No recursive lookup or enumeration is available.</p>`;
+        const networkMarkup = verification && verification.network ? `<section class="osint-domain-network-readout">${readout("PUBLIC IP", verification.network.ip)}${readout("ASN", (verification.network.asns || []).join(" · "))}${readout("PREFIX", verification.network.prefix)}${readout("RIR CONTEXT", verification.network.rir)}${readout("ALLOCATION", verification.network.allocationContext)}</section>` : target && target.targetType === "DOMAIN" && addresses.length ? `<section class="osint-domain-network-select"><label><span>DNS-OBSERVED PUBLIC ADDRESS</span><select class="aegis-select" data-osint-domain-ip><option value="">SELECT ONE ADDRESS</option>${addresses.map(ip => `<option value="${this.escape(ip)}"${state.selectedPublicIp === ip ? " selected" : ""}>${this.escape(ip)}</option>`).join("")}</select></label><button type="button" data-osint-domain-action="network"${state.selectedPublicIp ? "" : " disabled"}>GET SELECTED NETWORK CONTEXT</button><small>Explicit second action only. AegisUI does not automatically fan out from DNS results.</small></section>` : `<p class="osint-panel-muted">Network/ASN context is available for an explicitly entered public IP, or after you explicitly select one DNS-observed public address.</p>`;
+        const status = loading ? "ANALYZING" : state.lastError ? state.lastError.code || "ERROR" : verification ? verification.verificationStatus : "READY";
+        grid.innerHTML = `<section class="osint-domain-header workspace-panel"><button type="button" class="osint-back-button" data-osint-domain-action="catalog">‹ OSINT CATALOG</button><div><small>OSINT / DOMAIN &amp; INFRASTRUCTURE CONTEXT</small><h2>PASSIVE DOMAIN CONTEXT</h2><p>One public domain or public IP, explicitly supplied by the analyst. No scan, probing, brute force, crawler, monitoring or hidden target history.</p></div><div class="osint-domain-status"><small>STATE</small><strong>${this.escape(this.formatOSINTEnum(status))}</strong><span>CONFIDENCE · ${this.escape(verification && verification.confidence || "LOW")}</span></div></section>
+            <section class="osint-domain-query workspace-panel"><header><h2>TARGET INPUT</h2><span>EXPLICIT / EPHEMERAL</span></header><div class="workspace-panel-content"><form data-osint-domain-form novalidate><label><span>PUBLIC DOMAIN, PUBLIC IPv4, PUBLIC IPv6 OR HTTP(S) URL</span><input class="aegis-input" data-osint-domain-input maxlength="512" autocomplete="off" spellcheck="false" value="${this.escape(state.input || "")}" placeholder="example.org · 8.8.8.8 · 2001:4860:4860::8888"></label><small>Private, reserved, loopback, CIDR, wildcard, multiple targets, credentials and non-HTTP(S) URI schemes are rejected before any provider request.</small><footer><button type="submit" ${loading ? "disabled" : ""}>${loading ? "ANALYZING…" : "ANALYZE"}</button>${loading ? `<button type="button" data-osint-domain-action="cancel">CANCEL</button>` : ""}<button type="button" data-osint-domain-action="clear">CLEAR</button></footer></form>${state.lastError ? `<section class="osint-panel-error"><strong>${this.escape(this.formatOSINTEnum(state.lastError.code || "ERROR"))}</strong><p>${this.escape(state.lastError.message || "Infrastructure context did not complete.")}</p></section>` : ""}</div></section>
+            <section class="osint-domain-target workspace-panel"><header><h2>NORMALIZED TARGET</h2><span>${this.escape(target && target.source || "AWAITING INPUT")}</span></header><div class="workspace-panel-content osint-domain-target-readout">${readout("ORIGINAL INPUT", target && target.originalInput, "NOT QUERIED")}${readout("NORMALIZED TARGET", target && target.normalizedTarget, "NOT QUERIED")}${readout("TYPE", target && target.targetType, "NOT QUERIED")}</div></section>
+            <section class="osint-domain-dns workspace-panel"><header><h2>DNS CONTEXT</h2><span>FIXED / BOUNDED</span></header><div class="workspace-panel-content">${dnsMarkup}</div></section>
+            <section class="osint-domain-network workspace-panel"><header><h2>NETWORK / ASN</h2><span>EXPLICIT ONLY</span></header><div class="workspace-panel-content">${networkMarkup}</div></section>
+            <section class="osint-domain-registration workspace-panel"><header><h2>REGISTRATION</h2><span>LINK ONLY</span></header><div class="workspace-panel-content"><p>Authoritative RDAP is not queried natively in this phase. Bootstrap-driven authority routing and registrant contact data are intentionally outside this bounded runtime.</p></div></section>
+            <section class="osint-domain-certificate workspace-panel"><header><h2>CERTIFICATE</h2><span>DEFERRED</span></header><div class="workspace-panel-content"><p>Certificate context is not queried here. AegisUI does not connect sockets to the target, assume port 443 or expand certificate names.</p></div></section>
+            <section class="osint-domain-observation workspace-panel"><header><h2>ANALYST OBSERVATION</h2><span>EPHEMERAL UNTIL ADD TO CASE</span></header><div class="workspace-panel-content"><label><span>ANALYST NOTE · NOT EXTRACTED FACT</span><textarea class="aegis-input" data-osint-domain-note maxlength="4000" ${verification ? "" : "disabled"}>${this.escape(state.analystObservation || "")}</textarea></label><p>Observation text does not change provider observations and triggers no request.</p><footer>${verification ? `<button type="button" data-osint-domain-action="save">ADD TO CASE</button>` : `<span class="osint-action-unavailable">ADD TO CASE AVAILABLE AFTER A REVIEWED PROVIDER OBSERVATION</span>`}</footer></div></section>
+            <aside class="osint-domain-policy workspace-panel"><header><h2>PROVIDER POLICY</h2><span>PASSIVE / FIXED ENDPOINTS</span></header><div class="workspace-panel-content"><p><strong>Google Public DNS</strong> is limited to one explicit domain and the fixed A, AAAA, MX, NS, TXT and CNAME set. <strong>RIPEstat Network Info</strong> is limited to one explicit public IP.</p><p>Registration and certificate discovery remain link-only/deferred. No generic HTTP proxy, renderer-selected endpoint, credentials, target list or automatic infrastructure follow-up is available.</p></div></aside>`;
     }
 
     handleOSINTGeoAction(action, trigger = null) {
@@ -2756,6 +2925,7 @@ class WorkspaceManager {
         const data = normalized && normalized.data || {};
         const title = normalized && normalized.summary || "Provider result";
         const geo = normalized && normalized.capability === "GEOSPATIAL_VERIFICATION";
+        const infrastructure = normalized && normalized.capability === "INFRASTRUCTURE_CONTEXT";
         const redactions = [
             ["queryInput", "QUERY INPUT"],
             ["canonicalUrl", "CANONICAL URL"],
@@ -2764,8 +2934,9 @@ class WorkspaceManager {
             ["data.canonicalUrl", "DATA / CANONICAL URL"],
             ["data.snapshotUrl", "DATA / SNAPSHOT URL"],
             ...(geo ? [["data.geo.latitude", "GEO / LATITUDE"], ["data.geo.longitude", "GEO / LONGITUDE"], ["data.geo.displayName", "GEO / DISPLAY NAME"], ["data.geo.locality", "GEO / LOCALITY"], ["data.geo.region", "GEO / REGION"], ["data.geo.country", "GEO / COUNTRY"], ["data.geo.countryCode", "GEO / COUNTRY CODE"], ["data.geo.elevationM", "GEO / ELEVATION"], ["data.geo.observations", "GEO / PROVIDER OBSERVATIONS"]] : [])
+            .concat(infrastructure ? [["data.infrastructure.normalizedTarget", "INFRASTRUCTURE / NORMALIZED TARGET"], ["data.infrastructure.dns", "INFRASTRUCTURE / DNS"], ["data.infrastructure.network", "INFRASTRUCTURE / NETWORK"], ["data.infrastructure.provenance", "INFRASTRUCTURE / PROVIDER PROVENANCE"]] : [])
         ];
-        this.openOSINTCaseDialog("EVIDENCE PREVIEW", `<form data-osint-evidence-preview-form><p>Review the safe normalized metadata. The provider, capability, query timestamp and integrity basis are fixed by the trusted local service.</p><section class="osint-evidence-preview-provenance"><div><small>PROVIDER</small><strong>${this.escape(providerId)}</strong></div><div><small>CAPABILITY</small><strong>${this.escape(normalized.capability)}</strong></div><div><small>STATUS</small><strong>${this.escape(normalized.status)}</strong></div><div><small>QUERIED</small><strong>${this.escape(normalized.queriedAt)}</strong></div></section><label><span>TITLE</span><input class="aegis-input" name="title" value="${this.escape(title)}" maxlength="160" required></label><label><span>SUMMARY</span><textarea class="aegis-input" name="summary" maxlength="4000" required>${this.escape(normalized.summary || "")}</textarea></label><label><span>TAGS</span><input class="aegis-input" name="tags" maxlength="500" value="${geo ? "geospatial, verification" : "wayback, historical-archive"}"></label><label><span>NOTE · OPTIONAL</span><textarea class="aegis-input" name="note" maxlength="8000"></textarea></label><fieldset><legend>REDACT BEFORE LOCAL SAVE</legend>${redactions.map(([field, label]) => `<label><input type="checkbox" name="redactions" value="${field}"> ${label}</label>`).join("")}</fieldset><footer><button type="button" data-osint-case-dialog-close>CANCEL</button><button type="submit">CONFIRM SAVE EVIDENCE</button></footer></form>`, trigger, (overlay, close) => {
+        this.openOSINTCaseDialog("EVIDENCE PREVIEW", `<form data-osint-evidence-preview-form><p>Review the safe normalized metadata. The provider, capability, query timestamp and integrity basis are fixed by the trusted local service.</p><section class="osint-evidence-preview-provenance"><div><small>PROVIDER</small><strong>${this.escape(providerId)}</strong></div><div><small>CAPABILITY</small><strong>${this.escape(normalized.capability)}</strong></div><div><small>STATUS</small><strong>${this.escape(normalized.status)}</strong></div><div><small>QUERIED</small><strong>${this.escape(normalized.queriedAt)}</strong></div></section><label><span>TITLE</span><input class="aegis-input" name="title" value="${this.escape(title)}" maxlength="160" required></label><label><span>SUMMARY</span><textarea class="aegis-input" name="summary" maxlength="4000" required>${this.escape(normalized.summary || "")}</textarea></label><label><span>TAGS</span><input class="aegis-input" name="tags" maxlength="500" value="${geo ? "geospatial, verification" : infrastructure ? "domain, infrastructure" : "wayback, historical-archive"}"></label><label><span>NOTE · OPTIONAL</span><textarea class="aegis-input" name="note" maxlength="8000"></textarea></label><fieldset><legend>REDACT BEFORE LOCAL SAVE</legend>${redactions.map(([field, label]) => `<label><input type="checkbox" name="redactions" value="${field}"> ${label}</label>`).join("")}</fieldset><footer><button type="button" data-osint-case-dialog-close>CANCEL</button><button type="submit">CONFIRM SAVE EVIDENCE</button></footer></form>`, trigger, (overlay, close) => {
             overlay.querySelectorAll("[data-osint-case-dialog-close]").forEach(button => button.addEventListener("click", close));
             overlay.querySelector("[data-osint-evidence-preview-form]").addEventListener("submit", async event => {
                 event.preventDefault(); const form = new FormData(event.currentTarget);

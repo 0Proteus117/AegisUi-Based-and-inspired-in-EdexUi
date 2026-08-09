@@ -9,12 +9,18 @@
         || (typeof require === "function" ? require("./osintProviderRuntime.class.js") : null);
     const Policy = (typeof window !== "undefined" && window.OSINTProviderPolicy)
         || (typeof require === "function" ? require("./osintProviderPolicy.class.js") : null);
-    if (!Runtime || !Policy) throw new Error("OSINT provider runtime and policy must load before adapters.");
+    const DomainInfrastructure = (typeof window !== "undefined" && window.OSINTDomainInfrastructure)
+        || (typeof require === "function" ? require("./osintDomainInfrastructure.class.js") : null);
+    if (!Runtime || !Policy || !DomainInfrastructure) throw new Error("OSINT provider runtime, policy and domain module must load before adapters.");
 
     const WAYBACK_AVAILABILITY_ENDPOINT = "https://archive.org/wayback/available";
     const WAYBACK_TIMEOUT_MS = 9000;
     const OPEN_METEO_GEOCODING_ENDPOINT = "https://geocoding-api.open-meteo.com/v1/search";
     const OPEN_METEO_TIMEOUT_MS = 8000;
+    const GOOGLE_DNS_DOH_ENDPOINT = "https://dns.google/resolve";
+    const GOOGLE_DNS_TIMEOUT_MS = 8000;
+    const RIPESTAT_NETWORK_INFO_ENDPOINT = "https://stat.ripe.net/data/network-info/data.json";
+    const RIPESTAT_TIMEOUT_MS = 8000;
 
     function safeText(value, fallback = "Provider request failed.") {
         return String(value || fallback).replace(/https?:\/\/[^\s]+/gi, "[URL REDACTED]").replace(/\s+/g, " ").trim().slice(0, 240) || fallback;
@@ -206,6 +212,100 @@
         }
     }
 
+    function dnsStatus(code) {
+        return ({0: "NOERROR", 1: "FORMERR", 2: "SERVFAIL", 3: "NXDOMAIN", 4: "NOTIMP", 5: "REFUSED"})[Number(code)] || "UNKNOWN";
+    }
+
+    function normalizeDnsValue(type, value) {
+        const text = String(value || "").replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim();
+        if (!text) return null;
+        // TXT fields can be very large. They are rendered only as a bounded,
+        // context record; no provider payload is retained.
+        return text.slice(0, type === "TXT" ? 1024 : 320);
+    }
+
+    class GooglePublicDnsAdapter extends RestApiAdapter {
+        validateInput(input) {
+            const target = input && typeof input === "object" && input.normalizedTarget ? input : DomainInfrastructure.normalizeInput(input);
+            if (target.targetType !== "DOMAIN") throw new Runtime.ProviderError("INVALID_INPUT", "Google Public DNS accepts one normalized public domain only.", {providerId: this.provider.id});
+            return target;
+        }
+        buildRequest(target, recordType) {
+            if (!DomainInfrastructure.DNS_RECORD_TYPES.includes(recordType)) throw new Runtime.ProviderError("INVALID_INPUT", "Only the approved DNS record types are supported.", {providerId: this.provider.id});
+            const url = new URL(GOOGLE_DNS_DOH_ENDPOINT);
+            url.searchParams.set("name", target.normalizedTarget);
+            url.searchParams.set("type", recordType);
+            url.searchParams.set("do", "false");
+            url.searchParams.set("cd", "false");
+            return url.toString();
+        }
+        async query(input, context) {
+            const target = this.validateInput(input);
+            const settled = await Promise.allSettled(DomainInfrastructure.DNS_RECORD_TYPES.map(async type => ({type, raw: await this.fetchJson(this.buildRequest(target, type), context, GOOGLE_DNS_TIMEOUT_MS)})));
+            if (context.abortSignal && context.abortSignal.aborted) throw new Runtime.ProviderError("CANCELLED", "DNS context was cancelled.", {providerId: context.providerId});
+            const rawResults = settled.map((result, index) => result.status === "fulfilled"
+                ? result.value
+                : {type: DomainInfrastructure.DNS_RECORD_TYPES[index], error: result.reason});
+            if (!rawResults.some(item => item.raw)) {
+                const cause = rawResults.find(item => item.error)?.error;
+                throw cause instanceof Runtime.ProviderError ? cause : new Runtime.ProviderError("PROVIDER_UNAVAILABLE", "The DNS provider did not return a usable response.", {providerId: context.providerId});
+            }
+            return this.normalizeResult(rawResults, context, target);
+        }
+        normalizeResult(results, context, target) {
+            if (!Array.isArray(results) || results.length !== DomainInfrastructure.DNS_RECORD_TYPES.length) throw new Runtime.ProviderError("NORMALIZATION_FAILED", "The DNS response did not match the fixed query set.", {providerId: context.providerId});
+            const warnings = [];
+            const records = results.map(item => {
+                if (item.error) {
+                    warnings.push(`DNS ${item.type} was unavailable: ${safeText(item.error && item.error.message, "Provider request failed.")}`);
+                    return Object.freeze({type: item.type, status: item.error.code || "PROVIDER_UNAVAILABLE", values: Object.freeze([])});
+                }
+                if (!item.raw || typeof item.raw !== "object" || (item.raw.Answer !== undefined && !Array.isArray(item.raw.Answer))) throw new Runtime.ProviderError("NORMALIZATION_FAILED", "The DNS provider returned an unreadable record response.", {providerId: context.providerId});
+                const values = (item.raw.Answer || []).map(answer => normalizeDnsValue(item.type, answer && answer.data)).filter(Boolean).slice(0, 12);
+                return Object.freeze({type: item.type, status: dnsStatus(item.raw.Status), values: Object.freeze(values)});
+            });
+            const nonEmpty = records.filter(record => record.values.length).length;
+            const unavailable = records.filter(record => record.status === "PROVIDER_UNAVAILABLE" || record.status === "TIMEOUT").length;
+            const completedAt = new Date().toISOString();
+            return Runtime.createNormalizedResult({
+                requestId: context.requestId, providerId: context.providerId, capability: context.capability, status: unavailable ? "PARTIAL" : nonEmpty ? "SUCCESS" : "EMPTY", queriedAt: context.startedAt, completedAt,
+                durationMs: Math.max(0, new Date(completedAt).getTime() - new Date(context.startedAt).getTime()),
+                summary: unavailable ? `${nonEmpty} fixed DNS record group${nonEmpty === 1 ? "" : "s"} returned; ${unavailable} record group${unavailable === 1 ? "" : "s"} unavailable.` : nonEmpty ? `${nonEmpty} fixed DNS record group${nonEmpty === 1 ? "" : "s"} returned for the explicit domain.` : "No values were returned for the fixed DNS record set.",
+                data: {target: target.normalizedTarget, targetType: target.targetType, records, warnings: Object.freeze(warnings.slice(0, 6))}, warnings: Object.freeze(warnings.slice(0, 6)), source: {provider: "Google Public DNS", type: "PUBLIC_DNS_OVER_HTTPS"}, confidence: "PROVIDER_REPORTED"
+            });
+        }
+    }
+
+    class RIPEstatNetworkInfoAdapter extends RestApiAdapter {
+        validateInput(input) {
+            const target = input && typeof input === "object" && input.normalizedTarget ? input : DomainInfrastructure.normalizeInput(input);
+            if (!["IPv4", "IPv6"].includes(target.targetType)) throw new Runtime.ProviderError("INVALID_INPUT", "RIPEstat Network Info accepts one normalized public IP address only.", {providerId: this.provider.id});
+            return target;
+        }
+        buildRequest(target) {
+            const url = new URL(RIPESTAT_NETWORK_INFO_ENDPOINT);
+            url.searchParams.set("resource", target.normalizedTarget);
+            return url.toString();
+        }
+        async query(input, context) {
+            const target = this.validateInput(input);
+            const raw = await this.fetchJson(this.buildRequest(target), context, RIPESTAT_TIMEOUT_MS);
+            return this.normalizeResult(raw, context, target);
+        }
+        normalizeResult(raw, context, target) {
+            const data = raw && raw.data;
+            if (!raw || typeof raw !== "object" || !data || typeof data !== "object") throw new Runtime.ProviderError("NORMALIZATION_FAILED", "The network provider returned an unreadable response.", {providerId: context.providerId});
+            const asns = (Array.isArray(data.asns) ? data.asns : []).map(value => String(value).replace(/[^0-9]/g, "")).filter(Boolean).slice(0, 12).map(value => `AS${value}`);
+            const network = Object.freeze({ip: target.normalizedTarget, asns: Object.freeze(asns), prefix: safeText(data.prefix, "NOT RETURNED").replace("[URL REDACTED]", "NOT RETURNED"), rir: data.rir ? safeText(data.rir, "NOT RETURNED").replace("[URL REDACTED]", "NOT RETURNED") : "NOT RETURNED", country: null, allocationContext: asns.length ? "Containing network and announcing ASN context returned by RIPEstat." : "RIPEstat returned no announcing ASN context for this public IP."});
+            const completedAt = new Date().toISOString();
+            return Runtime.createNormalizedResult({
+                requestId: context.requestId, providerId: context.providerId, capability: context.capability, status: asns.length || network.prefix !== "NOT RETURNED" ? "SUCCESS" : "EMPTY", queriedAt: context.startedAt, completedAt,
+                durationMs: Math.max(0, new Date(completedAt).getTime() - new Date(context.startedAt).getTime()), summary: asns.length ? "Public network and ASN context returned for the explicit IP." : "No public ASN context was returned for the explicit IP.",
+                data: {target: target.normalizedTarget, targetType: target.targetType, network}, warnings: [], source: {provider: "RIPEstat Network Info", type: "PUBLIC_NETWORK_INFORMATION_API"}, confidence: "PROVIDER_REPORTED"
+            });
+        }
+    }
+
     class AdapterFactory {
         constructor(options = {}) {
             this.providerRegistry = options.providerRegistry;
@@ -221,6 +321,8 @@
             if (["DISABLED", "UNSUPPORTED"].includes(provider.providerStatus)) throw new Runtime.ProviderError("PROVIDER_DISABLED", "This provider is disabled.", {providerId});
             if (provider.runtimeAdapter === "WAYBACK_AVAILABILITY") return new WaybackAdapter(provider, {fetchImpl: this.fetchImpl});
             if (provider.runtimeAdapter === "OPEN_METEO_GEOCODING") return new OpenMeteoGeocodingAdapter(provider, {fetchImpl: this.fetchImpl});
+            if (provider.runtimeAdapter === "GOOGLE_DNS_DOH") return new GooglePublicDnsAdapter(provider, {fetchImpl: this.fetchImpl});
+            if (provider.runtimeAdapter === "RIPESTAT_NETWORK_INFO") return new RIPEstatNetworkInfoAdapter(provider, {fetchImpl: this.fetchImpl});
             if (provider.runtimeAdapter === "EXTERNAL_WEB") return new ExternalWebAdapter(provider, {fetchImpl: this.fetchImpl});
             if (provider.runtimeAdapter === "LOCAL_TOOL") return new LocalToolAdapter(provider, {fetchImpl: this.fetchImpl});
             if (provider.runtimeAdapter === "SYSTEM_INTEGRATION") return new SystemIntegrationAdapter(provider, {fetchImpl: this.fetchImpl});
@@ -234,5 +336,5 @@
         }
     }
 
-    return Object.freeze({WAYBACK_AVAILABILITY_ENDPOINT, WAYBACK_TIMEOUT_MS, OPEN_METEO_GEOCODING_ENDPOINT, OPEN_METEO_TIMEOUT_MS, ProviderAdapter, ExternalWebAdapter, RestApiAdapter, LocalToolAdapter, SystemIntegrationAdapter, ReferenceOnlyAdapter, WaybackAdapter, OpenMeteoGeocodingAdapter, AdapterFactory, validateWaybackInput, validateOpenMeteoPlaceInput, safeText});
+    return Object.freeze({WAYBACK_AVAILABILITY_ENDPOINT, WAYBACK_TIMEOUT_MS, OPEN_METEO_GEOCODING_ENDPOINT, OPEN_METEO_TIMEOUT_MS, GOOGLE_DNS_DOH_ENDPOINT, GOOGLE_DNS_TIMEOUT_MS, RIPESTAT_NETWORK_INFO_ENDPOINT, RIPESTAT_TIMEOUT_MS, ProviderAdapter, ExternalWebAdapter, RestApiAdapter, LocalToolAdapter, SystemIntegrationAdapter, ReferenceOnlyAdapter, WaybackAdapter, OpenMeteoGeocodingAdapter, GooglePublicDnsAdapter, RIPEstatNetworkInfoAdapter, AdapterFactory, validateWaybackInput, validateOpenMeteoPlaceInput, safeText});
 });

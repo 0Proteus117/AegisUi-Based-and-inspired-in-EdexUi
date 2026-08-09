@@ -384,11 +384,41 @@
         })
     ]);
 
+    // Phase 7 uses two narrow fixed adapters. Neither is launchable and neither
+    // accepts an endpoint, method, header or credential from the renderer.
+    const INFRASTRUCTURE_NATIVE_PROVIDERS = Object.freeze([
+        Object.freeze({
+            id: "google-public-dns", name: "Google Public DNS", shortName: "Google DNS",
+            description: "Bounded public DNS context for one explicitly supplied domain using fixed record types only.",
+            category: "infrastructure", capabilities: ["INFRASTRUCTURE_CONTEXT"], providerType: "REST_API", accessMode: "API", providerStatus: "ACTIVE",
+            riskProfile: "PASSIVE", legalStatus: "GENERALLY_LEGAL", inputs: ["DOMAIN"], outputs: ["DNS_A", "DNS_AAAA", "DNS_MX", "DNS_NS", "DNS_TXT", "DNS_CNAME", "PROVIDER_OBSERVATION"],
+            authentication: "NONE", costModel: "PUBLIC_NO_KEY", officialUrl: "https://developers.google.com/speed/public-dns/docs/doh/json", docsUrl: "https://developers.google.com/speed/public-dns/docs/doh/json", publicReferenceUrl: null,
+            launchAllowed: false, copyUrlAllowed: false, integrationAllowed: true, installationAllowed: false, runtimeAdapter: "GOOGLE_DNS_DOH",
+            referenceReason: "Approved only for a bounded, analyst-initiated DNS context request against one explicit domain. It does not enumerate names or perform recursive follow-up.",
+            legalDisclaimer: "AegisUI sends only the explicitly entered public domain to a fixed public DNS endpoint and normalizes a small fixed record set. DNS observations are contextual and do not establish ownership, identity or authorization.",
+            jurisdictionNote: "DNS data can vary by resolver, time and jurisdiction. The result is an observation from this provider, not an attribution finding.",
+            tags: Object.freeze(["dns", "passive", "public-api", "fixed-endpoint"]), lastReviewed: REVIEW_DATE, sourceConfidence: "VERIFIED_OFFICIAL", icon: "DNS", featured: false, featuredOrder: 0
+        }),
+        Object.freeze({
+            id: "ripestat-network-info", name: "RIPEstat Network Info", shortName: "RIPEstat",
+            description: "Passive ASN and containing-prefix context for one explicitly supplied public IP address.",
+            category: "infrastructure", capabilities: ["INFRASTRUCTURE_CONTEXT"], providerType: "REST_API", accessMode: "API", providerStatus: "ACTIVE",
+            riskProfile: "PASSIVE", legalStatus: "GENERALLY_LEGAL", inputs: ["PUBLIC_IP"], outputs: ["ASN", "NETWORK_PREFIX", "RIR_CONTEXT", "PROVIDER_OBSERVATION"],
+            authentication: "NONE", costModel: "PUBLIC_NO_KEY", officialUrl: "https://stat.ripe.net/docs/data-api/api-endpoints/network-info.html", docsUrl: "https://stat.ripe.net/docs/data-api/api-endpoints/network-info.html", publicReferenceUrl: null,
+            launchAllowed: false, copyUrlAllowed: false, integrationAllowed: true, installationAllowed: false, runtimeAdapter: "RIPESTAT_NETWORK_INFO",
+            referenceReason: "Approved only for one explicit public-IP network context request. Domain-derived addresses require a separate analyst selection before any network request.",
+            legalDisclaimer: "AegisUI sends only the explicitly selected public IP to a fixed RIPEstat endpoint. ASN and prefix observations provide infrastructure context and do not prove operator, ownership or identity.",
+            jurisdictionNote: "RIR and allocation data are provider observations that can be incomplete, time-dependent or jurisdiction-dependent.",
+            tags: Object.freeze(["asn", "ip", "passive", "public-api", "fixed-endpoint"]), lastReviewed: REVIEW_DATE, sourceConfidence: "VERIFIED_OFFICIAL", icon: "ASN", featured: false, featuredOrder: 0
+        })
+    ]);
+
     const PROVIDERS = Object.freeze([
         ...PROVIDER_SEEDS.map(normalizeSeed),
         ...REFERENCE_ONLY_PROVIDERS,
         ...GEOSPATIAL_NATIVE_PROVIDERS,
-        ...VISUAL_MEDIA_LOCAL_PROVIDERS
+        ...VISUAL_MEDIA_LOCAL_PROVIDERS,
+        ...INFRASTRUCTURE_NATIVE_PROVIDERS
     ]);
 
     const CATEGORIES = Object.freeze(CATEGORY_DEFINITIONS.map(category => Object.freeze({
