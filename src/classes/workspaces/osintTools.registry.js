@@ -215,8 +215,8 @@
 
     const REVIEW_DATE = "2026-07-23";
     const CATEGORY_CAPABILITIES = Object.freeze({
-        discovery: ["RESEARCH_DISCOVERY"],
-        archives: ["HISTORICAL_ARCHIVE", "EVIDENCE_PRESERVATION"],
+        discovery: ["RESEARCH_DISCOVERY", "SOURCE_VERIFICATION"],
+        archives: ["HISTORICAL_ARCHIVE", "EVIDENCE_PRESERVATION", "SOURCE_VERIFICATION"],
         infrastructure: ["INFRASTRUCTURE_CONTEXT"],
         threat: ["THREAT_REPUTATION"],
         geospatial: ["GEOSPATIAL_VERIFICATION", "VISUAL_MEDIA_VERIFICATION", "MEDIA_VERIFICATION"],
@@ -413,12 +413,43 @@
         })
     ]);
 
+    // Phase 8 deliberately keeps native scholarly access to one DOI → one
+    // metadata-record request. URL/source context reuses explicit Wayback
+    // checks; no browser scraping, downloads or search endpoint is exposed.
+    const RESEARCH_SOURCE_NATIVE_PROVIDERS = Object.freeze([
+        Object.freeze({
+            id: "crossref-works", name: "Crossref Works", shortName: "Crossref",
+            description: "Bounded bibliographic metadata for one explicitly supplied DOI.",
+            category: "discovery", capabilities: ["SOURCE_VERIFICATION"], providerType: "REST_API", accessMode: "API", providerStatus: "ACTIVE",
+            riskProfile: "PASSIVE", legalStatus: "GENERALLY_LEGAL", inputs: ["DOI"], outputs: ["NORMALIZED_SOURCE_CONTEXT", "PROVIDER_OBSERVATION"],
+            authentication: "NONE", costModel: "PUBLIC_NO_KEY", officialUrl: "https://www.crossref.org/documentation/retrieve-metadata/rest-api/", docsUrl: "https://www.crossref.org/documentation/retrieve-metadata/rest-api/", publicReferenceUrl: null,
+            launchAllowed: false, copyUrlAllowed: false, integrationAllowed: true, installationAllowed: false, runtimeAdapter: "CROSSREF_WORKS",
+            referenceReason: "Approved only for one analyst-initiated DOI metadata retrieval through Crossref's documented works endpoint. It does not search, paginate, download documents or crawl publisher sites.",
+            legalDisclaimer: "AegisUI submits only the DOI explicitly entered by the analyst to Crossref. Returned bibliographic metadata is contextual and does not authenticate a document, prove authorship or establish the truth of a claim.",
+            jurisdictionNote: "Publisher metadata, licensing and availability can vary. The analyst remains responsible for applying provider terms and applicable law.",
+            tags: Object.freeze(["doi", "research", "metadata", "public-api", "fixed-endpoint"]), lastReviewed: REVIEW_DATE, sourceConfidence: "VERIFIED_OFFICIAL", icon: "CR", featured: false, featuredOrder: 0
+        }),
+        Object.freeze({
+            id: "local-pdf-inspection", name: "Local PDF Inspection", shortName: "PDF Inspect",
+            description: "Passive local metadata and SHA-256 inspection for one explicitly selected PDF. No upload or original-file persistence.",
+            category: "archives", capabilities: ["SOURCE_VERIFICATION"], providerType: "LOCAL_TOOL", accessMode: "LOCAL", providerStatus: "ACTIVE",
+            riskProfile: "PASSIVE", legalStatus: "GENERALLY_LEGAL", inputs: ["LOCAL_PDF"], outputs: ["DOCUMENT_METADATA", "ORIGINAL_DOCUMENT_HASH"],
+            authentication: "NONE", costModel: "LOCAL_ONLY", officialUrl: null, docsUrl: null, publicReferenceUrl: null,
+            launchAllowed: false, copyUrlAllowed: false, integrationAllowed: true, installationAllowed: false, runtimeAdapter: "LOCAL_TOOL",
+            referenceReason: "Built-in local PDF metadata inspection. The renderer receives explicit file bytes only and does not persist paths or original documents.",
+            legalDisclaimer: "AegisUI extracts only bounded local PDF metadata actually present in one selected file. Metadata is contextual and does not prove authorship, publication, integrity of content or claim accuracy.",
+            jurisdictionNote: "The analyst remains responsible for lawful possession and handling of the selected document. No external document service is contacted.",
+            tags: Object.freeze(["pdf", "metadata", "local", "passive", "sha-256"]), lastReviewed: REVIEW_DATE, sourceConfidence: "VERIFIED_OFFICIAL", icon: "PDF", featured: false, featuredOrder: 0
+        })
+    ]);
+
     const PROVIDERS = Object.freeze([
         ...PROVIDER_SEEDS.map(normalizeSeed),
         ...REFERENCE_ONLY_PROVIDERS,
         ...GEOSPATIAL_NATIVE_PROVIDERS,
         ...VISUAL_MEDIA_LOCAL_PROVIDERS,
-        ...INFRASTRUCTURE_NATIVE_PROVIDERS
+        ...INFRASTRUCTURE_NATIVE_PROVIDERS,
+        ...RESEARCH_SOURCE_NATIVE_PROVIDERS
     ]);
 
     const CATEGORIES = Object.freeze(CATEGORY_DEFINITIONS.map(category => Object.freeze({

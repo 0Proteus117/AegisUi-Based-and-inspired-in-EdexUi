@@ -3561,6 +3561,131 @@ button.eng-thread-row.active {
     scrollbar-gutter: stable;
 }
 
+/* Phase 8: source and document context uses the same content-sized, normal-flow
+   layout contract as the Geo, Media and Domain surfaces. Inputs, provider data
+   and analyst content may all be legitimately long, so none relies on fixed
+   offsets or screenshot-specific heights. */
+.engineering-mode .osint-research-header,
+.engineering-mode .osint-research-input,
+.engineering-mode .osint-research-context,
+.engineering-mode .osint-research-archive,
+.engineering-mode .osint-research-document,
+.engineering-mode .osint-research-provenance-panel,
+.engineering-mode .osint-research-excerpt,
+.engineering-mode .osint-research-observation,
+.engineering-mode .osint-research-policy {
+    min-width: 0;
+    border-color: var(--aegis-border-subtle);
+    background: linear-gradient(145deg, rgba(59, 167, 255, .08), transparent 48%), var(--aegis-surface);
+    color: var(--aegis-text);
+}
+.engineering-mode .workspace-grid.osint-command-grid:has(.osint-research-header) {
+    display: grid;
+    grid-template-columns: minmax(17rem, .9fr) minmax(20rem, 1.12fr) minmax(17rem, .92fr);
+    grid-template-areas:
+        "research-header research-header research-header"
+        "research-input research-context research-archive"
+        "research-document research-provenance research-excerpt"
+        "research-observation research-observation research-policy";
+    grid-template-rows: repeat(4, auto);
+    gap: .85vh;
+    min-height: 0;
+    overflow: auto;
+    align-content: start;
+}
+.engineering-mode .osint-research-header { grid-area: research-header; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 1vh; align-items: center; padding: 1vh 1.15vh; }
+.engineering-mode .osint-research-input { grid-area: research-input; }
+.engineering-mode .osint-research-context { grid-area: research-context; }
+.engineering-mode .osint-research-archive { grid-area: research-archive; }
+.engineering-mode .osint-research-document { grid-area: research-document; }
+.engineering-mode .osint-research-provenance-panel { grid-area: research-provenance; }
+.engineering-mode .osint-research-excerpt { grid-area: research-excerpt; }
+.engineering-mode .osint-research-observation { grid-area: research-observation; }
+.engineering-mode .osint-research-policy { grid-area: research-policy; }
+.engineering-mode .osint-research-input,
+.engineering-mode .osint-research-context,
+.engineering-mode .osint-research-archive,
+.engineering-mode .osint-research-document,
+.engineering-mode .osint-research-provenance-panel,
+.engineering-mode .osint-research-excerpt,
+.engineering-mode .osint-research-observation,
+.engineering-mode .osint-research-policy { display: grid; grid-template-rows: auto minmax(0, 1fr); min-height: min-content; }
+.engineering-mode .osint-research-header > div,
+.engineering-mode .osint-research-input .workspace-panel-content,
+.engineering-mode .osint-research-context .workspace-panel-content,
+.engineering-mode .osint-research-archive .workspace-panel-content,
+.engineering-mode .osint-research-document .workspace-panel-content,
+.engineering-mode .osint-research-provenance-panel .workspace-panel-content,
+.engineering-mode .osint-research-excerpt .workspace-panel-content,
+.engineering-mode .osint-research-observation .workspace-panel-content,
+.engineering-mode .osint-research-policy .workspace-panel-content {
+    position: relative;
+    inset: auto;
+    min-width: 0;
+    display: grid;
+    align-content: start;
+    gap: .75vh;
+    min-height: min-content;
+    padding: .82vh;
+    overflow: visible;
+}
+.engineering-mode .osint-research-header small,
+.engineering-mode .osint-research-input label > span,
+.engineering-mode .osint-research-excerpt label > span,
+.engineering-mode .osint-research-observation label > span,
+.engineering-mode .osint-research-status small,
+.engineering-mode .osint-research-readout small,
+.engineering-mode .osint-research-document-readout small,
+.engineering-mode .osint-research-archive-readout small,
+.engineering-mode .osint-research-provenance small { display: block; color: var(--aegis-text-faint); font: .56vh var(--font_mono); letter-spacing: .1em; }
+.engineering-mode .osint-research-header h2 { margin: .16vh 0; color: var(--aegis-text); font: 1.45vh var(--font_main); font-weight: normal; letter-spacing: .08em; overflow-wrap: anywhere; }
+.engineering-mode .osint-research-header p,
+.engineering-mode .osint-research-input form > small,
+.engineering-mode .osint-research-observation p,
+.engineering-mode .osint-research-policy p,
+.engineering-mode .osint-research-archive p { margin: 0; color: var(--aegis-text-muted); font: .65vh var(--font_main); line-height: 1.38; overflow-wrap: anywhere; }
+.engineering-mode .osint-research-status { display: grid; gap: .28vh; min-width: 12vh; padding: .52vh .68vh; border-left: .12vh solid var(--aegis-accent); text-align: right; }
+.engineering-mode .osint-research-status strong { color: var(--aegis-accent-soft); font: .76vh var(--font_mono); letter-spacing: .08em; }
+.engineering-mode .osint-research-status span { color: var(--aegis-text-muted); font: .54vh var(--font_mono); }
+.engineering-mode .osint-research-input form,
+.engineering-mode .osint-research-input label,
+.engineering-mode .osint-research-excerpt label,
+.engineering-mode .osint-research-observation label { display: grid; gap: .5vh; min-width: 0; }
+.engineering-mode .osint-research-input .aegis-input,
+.engineering-mode .osint-research-input .aegis-select,
+.engineering-mode .osint-research-excerpt .aegis-input,
+.engineering-mode .osint-research-excerpt .aegis-select,
+.engineering-mode .osint-research-observation .aegis-input { width: 100%; min-width: 0; box-sizing: border-box; color: var(--aegis-text); border-color: var(--aegis-border); background: var(--aegis-surface-input); }
+.engineering-mode .osint-research-file-input input[type="file"] { padding: .48vh; font: .58vh var(--font_mono); }
+.engineering-mode .osint-research-selected-file { color: var(--aegis-accent-soft); font: .58vh var(--font_mono); overflow-wrap: anywhere; }
+.engineering-mode .osint-research-excerpt textarea { min-height: 8vh; resize: vertical; }
+.engineering-mode .osint-research-observation textarea { min-height: 9vh; resize: vertical; }
+.engineering-mode .osint-research-input footer,
+.engineering-mode .osint-research-archive footer,
+.engineering-mode .osint-research-observation footer { display: flex; flex-wrap: wrap; gap: .55vh; align-items: center; }
+.engineering-mode .osint-research-input button,
+.engineering-mode .osint-research-archive button,
+.engineering-mode .osint-research-observation button { border: .08vh solid var(--aegis-border); color: var(--aegis-accent-soft); background: var(--aegis-surface-raised); padding: .52vh .7vh; font: .6vh var(--font_main); letter-spacing: .08em; }
+.engineering-mode .osint-research-readout,
+.engineering-mode .osint-research-document-readout,
+.engineering-mode .osint-research-archive-readout { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .58vh; }
+.engineering-mode .osint-research-readout > div,
+.engineering-mode .osint-research-document-readout > div,
+.engineering-mode .osint-research-archive-readout > div { min-width: 0; padding: .58vh; border-left: .12vh solid var(--aegis-accent); background: var(--aegis-surface-muted); }
+.engineering-mode .osint-research-readout strong,
+.engineering-mode .osint-research-document-readout strong,
+.engineering-mode .osint-research-archive-readout strong { display: block; margin-top: .16vh; color: var(--aegis-text); font: .61vh var(--font_mono); line-height: 1.3; overflow-wrap: anywhere; }
+.engineering-mode .osint-research-provenance { display: grid; gap: .55vh; margin: 0; padding: 0; list-style: none; }
+.engineering-mode .osint-research-provenance li { display: grid; gap: .22vh; min-width: 0; padding: .58vh; border-left: .12vh solid var(--aegis-accent); background: var(--aegis-surface-muted); }
+.engineering-mode .osint-research-provenance strong { color: var(--aegis-accent-soft); font: .62vh var(--font_mono); letter-spacing: .06em; }
+.engineering-mode .osint-research-provenance span { color: var(--aegis-text); font: .61vh var(--font_main); line-height: 1.32; overflow-wrap: anywhere; }
+.engineering-mode .osint-research-provenance small { overflow-wrap: anywhere; }
+.engineering-mode .osint-research-field-provenance { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .45vh; min-width: 0; padding: .58vh; border: .08vh solid var(--aegis-border-subtle); background: var(--aegis-surface-muted); }
+.engineering-mode .osint-research-field-provenance > small { grid-column: 1 / -1; }
+.engineering-mode .osint-research-field-provenance > div { display: grid; gap: .18vh; min-width: 0; }
+.engineering-mode .osint-research-field-provenance strong { color: var(--aegis-accent-soft); font: .59vh var(--font_mono); overflow-wrap: anywhere; }
+.engineering-mode .osint-research-field-provenance span { color: var(--aegis-text-muted); font: .56vh var(--font_main); line-height: 1.28; overflow-wrap: anywhere; }
+
 /* Phase 7: passive domain context is deliberately content-sized and follows
    normal Grid flow. Provider data may be absent or long; no result body uses
    an absolute offset or a fixed screenshot-oriented height. */
@@ -5133,6 +5258,16 @@ button.eng-thread-row.active {
             "domain-registration domain-certificate"
             "domain-observation domain-policy";
     }
+
+    .engineering-mode .workspace-grid.osint-command-grid:has(.osint-research-header) {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        grid-template-areas:
+            "research-header research-header"
+            "research-input research-context"
+            "research-archive research-document"
+            "research-provenance research-excerpt"
+            "research-observation research-policy";
+    }
 }
 
 @media (max-width: 900px), (max-aspect-ratio: 5/4) {
@@ -5221,6 +5356,25 @@ button.eng-thread-row.active {
     .engineering-mode .osint-domain-target-readout,
     .engineering-mode .osint-domain-network-readout,
     .engineering-mode .osint-domain-records { grid-template-columns: minmax(0, 1fr); }
+
+    .engineering-mode .workspace-grid.osint-command-grid:has(.osint-research-header) {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-areas:
+            "research-header"
+            "research-input"
+            "research-context"
+            "research-archive"
+            "research-document"
+            "research-provenance"
+            "research-excerpt"
+            "research-observation"
+            "research-policy";
+    }
+    .engineering-mode .osint-research-header { grid-template-columns: minmax(0, 1fr); }
+    .engineering-mode .osint-research-status { text-align: left; }
+    .engineering-mode .osint-research-readout,
+    .engineering-mode .osint-research-document-readout,
+    .engineering-mode .osint-research-archive-readout { grid-template-columns: minmax(0, 1fr); }
 }
 
 @media (max-aspect-ratio: 16/10) {

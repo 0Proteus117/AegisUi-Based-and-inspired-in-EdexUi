@@ -36,11 +36,11 @@ async function main() {
     const reference = registry.getProvider("cobalt-strike-reference");
     const expectedCapabilities = [
         "RESEARCH_DISCOVERY", "HISTORICAL_ARCHIVE", "EVIDENCE_PRESERVATION", "INFRASTRUCTURE_CONTEXT",
-        "THREAT_REPUTATION", "GEOSPATIAL_VERIFICATION", "VISUAL_MEDIA_VERIFICATION", "MEDIA_VERIFICATION", "ENTITY_RESEARCH",
+        "THREAT_REPUTATION", "GEOSPATIAL_VERIFICATION", "VISUAL_MEDIA_VERIFICATION", "SOURCE_VERIFICATION", "MEDIA_VERIFICATION", "ENTITY_RESEARCH",
         "PUBLIC_PRESENCE", "TRANSPORT_MONITORING", "DATA_ANALYSIS"
     ];
 
-    check("RUNTIME_CAPABILITIES", expectedCapabilities.every(id => capabilityRegistry.getCapability(id)), `${capabilityRegistry.getCapabilities().length}/12`);
+    check("RUNTIME_CAPABILITIES", expectedCapabilities.every(id => capabilityRegistry.getCapability(id)), `${capabilityRegistry.getCapabilities().length}/13`);
     check("RUNTIME_CAPABILITY_PROVIDER_MAP", capabilityRegistry.getProviders("HISTORICAL_ARCHIVE").some(provider => provider.id === "wayback"));
     check("RUNTIME_PREFERRED_PROVIDER", capabilityRegistry.getPreferredProvider("HISTORICAL_ARCHIVE").id === "wayback");
     check("RUNTIME_WAYBACK_POLICY", policy.canQuery(wayback).allowed && !policy.canLaunch(wayback).allowed);
@@ -49,6 +49,9 @@ async function main() {
     const factory = new Adapters.AdapterFactory({providerRegistry});
     const adapter = factory.createAdapter("wayback");
     check("RUNTIME_WAYBACK_ADAPTER", adapter instanceof Adapters.WaybackAdapter);
+    const crossref = registry.getProvider("crossref-works");
+    check("RUNTIME_SOURCE_PROVIDER_MAP", capabilityRegistry.getProviders("SOURCE_VERIFICATION").some(provider => provider.id === "crossref-works") && policy.canQuery(crossref).allowed && !policy.canLaunch(crossref).allowed);
+    check("RUNTIME_CROSSREF_ADAPTER", factory.createAdapter("crossref-works") instanceof Adapters.CrossrefWorksAdapter && Adapters.CROSSREF_WORKS_ENDPOINT === "https://api.crossref.org/works/");
     let refBlocked = false;
     try { factory.createAdapter(reference.id); } catch (error) { refBlocked = error.code === "REFERENCE_ONLY_PROVIDER"; }
     check("RUNTIME_REFERENCE_ADAPTER_BLOCKED", refBlocked);

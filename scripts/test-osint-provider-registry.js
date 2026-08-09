@@ -22,7 +22,7 @@ function copy(value) {
 
 const providerErrors = registry.validate();
 const providers = registry.PROVIDERS;
-const phaseNativeProviderIds = new Set(["open-meteo-geocoding", "local-media-inspection", "google-public-dns", "ripestat-network-info"]);
+const phaseNativeProviderIds = new Set(["open-meteo-geocoding", "local-media-inspection", "google-public-dns", "ripestat-network-info", "crossref-works", "local-pdf-inspection"]);
 const legacyNormalProviders = providers.filter(provider => !policy.isReferenceOnly(provider) && !phaseNativeProviderIds.has(provider.id));
 const normalProviders = providers.filter(provider => !policy.isReferenceOnly(provider));
 const referenceProviders = providers.filter(provider => policy.isReferenceOnly(provider));
@@ -35,7 +35,7 @@ check("OSINT_REQUIRED_FIELDS", schema.REQUIRED_FIELDS.every(field => providers.e
 check("OSINT_PROVIDER_IDS", providerIds.size === providers.length, `${providerIds.size}/${providers.length}`);
 check("OSINT_CATEGORIES", registry.CATEGORIES.length === 9, String(registry.CATEGORIES.length));
 check("OSINT_MIGRATED_LEGACY_TOOLS", legacyNormalProviders.length === 161, String(legacyNormalProviders.length));
-check("OSINT_TOTAL_PROVIDERS", providers.length === 166, String(providers.length));
+check("OSINT_TOTAL_PROVIDERS", providers.length === 168, String(providers.length));
 check("OSINT_NORMAL_URLS", normalProviders.filter(provider => provider.accessMode === "WEB").every(provider => typeof provider.officialUrl === "string" && /^https?:\/\//.test(provider.officialUrl)));
 check("OSINT_COMPATIBILITY_EXPORT", registry.TOOLS.length === providers.length && registry.TOOLS.every(tool => providerIds.has(tool.id)));
 check("OSINT_CATEGORY_COUNTS_DERIVED", registry.CATEGORIES.every(category => category.count === categoryCounts[category.id] && category.count === registry.getProvidersForCategory(category.id).length));
@@ -57,6 +57,11 @@ const dnsProvider = registry.getProvider("google-public-dns");
 const networkProvider = registry.getProvider("ripestat-network-info");
 check("OSINT_DOMAIN_DNS_PROVIDER", dnsProvider && dnsProvider.runtimeAdapter === "GOOGLE_DNS_DOH" && policy.canQuery(dnsProvider).allowed && !dnsProvider.launchAllowed && !dnsProvider.copyUrlAllowed);
 check("OSINT_DOMAIN_NETWORK_PROVIDER", networkProvider && networkProvider.runtimeAdapter === "RIPESTAT_NETWORK_INFO" && policy.canQuery(networkProvider).allowed && !networkProvider.launchAllowed && !networkProvider.copyUrlAllowed);
+
+const crossrefProvider = registry.getProvider("crossref-works");
+const localPdfProvider = registry.getProvider("local-pdf-inspection");
+check("OSINT_RESEARCH_CROSSREF_PROVIDER", crossrefProvider && crossrefProvider.runtimeAdapter === "CROSSREF_WORKS" && policy.canQuery(crossrefProvider).allowed && !crossrefProvider.launchAllowed && !crossrefProvider.copyUrlAllowed);
+check("OSINT_RESEARCH_LOCAL_PDF_PROVIDER", localPdfProvider && localPdfProvider.runtimeAdapter === "LOCAL_TOOL" && localPdfProvider.providerType === "LOCAL_TOOL" && localPdfProvider.capabilities.includes("SOURCE_VERIFICATION") && !localPdfProvider.launchAllowed);
 
 const base = registry.getProvider("wayback");
 const missingRequired = copy(base);

@@ -1,5 +1,21 @@
 # Changelog
 
+## 2.5.4 - 2026-08-09
+
+### OSINT Research / Documents / Source Verification
+
+- Added a passive, bounded Source Verification workspace for one explicit
+  public URL, DOI or local PDF at a time.
+- Added a fixed Crossref Works adapter for explicit DOI metadata only; URL
+  archive context reuses the existing explicit Wayback provider and local PDF
+  inspection remains in-process.
+- Added field-level provenance, short analyst-entered excerpts, neutral claim
+  relationship labels and redaction-reviewed Evidence promotion. Original
+  documents, local paths, provider payloads, cookies and source history remain
+  outside persistence.
+- Preserved Reference Only blocking, the disconnected legacy OSINT runtime,
+  Cases/Evidence integrity, all themes and unrelated AegisUi systems.
+
 ## 2.5.3 - 2026-08-09
 
 ### OSINT Domain & Infrastructure Context

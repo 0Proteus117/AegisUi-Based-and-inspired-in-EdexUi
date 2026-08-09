@@ -1582,6 +1582,11 @@ class WorkspaceManager {
             mode: "CATALOG", input: "", phase: "IDLE", verification: null,
             activeRequestId: null, lastError: null, analystObservation: "", selectedPublicIp: ""
         };
+        this.osintResearchState = this.osintResearchState || {
+            mode: "CATALOG", sourceKind: "URL", input: "", phase: "IDLE", context: null,
+            activeRequestId: null, lastError: null, analystObservation: "", excerpt: "", excerptLocation: "",
+            claimRelationship: "UNKNOWN", selectedFile: null
+        };
         this.osintState.filters = {...{providerStatus: "", riskProfile: "", legalStatus: ""}, ...(this.osintState.filters || {})};
         this.renderOSINTState(view, definition);
         this.ensureOSINTCasesLoaded();
@@ -1620,6 +1625,12 @@ class WorkspaceManager {
             return;
         }
 
+        if (this.osintResearchState && this.osintResearchState.mode === "SOURCE") {
+            this.renderOSINTResearchSourceWorkspace(grid);
+            this.bindOSINTDeck(view);
+            return;
+        }
+
         if (!activeCategory) {
             const featured = typeof registry.getFeaturedProviders === "function"
                 ? registry.getFeaturedProviders()
@@ -1631,7 +1642,7 @@ class WorkspaceManager {
                         <small>PUBLIC-SOURCE / EVIDENCE-AWARE RESEARCH</small>
                         <h2>OSINT TOOL CATALOG</h2>
                         <p>Choose an investigation domain. Every entry carries an explicit access and policy state before any external resource can be launched.</p>
-                        <div class="osint-hero-actions"><button type="button" class="osint-case-workspace-button" data-osint-case-action="workspace">CASE WORKSPACE</button><button type="button" class="osint-case-workspace-button" data-osint-geo-action="open">GEO VERIFICATION</button><button type="button" class="osint-case-workspace-button" data-osint-media-action="open">VISUAL VERIFICATION</button><button type="button" class="osint-case-workspace-button" data-osint-domain-action="open">DOMAIN CONTEXT</button></div>
+                        <div class="osint-hero-actions"><button type="button" class="osint-case-workspace-button" data-osint-case-action="workspace">CASE WORKSPACE</button><button type="button" class="osint-case-workspace-button" data-osint-geo-action="open">GEO VERIFICATION</button><button type="button" class="osint-case-workspace-button" data-osint-media-action="open">VISUAL VERIFICATION</button><button type="button" class="osint-case-workspace-button" data-osint-domain-action="open">DOMAIN CONTEXT</button><button type="button" class="osint-case-workspace-button" data-osint-research-action="open">SOURCE VERIFICATION</button></div>
                     </div>
                     <div class="osint-command-stats">
                         <div><small>CATEGORIES</small><strong>${registry.CATEGORIES.length}</strong></div>
@@ -1658,7 +1669,7 @@ class WorkspaceManager {
             grid.innerHTML = `
                 <section class="osint-category-header workspace-panel">
                     <button type="button" class="osint-back-button" data-osint-back>‹ ALL DOMAINS</button>
-                    <div class="osint-hero-actions"><button type="button" class="osint-case-workspace-button" data-osint-case-action="workspace">CASE WORKSPACE</button>${activeCategory.id === "geospatial" ? `<button type="button" class="osint-case-workspace-button" data-osint-geo-action="open">GEO VERIFICATION</button><button type="button" class="osint-case-workspace-button" data-osint-media-action="open">VISUAL VERIFICATION</button>` : ""}${activeCategory.id === "infrastructure" ? `<button type="button" class="osint-case-workspace-button" data-osint-domain-action="open">DOMAIN CONTEXT</button>` : ""}</div>
+                    <div class="osint-hero-actions"><button type="button" class="osint-case-workspace-button" data-osint-case-action="workspace">CASE WORKSPACE</button>${activeCategory.id === "geospatial" ? `<button type="button" class="osint-case-workspace-button" data-osint-geo-action="open">GEO VERIFICATION</button><button type="button" class="osint-case-workspace-button" data-osint-media-action="open">VISUAL VERIFICATION</button>` : ""}${activeCategory.id === "infrastructure" ? `<button type="button" class="osint-case-workspace-button" data-osint-domain-action="open">DOMAIN CONTEXT</button>` : ""}${["discovery", "archives"].includes(activeCategory.id) ? `<button type="button" class="osint-case-workspace-button" data-osint-research-action="open">SOURCE VERIFICATION</button>` : ""}</div>
                     <span class="osint-category-icon">${this.escape(activeCategory.icon)}</span>
                     <div><small>OSINT DOMAIN / ${this.escape(activeCategory.id)}</small><h2>${this.escape(activeCategory.title)}</h2><p>${this.escape(activeCategory.description)}</p></div>
                     <strong>${providers.length} / ${allCategoryProviders.length} SOURCES</strong>
@@ -1774,7 +1785,7 @@ class WorkspaceManager {
     bindOSINTDeck(view = this.osintView) {
         if (!view || view.dataset.osintDeckBound === "true") return;
         this.boundOSINTDeckClick = event => {
-            const target = event.target.closest("[data-osint-category], [data-osint-back], [data-osint-filter-clear], [data-osint-tool], [data-osint-panel-action], [data-osint-history-clear], [data-osint-query-cancel], [data-osint-save-result], [data-osint-case-action], [data-osint-geo-action], [data-osint-media-action], [data-osint-domain-action]");
+            const target = event.target.closest("[data-osint-category], [data-osint-back], [data-osint-filter-clear], [data-osint-tool], [data-osint-panel-action], [data-osint-history-clear], [data-osint-query-cancel], [data-osint-save-result], [data-osint-case-action], [data-osint-geo-action], [data-osint-media-action], [data-osint-domain-action], [data-osint-research-action]");
             if (!target || !view.contains(target)) return;
             if (target.matches("[data-osint-category]")) {
                 this.osintState.categoryId = target.dataset.osintCategory;
@@ -1823,6 +1834,10 @@ class WorkspaceManager {
                 this.handleOSINTDomainAction(target.dataset.osintDomainAction, target);
                 return;
             }
+            if (target.matches("[data-osint-research-action]")) {
+                this.handleOSINTResearchAction(target.dataset.osintResearchAction, target);
+                return;
+            }
             if (target.matches("[data-osint-panel-action]")) this.handleOSINTPanelAction(target.dataset.osintPanelAction, target);
         };
         this.boundOSINTDeckChange = event => {
@@ -1830,6 +1845,17 @@ class WorkspaceManager {
             if (mediaFile && view.contains(mediaFile)) {
                 const selected = mediaFile.files && mediaFile.files[0];
                 if (selected) this.inspectOSINTMediaFile(selected);
+                return;
+            }
+            const researchFile = event.target.closest("[data-osint-research-file]");
+            if (researchFile && view.contains(researchFile)) {
+                const selected = researchFile.files && researchFile.files[0];
+                if (selected) this.inspectOSINTResearchPdf(selected);
+                return;
+            }
+            const researchKind = event.target.closest("[data-osint-research-kind]");
+            if (researchKind && view.contains(researchKind)) {
+                this.setOSINTResearchKind(researchKind.value);
                 return;
             }
             const geoCandidate = event.target.closest("[data-osint-geo-candidate]");
@@ -1880,6 +1906,31 @@ class WorkspaceManager {
                 this.osintDomainState.analystObservation = domainNote.value.slice(0, 4000);
                 return;
             }
+            const researchInput = event.target.closest("[data-osint-research-input]");
+            if (researchInput && view.contains(researchInput)) {
+                this.osintResearchState.input = researchInput.value.slice(0, 2048);
+                return;
+            }
+            const researchNote = event.target.closest("[data-osint-research-note]");
+            if (researchNote && view.contains(researchNote)) {
+                this.osintResearchState.analystObservation = researchNote.value.slice(0, 4000);
+                return;
+            }
+            const researchExcerpt = event.target.closest("[data-osint-research-excerpt]");
+            if (researchExcerpt && view.contains(researchExcerpt)) {
+                this.osintResearchState.excerpt = researchExcerpt.value.slice(0, 4000);
+                return;
+            }
+            const researchLocation = event.target.closest("[data-osint-research-excerpt-location]");
+            if (researchLocation && view.contains(researchLocation)) {
+                this.osintResearchState.excerptLocation = researchLocation.value.slice(0, 240);
+                return;
+            }
+            const researchRelation = event.target.closest("[data-osint-research-claim-relation]");
+            if (researchRelation && view.contains(researchRelation)) {
+                this.osintResearchState.claimRelationship = researchRelation.value;
+                return;
+            }
             const input = event.target.closest("[data-osint-query-input]");
             if (!input || !view.contains(input)) return;
             this.osintQueryDrafts[input.dataset.osintQueryInput] = input.value.slice(0, 2048);
@@ -1905,6 +1956,12 @@ class WorkspaceManager {
             if (domainForm && view.contains(domainForm)) {
                 event.preventDefault();
                 this.beginOSINTDomainInfrastructureVerification();
+                return;
+            }
+            const researchForm = event.target.closest("[data-osint-research-form]");
+            if (researchForm && view.contains(researchForm)) {
+                event.preventDefault();
+                this.beginOSINTResearchSourceVerification();
                 return;
             }
             const form = event.target.closest("[data-osint-query-form]");
@@ -2371,6 +2428,194 @@ class WorkspaceManager {
         const providerId = state.verification.providerObservations[0].providerId;
         this.osintLastNormalizedResults[providerId] = Object.freeze({requestId: `infrastructure-evidence-${Date.now().toString(36)}`, providerId, capability: "INFRASTRUCTURE_CONTEXT", status: "SUCCESS", queriedAt: data.queriedAt, completedAt: data.completedAt, durationMs: 0, summary: `Passive infrastructure context: ${data.infrastructure.normalizedTarget}.`, data, warnings: [], source: {provider: data.provider, type: "NORMALIZED_PASSIVE_OBSERVATIONS"}, confidence: state.verification.confidence, rawAvailable: false, error: null});
         this.openOSINTEvidencePromotion(providerId, trigger);
+    }
+
+    getOSINTResearchSourceModule() { return window.OSINTResearchSourceVerification || null; }
+
+    getOSINTResearchProvider(id) {
+        return this.osintProviderRegistry && this.osintProviderRegistry.getProvider(id);
+    }
+
+    resetOSINTResearchState(mode = "SOURCE", sourceKind = "URL") {
+        this.cancelOSINTResearchVerification(false);
+        this.osintResearchState = {mode, sourceKind, input: "", phase: "IDLE", context: null, activeRequestId: null, lastError: null, analystObservation: "", excerpt: "", excerptLocation: "", claimRelationship: "UNKNOWN", selectedFile: null};
+    }
+
+    setOSINTResearchKind(kind) {
+        const sourceKind = ["URL", "DOI", "LOCAL_PDF"].includes(kind) ? kind : "URL";
+        this.resetOSINTResearchState("SOURCE", sourceKind);
+        this.renderOSINTState();
+    }
+
+    handleOSINTResearchAction(action, trigger = null) {
+        const state = this.osintResearchState;
+        if (!state) return;
+        if (action === "open") {
+            state.mode = "SOURCE";
+            this.osintState.categoryId = "discovery";
+            this.renderOSINTState();
+            return;
+        }
+        if (action === "catalog") {
+            this.resetOSINTResearchState("CATALOG", state.sourceKind || "URL");
+            this.renderOSINTState();
+            return;
+        }
+        if (action === "clear") {
+            this.resetOSINTResearchState("SOURCE", state.sourceKind || "URL");
+            this.renderOSINTState();
+            return;
+        }
+        if (action === "cancel") return this.cancelOSINTResearchVerification(true);
+        if (action === "archive") return this.beginOSINTResearchArchiveCheck();
+        if (action === "save") return this.promoteOSINTResearchEvidence(trigger);
+    }
+
+    async beginOSINTResearchSourceVerification() {
+        const Source = this.getOSINTResearchSourceModule();
+        const state = this.osintResearchState;
+        if (!Source || !state) return;
+        if (state.sourceKind === "LOCAL_PDF") return this.showToast(this.osintView, "SELECT ONE PDF DOCUMENT");
+        let source;
+        try { source = state.sourceKind === "DOI" ? Source.normalizeDoi(state.input) : Source.normalizeUrl(state.input); }
+        catch (error) {
+            state.phase = "ERROR";
+            state.lastError = {code: error.code || "INVALID_INPUT", message: error.userMessage || error.message || "Enter one valid source."};
+            this.renderOSINTState();
+            return;
+        }
+        this.cancelOSINTResearchVerification(false);
+        state.lastError = null;
+        state.context = null;
+        if (source.sourceType === "URL") {
+            state.context = Source.createSourceContext({source, analystObservation: state.analystObservation, excerpt: state.excerpt, excerptLocation: state.excerptLocation, claimRelationship: state.claimRelationship});
+            state.phase = "COMPLETE";
+            this.renderOSINTState();
+            return;
+        }
+        return this.runOSINTResearchProviderQuery("crossref-works", source, "DOI");
+    }
+
+    async inspectOSINTResearchPdf(file) {
+        const Source = this.getOSINTResearchSourceModule();
+        const state = this.osintResearchState;
+        if (!Source || !state || !file || typeof file.arrayBuffer !== "function") return;
+        this.cancelOSINTResearchVerification(false);
+        state.sourceKind = "LOCAL_PDF";
+        state.phase = "INSPECTING";
+        state.lastError = null;
+        state.context = null;
+        state.selectedFile = null;
+        this.renderOSINTState();
+        try {
+            const bytes = await file.arrayBuffer();
+            const source = await Source.inspectPdf({name: file.name, type: file.type, bytes});
+            const local = source.localFileMetadata;
+            const provider = this.getOSINTResearchProvider("local-pdf-inspection");
+            const observation = {providerId: provider && provider.id || "local-pdf-inspection", providerName: provider && provider.name || "Local PDF Inspection", type: "EXPLICIT_LOCAL_DOCUMENT", observedAt: new Date().toISOString(), status: "LOCAL", summary: "Bounded PDF metadata and original-byte SHA-256 were inspected locally."};
+            state.context = Source.createSourceContext({source, metadata: {title: local.title, authors: local.author ? [local.author] : [], publishedAt: local.creationTimestamp, updatedAt: local.modificationTimestamp}, providerObservations: [observation], analystObservation: state.analystObservation, excerpt: state.excerpt, excerptLocation: state.excerptLocation, claimRelationship: state.claimRelationship});
+            state.selectedFile = {name: local.displayLabel, type: local.mediaType, size: local.byteSize};
+            state.phase = "COMPLETE";
+        } catch (error) {
+            state.phase = "ERROR";
+            state.lastError = {code: error.code || "ERROR", message: error.userMessage || error.message || "The selected PDF could not be inspected."};
+        }
+        this.renderOSINTState();
+    }
+
+    async runOSINTResearchProviderQuery(providerId, source, purpose = "DOI") {
+        const Source = this.getOSINTResearchSourceModule();
+        const state = this.osintResearchState;
+        const provider = this.getOSINTResearchProvider(providerId);
+        if (!Source || !state || !source || !provider || !this.osintRuntime) {
+            state.phase = "ERROR";
+            state.lastError = {code: "PROVIDER_UNAVAILABLE", message: "The approved source provider is unavailable."};
+            this.renderOSINTState();
+            return;
+        }
+        state.phase = "LOADING";
+        state.lastError = null;
+        this.renderOSINTState();
+        const capability = purpose === "ARCHIVE" ? "HISTORICAL_ARCHIVE" : "SOURCE_VERIFICATION";
+        const input = purpose === "ARCHIVE" ? source.normalizedUrl : source;
+        const pending = this.osintRuntime.startQuery(provider.id, input, {capability, networkAllowed: true, userInitiated: true, sessionId: "ephemeral-source-verification"});
+        state.activeRequestId = pending.requestId;
+        const result = await pending.promise;
+        if (!this.osintResearchState || this.osintResearchState.activeRequestId !== pending.requestId) return;
+        state.activeRequestId = null;
+        if (!result || !["SUCCESS", "EMPTY", "PARTIAL"].includes(result.status)) {
+            state.phase = result && result.status === "CANCELLED" ? "IDLE" : "ERROR";
+            state.lastError = {code: result && result.error && result.error.code || result && result.status || "ERROR", message: result && result.summary || "Source verification did not complete."};
+            this.renderOSINTState();
+            return;
+        }
+        const observation = {providerId: provider.id, providerName: provider.name, type: result.source && result.source.type || "PUBLIC_PROVIDER", observedAt: result.completedAt, status: result.status, summary: result.summary};
+        if (purpose === "ARCHIVE") {
+            const previous = state.context;
+            if (!previous) return;
+            state.context = Source.createSourceContext({source: previous.source, metadata: previous.metadata, archive: {available: result.data.available === true, snapshotUrl: result.data.snapshotUrl, snapshotTimestamp: result.data.snapshotTimestamp, provider: "Wayback Machine", observedAt: result.completedAt}, providerObservations: [...previous.providerObservations, observation], analystObservation: state.analystObservation, excerpt: state.excerpt, excerptLocation: state.excerptLocation, claimRelationship: state.claimRelationship, status: result.data.available ? "ARCHIVE_AVAILABLE" : previous.verificationStatus});
+        } else {
+            state.context = Source.createSourceContext({source, metadata: result.data.metadata, providerObservations: [observation], analystObservation: state.analystObservation, excerpt: state.excerpt, excerptLocation: state.excerptLocation, claimRelationship: state.claimRelationship, status: result.status === "PARTIAL" ? "PARTIALLY_VERIFIED" : "METADATA_AVAILABLE"});
+        }
+        state.phase = "COMPLETE";
+        this.renderOSINTState();
+    }
+
+    beginOSINTResearchArchiveCheck() {
+        const state = this.osintResearchState;
+        if (!state || !state.context || state.context.source.sourceType !== "URL") return this.showToast(this.osintView, "ARCHIVE CHECK REQUIRES A NORMALIZED PUBLIC URL");
+        this.cancelOSINTResearchVerification(false);
+        return this.runOSINTResearchProviderQuery("wayback", state.context.source, "ARCHIVE");
+    }
+
+    cancelOSINTResearchVerification(render = true) {
+        const state = this.osintResearchState;
+        if (!state || !state.activeRequestId || !this.osintRuntime) return false;
+        const cancelled = this.osintRuntime.cancel(state.activeRequestId);
+        state.activeRequestId = null;
+        state.phase = "IDLE";
+        if (render) this.renderOSINTState();
+        return cancelled;
+    }
+
+    promoteOSINTResearchEvidence(trigger = null) {
+        const Source = this.getOSINTResearchSourceModule();
+        const state = this.osintResearchState;
+        if (!Source || !state || !state.context || !state.context.providerObservations.length) return this.showToast(this.osintView, "NO PROMOTABLE SOURCE CONTEXT");
+        const data = Source.toEvidenceData({...state.context, excerpt: state.excerpt, excerptLocation: state.excerptLocation, claimRelationship: state.claimRelationship}, state.analystObservation || "");
+        const providerId = state.context.providerObservations[0].providerId;
+        this.osintLastNormalizedResults[providerId] = Object.freeze({requestId: `source-evidence-${Date.now().toString(36)}`, providerId, capability: "SOURCE_VERIFICATION", status: "SUCCESS", queriedAt: data.queriedAt, completedAt: data.completedAt, durationMs: 0, summary: `Source context: ${data.research.title || data.research.doi || data.research.localDocument && data.research.localDocument.displayLabel || "reviewed source"}.`, data, warnings: [], source: {provider: data.provider, type: "NORMALIZED_SOURCE_CONTEXT"}, confidence: state.context.confidence, rawAvailable: false, error: null});
+        this.openOSINTEvidencePromotion(providerId, trigger);
+    }
+
+    renderOSINTResearchSourceWorkspace(grid) {
+        const state = this.osintResearchState || {};
+        const Source = this.getOSINTResearchSourceModule();
+        const context = state.context;
+        const source = context && context.source;
+        const metadata = context && context.metadata || {};
+        const local = source && source.localFileMetadata;
+        const loading = ["LOADING", "INSPECTING"].includes(state.phase);
+        const canArchive = source && source.sourceType === "URL" && !loading;
+        const canSave = context && context.providerObservations && context.providerObservations.length;
+        const readout = (label, value, fallback = "NOT AVAILABLE") => `<div><small>${this.escape(label)}</small><strong>${this.escape(value === null || value === undefined || value === "" ? fallback : String(value))}</strong></div>`;
+        const status = loading ? "ANALYZING" : state.lastError ? state.lastError.code || "ERROR" : context ? context.verificationStatus : "READY";
+        const sourceInput = state.sourceKind === "LOCAL_PDF"
+            ? `<label class="osint-research-file-input"><span>PDF · 25 MB MAX · EXPLICIT / LOCAL</span><input class="aegis-input" type="file" accept="application/pdf,.pdf" data-osint-research-file></label>${state.selectedFile ? `<small class="osint-research-selected-file">SELECTED · ${this.escape(state.selectedFile.name)} · ${this.escape(state.selectedFile.type)} · ${this.escape(state.selectedFile.size)} BYTES</small>` : ""}`
+            : `<label><span>${state.sourceKind === "DOI" ? "DOI / DOI.ORG IDENTIFIER" : "PUBLIC HTTP(S) URL"}</span><input class="aegis-input" data-osint-research-input maxlength="2048" autocomplete="off" spellcheck="false" value="${this.escape(state.input || "")}" placeholder="${state.sourceKind === "DOI" ? "10.1000/example" : "https://example.org/report"}"></label>`;
+        const archiveMarkup = context && context.archive ? `<section class="osint-research-archive-readout">${readout("SNAPSHOT", context.archive.available ? "AVAILABLE" : "NOT AVAILABLE")}${readout("TIMESTAMP", context.archive.snapshotTimestamp)}${readout("PROVIDER", context.archive.provider)}${context.archive.snapshotUrl ? readout("ARCHIVED URL", context.archive.snapshotUrl) : ""}</section>` : `<p class="osint-panel-muted">Archive context is not checked automatically. A normalized public URL can be sent to the existing Wayback Availability provider only after you choose CHECK ARCHIVE.</p>`;
+        const fieldProvenanceMarkup = context && context.fieldProvenance && context.fieldProvenance.length ? `<section class="osint-research-field-provenance"><small>FIELD → SOURCE</small>${context.fieldProvenance.map(item => `<div><strong>${this.escape(item.field)}</strong><span>${this.escape(item.source)} · ${this.escape(item.kind)}</span></div>`).join("")}</section>` : "";
+        const provenanceMarkup = context && context.providerObservations && context.providerObservations.length ? `${fieldProvenanceMarkup}<ol class="osint-research-provenance">${context.providerObservations.map(item => `<li><strong>${this.escape(item.providerName || item.providerId || "SOURCE")}</strong><span>${this.escape(item.summary || "Provider observation")}</span><small>${this.escape(item.type || "OBSERVATION")} · ${this.escape(item.observedAt || "UNKNOWN TIME")}</small></li>`).join("")}</ol>` : `${fieldProvenanceMarkup || `<p class="osint-panel-muted">No provider observation yet. A normalized URL remains local until an explicit archive check; local PDF inspection and DOI retrieval produce their own provenance.</p>`}`;
+        const localMarkup = local ? `<section class="osint-research-document-readout">${readout("TYPE", local.mediaType)}${readout("SIZE", `${local.byteSize} BYTES`)}${readout("PAGES", local.pageCount)}${readout("TITLE", local.title)}${readout("AUTHOR", local.author)}${readout("CREATOR", local.creator)}${readout("PRODUCER", local.producer)}${readout("SHA-256", local.originalDocumentHash)}</section>` : `<p class="osint-panel-muted">Local document metadata is available only after you explicitly select one PDF. Original documents and local paths are not persisted.</p>`;
+        grid.innerHTML = `<section class="osint-research-header workspace-panel"><button type="button" class="osint-back-button" data-osint-research-action="catalog">‹ OSINT CATALOG</button><div><small>OSINT / RESEARCH · DOCUMENTS · SOURCE VERIFICATION</small><h2>PASSIVE SOURCE CONTEXT</h2><p>One explicit public URL, DOI or local PDF. No crawler, bulk download, web scraping, credentials, hidden history or automatic archive query.</p></div><div class="osint-research-status"><small>STATE</small><strong>${this.escape(this.formatOSINTEnum(status))}</strong><span>CONFIDENCE · ${this.escape(context && context.confidence || "LOW")}</span></div></section>
+            <section class="osint-research-input workspace-panel"><header><h2>SOURCE INPUT</h2><span>EXPLICIT / EPHEMERAL</span></header><div class="workspace-panel-content"><form data-osint-research-form novalidate><label><span>INPUT TYPE</span><select class="aegis-select" data-osint-research-kind><option value="URL"${state.sourceKind === "URL" ? " selected" : ""}>PUBLIC URL</option><option value="DOI"${state.sourceKind === "DOI" ? " selected" : ""}>DOI</option><option value="LOCAL_PDF"${state.sourceKind === "LOCAL_PDF" ? " selected" : ""}>LOCAL PDF</option></select></label>${sourceInput}<small>${state.sourceKind === "URL" ? "URL analysis normalizes locally only. Metadata retrieval from arbitrary pages is intentionally unavailable; CHECK ARCHIVE is separate and explicit." : state.sourceKind === "DOI" ? "One DOI is sent only to the approved fixed Crossref Works endpoint after ANALYZE." : "Only selected PDF bytes are inspected locally. No path, original document or text body is persisted."}</small><footer>${state.sourceKind === "LOCAL_PDF" ? "" : `<button type="submit" ${loading ? "disabled" : ""}>${loading ? "ANALYZING…" : "ANALYZE"}</button>`}${loading ? `<button type="button" data-osint-research-action="cancel">CANCEL</button>` : ""}<button type="button" data-osint-research-action="clear">CLEAR</button></footer></form>${state.lastError ? `<section class="osint-panel-error"><strong>${this.escape(this.formatOSINTEnum(state.lastError.code || "ERROR"))}</strong><p>${this.escape(state.lastError.message || "Source verification did not complete.")}</p></section>` : ""}</div></section>
+            <section class="osint-research-context workspace-panel"><header><h2>SOURCE CONTEXT</h2><span>${this.escape(source && source.sourceType || "AWAITING INPUT")}</span></header><div class="workspace-panel-content"><section class="osint-research-readout">${readout("ORIGINAL INPUT", source && source.originalInput, "NOT ANALYZED")}${readout("NORMALIZED URL", source && source.normalizedUrl, "NOT ANALYZED")}${readout("HOST", source && source.hostname)}${readout("DOI", source && source.identifiers && source.identifiers.doi)}${readout("TITLE", metadata.title)}${readout("PUBLISHER", metadata.publisher)}${readout("AUTHORS", metadata.authors && metadata.authors.join(" · "))}${readout("PUBLISHED", metadata.publishedAt)}${readout("UPDATED", metadata.updatedAt)}${readout("CONTAINER", metadata.container)}${readout("TYPE", metadata.workType)}</section></div></section>
+            <section class="osint-research-archive workspace-panel"><header><h2>ARCHIVE CONTEXT</h2><span>WAYBACK / EXPLICIT</span></header><div class="workspace-panel-content">${archiveMarkup}<footer><button type="button" data-osint-research-action="archive"${canArchive ? "" : " disabled"}>CHECK ARCHIVE</button></footer></div></section>
+            <section class="osint-research-document workspace-panel"><header><h2>DOCUMENT METADATA</h2><span>LOCAL / BOUNDED</span></header><div class="workspace-panel-content">${localMarkup}</div></section>
+            <section class="osint-research-provenance-panel workspace-panel"><header><h2>PROVENANCE</h2><span>FIELD / SOURCE</span></header><div class="workspace-panel-content">${provenanceMarkup}</div></section>
+            <section class="osint-research-excerpt workspace-panel"><header><h2>EXCERPT / CLAIM CONTEXT</h2><span>ANALYST ENTERED</span></header><div class="workspace-panel-content"><label><span>SHORT EXCERPT · NOT A PAGE DUMP</span><textarea class="aegis-input" data-osint-research-excerpt maxlength="4000" ${context ? "" : "disabled"}>${this.escape(state.excerpt || "")}</textarea></label><label><span>PAGE / SECTION / LOCATION</span><input class="aegis-input" data-osint-research-excerpt-location maxlength="240" value="${this.escape(state.excerptLocation || "")}" ${context ? "" : "disabled"}></label><label><span>CLAIM RELATIONSHIP</span><select class="aegis-select" data-osint-research-claim-relation ${context ? "" : "disabled"}>${["UNKNOWN", "SUPPORT", "CONTRADICT", "CONTEXT"].map(value => `<option value="${value}"${state.claimRelationship === value ? " selected" : ""}>${value}</option>`).join("")}</select></label></div></section>
+            <section class="osint-research-observation workspace-panel"><header><h2>ANALYST OBSERVATION</h2><span>EPHEMERAL UNTIL ADD TO CASE</span></header><div class="workspace-panel-content"><label><span>ANALYST NOTE · NOT EXTRACTED FACT</span><textarea class="aegis-input" data-osint-research-note maxlength="4000" ${context ? "" : "disabled"}>${this.escape(state.analystObservation || "")}</textarea></label><p>Analyst observations remain distinct from provider/local metadata and cannot trigger more requests.</p><footer>${canSave ? `<button type="button" data-osint-research-action="save">ADD TO CASE</button>` : `<span class="osint-action-unavailable">ADD TO CASE AVAILABLE AFTER A REVIEWED OBSERVATION</span>`}</footer></div></section>
+            <aside class="osint-research-policy workspace-panel"><header><h2>PROVIDER POLICY</h2><span>PASSIVE / EXPLICIT / BOUNDED</span></header><div class="workspace-panel-content"><p><strong>Crossref</strong> handles one DOI through a fixed endpoint. <strong>Wayback</strong> is reused only after CHECK ARCHIVE. Local PDF inspection runs in-process on one selected file.</p><p>No arbitrary web extraction, crawler, download, cookies, credentials, paywall bypass, archive capture or hidden persistence is available.</p><small>ORIGINAL DOCUMENT ATTACHMENT · DEFERRED</small></div></aside>`;
     }
 
     renderOSINTDomainInfrastructureWorkspace(grid) {
@@ -2926,6 +3171,7 @@ class WorkspaceManager {
         const title = normalized && normalized.summary || "Provider result";
         const geo = normalized && normalized.capability === "GEOSPATIAL_VERIFICATION";
         const infrastructure = normalized && normalized.capability === "INFRASTRUCTURE_CONTEXT";
+        const research = normalized && normalized.capability === "SOURCE_VERIFICATION";
         const redactions = [
             ["queryInput", "QUERY INPUT"],
             ["canonicalUrl", "CANONICAL URL"],
@@ -2935,8 +3181,9 @@ class WorkspaceManager {
             ["data.snapshotUrl", "DATA / SNAPSHOT URL"],
             ...(geo ? [["data.geo.latitude", "GEO / LATITUDE"], ["data.geo.longitude", "GEO / LONGITUDE"], ["data.geo.displayName", "GEO / DISPLAY NAME"], ["data.geo.locality", "GEO / LOCALITY"], ["data.geo.region", "GEO / REGION"], ["data.geo.country", "GEO / COUNTRY"], ["data.geo.countryCode", "GEO / COUNTRY CODE"], ["data.geo.elevationM", "GEO / ELEVATION"], ["data.geo.observations", "GEO / PROVIDER OBSERVATIONS"]] : [])
             .concat(infrastructure ? [["data.infrastructure.normalizedTarget", "INFRASTRUCTURE / NORMALIZED TARGET"], ["data.infrastructure.dns", "INFRASTRUCTURE / DNS"], ["data.infrastructure.network", "INFRASTRUCTURE / NETWORK"], ["data.infrastructure.provenance", "INFRASTRUCTURE / PROVIDER PROVENANCE"]] : [])
+            .concat(research ? [["data.research.normalizedUrl", "RESEARCH / NORMALIZED URL"], ["data.research.localDocument", "RESEARCH / LOCAL DOCUMENT METADATA"], ["data.research.localDocument.displayLabel", "RESEARCH / DOCUMENT DISPLAY LABEL"], ["data.research.title", "RESEARCH / TITLE"], ["data.research.publisher", "RESEARCH / PUBLISHER"], ["data.research.authors", "RESEARCH / AUTHORS"], ["data.research.publishedAt", "RESEARCH / PUBLISHED"], ["data.research.updatedAt", "RESEARCH / UPDATED"], ["data.research.archive", "RESEARCH / ARCHIVE CONTEXT"], ["data.research.provenance", "RESEARCH / PROVIDER PROVENANCE"], ["data.research.fieldProvenance", "RESEARCH / FIELD PROVENANCE"], ["data.research.excerpt", "RESEARCH / EXCERPT"], ["data.research.analystObservation", "RESEARCH / ANALYST OBSERVATION"]] : [])
         ];
-        this.openOSINTCaseDialog("EVIDENCE PREVIEW", `<form data-osint-evidence-preview-form><p>Review the safe normalized metadata. The provider, capability, query timestamp and integrity basis are fixed by the trusted local service.</p><section class="osint-evidence-preview-provenance"><div><small>PROVIDER</small><strong>${this.escape(providerId)}</strong></div><div><small>CAPABILITY</small><strong>${this.escape(normalized.capability)}</strong></div><div><small>STATUS</small><strong>${this.escape(normalized.status)}</strong></div><div><small>QUERIED</small><strong>${this.escape(normalized.queriedAt)}</strong></div></section><label><span>TITLE</span><input class="aegis-input" name="title" value="${this.escape(title)}" maxlength="160" required></label><label><span>SUMMARY</span><textarea class="aegis-input" name="summary" maxlength="4000" required>${this.escape(normalized.summary || "")}</textarea></label><label><span>TAGS</span><input class="aegis-input" name="tags" maxlength="500" value="${geo ? "geospatial, verification" : infrastructure ? "domain, infrastructure" : "wayback, historical-archive"}"></label><label><span>NOTE · OPTIONAL</span><textarea class="aegis-input" name="note" maxlength="8000"></textarea></label><fieldset><legend>REDACT BEFORE LOCAL SAVE</legend>${redactions.map(([field, label]) => `<label><input type="checkbox" name="redactions" value="${field}"> ${label}</label>`).join("")}</fieldset><footer><button type="button" data-osint-case-dialog-close>CANCEL</button><button type="submit">CONFIRM SAVE EVIDENCE</button></footer></form>`, trigger, (overlay, close) => {
+        this.openOSINTCaseDialog("EVIDENCE PREVIEW", `<form data-osint-evidence-preview-form><p>Review the safe normalized metadata. The provider, capability, query timestamp and integrity basis are fixed by the trusted local service.</p><section class="osint-evidence-preview-provenance"><div><small>PROVIDER</small><strong>${this.escape(providerId)}</strong></div><div><small>CAPABILITY</small><strong>${this.escape(normalized.capability)}</strong></div><div><small>STATUS</small><strong>${this.escape(normalized.status)}</strong></div><div><small>QUERIED</small><strong>${this.escape(normalized.queriedAt)}</strong></div></section><label><span>TITLE</span><input class="aegis-input" name="title" value="${this.escape(title)}" maxlength="160" required></label><label><span>SUMMARY</span><textarea class="aegis-input" name="summary" maxlength="4000" required>${this.escape(normalized.summary || "")}</textarea></label><label><span>TAGS</span><input class="aegis-input" name="tags" maxlength="500" value="${geo ? "geospatial, verification" : infrastructure ? "domain, infrastructure" : research ? "research, source-verification" : "wayback, historical-archive"}"></label><label><span>NOTE · OPTIONAL</span><textarea class="aegis-input" name="note" maxlength="8000"></textarea></label><fieldset><legend>REDACT BEFORE LOCAL SAVE</legend>${redactions.map(([field, label]) => `<label><input type="checkbox" name="redactions" value="${field}"> ${label}</label>`).join("")}</fieldset><footer><button type="button" data-osint-case-dialog-close>CANCEL</button><button type="submit">CONFIRM SAVE EVIDENCE</button></footer></form>`, trigger, (overlay, close) => {
             overlay.querySelectorAll("[data-osint-case-dialog-close]").forEach(button => button.addEventListener("click", close));
             overlay.querySelector("[data-osint-evidence-preview-form]").addEventListener("submit", async event => {
                 event.preventDefault(); const form = new FormData(event.currentTarget);
