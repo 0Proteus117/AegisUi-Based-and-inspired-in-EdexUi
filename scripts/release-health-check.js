@@ -131,6 +131,9 @@ function main() {
         && exists("scripts/test-osint-research-source-verification.js")
         && fs.readFileSync(path.join(ROOT, "src/classes/workspaces/osintTools.registry.js"), "utf8").includes("crossref-works")
         && fs.readFileSync(path.join(ROOT, "src/classes/workspaces/osintTools.registry.js"), "utf8").includes("local-pdf-inspection");
+    const osintEntityResolution = exists("src/classes/workspaces/osintEntityResolution.class.js")
+        && exists("scripts/test-osint-entity-resolution.js")
+        && fs.readFileSync(path.join(ROOT, "src/classes/workspaces/osintTools.registry.js"), "utf8").includes("local-entity-resolution");
     const themeIntegrity = exists("src/assets/css/aegis_theme.css")
         && exists("scripts/test-aegis-theme-integrity.js")
         && exists("scripts/test-calendar-theme-integrity.js")
@@ -153,6 +156,7 @@ function main() {
     if (!osintVisualMediaVerification) failures.push("OSINT visual media verification files missing");
     if (!osintDomainInfrastructure) failures.push("OSINT domain infrastructure files missing");
     if (!osintResearchSourceVerification) failures.push("OSINT research source verification files missing");
+    if (!osintEntityResolution) failures.push("OSINT entity resolution files missing");
     if (!themeIntegrity) failures.push("Aegis semantic theme integrity files missing");
 
     print("PACKAGE_VERSION", pkg.version || "UNKNOWN");
@@ -177,6 +181,7 @@ function main() {
     print("OSINT_VISUAL_MEDIA_VERIFICATION", osintVisualMediaVerification ? "PRESENT" : "MISSING");
     print("OSINT_DOMAIN_INFRASTRUCTURE", osintDomainInfrastructure ? "PRESENT" : "MISSING");
     print("OSINT_RESEARCH_SOURCE_VERIFICATION", osintResearchSourceVerification ? "PRESENT" : "MISSING");
+    print("OSINT_ENTITY_RESOLUTION", osintEntityResolution ? "PRESENT" : "MISSING");
     print("AEGIS_THEME_INTEGRITY", themeIntegrity ? "PRESENT" : "MISSING");
     print("CALENDAR_THEME_INTEGRITY", exists("scripts/test-calendar-theme-integrity.js") ? "PRESENT" : "MISSING");
     print("PACKAGED_CALENDAR_HELPER", exists("scripts/test-packaged-calendar-helper.js") ? "PRESENT" : "MISSING");

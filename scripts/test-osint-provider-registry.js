@@ -34,8 +34,10 @@ check("OSINT_PROVIDER_SCHEMA", providerErrors.length === 0, providerErrors.join(
 check("OSINT_REQUIRED_FIELDS", schema.REQUIRED_FIELDS.every(field => providers.every(provider => Object.prototype.hasOwnProperty.call(provider, field))));
 check("OSINT_PROVIDER_IDS", providerIds.size === providers.length, `${providerIds.size}/${providers.length}`);
 check("OSINT_CATEGORIES", registry.CATEGORIES.length === 9, String(registry.CATEGORIES.length));
-check("OSINT_MIGRATED_LEGACY_TOOLS", legacyNormalProviders.length === 161, String(legacyNormalProviders.length));
-check("OSINT_TOTAL_PROVIDERS", providers.length === 168, String(providers.length));
+// Phase 9 preserves the 161 migrated legacy entries and adds one local,
+// non-network entity-resolution provider; reference entries remain unchanged.
+check("OSINT_MIGRATED_LEGACY_TOOLS", legacyNormalProviders.length === 162, String(legacyNormalProviders.length));
+check("OSINT_TOTAL_PROVIDERS", providers.length === 169, String(providers.length));
 check("OSINT_NORMAL_URLS", normalProviders.filter(provider => provider.accessMode === "WEB").every(provider => typeof provider.officialUrl === "string" && /^https?:\/\//.test(provider.officialUrl)));
 check("OSINT_COMPATIBILITY_EXPORT", registry.TOOLS.length === providers.length && registry.TOOLS.every(tool => providerIds.has(tool.id)));
 check("OSINT_CATEGORY_COUNTS_DERIVED", registry.CATEGORIES.every(category => category.count === categoryCounts[category.id] && category.count === registry.getProvidersForCategory(category.id).length));

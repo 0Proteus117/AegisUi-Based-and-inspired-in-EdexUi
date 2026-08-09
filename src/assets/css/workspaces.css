@@ -5208,6 +5208,131 @@ button.eng-thread-row.active {
     .engineering-mode .osint-evidence-preview-provenance { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
+/* Phase 9: all entity surfaces remain in normal grid/document flow. The graph is
+   intentionally bounded; it never owns positioning for dynamic detail content. */
+.engineering-mode .workspace-grid.osint-command-grid:has(.osint-entity-header) {
+    grid-template-columns: minmax(19rem, .78fr) minmax(30rem, 1.22fr) minmax(22rem, .95fr);
+    grid-template-areas:
+        "entity-header entity-header entity-header"
+        "entity-create entity-graph entity-detail"
+        "entity-relationship entity-relationship entity-policy";
+    grid-template-rows: max-content minmax(28vh, 1fr) max-content;
+    align-items: stretch;
+    overflow: auto;
+}
+.engineering-mode .osint-entity-header { grid-area: entity-header; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: .8vh; align-items: start; }
+.engineering-mode .osint-entity-create { grid-area: entity-create; }
+.engineering-mode .osint-entity-graph-panel { grid-area: entity-graph; }
+.engineering-mode .osint-entity-detail { grid-area: entity-detail; }
+.engineering-mode .osint-entity-relationship { grid-area: entity-relationship; }
+.engineering-mode .osint-entity-policy { grid-area: entity-policy; }
+.engineering-mode .osint-entity-create,
+.engineering-mode .osint-entity-graph-panel,
+.engineering-mode .osint-entity-detail,
+.engineering-mode .osint-entity-relationship,
+.engineering-mode .osint-entity-policy { display: grid; grid-template-rows: auto auto; align-self: start; min-height: min-content; }
+.engineering-mode .osint-entity-header > div,
+.engineering-mode .osint-entity-create .workspace-panel-content,
+.engineering-mode .osint-entity-graph-panel .workspace-panel-content,
+.engineering-mode .osint-entity-detail .workspace-panel-content,
+.engineering-mode .osint-entity-relationship .workspace-panel-content,
+.engineering-mode .osint-entity-policy .workspace-panel-content {
+    position: relative;
+    inset: auto;
+    min-width: 0;
+    min-height: min-content;
+    display: grid;
+    align-content: start;
+    gap: .75vh;
+    padding: .82vh;
+    overflow: visible;
+}
+.engineering-mode .osint-entity-header small,
+.engineering-mode .osint-entity-create label > span,
+.engineering-mode .osint-entity-relationship label > span,
+.engineering-mode .osint-entity-detail label > span,
+.engineering-mode .osint-entity-filters label > span,
+.engineering-mode .osint-entity-status small,
+.engineering-mode .osint-entity-attributes > small,
+.engineering-mode .osint-entity-relationships > small,
+.engineering-mode .osint-entity-duplicates > small { display: block; color: var(--aegis-text-faint); font: .56vh var(--font_mono); letter-spacing: .1em; }
+.engineering-mode .osint-entity-header h2 { margin: .16vh 0; color: var(--aegis-text); font: 1.45vh var(--font_main); font-weight: normal; letter-spacing: .08em; overflow-wrap: anywhere; }
+.engineering-mode .osint-entity-header p,
+.engineering-mode .osint-entity-policy p { margin: 0; color: var(--aegis-text-muted); font: .65vh var(--font_main); line-height: 1.38; overflow-wrap: anywhere; }
+.engineering-mode .osint-entity-status { display: grid; gap: .28vh; min-width: 14vh; padding: .52vh .68vh; border-left: .12vh solid var(--aegis-accent); text-align: right; }
+.engineering-mode .osint-entity-status strong { color: var(--aegis-accent-soft); font: .7vh var(--font_mono); letter-spacing: .06em; }
+.engineering-mode .osint-entity-status span { color: var(--aegis-text-muted); font: .54vh var(--font_mono); }
+.engineering-mode .osint-entity-create form,
+.engineering-mode .osint-entity-relationship form,
+.engineering-mode .osint-entity-detail label,
+.engineering-mode .osint-entity-filters { display: grid; gap: .5vh; min-width: 0; }
+.engineering-mode .osint-entity-create .aegis-input,
+.engineering-mode .osint-entity-create .aegis-select,
+.engineering-mode .osint-entity-relationship .aegis-input,
+.engineering-mode .osint-entity-relationship .aegis-select,
+.engineering-mode .osint-entity-detail .aegis-input,
+.engineering-mode .osint-entity-filters .aegis-select { width: 100%; min-width: 0; box-sizing: border-box; color: var(--aegis-text); border-color: var(--aegis-border); background: var(--aegis-surface-input); }
+.engineering-mode .osint-entity-inline-fields { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: .42vh; }
+.engineering-mode .osint-entity-create footer,
+.engineering-mode .osint-entity-detail footer,
+.engineering-mode .osint-entity-relationship footer { display: flex; flex-wrap: wrap; gap: .55vh; align-items: center; }
+.engineering-mode .osint-entity-create button,
+.engineering-mode .osint-entity-detail button,
+.engineering-mode .osint-entity-relationship button,
+.engineering-mode .osint-entity-duplicates button { border: .08vh solid var(--aegis-border); color: var(--aegis-accent-soft); background: var(--aegis-surface-raised); padding: .52vh .7vh; font: .6vh var(--font_main); letter-spacing: .08em; }
+.engineering-mode .osint-entity-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom: .55vh; }
+.engineering-mode .osint-entity-graph { min-height: 0; margin: 0; border: .08vh solid var(--aegis-border); background: var(--aegis-surface-muted); overflow: hidden; }
+.engineering-mode .osint-entity-graph svg { display: block; width: 100%; height: clamp(16rem, 32vh, 31rem); max-height: 40vh; }
+.engineering-mode .osint-entity-edge { stroke: var(--aegis-border); stroke-width: 2.2; opacity: .75; }
+.engineering-mode .osint-entity-edge.confidence-medium { stroke: var(--aegis-accent); }
+.engineering-mode .osint-entity-edge.confidence-high { stroke: var(--aegis-accent-soft); stroke-width: 3.2; }
+.engineering-mode .osint-entity-node { cursor: pointer; }
+.engineering-mode .osint-entity-node circle { fill: var(--aegis-surface-raised); stroke: var(--aegis-accent); stroke-width: 2.5; }
+.engineering-mode .osint-entity-node.selected circle { fill: var(--aegis-accent); stroke: var(--aegis-text); }
+.engineering-mode .osint-entity-node text { fill: var(--aegis-text); font: 17px var(--font_mono); pointer-events: none; }
+.engineering-mode .osint-entity-edge { cursor: pointer; }
+.engineering-mode .osint-entity-graph-caption { fill: var(--aegis-text-faint); font: 13px var(--font_mono); letter-spacing: 1px; }
+.engineering-mode .osint-entity-node-list { display: flex; flex-wrap: wrap; gap: .42vh; margin-top: .55vh; }
+.engineering-mode .osint-entity-node-list button { display: grid; gap: .14vh; min-width: 11rem; max-width: 100%; padding: .46vh .58vh; border: .08vh solid var(--aegis-border); color: var(--aegis-text); background: var(--aegis-surface-muted); text-align: left; }
+.engineering-mode .osint-entity-node-list button.selected { border-color: var(--aegis-accent); box-shadow: inset 0 0 0 .08vh var(--aegis-accent); }
+.engineering-mode .osint-entity-node-list strong { font: .64vh var(--font_mono); overflow-wrap: anywhere; }
+.engineering-mode .osint-entity-node-list span { color: var(--aegis-text-muted); font: .53vh var(--font_mono); }
+.engineering-mode .osint-entity-identity { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5vh; }
+.engineering-mode .osint-entity-identity > div { min-width: 0; padding: .5vh; border-left: .12vh solid var(--aegis-accent); background: var(--aegis-surface-muted); }
+.engineering-mode .osint-entity-identity small,
+.engineering-mode .osint-entity-attributes li > div small { display: block; color: var(--aegis-text-faint); font: .52vh var(--font_mono); letter-spacing: .08em; }
+.engineering-mode .osint-entity-identity strong,
+.engineering-mode .osint-entity-attributes strong { display: block; margin-top: .14vh; color: var(--aegis-text); font: .6vh var(--font_mono); line-height: 1.3; overflow-wrap: anywhere; }
+.engineering-mode .osint-entity-attributes,
+.engineering-mode .osint-entity-relationships { margin-top: .65vh; }
+.engineering-mode .osint-entity-attributes ul,
+.engineering-mode .osint-entity-relationships ul { display: grid; gap: .42vh; margin: .38vh 0; padding: 0; list-style: none; }
+.engineering-mode .osint-entity-attributes li,
+.engineering-mode .osint-entity-relationships li { display: grid; gap: .22vh; min-width: 0; padding: .5vh; border-left: .12vh solid var(--aegis-accent); background: var(--aegis-surface-muted); color: var(--aegis-text); font: .58vh var(--font_mono); overflow-wrap: anywhere; }
+.engineering-mode .osint-entity-attributes li > span,
+.engineering-mode .osint-entity-relationships li > span,
+.engineering-mode .osint-entity-relationships li > small { color: var(--aegis-text-muted); font: .52vh var(--font_mono); overflow-wrap: anywhere; }
+.engineering-mode .osint-entity-relationships li > em { color: var(--aegis-warning); font: .51vh var(--font_mono); font-style: normal; overflow-wrap: anywhere; }
+.engineering-mode .osint-entity-detail textarea,
+.engineering-mode .osint-entity-relationship textarea { min-height: 7vh; resize: vertical; }
+.engineering-mode .osint-entity-duplicates { display: grid; gap: .45vh; margin-bottom: .65vh; }
+.engineering-mode .osint-entity-duplicates > div { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr) auto auto; gap: .36vh; align-items: center; min-width: 0; padding: .46vh; border-left: .12vh solid var(--aegis-warning); background: var(--aegis-surface-muted); }
+.engineering-mode .osint-entity-duplicates span,
+.engineering-mode .osint-entity-duplicates strong { min-width: 0; color: var(--aegis-text); font: .54vh var(--font_mono); overflow-wrap: anywhere; }
+
+@media (max-width: 1280px), (max-height: 820px) {
+    .engineering-mode .workspace-grid.osint-command-grid:has(.osint-entity-header) {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-areas:
+            "entity-header entity-header"
+            "entity-graph entity-graph"
+            "entity-create entity-detail"
+            "entity-relationship entity-policy";
+        grid-template-rows: repeat(4, max-content);
+    }
+    .engineering-mode .osint-entity-graph svg { height: min(30vh, 18rem); }
+}
+
 @media (max-width: 900px), (max-aspect-ratio: 5/4) {
     .engineering-mode .osint-command-grid:has(.osint-case-workspace-header) {
         grid-template-columns: minmax(0, 1fr);
@@ -5396,6 +5521,25 @@ button.eng-thread-row.active {
     .engineering-mode .osint-research-readout,
     .engineering-mode .osint-research-document-readout,
     .engineering-mode .osint-research-archive-readout { grid-template-columns: minmax(0, 1fr); }
+
+    .engineering-mode .workspace-grid.osint-command-grid:has(.osint-entity-header) {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: repeat(6, max-content);
+        grid-template-areas:
+            "entity-header"
+            "entity-create"
+            "entity-graph"
+            "entity-detail"
+            "entity-relationship"
+            "entity-policy";
+    }
+    .engineering-mode .osint-entity-header { grid-template-columns: minmax(0, 1fr); }
+    .engineering-mode .osint-entity-status { text-align: left; }
+    .engineering-mode .osint-entity-inline-fields,
+    .engineering-mode .osint-entity-filters,
+    .engineering-mode .osint-entity-identity { grid-template-columns: minmax(0, 1fr); }
+    .engineering-mode .osint-entity-duplicates > div { grid-template-columns: minmax(0, 1fr); }
+    .engineering-mode .osint-entity-graph svg { height: min(31vh, 20rem); }
 }
 
 @media (max-aspect-ratio: 16/10) {

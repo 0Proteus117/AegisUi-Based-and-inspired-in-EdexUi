@@ -1587,6 +1587,9 @@ class WorkspaceManager {
             activeRequestId: null, lastError: null, analystObservation: "", excerpt: "", excerptLocation: "",
             claimRelationship: "UNKNOWN", selectedFile: null
         };
+        this.osintEntityState = this.osintEntityState || (window.OSINTEntityResolution
+            ? window.OSINTEntityResolution.createState({mode: "CATALOG"})
+            : {mode: "CATALOG", entities: [], relationships: [], selectedEntityId: null, analystNote: "", filters: {type: "", status: "", relationshipType: ""}, lastError: null});
         this.osintState.filters = {...{providerStatus: "", riskProfile: "", legalStatus: ""}, ...(this.osintState.filters || {})};
         this.renderOSINTState(view, definition);
         this.ensureOSINTCasesLoaded();
@@ -1631,6 +1634,12 @@ class WorkspaceManager {
             return;
         }
 
+        if (this.osintEntityState && this.osintEntityState.mode === "ENTITY") {
+            this.renderOSINTEntityWorkspace(grid);
+            this.bindOSINTDeck(view);
+            return;
+        }
+
         if (!activeCategory) {
             const featured = typeof registry.getFeaturedProviders === "function"
                 ? registry.getFeaturedProviders()
@@ -1642,7 +1651,7 @@ class WorkspaceManager {
                         <small>PUBLIC-SOURCE / EVIDENCE-AWARE RESEARCH</small>
                         <h2>OSINT TOOL CATALOG</h2>
                         <p>Choose an investigation domain. Every entry carries an explicit access and policy state before any external resource can be launched.</p>
-                        <div class="osint-hero-actions"><button type="button" class="osint-case-workspace-button" data-osint-case-action="workspace">CASE WORKSPACE</button><button type="button" class="osint-case-workspace-button" data-osint-geo-action="open">GEO VERIFICATION</button><button type="button" class="osint-case-workspace-button" data-osint-media-action="open">VISUAL VERIFICATION</button><button type="button" class="osint-case-workspace-button" data-osint-domain-action="open">DOMAIN CONTEXT</button><button type="button" class="osint-case-workspace-button" data-osint-research-action="open">SOURCE VERIFICATION</button></div>
+                        <div class="osint-hero-actions"><button type="button" class="osint-case-workspace-button" data-osint-case-action="workspace">CASE WORKSPACE</button><button type="button" class="osint-case-workspace-button" data-osint-geo-action="open">GEO VERIFICATION</button><button type="button" class="osint-case-workspace-button" data-osint-media-action="open">VISUAL VERIFICATION</button><button type="button" class="osint-case-workspace-button" data-osint-domain-action="open">DOMAIN CONTEXT</button><button type="button" class="osint-case-workspace-button" data-osint-research-action="open">SOURCE VERIFICATION</button><button type="button" class="osint-case-workspace-button" data-osint-entity-action="open">ENTITY RESOLUTION</button></div>
                     </div>
                     <div class="osint-command-stats">
                         <div><small>CATEGORIES</small><strong>${registry.CATEGORIES.length}</strong></div>
@@ -1669,7 +1678,7 @@ class WorkspaceManager {
             grid.innerHTML = `
                 <section class="osint-category-header workspace-panel">
                     <button type="button" class="osint-back-button" data-osint-back>‹ ALL DOMAINS</button>
-                    <div class="osint-hero-actions"><button type="button" class="osint-case-workspace-button" data-osint-case-action="workspace">CASE WORKSPACE</button>${activeCategory.id === "geospatial" ? `<button type="button" class="osint-case-workspace-button" data-osint-geo-action="open">GEO VERIFICATION</button><button type="button" class="osint-case-workspace-button" data-osint-media-action="open">VISUAL VERIFICATION</button>` : ""}${activeCategory.id === "infrastructure" ? `<button type="button" class="osint-case-workspace-button" data-osint-domain-action="open">DOMAIN CONTEXT</button>` : ""}${["discovery", "archives"].includes(activeCategory.id) ? `<button type="button" class="osint-case-workspace-button" data-osint-research-action="open">SOURCE VERIFICATION</button>` : ""}</div>
+                    <div class="osint-hero-actions"><button type="button" class="osint-case-workspace-button" data-osint-case-action="workspace">CASE WORKSPACE</button>${activeCategory.id === "geospatial" ? `<button type="button" class="osint-case-workspace-button" data-osint-geo-action="open">GEO VERIFICATION</button><button type="button" class="osint-case-workspace-button" data-osint-media-action="open">VISUAL VERIFICATION</button>` : ""}${activeCategory.id === "infrastructure" ? `<button type="button" class="osint-case-workspace-button" data-osint-domain-action="open">DOMAIN CONTEXT</button>` : ""}${["discovery", "archives"].includes(activeCategory.id) ? `<button type="button" class="osint-case-workspace-button" data-osint-research-action="open">SOURCE VERIFICATION</button>` : ""}${activeCategory.id === "entities" ? `<button type="button" class="osint-case-workspace-button" data-osint-entity-action="open">ENTITY RESOLUTION</button>` : ""}</div>
                     <span class="osint-category-icon">${this.escape(activeCategory.icon)}</span>
                     <div><small>OSINT DOMAIN / ${this.escape(activeCategory.id)}</small><h2>${this.escape(activeCategory.title)}</h2><p>${this.escape(activeCategory.description)}</p></div>
                     <strong>${providers.length} / ${allCategoryProviders.length} SOURCES</strong>
@@ -1785,7 +1794,7 @@ class WorkspaceManager {
     bindOSINTDeck(view = this.osintView) {
         if (!view || view.dataset.osintDeckBound === "true") return;
         this.boundOSINTDeckClick = event => {
-            const target = event.target.closest("[data-osint-category], [data-osint-back], [data-osint-filter-clear], [data-osint-tool], [data-osint-panel-action], [data-osint-history-clear], [data-osint-query-cancel], [data-osint-save-result], [data-osint-case-action], [data-osint-geo-action], [data-osint-media-action], [data-osint-domain-action], [data-osint-research-action]");
+            const target = event.target.closest("[data-osint-category], [data-osint-back], [data-osint-filter-clear], [data-osint-tool], [data-osint-panel-action], [data-osint-history-clear], [data-osint-query-cancel], [data-osint-save-result], [data-osint-case-action], [data-osint-geo-action], [data-osint-media-action], [data-osint-domain-action], [data-osint-research-action], [data-osint-entity-action]");
             if (!target || !view.contains(target)) return;
             if (target.matches("[data-osint-category]")) {
                 this.osintState.categoryId = target.dataset.osintCategory;
@@ -1838,6 +1847,10 @@ class WorkspaceManager {
                 this.handleOSINTResearchAction(target.dataset.osintResearchAction, target);
                 return;
             }
+            if (target.matches("[data-osint-entity-action]")) {
+                this.handleOSINTEntityAction(target.dataset.osintEntityAction, target);
+                return;
+            }
             if (target.matches("[data-osint-panel-action]")) this.handleOSINTPanelAction(target.dataset.osintPanelAction, target);
         };
         this.boundOSINTDeckChange = event => {
@@ -1873,6 +1886,13 @@ class WorkspaceManager {
             const domainIp = event.target.closest("[data-osint-domain-ip]");
             if (domainIp && view.contains(domainIp)) {
                 this.osintDomainState.selectedPublicIp = domainIp.value;
+                return;
+            }
+            const entityFilter = event.target.closest("[data-osint-entity-filter]");
+            if (entityFilter && view.contains(entityFilter)) {
+                if (entityFilter.dataset.osintEntityFilter === "type") this.osintEntityState.typeFilter = entityFilter.value;
+                if (entityFilter.dataset.osintEntityFilter === "relationshipStatus") this.osintEntityState.relationshipFilter = entityFilter.value;
+                this.renderOSINTState(view);
                 return;
             }
             const select = event.target.closest("[data-osint-filter]");
@@ -1926,6 +1946,11 @@ class WorkspaceManager {
                 this.osintResearchState.excerptLocation = researchLocation.value.slice(0, 240);
                 return;
             }
+            const entityNote = event.target.closest("[data-osint-entity-note]");
+            if (entityNote && view.contains(entityNote)) {
+                this.osintEntityState.analystNote = entityNote.value.slice(0, 4000);
+                return;
+            }
             const researchRelation = event.target.closest("[data-osint-research-claim-relation]");
             if (researchRelation && view.contains(researchRelation)) {
                 this.osintResearchState.claimRelationship = researchRelation.value;
@@ -1962,6 +1987,18 @@ class WorkspaceManager {
             if (researchForm && view.contains(researchForm)) {
                 event.preventDefault();
                 this.beginOSINTResearchSourceVerification();
+                return;
+            }
+            const entityCreateForm = event.target.closest("[data-osint-entity-create-form]");
+            if (entityCreateForm && view.contains(entityCreateForm)) {
+                event.preventDefault();
+                this.submitOSINTEntityCreateForm(entityCreateForm);
+                return;
+            }
+            const entityRelationshipForm = event.target.closest("[data-osint-entity-relationship-form]");
+            if (entityRelationshipForm && view.contains(entityRelationshipForm)) {
+                event.preventDefault();
+                this.submitOSINTEntityRelationshipForm(entityRelationshipForm);
                 return;
             }
             const form = event.target.closest("[data-osint-query-form]");
@@ -2618,6 +2655,190 @@ class WorkspaceManager {
             <aside class="osint-research-policy workspace-panel"><header><h2>PROVIDER POLICY</h2><span>PASSIVE / EXPLICIT / BOUNDED</span></header><div class="workspace-panel-content"><p><strong>Crossref</strong> handles one DOI through a fixed endpoint. <strong>Wayback</strong> is reused only after CHECK ARCHIVE. Local PDF inspection runs in-process on one selected file.</p><p>No arbitrary web extraction, crawler, download, cookies, credentials, paywall bypass, archive capture or hidden persistence is available.</p><small>ORIGINAL DOCUMENT ATTACHMENT · DEFERRED</small></div></aside>`;
     }
 
+    getOSINTEntityModule() { return window.OSINTEntityResolution || null; }
+
+    getOSINTEntityProvider() {
+        return this.osintProviderRegistry && this.osintProviderRegistry.getProvider("local-entity-resolution")
+            || this.getOSINTProviders().find(provider => provider.id === "local-entity-resolution") || null;
+    }
+
+    handleOSINTEntityAction(action, trigger = null) {
+        const Engine = this.getOSINTEntityModule();
+        const state = this.osintEntityState;
+        if (!Engine || !state) return this.showToast(this.osintView, "ENTITY RESOLUTION UNAVAILABLE");
+        if (action === "open") {
+            state.mode = "ENTITY";
+            this.osintState.categoryId = "entities";
+            this.renderOSINTState();
+            return;
+        }
+        if (action === "catalog") {
+            state.mode = "CATALOG";
+            this.renderOSINTState();
+            return;
+        }
+        if (action === "clear") {
+            this.osintEntityState = Engine.createState({mode: "ENTITY"});
+            this.renderOSINTState();
+            return;
+        }
+        if (action === "select") {
+            const id = trigger && trigger.dataset.osintEntityId;
+            if (state.entities.some(entity => entity.id === id)) state.selectedEntityId = id;
+            this.renderOSINTState();
+            return;
+        }
+        if (action === "relationship") {
+            const relationship = state.relationships.find(item => item.id === (trigger && trigger.dataset.osintRelationshipId));
+            if (!relationship) return;
+            const from = state.entities.find(item => item.id === relationship.fromId);
+            const to = state.entities.find(item => item.id === relationship.toId);
+            const evidence = relationship.evidence.map(item => `<li><strong>${this.escape(item.summary)}</strong><span>${this.escape(item.sourceType)} · ${this.escape(item.sourceIdentifier)} · ${this.escape(item.confidence)}</span></li>`).join("");
+            const contradictions = relationship.contradictions && relationship.contradictions.length ? `<section><h3>CONTRADICTIONS</h3><p>${this.escape(relationship.contradictions.join(" · "))}</p></section>` : "";
+            this.openOSINTCaseDialog("RELATIONSHIP EVIDENCE", `<section class="osint-entity-relationship-dialog"><p><strong>${this.escape(from && from.label || "ARCHIVED ENTITY")}</strong> <em>${this.escape(this.formatOSINTEnum(relationship.type))}</em> <strong>${this.escape(to && to.label || "ARCHIVED ENTITY")}</strong></p><dl><div><dt>STATUS</dt><dd>${this.escape(this.formatOSINTEnum(relationship.status))}</dd></div><div><dt>CONFIDENCE</dt><dd>${this.escape(relationship.confidence)}</dd></div></dl><section><h3>SUPPORTING OBSERVATIONS</h3><ul>${evidence}</ul></section>${contradictions}<footer><button type="button" data-osint-case-dialog-close>CLOSE</button></footer></section>`, trigger, (overlay, close) => {
+                overlay.querySelectorAll("[data-osint-case-dialog-close]").forEach(button => button.addEventListener("click", close));
+            });
+            return;
+        }
+        if (action === "archive") {
+            try { this.osintEntityState = Engine.archiveEntity(state, trigger.dataset.osintEntityId); }
+            catch (error) { this.osintEntityState = {...state, lastError: error.message}; }
+            this.renderOSINTState();
+            return;
+        }
+        if (action === "edit") {
+            const entity = state.entities.find(item => item.id === (trigger && trigger.dataset.osintEntityId));
+            if (!entity) return;
+            this.openOSINTCaseDialog("EDIT ENTITY", `<section class="osint-entity-edit-dialog"><form data-osint-entity-edit-form><label><span>PREFERRED LABEL</span><input class="aegis-input" name="label" maxlength="240" required value="${this.escape(entity.label)}"></label><label><span>ALIASES · OPTIONAL</span><input class="aegis-input" name="aliases" maxlength="1200" value="${this.escape(entity.aliases.join(", "))}"></label><label><span>CONFIDENCE</span><select class="aegis-select" name="confidence">${Engine.CONFIDENCE.map(value => `<option value="${value}"${entity.confidence === value ? " selected" : ""}>${value}</option>`).join("")}</select></label><label><span>STATUS</span><select class="aegis-select" name="status">${Engine.STATUSES.map(value => `<option value="${value}"${entity.status === value ? " selected" : ""}>${this.escape(this.formatOSINTEnum(value))}</option>`).join("")}</select></label><footer><button type="button" data-osint-case-dialog-close>CANCEL</button><button type="submit">SAVE ENTITY</button></footer></form></section>`, trigger, (overlay, close) => {
+                overlay.querySelectorAll("[data-osint-case-dialog-close]").forEach(button => button.addEventListener("click", close));
+                overlay.querySelector("[data-osint-entity-edit-form]").addEventListener("submit", event => {
+                    event.preventDefault(); const form = new FormData(event.currentTarget);
+                    try { this.osintEntityState = Engine.updateEntity(this.osintEntityState, entity.id, {label: form.get("label"), aliases: String(form.get("aliases") || "").split(",").map(item => item.trim()).filter(Boolean), confidence: form.get("confidence"), status: form.get("status")}); close(); this.renderOSINTState(); }
+                    catch (error) { this.showToast(this.osintView, error.message || "ENTITY UPDATE FAILED"); }
+                });
+            });
+            return;
+        }
+        if (action === "potential-link") {
+            try {
+                this.osintEntityState = Engine.addRelationship(state, {
+                    fromId: trigger.dataset.osintEntityId,
+                    toId: trigger.dataset.osintEntityTarget,
+                    type: "POTENTIALLY_SAME_AS",
+                    evidence: [{summary: "Exact canonical identifier candidate reviewed and explicitly linked by the analyst.", sourceType: "DERIVED_NORMALIZATION", sourceIdentifier: "LOCAL_EXACT_MATCH", confidence: "MEDIUM"}],
+                    confidence: "MEDIUM", status: "AMBIGUOUS"
+                });
+            } catch (error) { this.osintEntityState = {...state, lastError: error.message}; }
+            this.renderOSINTState();
+            return;
+        }
+        if (action === "merge") {
+            const keepId = trigger.dataset.osintEntityId;
+            const mergeId = trigger.dataset.osintEntityTarget;
+            const keep = state.entities.find(item => item.id === keepId); const merge = state.entities.find(item => item.id === mergeId);
+            if (!keep || !merge) return;
+            this.openOSINTCaseDialog("MERGE CONFIRMED", `<section class="osint-entity-merge-dialog"><p>Merge <strong>${this.escape(merge.label)}</strong> into <strong>${this.escape(keep.label)}</strong>? This is an explicit analyst confirmation. Matching and conflicting attributes remain visible in the selected entity snapshot; no external lookup occurs.</p><footer><button type="button" data-osint-case-dialog-close>KEEP SEPARATE</button><button type="button" data-osint-entity-merge-confirm>MERGE CONFIRMED</button></footer></section>`, trigger, (overlay, close) => {
+                overlay.querySelectorAll("[data-osint-case-dialog-close]").forEach(button => button.addEventListener("click", close));
+                overlay.querySelector("[data-osint-entity-merge-confirm]").addEventListener("click", () => {
+                    try { this.osintEntityState = Engine.mergeConfirmed(this.osintEntityState, keepId, mergeId, true); close(); this.renderOSINTState(); }
+                    catch (error) { this.showToast(this.osintView, error.message || "MERGE FAILED"); }
+                });
+            });
+            return;
+        }
+        if (action === "save") return this.promoteOSINTEntityEvidence(trigger);
+        if (action === "handoff") return this.handoffOSINTEntity(trigger && trigger.dataset.osintEntityId);
+    }
+
+    submitOSINTEntityCreateForm(form) {
+        const Engine = this.getOSINTEntityModule();
+        if (!Engine) return;
+        const state = this.osintEntityState;
+        const values = new FormData(form);
+        try {
+            this.osintEntityState = Engine.addEntity(state, {
+                type: values.get("type"), label: values.get("label"), aliases: String(values.get("aliases") || "").split(",").map(item => item.trim()).filter(Boolean),
+                attributes: [{field: values.get("field") || "IDENTIFIER", value: values.get("value") || values.get("label"), sourceType: values.get("sourceType") || "ANALYST_OBSERVATION", sourceIdentifier: values.get("sourceIdentifier") || "ANALYST ENTERED", confidence: values.get("confidence") || "LOW", status: "UNVERIFIED"}],
+                confidence: values.get("confidence") || "LOW", status: "UNVERIFIED"
+            });
+            this.renderOSINTState();
+        } catch (error) { this.osintEntityState = {...state, lastError: error.message || "ENTITY CREATE FAILED"}; this.renderOSINTState(); }
+    }
+
+    submitOSINTEntityRelationshipForm(form) {
+        const Engine = this.getOSINTEntityModule();
+        if (!Engine) return;
+        const state = this.osintEntityState;
+        const values = new FormData(form);
+        try {
+            this.osintEntityState = Engine.addRelationship(state, {
+                fromId: values.get("fromId"), toId: values.get("toId"), type: values.get("type"), confidence: values.get("confidence") || "LOW", status: values.get("status") || "PARTIALLY_RESOLVED",
+                evidence: [{summary: values.get("evidence"), sourceType: values.get("sourceType") || "ANALYST_OBSERVATION", sourceIdentifier: values.get("sourceIdentifier") || "ANALYST ENTERED", confidence: values.get("confidence") || "LOW"}],
+                contradictions: String(values.get("contradictions") || "").split("\n").map(item => item.trim()).filter(Boolean)
+            });
+            this.renderOSINTState();
+        } catch (error) { this.osintEntityState = {...state, lastError: error.message || "RELATIONSHIP CREATE FAILED"}; this.renderOSINTState(); }
+    }
+
+    handoffOSINTEntity(entityId) {
+        const entity = this.osintEntityState && this.osintEntityState.entities.find(item => item.id === entityId);
+        if (!entity) return;
+        if (["DOMAIN", "IP"].includes(entity.type)) {
+            this.osintDomainState = {...this.osintDomainState, mode: "DOMAIN", input: entity.label, verification: null, lastError: null};
+            this.renderOSINTState();
+            return;
+        }
+        if (entity.type === "LOCATION") {
+            this.osintGeoState = {...this.osintGeoState, mode: "GEO", input: entity.label, verification: null, lastError: null};
+            this.renderOSINTState();
+            return;
+        }
+        if (entity.type === "SOURCE") {
+            this.osintResearchState = {...this.osintResearchState, mode: "SOURCE", sourceKind: "URL", input: entity.label, context: null, lastError: null};
+            this.renderOSINTState();
+            return;
+        }
+        this.showToast(this.osintView, "NO EXPLICIT HANDOFF FOR THIS ENTITY TYPE");
+    }
+
+    promoteOSINTEntityEvidence(trigger = null) {
+        const Engine = this.getOSINTEntityModule(); const provider = this.getOSINTEntityProvider(); const state = this.osintEntityState;
+        if (!Engine || !provider || !state || !state.selectedEntityId) return this.showToast(this.osintView, "SELECT ONE ENTITY BEFORE ADD TO CASE");
+        try {
+            const entity = state.entities.find(item => item.id === state.selectedEntityId);
+            const data = Engine.toEvidenceData(state, state.selectedEntityId, state.analystNote || "");
+            const timestamp = new Date().toISOString();
+            this.osintLastNormalizedResults[provider.id] = Object.freeze({requestId: `entity-evidence-${Date.now().toString(36)}`, providerId: provider.id, capability: "ENTITY_RESOLUTION", status: "SUCCESS", queriedAt: timestamp, completedAt: timestamp, durationMs: 0, summary: `Entity snapshot: ${entity.label}.`, data: {...data, provider: provider.name, available: true}, warnings: [], source: {provider: provider.name, type: "LOCAL_ENTITY_RESOLUTION"}, confidence: entity.confidence, rawAvailable: false, error: null});
+            this.openOSINTEvidencePromotion(provider.id, trigger);
+        } catch (error) { this.showToast(this.osintView, error.message || "ENTITY EVIDENCE UNAVAILABLE"); }
+    }
+
+    renderOSINTEntityWorkspace(grid) {
+        const Engine = this.getOSINTEntityModule(); const state = this.osintEntityState || {};
+        const graph = Engine ? Engine.graph(state, {type: state.typeFilter, relationshipStatus: state.relationshipFilter}) : {nodes: [], edges: [], limits: {nodes: 0, edges: 0}};
+        const selected = state.entities && state.entities.find(item => item.id === state.selectedEntityId) || null;
+        const entityTypes = Engine ? Engine.ENTITY_TYPES : []; const relationTypes = Engine ? Engine.RELATIONSHIP_TYPES : [];
+        const readout = (label, value, fallback = "NOT AVAILABLE") => `<div><small>${this.escape(label)}</small><strong>${this.escape(value === null || value === undefined || value === "" ? fallback : String(value))}</strong></div>`;
+        const positions = new Map(graph.nodes.map((node, index) => {
+            const angle = (Math.PI * 2 * index / Math.max(graph.nodes.length, 1)) - Math.PI / 2;
+            return [node.id, {x: 500 + Math.cos(angle) * (graph.nodes.length <= 2 ? 175 : 310), y: 250 + Math.sin(angle) * (graph.nodes.length <= 2 ? 0 : 145)}];
+        }));
+        const edgeMarkup = graph.edges.map(edge => { const from = positions.get(edge.fromId); const to = positions.get(edge.toId); return from && to ? `<line x1="${from.x}" y1="${from.y}" x2="${to.x}" y2="${to.y}" class="osint-entity-edge confidence-${this.escape(edge.confidence.toLowerCase())}" data-osint-entity-action="relationship" data-osint-relationship-id="${this.escape(edge.id)}"><title>${this.escape(`${edge.type} · ${edge.confidence}`)}</title></line>` : ""; }).join("");
+        const nodeMarkup = graph.nodes.map(node => { const point = positions.get(node.id); const selectedNode = node.id === state.selectedEntityId; return `<g class="osint-entity-node${selectedNode ? " selected" : ""}" data-osint-entity-action="select" data-osint-entity-id="${this.escape(node.id)}"><circle cx="${point.x}" cy="${point.y}" r="${selectedNode ? 34 : 28}"></circle><text x="${point.x}" y="${point.y + 4}" text-anchor="middle">${this.escape(node.type.slice(0, 3))}</text><title>${this.escape(`${node.label} · ${node.type}`)}</title></g>`; }).join("");
+        const nodeList = graph.nodes.length ? graph.nodes.map(node => `<button type="button" class="osint-entity-node-list${node.id === state.selectedEntityId ? " selected" : ""}" data-osint-entity-action="select" data-osint-entity-id="${this.escape(node.id)}"><strong>${this.escape(node.label)}</strong><span>${this.escape(this.formatOSINTEnum(node.type))} · ${this.escape(node.confidence)}</span></button>`).join("") : `<p class="osint-panel-muted">No entities yet. Explicitly create one from an analyst observation or an existing normalized observation.</p>`;
+        const attributes = selected ? selected.attributes.map(attribute => `<li>${readout(attribute.field, attribute.value)}<span>${this.escape(attribute.sourceType)} · ${this.escape(attribute.sourceIdentifier)} · ${this.escape(attribute.confidence)}</span></li>`).join("") : "";
+        const relationships = selected ? state.relationships.filter(item => item.fromId === selected.id || item.toId === selected.id).map(item => { const counterpart = state.entities.find(entity => entity.id === (item.fromId === selected.id ? item.toId : item.fromId)); return `<li><strong>${this.escape(item.type)}</strong><span>${this.escape(counterpart && counterpart.label || "ARCHIVED ENTITY")} · ${this.escape(item.confidence)} · ${this.escape(item.status)}</span><small>${this.escape(item.evidence.map(evidence => evidence.summary).join(" · "))}</small>${item.contradictions && item.contradictions.length ? `<em>CONTRADICTIONS · ${this.escape(item.contradictions.join(" · "))}</em>` : ""}</li>`; }).join("") : "";
+        const hints = Engine ? Engine.exactDuplicateHints(state.entities || []) : [];
+        const duplicateMarkup = hints.length ? `<section class="osint-entity-duplicates"><small>EXACT IDENTIFIER CANDIDATES · ANALYST REVIEW REQUIRED</small>${hints.map(hint => { const [first, second] = hint.entityIds; const firstEntity = state.entities.find(item => item.id === first); const secondEntity = state.entities.find(item => item.id === second); return `<div><span>${this.escape(hint.key)}</span><strong>${this.escape(firstEntity && firstEntity.label)} ↔ ${this.escape(secondEntity && secondEntity.label)}</strong><button type="button" data-osint-entity-action="potential-link" data-osint-entity-id="${this.escape(first)}" data-osint-entity-target="${this.escape(second)}">LINK POTENTIALLY SAME</button><button type="button" data-osint-entity-action="merge" data-osint-entity-id="${this.escape(first)}" data-osint-entity-target="${this.escape(second)}">MERGE CONFIRMED</button></div>`; }).join("")}</section>` : "";
+        const handoffAllowed = selected && ["DOMAIN", "IP", "LOCATION", "SOURCE"].includes(selected.type);
+        grid.innerHTML = `<section class="osint-entity-header workspace-panel"><button type="button" class="osint-back-button" data-osint-entity-action="catalog">‹ OSINT CATALOG</button><div><small>OSINT / IDENTITY · ENTITY RESOLUTION</small><h2>PROVENANCE-AWARE ENTITY CONTEXT</h2><p>Explicit local entity modeling for one investigation. No people search, biometric matching, social crawling, email probing, hidden enrichment or background query.</p></div><div class="osint-entity-status"><small>GRAPH LIMIT</small><strong>${graph.nodes.length} / ${graph.limits.nodes} ENTITIES</strong><span>${graph.edges.length} / ${graph.limits.edges} RELATIONSHIPS</span></div></section>
+            <section class="osint-entity-create workspace-panel"><header><h2>CREATE ENTITY</h2><span>EXPLICIT / EPHEMERAL</span></header><div class="workspace-panel-content"><form data-osint-entity-create-form><label><span>TYPE</span><select class="aegis-select" name="type">${entityTypes.map(type => `<option value="${type}">${this.escape(this.formatOSINTEnum(type))}</option>`).join("")}</select></label><label><span>PREFERRED LABEL</span><input class="aegis-input" name="label" maxlength="240" required placeholder="Synthetic Example Organization"></label><label><span>ATTRIBUTE FIELD / VALUE</span><div class="osint-entity-inline-fields"><input class="aegis-input" name="field" maxlength="80" value="IDENTIFIER"><input class="aegis-input" name="value" maxlength="320" required placeholder="Explicitly supplied value"></div></label><label><span>PROVENANCE</span><div class="osint-entity-inline-fields"><select class="aegis-select" name="sourceType"><option value="ANALYST_OBSERVATION">ANALYST OBSERVATION</option><option value="SOURCE_METADATA">SOURCE METADATA</option><option value="DOMAIN_CONTEXT">DOMAIN CONTEXT</option><option value="GEO_CONTEXT">GEO CONTEXT</option><option value="MEDIA_METADATA">MEDIA METADATA</option><option value="CASE_EVIDENCE">CASE EVIDENCE</option></select><input class="aegis-input" name="sourceIdentifier" maxlength="160" value="ANALYST ENTERED"></div></label><label><span>CONFIDENCE</span><select class="aegis-select" name="confidence"><option>LOW</option><option>MEDIUM</option><option>HIGH</option></select></label><label><span>ALIASES · OPTIONAL</span><input class="aegis-input" name="aliases" maxlength="1200" placeholder="comma separated"></label><footer><button type="submit">CREATE ENTITY</button><button type="button" data-osint-entity-action="clear">CLEAR EPHEMERAL GRAPH</button></footer></form>${state.lastError ? `<section class="osint-panel-error"><strong>ENTITY INPUT REJECTED</strong><p>${this.escape(state.lastError)}</p></section>` : ""}</div></section>
+            <section class="osint-entity-graph-panel workspace-panel"><header><h2>RELATIONSHIP GRAPH</h2><span>BOUNDED / LOCAL</span></header><div class="workspace-panel-content"><div class="osint-entity-filters"><label><span>TYPE</span><select class="aegis-select" data-osint-entity-filter="type"><option value="">ALL TYPES</option>${entityTypes.map(type => `<option value="${type}"${state.typeFilter === type ? " selected" : ""}>${this.escape(this.formatOSINTEnum(type))}</option>`).join("")}</select></label><label><span>RELATIONSHIP STATUS</span><select class="aegis-select" data-osint-entity-filter="relationshipStatus"><option value="">ALL STATES</option>${["UNVERIFIED", "PARTIALLY_RESOLVED", "CONSISTENT", "INCONSISTENT", "AMBIGUOUS", "CONFIRMED_BY_ANALYST"].map(status => `<option value="${status}"${state.relationshipFilter === status ? " selected" : ""}>${this.escape(this.formatOSINTEnum(status))}</option>`).join("")}</select></label></div><figure class="osint-entity-graph" aria-label="Bounded entity relationship graph"><svg viewBox="0 0 1000 500" role="img">${edgeMarkup}${nodeMarkup}<text x="500" y="470" text-anchor="middle" class="osint-entity-graph-caption">SELECT AN ENTITY FROM THE KEY BELOW TO REVIEW PROVENANCE</text></svg></figure><div class="osint-entity-node-list" role="list">${nodeList}</div></div></section>
+            <section class="osint-entity-detail workspace-panel"><header><h2>ENTITY DETAIL</h2><span>${this.escape(selected ? selected.type : "NO SELECTION")}</span></header><div class="workspace-panel-content">${selected ? `<section class="osint-entity-identity">${readout("LABEL", selected.label)}${readout("STATUS", selected.status)}${readout("CONFIDENCE", selected.confidence)}${readout("ALIASES", selected.aliases.join(" · "), "NONE")}</section><section class="osint-entity-attributes"><small>ATTRIBUTES / FIELD-LEVEL PROVENANCE</small><ul>${attributes}</ul></section><section class="osint-entity-relationships"><small>RELATIONSHIPS / EVIDENCE-BACKED</small><ul>${relationships || "<li>NO RELATIONSHIPS RECORDED</li>"}</ul></section><label><span>ANALYST NOTE · NOT EXTRACTED FACT</span><textarea class="aegis-input" data-osint-entity-note maxlength="4000">${this.escape(state.analystNote || "")}</textarea></label><footer><button type="button" data-osint-entity-action="edit" data-osint-entity-id="${this.escape(selected.id)}">EDIT ENTITY</button><button type="button" data-osint-entity-action="save">ADD TO CASE</button>${handoffAllowed ? `<button type="button" data-osint-entity-action="handoff" data-osint-entity-id="${this.escape(selected.id)}">OPEN CONTEXT</button>` : ""}<button type="button" data-osint-entity-action="archive" data-osint-entity-id="${this.escape(selected.id)}">ARCHIVE ENTITY</button></footer>` : `<p class="osint-panel-muted">Select an entity to inspect provenance, relationships, contradictions and explicit handoff options.</p>`}</div></section>
+            <section class="osint-entity-relationship workspace-panel"><header><h2>LINK ENTITIES</h2><span>EVIDENCE REQUIRED</span></header><div class="workspace-panel-content">${state.entities.length >= 2 ? `<form data-osint-entity-relationship-form><label><span>FROM / TO</span><div class="osint-entity-inline-fields"><select class="aegis-select" name="fromId">${state.entities.map(entity => `<option value="${this.escape(entity.id)}"${entity.id === state.selectedEntityId ? " selected" : ""}>${this.escape(entity.label)}</option>`).join("")}</select><select class="aegis-select" name="toId">${state.entities.map(entity => `<option value="${this.escape(entity.id)}">${this.escape(entity.label)}</option>`).join("")}</select></div></label><label><span>RELATIONSHIP / CONFIDENCE</span><div class="osint-entity-inline-fields"><select class="aegis-select" name="type">${relationTypes.map(type => `<option value="${type}">${this.escape(this.formatOSINTEnum(type))}</option>`).join("")}</select><select class="aegis-select" name="confidence"><option>LOW</option><option>MEDIUM</option><option>HIGH</option></select></div></label><label><span>STATUS</span><select class="aegis-select" name="status"><option>PARTIALLY_RESOLVED</option><option>CONSISTENT</option><option>INCONSISTENT</option><option>AMBIGUOUS</option></select></label><label><span>SUPPORTING OBSERVATION</span><textarea class="aegis-input" name="evidence" maxlength="500" required></textarea></label><label><span>OBSERVATION PROVENANCE</span><div class="osint-entity-inline-fields"><select class="aegis-select" name="sourceType"><option value="ANALYST_OBSERVATION">ANALYST OBSERVATION</option><option value="SOURCE_METADATA">SOURCE METADATA</option><option value="DOMAIN_CONTEXT">DOMAIN CONTEXT</option><option value="CASE_EVIDENCE">CASE EVIDENCE</option></select><input class="aegis-input" name="sourceIdentifier" maxlength="160" value="ANALYST ENTERED"></div></label><label><span>CONTRADICTIONS · OPTIONAL / ONE PER LINE</span><textarea class="aegis-input" name="contradictions" maxlength="2000"></textarea></label><footer><button type="submit">LINK WITH EVIDENCE</button></footer></form>` : `<p class="osint-panel-muted">Create two entities before a relationship can be modeled. A relationship without at least one supporting observation is rejected.</p>`}</div></section>
+            <aside class="osint-entity-policy workspace-panel"><header><h2>ENTITY POLICY</h2><span>PASSIVE / FAIL-CLOSED</span></header><div class="workspace-panel-content">${duplicateMarkup}<p>Entity creation, graph selection and linking are entirely local. They trigger no provider request, network action, account check or hidden persistence. Only ADD TO CASE enters the existing redaction and integrity workflow.</p><p>REFERENCE ONLY entries remain blocked from launch, network, IPC and disk actions. Exact identifiers suggest review only; no entity is merged automatically.</p></div></aside>`;
+    }
+
     renderOSINTDomainInfrastructureWorkspace(grid) {
         const state = this.osintDomainState || {};
         const verification = state.verification;
@@ -3172,6 +3393,7 @@ class WorkspaceManager {
         const geo = normalized && normalized.capability === "GEOSPATIAL_VERIFICATION";
         const infrastructure = normalized && normalized.capability === "INFRASTRUCTURE_CONTEXT";
         const research = normalized && normalized.capability === "SOURCE_VERIFICATION";
+        const entityResolution = normalized && normalized.capability === "ENTITY_RESOLUTION";
         const redactions = [
             ["queryInput", "QUERY INPUT"],
             ["canonicalUrl", "CANONICAL URL"],
@@ -3182,8 +3404,9 @@ class WorkspaceManager {
             ...(geo ? [["data.geo.latitude", "GEO / LATITUDE"], ["data.geo.longitude", "GEO / LONGITUDE"], ["data.geo.displayName", "GEO / DISPLAY NAME"], ["data.geo.locality", "GEO / LOCALITY"], ["data.geo.region", "GEO / REGION"], ["data.geo.country", "GEO / COUNTRY"], ["data.geo.countryCode", "GEO / COUNTRY CODE"], ["data.geo.elevationM", "GEO / ELEVATION"], ["data.geo.observations", "GEO / PROVIDER OBSERVATIONS"]] : [])
             .concat(infrastructure ? [["data.infrastructure.normalizedTarget", "INFRASTRUCTURE / NORMALIZED TARGET"], ["data.infrastructure.dns", "INFRASTRUCTURE / DNS"], ["data.infrastructure.network", "INFRASTRUCTURE / NETWORK"], ["data.infrastructure.provenance", "INFRASTRUCTURE / PROVIDER PROVENANCE"]] : [])
             .concat(research ? [["data.research.normalizedUrl", "RESEARCH / NORMALIZED URL"], ["data.research.localDocument", "RESEARCH / LOCAL DOCUMENT METADATA"], ["data.research.localDocument.displayLabel", "RESEARCH / DOCUMENT DISPLAY LABEL"], ["data.research.title", "RESEARCH / TITLE"], ["data.research.publisher", "RESEARCH / PUBLISHER"], ["data.research.authors", "RESEARCH / AUTHORS"], ["data.research.publishedAt", "RESEARCH / PUBLISHED"], ["data.research.updatedAt", "RESEARCH / UPDATED"], ["data.research.archive", "RESEARCH / ARCHIVE CONTEXT"], ["data.research.provenance", "RESEARCH / PROVIDER PROVENANCE"], ["data.research.fieldProvenance", "RESEARCH / FIELD PROVENANCE"], ["data.research.excerpt", "RESEARCH / EXCERPT"], ["data.research.analystObservation", "RESEARCH / ANALYST OBSERVATION"]] : [])
+            .concat(entityResolution ? [["data.entityResolution.entity.label", "ENTITY / LABEL"], ["data.entityResolution.entity.aliases", "ENTITY / ALIASES"], ["data.entityResolution.entity.attributes", "ENTITY / ATTRIBUTES AND PROVENANCE"], ["data.entityResolution.relationships", "ENTITY / RELATIONSHIPS"], ["data.entityResolution.analystNote", "ENTITY / ANALYST NOTE"]] : [])
         ];
-        this.openOSINTCaseDialog("EVIDENCE PREVIEW", `<form data-osint-evidence-preview-form><p>Review the safe normalized metadata. The provider, capability, query timestamp and integrity basis are fixed by the trusted local service.</p><section class="osint-evidence-preview-provenance"><div><small>PROVIDER</small><strong>${this.escape(providerId)}</strong></div><div><small>CAPABILITY</small><strong>${this.escape(normalized.capability)}</strong></div><div><small>STATUS</small><strong>${this.escape(normalized.status)}</strong></div><div><small>QUERIED</small><strong>${this.escape(normalized.queriedAt)}</strong></div></section><label><span>TITLE</span><input class="aegis-input" name="title" value="${this.escape(title)}" maxlength="160" required></label><label><span>SUMMARY</span><textarea class="aegis-input" name="summary" maxlength="4000" required>${this.escape(normalized.summary || "")}</textarea></label><label><span>TAGS</span><input class="aegis-input" name="tags" maxlength="500" value="${geo ? "geospatial, verification" : infrastructure ? "domain, infrastructure" : research ? "research, source-verification" : "wayback, historical-archive"}"></label><label><span>NOTE · OPTIONAL</span><textarea class="aegis-input" name="note" maxlength="8000"></textarea></label><fieldset><legend>REDACT BEFORE LOCAL SAVE</legend>${redactions.map(([field, label]) => `<label><input type="checkbox" name="redactions" value="${field}"> ${label}</label>`).join("")}</fieldset><footer><button type="button" data-osint-case-dialog-close>CANCEL</button><button type="submit">CONFIRM SAVE EVIDENCE</button></footer></form>`, trigger, (overlay, close) => {
+        this.openOSINTCaseDialog("EVIDENCE PREVIEW", `<form data-osint-evidence-preview-form><p>Review the safe normalized metadata. The provider, capability, query timestamp and integrity basis are fixed by the trusted local service.</p><section class="osint-evidence-preview-provenance"><div><small>PROVIDER</small><strong>${this.escape(providerId)}</strong></div><div><small>CAPABILITY</small><strong>${this.escape(normalized.capability)}</strong></div><div><small>STATUS</small><strong>${this.escape(normalized.status)}</strong></div><div><small>QUERIED</small><strong>${this.escape(normalized.queriedAt)}</strong></div></section><label><span>TITLE</span><input class="aegis-input" name="title" value="${this.escape(title)}" maxlength="160" required></label><label><span>SUMMARY</span><textarea class="aegis-input" name="summary" maxlength="4000" required>${this.escape(normalized.summary || "")}</textarea></label><label><span>TAGS</span><input class="aegis-input" name="tags" maxlength="500" value="${entityResolution ? "entity, provenance" : geo ? "geospatial, verification" : infrastructure ? "domain, infrastructure" : research ? "research, source-verification" : "wayback, historical-archive"}"></label><label><span>NOTE · OPTIONAL</span><textarea class="aegis-input" name="note" maxlength="8000"></textarea></label><fieldset><legend>REDACT BEFORE LOCAL SAVE</legend>${redactions.map(([field, label]) => `<label><input type="checkbox" name="redactions" value="${field}"> ${label}</label>`).join("")}</fieldset><footer><button type="button" data-osint-case-dialog-close>CANCEL</button><button type="submit">CONFIRM SAVE EVIDENCE</button></footer></form>`, trigger, (overlay, close) => {
             overlay.querySelectorAll("[data-osint-case-dialog-close]").forEach(button => button.addEventListener("click", close));
             overlay.querySelector("[data-osint-evidence-preview-form]").addEventListener("submit", async event => {
                 event.preventDefault(); const form = new FormData(event.currentTarget);
