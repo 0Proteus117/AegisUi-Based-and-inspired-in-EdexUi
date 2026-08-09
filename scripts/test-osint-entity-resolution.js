@@ -51,7 +51,7 @@ function main() {
     check("ENTITY_NO_NEW_IPC", !/ipc\.invoke\(\s*["']osint-entity-|ipcMain\.handle\(\s*["']osint-entity-/.test(manager));
     const handoffStart = manager.indexOf("    handoffOSINTEntity(entityId)");
     const handoff = manager.slice(handoffStart, manager.indexOf("    promoteOSINTEntityEvidence", handoffStart));
-    check("ENTITY_EXPLICIT_HANDOFF", /OPEN CONTEXT/.test(manager) && /mode: "DOMAIN"/.test(handoff) && !/beginOSINTDomainInfrastructureVerification\(\)/.test(handoff));
+    check("ENTITY_EXPLICIT_HANDOFF", /OPEN CONTEXT/.test(manager) && /beginOSINTInvestigationHandoff\(object, preferred\.id\)/.test(handoff) && /applyOSINTInvestigationHandoff\(handoff\)/.test(manager) && !/beginOSINTDomainInfrastructureVerification\(\)/.test(handoff));
     check("ENTITY_GRAPH_DIRECT_INTERACTION", manager.includes('data-osint-entity-action="relationship"') && manager.includes('data-osint-relationship-id') && manager.includes('RELATIONSHIP EVIDENCE'));
     check("ENTITY_LAYOUT_NORMAL_FLOW", /osint-entity-header/.test(css) && /grid-template-areas:[\s\S]*entity-header/.test(css) && /osint-entity-graph svg/.test(css) && /grid-template-rows: max-content minmax\(28vh, 1fr\) max-content/.test(css));
     check("ENTITY_REFERENCE_ONLY_UNCHANGED", /REFERENCE ONLY/.test(manager) && !/local-entity-resolution.*workspace-open-link/.test(manager));

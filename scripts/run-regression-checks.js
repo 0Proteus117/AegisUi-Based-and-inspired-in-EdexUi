@@ -35,6 +35,7 @@ const CHECKS = [
     "scripts/test-osint-domain-infrastructure.js",
     "scripts/test-osint-research-source-verification.js",
     "scripts/test-osint-entity-resolution.js",
+    "scripts/test-osint-investigation-orchestration.js",
     "scripts/test-osint-cases.js",
     "scripts/test-osint-case-ipc.js",
     "scripts/test-osint-case-ui.js",

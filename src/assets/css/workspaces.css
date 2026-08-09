@@ -5320,6 +5320,121 @@ button.eng-thread-row.active {
 .engineering-mode .osint-entity-duplicates span,
 .engineering-mode .osint-entity-duplicates strong { min-width: 0; color: var(--aegis-text); font: .54vh var(--font_mono); overflow-wrap: anywhere; }
 
+/* Phase 10: Case Overview is a derived local index, not a second case store.
+   Dynamic content stays in grid/document flow so handoff actions cannot collide
+   with object metadata at compact Electron window sizes. */
+.engineering-mode .workspace-grid.osint-command-grid:has(.osint-investigation-header) {
+    grid-template-columns: minmax(18rem, .72fr) minmax(26rem, 1.18fr) minmax(20rem, .9fr);
+    grid-template-areas:
+        "overview-header overview-header overview-header"
+        "overview-summary overview-index overview-actions"
+        "overview-questions overview-index overview-activity"
+        "overview-provenance overview-provenance overview-activity";
+    grid-template-rows: repeat(4, max-content);
+    align-items: start;
+    overflow: auto;
+}
+.engineering-mode .osint-investigation-header { grid-area: overview-header; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: .9vh; align-items: start; padding: .95vh 1.05vh; }
+.engineering-mode .osint-investigation-summary { grid-area: overview-summary; }
+.engineering-mode .osint-investigation-index { grid-area: overview-index; }
+.engineering-mode .osint-investigation-actions { grid-area: overview-actions; }
+.engineering-mode .osint-investigation-questions { grid-area: overview-questions; }
+.engineering-mode .osint-investigation-activity { grid-area: overview-activity; }
+.engineering-mode .osint-investigation-provenance { grid-area: overview-provenance; }
+.engineering-mode .osint-investigation-header > div,
+.engineering-mode .osint-investigation-header > span,
+.engineering-mode .osint-investigation-index .workspace-panel-content,
+.engineering-mode .osint-investigation-actions .workspace-panel-content,
+.engineering-mode .osint-investigation-questions .workspace-panel-content,
+.engineering-mode .osint-investigation-activity .workspace-panel-content,
+.engineering-mode .osint-investigation-provenance .workspace-panel-content { min-width: 0; }
+.engineering-mode .osint-investigation-header small,
+.engineering-mode .osint-investigation-object-group h3,
+.engineering-mode .osint-investigation-selected > small { color: var(--aegis-text-faint); font: .56vh var(--font_mono); letter-spacing: .1em; }
+.engineering-mode .osint-investigation-header h2 { margin: .14vh 0; color: var(--aegis-text); font: 1.45vh var(--font_main); font-weight: normal; letter-spacing: .08em; overflow-wrap: anywhere; }
+.engineering-mode .osint-investigation-header p,
+.engineering-mode .osint-investigation-provenance p,
+.engineering-mode .osint-investigation-selected p { margin: 0; color: var(--aegis-text-muted); font: .65vh var(--font_main); line-height: 1.4; overflow-wrap: anywhere; }
+.engineering-mode .osint-investigation-header > span { padding: .42vh .54vh; border: .08vh solid var(--aegis-border); color: var(--aegis-accent-soft); background: var(--aegis-surface-muted); font: .58vh var(--font_mono); text-align: right; overflow-wrap: anywhere; }
+.engineering-mode .osint-investigation-summary,
+.engineering-mode .osint-investigation-index,
+.engineering-mode .osint-investigation-actions,
+.engineering-mode .osint-investigation-questions,
+.engineering-mode .osint-investigation-activity,
+.engineering-mode .osint-investigation-provenance { display: grid; grid-template-rows: auto auto; align-self: start; min-height: min-content; }
+.engineering-mode .osint-investigation-summary .workspace-panel-content,
+.engineering-mode .osint-investigation-index .workspace-panel-content,
+.engineering-mode .osint-investigation-actions .workspace-panel-content,
+.engineering-mode .osint-investigation-questions .workspace-panel-content,
+.engineering-mode .osint-investigation-activity .workspace-panel-content,
+.engineering-mode .osint-investigation-provenance .workspace-panel-content {
+    position: relative;
+    inset: auto;
+    display: grid;
+    align-content: start;
+    gap: .65vh;
+    min-height: min-content;
+    padding: .82vh;
+    overflow: visible;
+}
+.engineering-mode .osint-investigation-readout { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5vh; padding: .75vh; }
+.engineering-mode .osint-investigation-readout > div { min-width: 0; padding: .55vh; border-left: .12vh solid var(--aegis-accent); background: var(--aegis-surface-muted); }
+.engineering-mode .osint-investigation-readout small { display: block; color: var(--aegis-text-faint); font: .52vh var(--font_mono); letter-spacing: .08em; }
+.engineering-mode .osint-investigation-readout strong { display: block; margin-top: .2vh; color: var(--aegis-text); font: .7vh var(--font_mono); line-height: 1.25; overflow-wrap: anywhere; }
+.engineering-mode .osint-investigation-object-group { display: grid; gap: .4vh; padding: .6vh 0; border-bottom: .08vh solid var(--aegis-border-subtle); }
+.engineering-mode .osint-investigation-object-group:last-child { border-bottom: 0; }
+.engineering-mode .osint-investigation-object-group > header { display: flex; justify-content: space-between; gap: .5vh; align-items: center; }
+.engineering-mode .osint-investigation-object-group h3 { margin: 0; }
+.engineering-mode .osint-investigation-object-group > header span { color: var(--aegis-accent-soft); font: .64vh var(--font_mono); }
+.engineering-mode .osint-investigation-object-group > div { display: grid; gap: .35vh; }
+.engineering-mode .osint-investigation-object { display: grid; width: 100%; min-width: 0; gap: .14vh; padding: .55vh .62vh; border: .08vh solid var(--aegis-border); color: var(--aegis-text); background: var(--aegis-surface-muted); text-align: left; }
+.engineering-mode .osint-investigation-object:hover,
+.engineering-mode .osint-investigation-object.selected { border-color: var(--aegis-accent); box-shadow: inset .16vh 0 var(--aegis-accent); }
+.engineering-mode .osint-investigation-object strong { color: var(--aegis-text); font: .64vh var(--font_mono); overflow-wrap: anywhere; }
+.engineering-mode .osint-investigation-object span,
+.engineering-mode .osint-investigation-object small { color: var(--aegis-text-muted); font: .52vh var(--font_mono); line-height: 1.35; overflow-wrap: anywhere; }
+.engineering-mode .osint-investigation-selected { display: grid; gap: .55vh; }
+.engineering-mode .osint-investigation-selected > strong { color: var(--aegis-text); font: .82vh var(--font_main); overflow-wrap: anywhere; }
+.engineering-mode .osint-investigation-selected > span { color: var(--aegis-accent-soft); font: .58vh var(--font_mono); overflow-wrap: anywhere; }
+.engineering-mode .osint-investigation-selected footer { display: flex; flex-wrap: wrap; gap: .45vh; padding-top: .65vh; border-top: .08vh solid var(--aegis-border-subtle); }
+.engineering-mode .osint-investigation-selected button { border: .08vh solid var(--aegis-border); color: var(--aegis-accent-soft); background: var(--aegis-surface-raised); padding: .5vh .62vh; font: .59vh var(--font_main); letter-spacing: .07em; }
+.engineering-mode .osint-investigation-question-list { display: grid; gap: .45vh; margin: 0; padding: 0; list-style: none; }
+.engineering-mode .osint-investigation-question-list li { display: grid; gap: .18vh; min-width: 0; padding: .58vh; border-left: .12vh solid var(--aegis-warning); background: var(--aegis-surface-muted); }
+.engineering-mode .osint-investigation-question-list strong { color: var(--aegis-warning); font: .54vh var(--font_mono); letter-spacing: .08em; }
+.engineering-mode .osint-investigation-question-list span { color: var(--aegis-text); font: .63vh var(--font_mono); overflow-wrap: anywhere; }
+.engineering-mode .osint-investigation-question-list small { color: var(--aegis-text-muted); font: .53vh var(--font_main); line-height: 1.35; overflow-wrap: anywhere; }
+.engineering-mode .osint-orchestration-handoff { display: block; margin-top: .45vh; color: var(--aegis-accent-soft); font: .54vh var(--font_mono); line-height: 1.35; letter-spacing: .06em; overflow-wrap: anywhere; }
+
+@media (max-width: 1280px), (max-height: 820px) {
+    .engineering-mode .workspace-grid.osint-command-grid:has(.osint-investigation-header) {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-areas:
+            "overview-header overview-header"
+            "overview-summary overview-actions"
+            "overview-index overview-index"
+            "overview-questions overview-activity"
+            "overview-provenance overview-provenance";
+        grid-template-rows: repeat(5, max-content);
+    }
+}
+
+@media (max-width: 900px), (max-aspect-ratio: 5/4) {
+    .engineering-mode .workspace-grid.osint-command-grid:has(.osint-investigation-header) {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-areas:
+            "overview-header"
+            "overview-summary"
+            "overview-index"
+            "overview-actions"
+            "overview-questions"
+            "overview-activity"
+            "overview-provenance";
+        grid-template-rows: repeat(7, max-content);
+    }
+    .engineering-mode .osint-investigation-header { grid-template-columns: minmax(0, 1fr); }
+    .engineering-mode .osint-investigation-header > span { text-align: left; }
+}
+
 @media (max-width: 1280px), (max-height: 820px) {
     .engineering-mode .workspace-grid.osint-command-grid:has(.osint-entity-header) {
         grid-template-columns: repeat(2, minmax(0, 1fr));

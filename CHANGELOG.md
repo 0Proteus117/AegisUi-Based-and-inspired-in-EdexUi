@@ -1,5 +1,22 @@
 # Changelog
 
+## 2.5.7 - 2026-08-09
+
+### OSINT Investigation Orchestration / Case Overview
+
+- Added a bounded local Investigation Context and a typed explicit-handoff
+  contract for normalized Case objects across Domain, Geo, Source, Media,
+  Evidence and Entity Resolution surfaces.
+- Added Case Overview: a derived inventory of Case Evidence, ephemeral Entity
+  graph context, open questions, contradictions, recent persistent activity
+  and provenance health. It is not a second database.
+- Handoffs only prefill the destination capability with normalized provenance;
+  they never run providers, create entities/relationships, bypass Evidence
+  Preview or persist navigation history.
+- Added orchestration contract tests and responsive Dark/Light/System layout
+  coverage without changing the legacy OSINT runtime, IPC boundary or provider
+  policy.
+
 ## 2.5.6 - 2026-08-09
 
 ### OSINT Identity / Entity Resolution
