@@ -1,5 +1,21 @@
 # Changelog
 
+## 2.5.6 - 2026-08-09
+
+### OSINT Identity / Entity Resolution
+
+- Added a bounded, local-only entity workspace for analyst-created profiles,
+  field-level provenance, evidence-backed relationships and contradictions.
+- Added a restrained relationship graph with explicit selection, filters and
+  limits of 50 entities and 100 relationships per ephemeral investigation.
+- Added analyst-confirmed merge, exact-identifier review hints and explicit
+  handoff preparation to existing Domain, Geo and Source workspaces; no
+  provider query runs during entity creation, linking, graph selection or handoff.
+- Reused the existing redaction-before-hash Case Evidence flow for selected
+  normalized entity snapshots. No global people database, social crawl,
+  biometric matching, email probe, username enumeration or hidden enrichment
+  was introduced.
+
 ## 2.5.5 - 2026-08-09
 
 ### OSINT Source Verification layout hotfix

@@ -443,13 +443,31 @@
         })
     ]);
 
+    // Phase 9 is a local analyst workspace, not a people-search provider. It
+    // accepts only observations the analyst explicitly creates or promotes.
+    const ENTITY_RESOLUTION_LOCAL_PROVIDERS = Object.freeze([
+        Object.freeze({
+            id: "local-entity-resolution", name: "Local Entity Resolution", shortName: "Entity Graph",
+            description: "Explicit local entity profiles and evidence-backed relationship correlation. No enrichment, people search or network lookup.",
+            category: "entities", capabilities: ["ENTITY_RESOLUTION"], providerType: "LOCAL_TOOL", accessMode: "LOCAL", providerStatus: "ACTIVE",
+            riskProfile: "PASSIVE", legalStatus: "CONTEXT_DEPENDENT", inputs: ["ANALYST_ENTITY", "NORMALIZED_OBSERVATION", "CASE_EVIDENCE"], outputs: ["ENTITY_PROFILE", "RELATIONSHIP_GRAPH", "ENTITY_EVIDENCE_SNAPSHOT"],
+            authentication: "NONE", costModel: "LOCAL_ONLY", officialUrl: null, docsUrl: null, publicReferenceUrl: null,
+            launchAllowed: false, copyUrlAllowed: false, integrationAllowed: true, installationAllowed: false, runtimeAdapter: "LOCAL_TOOL",
+            referenceReason: "Built-in local entity resolution is limited to analyst-entered or already-normalized investigation observations. It has no provider query or enrichment path.",
+            legalDisclaimer: "Entity labels and relationships are analytical context, not proof of identity, ownership, affiliation or legal responsibility. The analyst must review provenance and contradictions.",
+            jurisdictionNote: "The analyst is responsible for lawful handling of personal or organizational information. AegisUI does not search, verify or enrich private persons.",
+            tags: Object.freeze(["entities", "relationships", "provenance", "local", "passive"]), lastReviewed: REVIEW_DATE, sourceConfidence: "VERIFIED_OFFICIAL", icon: "ER", featured: false, featuredOrder: 0
+        })
+    ]);
+
     const PROVIDERS = Object.freeze([
         ...PROVIDER_SEEDS.map(normalizeSeed),
         ...REFERENCE_ONLY_PROVIDERS,
         ...GEOSPATIAL_NATIVE_PROVIDERS,
         ...VISUAL_MEDIA_LOCAL_PROVIDERS,
         ...INFRASTRUCTURE_NATIVE_PROVIDERS,
-        ...RESEARCH_SOURCE_NATIVE_PROVIDERS
+        ...RESEARCH_SOURCE_NATIVE_PROVIDERS,
+        ...ENTITY_RESOLUTION_LOCAL_PROVIDERS
     ]);
 
     const CATEGORIES = Object.freeze(CATEGORY_DEFINITIONS.map(category => Object.freeze({

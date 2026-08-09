@@ -9,12 +9,12 @@
     const CASE_STATUSES = Object.freeze(["OPEN", "PAUSED", "CLOSED", "ARCHIVED"]);
     const CASE_PRIORITIES = Object.freeze(["LOW", "MEDIUM", "HIGH", "CRITICAL"]);
     const EVIDENCE_TYPES = Object.freeze(["PROVIDER_RESULT", "WEB_REFERENCE", "USER_NOTE", "USER_ATTACHMENT_METADATA", "MANUAL_OBSERVATION"]);
-    const ACQUISITION_METHODS = Object.freeze(["NATIVE_PROVIDER_QUERY", "LOCAL_MEDIA_INSPECTION", "LOCAL_DOCUMENT_INSPECTION", "EXTERNAL_REFERENCE", "MANUAL_ENTRY", "USER_NOTE", "IMPORTED_CASE"]);
+    const ACQUISITION_METHODS = Object.freeze(["NATIVE_PROVIDER_QUERY", "LOCAL_MEDIA_INSPECTION", "LOCAL_DOCUMENT_INSPECTION", "LOCAL_ENTITY_RESOLUTION", "EXTERNAL_REFERENCE", "MANUAL_ENTRY", "USER_NOTE", "IMPORTED_CASE"]);
     const INTEGRITY_STATES = Object.freeze(["VALID", "INVALID", "UNKNOWN"]);
     const TIMELINE_EVENTS = Object.freeze(["CASE_CREATED", "CASE_UPDATED", "CASE_STATUS_CHANGED", "EVIDENCE_ADDED", "EVIDENCE_UPDATED", "EVIDENCE_REMOVED", "NOTE_ADDED", "NOTE_UPDATED", "EXPORT_CREATED", "INTEGRITY_WARNING", "CASE_IMPORTED"]);
     const ERROR_CODES = Object.freeze(["CASE_NOT_FOUND", "CASE_ALREADY_EXISTS", "CASE_INVALID", "CASE_BUSY", "CASE_ARCHIVED", "EVIDENCE_NOT_FOUND", "EVIDENCE_INVALID", "EVIDENCE_INTEGRITY_FAILED", "STORAGE_UNAVAILABLE", "STORAGE_WRITE_FAILED", "STORAGE_READ_FAILED", "INDEX_CORRUPTED", "EXPORT_CANCELLED", "EXPORT_FAILED", "UNSUPPORTED_SCHEMA_VERSION", "PATH_REJECTED", "PAYLOAD_TOO_LARGE", "POLICY_BLOCKED"]);
     const LIMITS = Object.freeze({title: 160, description: 4000, note: 8000, tags: 12, tag: 40, evidenceBytes: 65536, caseEvidence: 500, timeline: 1000, exportBytes: 10485760, payloadBytes: 65536, objectDepth: 10});
-    const REDACTABLE_FIELDS = Object.freeze(["queryInput", "canonicalUrl", "sourceUrl", "data.originalInput", "data.canonicalUrl", "data.snapshotUrl", "data.geo.latitude", "data.geo.longitude", "data.geo.displayName", "data.geo.locality", "data.geo.region", "data.geo.country", "data.geo.countryCode", "data.geo.elevationM", "data.geo.observations", "data.media.displayLabel", "data.media.captureTimestamp", "data.media.normalizedTimestamp", "data.media.cameraMake", "data.media.cameraModel", "data.media.lens", "data.media.geo", "data.media.softwareTag", "data.media.analystObservation", "data.infrastructure.normalizedTarget", "data.infrastructure.dns", "data.infrastructure.network", "data.infrastructure.provenance", "data.research.normalizedUrl", "data.research.localDocument", "data.research.localDocument.displayLabel", "data.research.title", "data.research.publisher", "data.research.authors", "data.research.publishedAt", "data.research.updatedAt", "data.research.archive", "data.research.provenance", "data.research.fieldProvenance", "data.research.excerpt", "data.research.analystObservation"]);
+    const REDACTABLE_FIELDS = Object.freeze(["queryInput", "canonicalUrl", "sourceUrl", "data.originalInput", "data.canonicalUrl", "data.snapshotUrl", "data.geo.latitude", "data.geo.longitude", "data.geo.displayName", "data.geo.locality", "data.geo.region", "data.geo.country", "data.geo.countryCode", "data.geo.elevationM", "data.geo.observations", "data.media.displayLabel", "data.media.captureTimestamp", "data.media.normalizedTimestamp", "data.media.cameraMake", "data.media.cameraModel", "data.media.lens", "data.media.geo", "data.media.softwareTag", "data.media.analystObservation", "data.infrastructure.normalizedTarget", "data.infrastructure.dns", "data.infrastructure.network", "data.infrastructure.provenance", "data.research.normalizedUrl", "data.research.localDocument", "data.research.localDocument.displayLabel", "data.research.title", "data.research.publisher", "data.research.authors", "data.research.publishedAt", "data.research.updatedAt", "data.research.archive", "data.research.provenance", "data.research.fieldProvenance", "data.research.excerpt", "data.research.analystObservation", "data.entityResolution.entity.label", "data.entityResolution.entity.aliases", "data.entityResolution.entity.attributes", "data.entityResolution.relationships", "data.entityResolution.analystNote"]);
 
     class CaseError extends Error {
         constructor(code, message, details = null) {
@@ -208,7 +208,7 @@
     function sanitizeNormalizedResult(value) {
         assertAllowedKeys(value, ["requestId", "providerId", "capability", "status", "queriedAt", "completedAt", "durationMs", "summary", "data", "warnings", "source", "confidence", "rawAvailable", "error"], "Normalized result");
         if (!["SUCCESS", "EMPTY", "PARTIAL"].includes(value.status)) throw new CaseError("POLICY_BLOCKED", "Only successful, empty or partial results can become evidence.");
-        const allowedData = ["available", "originalInput", "canonicalUrl", "snapshotUrl", "snapshotTimestamp", "provider", "queriedAt", "completedAt", "confidence", "warnings", "geo", "media", "infrastructure", "research", "analystObservation"];
+        const allowedData = ["available", "originalInput", "canonicalUrl", "snapshotUrl", "snapshotTimestamp", "provider", "queriedAt", "completedAt", "confidence", "warnings", "geo", "media", "infrastructure", "research", "entityResolution", "analystObservation"];
         const data = value.data && typeof value.data === "object" && !Array.isArray(value.data) ? value.data : {};
         assertAllowedKeys(data, allowedData, "Normalized result data");
         const source = value.source && typeof value.source === "object" && !Array.isArray(value.source) ? value.source : {};
@@ -217,6 +217,7 @@
         const media = data.media === undefined || data.media === null ? null : sanitizeMediaEvidenceData(data.media);
         const infrastructure = data.infrastructure === undefined || data.infrastructure === null ? null : sanitizeInfrastructureEvidenceData(data.infrastructure);
         const research = data.research === undefined || data.research === null ? null : sanitizeResearchEvidenceData(data.research);
+        const entityResolution = data.entityResolution === undefined || data.entityResolution === null ? null : sanitizeEntityResolutionEvidenceData(data.entityResolution);
         const normalizedData = {
             available: data.available === true,
             originalInput: nullableText(data.originalInput, 2048, "Original input"),
@@ -235,6 +236,7 @@
         if (media !== null) normalizedData.media = media;
         if (infrastructure !== null) normalizedData.infrastructure = infrastructure;
         if (research !== null) normalizedData.research = research;
+        if (entityResolution !== null) normalizedData.entityResolution = entityResolution;
         if (data.analystObservation !== undefined) normalizedData.analystObservation = nullableText(data.analystObservation, 4000, "Infrastructure analyst observation");
         return {
             providerId: plainText(value.providerId, 80, "Provider identifier"),
@@ -385,6 +387,49 @@
         };
     }
 
+    function sanitizeEntityResolutionEvidenceData(value) {
+        assertAllowedKeys(value, ["entity", "relationships", "analystNote", "provenance", "persistence"], "Entity resolution normalized data");
+        assertAllowedKeys(value.entity, ["id", "type", "label", "aliases", "attributes", "confidence", "status"], "Entity snapshot");
+        const entityTypes = ["PERSON", "ORGANIZATION", "DOMAIN", "EMAIL", "USERNAME", "SOURCE", "DOCUMENT", "LOCATION", "IP", "ASN", "UNKNOWN_ENTITY"];
+        const statuses = ["UNVERIFIED", "PARTIALLY_RESOLVED", "CONSISTENT", "INCONSISTENT", "AMBIGUOUS", "CONFIRMED_BY_ANALYST"];
+        const confidences = ["LOW", "MEDIUM", "HIGH"];
+        const sourceTypes = ["ANALYST_OBSERVATION", "SOURCE_METADATA", "DOMAIN_CONTEXT", "GEO_CONTEXT", "MEDIA_METADATA", "CASE_EVIDENCE", "DERIVED_NORMALIZATION"];
+        const relationshipTypes = ["AUTHORED_BY", "BELONGS_TO", "USES_DOMAIN", "USES_EMAIL_DOMAIN", "RESOLVES_TO", "LOCATED_AT", "PUBLISHED_BY", "MENTIONS", "ASSOCIATED_WITH", "HOSTED_BY", "REGISTERED_TO", "OBSERVED_WITH", "POTENTIALLY_SAME_AS"];
+        const attributes = Array.isArray(value.entity.attributes) ? value.entity.attributes : [];
+        const relationships = Array.isArray(value.relationships) ? value.relationships : [];
+        if (attributes.length > 24) throw new CaseError("PAYLOAD_TOO_LARGE", "Too many entity attributes for one evidence snapshot.");
+        if (relationships.length > 20) throw new CaseError("PAYLOAD_TOO_LARGE", "Too many entity relationships for one evidence snapshot.");
+        const sanitizeAttribute = item => {
+            assertAllowedKeys(item, ["id", "field", "value", "canonicalValue", "sourceType", "sourceIdentifier", "observedAt", "confidence", "status"], "Entity attribute");
+            return {
+                id: nullableText(item.id, 100, "Entity attribute identifier"), field: plainText(item.field, 80, "Entity attribute field"), value: plainText(item.value, 500, "Entity attribute value"),
+                canonicalValue: nullableText(item.canonicalValue, 500, "Entity canonical value"), sourceType: assertEnum(item.sourceType, sourceTypes, "Entity attribute source type"),
+                sourceIdentifier: nullableText(item.sourceIdentifier, 160, "Entity attribute source identifier"), observedAt: item.observedAt ? assertTimestamp(item.observedAt, "Entity attribute observation timestamp") : null,
+                confidence: assertEnum(item.confidence || "LOW", confidences, "Entity attribute confidence"), status: assertEnum(item.status || "UNVERIFIED", statuses, "Entity attribute status")
+            };
+        };
+        const sanitizeObservation = item => {
+            assertAllowedKeys(item, ["summary", "sourceType", "sourceIdentifier", "observedAt", "confidence"], "Relationship observation");
+            return {summary: plainText(item.summary, 500, "Relationship observation summary"), sourceType: assertEnum(item.sourceType, sourceTypes, "Relationship observation source type"), sourceIdentifier: nullableText(item.sourceIdentifier, 160, "Relationship observation source identifier"), observedAt: item.observedAt ? assertTimestamp(item.observedAt, "Relationship observation timestamp") : null, confidence: assertEnum(item.confidence || "LOW", confidences, "Relationship observation confidence")};
+        };
+        return {
+            entity: {
+                id: nullableText(value.entity.id, 100, "Entity identifier"), type: assertEnum(value.entity.type, entityTypes, "Entity type"), label: plainText(value.entity.label, 240, "Entity label"),
+                aliases: (Array.isArray(value.entity.aliases) ? value.entity.aliases : []).slice(0, 12).map(item => plainText(String(item), 240, "Entity alias")),
+                attributes: attributes.map(sanitizeAttribute), confidence: assertEnum(value.entity.confidence || "LOW", confidences, "Entity confidence"), status: assertEnum(value.entity.status || "UNVERIFIED", statuses, "Entity status")
+            },
+            relationships: relationships.map(item => {
+                assertAllowedKeys(item, ["id", "type", "fromId", "toId", "confidence", "status", "evidence", "contradictions"], "Entity relationship");
+                const evidence = Array.isArray(item.evidence) ? item.evidence : [];
+                const contradictions = Array.isArray(item.contradictions) ? item.contradictions : [];
+                if (!evidence.length) throw new CaseError("CASE_INVALID", "Entity relationship evidence is required.");
+                if (evidence.length > 12 || contradictions.length > 12) throw new CaseError("PAYLOAD_TOO_LARGE", "Too many relationship observations.");
+                return {id: nullableText(item.id, 100, "Relationship identifier"), type: assertEnum(item.type, relationshipTypes, "Relationship type"), fromId: nullableText(item.fromId, 100, "Relationship origin"), toId: nullableText(item.toId, 100, "Relationship target"), confidence: assertEnum(item.confidence || "LOW", confidences, "Relationship confidence"), status: assertEnum(item.status || "UNVERIFIED", statuses, "Relationship status"), evidence: evidence.map(sanitizeObservation), contradictions: contradictions.map(item => plainText(String(item), 400, "Relationship contradiction"))};
+            }),
+            analystNote: nullableText(value.analystNote, 4000, "Entity analyst observation"), provenance: plainText(value.provenance || "LOCAL_ENTITY_RESOLUTION", 80, "Entity provenance"), persistence: plainText(value.persistence || "EVIDENCE_PROMOTION_ONLY", 80, "Entity persistence policy")
+        };
+    }
+
     function applyRedactions(draft, fields, clock) {
         const target = canonicalize(draft);
         const redactions = [];
@@ -424,7 +469,7 @@
             source: result.source,
             sourceUrl,
             canonicalUrl: result.data.canonicalUrl || null,
-            acquisitionMethod: result.capability === "VISUAL_MEDIA_VERIFICATION" ? "LOCAL_MEDIA_INSPECTION" : result.capability === "SOURCE_VERIFICATION" && result.data && result.data.research && result.data.research.sourceType === "LOCAL_PDF" ? "LOCAL_DOCUMENT_INSPECTION" : "NATIVE_PROVIDER_QUERY",
+            acquisitionMethod: result.capability === "VISUAL_MEDIA_VERIFICATION" ? "LOCAL_MEDIA_INSPECTION" : result.capability === "ENTITY_RESOLUTION" ? "LOCAL_ENTITY_RESOLUTION" : result.capability === "SOURCE_VERIFICATION" && result.data && result.data.research && result.data.research.sourceType === "LOCAL_PDF" ? "LOCAL_DOCUMENT_INSPECTION" : "NATIVE_PROVIDER_QUERY",
             queryInput: result.data.originalInput || null,
             queriedAt: result.queriedAt,
             capturedAt: timestamp,
@@ -467,7 +512,7 @@
     function validateEvidenceRecord(value) {
         assertAllowedKeys(value, ["id", "caseId", "type", "title", "summary", "providerId", "providerName", "capability", "source", "sourceUrl", "canonicalUrl", "acquisitionMethod", "queryInput", "queriedAt", "capturedAt", "createdAt", "confidence", "warnings", "data", "notes", "tags", "integrity", "schemaVersion", "redactions", "legalContext", "riskContext"], "Evidence");
         if (value.schemaVersion !== CASE_SCHEMA_VERSION) throw new CaseError("UNSUPPORTED_SCHEMA_VERSION", "Evidence schema version is not supported.");
-        const evidenceDataKeys = ["available", "originalInput", "canonicalUrl", "snapshotUrl", "snapshotTimestamp", "provider", "queriedAt", "completedAt", "confidence", "warnings", "geo", "media", "infrastructure", "research", "analystObservation", "status", "runtimeStatus"];
+        const evidenceDataKeys = ["available", "originalInput", "canonicalUrl", "snapshotUrl", "snapshotTimestamp", "provider", "queriedAt", "completedAt", "confidence", "warnings", "geo", "media", "infrastructure", "research", "entityResolution", "analystObservation", "status", "runtimeStatus"];
         assertAllowedKeys(value.source && typeof value.source === "object" ? value.source : {}, ["provider", "type"], "Evidence source");
         assertAllowedKeys(value.data && typeof value.data === "object" ? value.data : {}, evidenceDataKeys, "Evidence data");
         const normalizedData = value.data && typeof value.data === "object" ? canonicalize(value.data) : {};
@@ -475,6 +520,7 @@
         if (normalizedData.media) normalizedData.media = sanitizeMediaEvidenceData(normalizedData.media);
         if (normalizedData.infrastructure) normalizedData.infrastructure = sanitizeInfrastructureEvidenceData(normalizedData.infrastructure);
         if (normalizedData.research) normalizedData.research = sanitizeResearchEvidenceData(normalizedData.research);
+        if (normalizedData.entityResolution) normalizedData.entityResolution = sanitizeEntityResolutionEvidenceData(normalizedData.entityResolution);
         const evidence = {...value,
             id: safeId(value.id, "evidence"), caseId: safeId(value.caseId, "case"), type: assertEnum(value.type, EVIDENCE_TYPES, "Evidence type"),
             title: plainText(value.title, LIMITS.title, "Evidence title"), summary: plainText(value.summary, LIMITS.description, "Evidence summary"),
@@ -525,5 +571,5 @@
         };
     }
 
-    return Object.freeze({CASE_SCHEMA_VERSION, CASE_STATUSES, CASE_PRIORITIES, EVIDENCE_TYPES, ACQUISITION_METHODS, INTEGRITY_STATES, TIMELINE_EVENTS, ERROR_CODES, LIMITS, REDACTABLE_FIELDS, CaseError, now, bytesOf, rejectUnsafeObject, assertAllowedKeys, plainText, nullableText, safeId, generateId, normalizeTags, assertEnum, assertTimestamp, safeUrl, canonicalize, canonicalStringify, sha256, integrityPayload, createIntegrity, validateIntegrity, validateCaseRecord, createCase, updateCase, sanitizeNormalizedResult, sanitizeMediaEvidenceData, sanitizeInfrastructureEvidenceData, sanitizeResearchEvidenceData, applyRedactions, createProviderEvidence, createManualEvidence, validateEvidenceRecord, createTimelineEvent, createNote, updateNote});
+    return Object.freeze({CASE_SCHEMA_VERSION, CASE_STATUSES, CASE_PRIORITIES, EVIDENCE_TYPES, ACQUISITION_METHODS, INTEGRITY_STATES, TIMELINE_EVENTS, ERROR_CODES, LIMITS, REDACTABLE_FIELDS, CaseError, now, bytesOf, rejectUnsafeObject, assertAllowedKeys, plainText, nullableText, safeId, generateId, normalizeTags, assertEnum, assertTimestamp, safeUrl, canonicalize, canonicalStringify, sha256, integrityPayload, createIntegrity, validateIntegrity, validateCaseRecord, createCase, updateCase, sanitizeNormalizedResult, sanitizeMediaEvidenceData, sanitizeInfrastructureEvidenceData, sanitizeResearchEvidenceData, sanitizeEntityResolutionEvidenceData, applyRedactions, createProviderEvidence, createManualEvidence, validateEvidenceRecord, createTimelineEvent, createNote, updateNote});
 });

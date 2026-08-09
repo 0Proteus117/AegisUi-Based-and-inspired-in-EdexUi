@@ -19,6 +19,7 @@
         "RESEARCH_DISCOVERY",
         "HISTORICAL_ARCHIVE",
         "SOURCE_VERIFICATION",
+        "ENTITY_RESOLUTION",
         "EVIDENCE_PRESERVATION",
         "INFRASTRUCTURE_CONTEXT",
         "THREAT_REPUTATION",
@@ -198,6 +199,11 @@
         if (provider.runtimeAdapter === "LOCAL_TOOL" && provider.id === "local-pdf-inspection") {
             if (provider.providerType !== "LOCAL_TOOL" || provider.accessMode !== "LOCAL" || !provider.integrationAllowed || !provider.capabilities.includes("SOURCE_VERIFICATION") || provider.launchAllowed || provider.copyUrlAllowed) {
                 errors.push("local-pdf-inspection must remain an integrated, non-launchable LOCAL_TOOL for SOURCE_VERIFICATION");
+            }
+        }
+        if (provider.runtimeAdapter === "LOCAL_TOOL" && provider.id === "local-entity-resolution") {
+            if (provider.providerType !== "LOCAL_TOOL" || provider.accessMode !== "LOCAL" || !provider.integrationAllowed || !provider.capabilities.includes("ENTITY_RESOLUTION") || provider.launchAllowed || provider.copyUrlAllowed) {
+                errors.push("local-entity-resolution must remain an integrated, non-launchable LOCAL_TOOL for ENTITY_RESOLUTION");
             }
         }
         return errors;
