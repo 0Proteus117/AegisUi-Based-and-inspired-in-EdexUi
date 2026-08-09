@@ -73,6 +73,19 @@ regressions.
 
 ## Packaged validation
 
-The v2.6.0 milestone requires a final arm64 DMG. The final record is updated
-with its signed bundle inspection, mounted-DMG launch, Calendar helper check,
-sanitized OSINT visual evidence and checksum after the package gate completes.
+The final arm64 artifact was built with the established ad-hoc-signing path:
+
+- `AegisUi-2.6.0-arm64.dmg`
+- SHA-256:
+  `a5e968fd73eb62e35865afc25f5ec1c7b385b02ec1008502be19d127c867597e`
+- The UDZO image mounted successfully as `AegisUi 2.6.0`.
+- The mounted bundle reports `AegisUi`, `com.edex.ui.eng` and `2.6.0`.
+- `AegisUiCalendar.app` and its signed `calendar-helper` are present inside the
+  mounted application; the helper returned local Calendar data and preserved
+  the same panel/state through Dark, Light and System appearance changes.
+- The application launched directly from the mounted DMG with a disposable
+  profile. Synthetic Case Overview, Geo, Media and Evidence Preview probes
+  completed without overlap, escaped controls or horizontal overflow.
+
+All release visual evidence uses synthetic `example.invalid` data and contains
+no local case data, paths, credentials or personal calendar content.
