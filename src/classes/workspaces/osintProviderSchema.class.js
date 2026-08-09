@@ -13,7 +13,7 @@
         legalStatus: Object.freeze(["GENERALLY_LEGAL", "AUTHORIZATION_REQUIRED", "CONTEXT_DEPENDENT", "JURISDICTION_DEPENDENT", "POTENTIALLY_ILLEGAL", "UNKNOWN"]),
         sourceConfidence: Object.freeze(["VERIFIED_OFFICIAL", "VERIFIED_PUBLIC", "MULTIPLE_PUBLIC_SOURCES", "UNVERIFIED", "HISTORICAL"])
     });
-    const RUNTIME_ADAPTERS = Object.freeze(["EXTERNAL_WEB", "WAYBACK_AVAILABILITY", "OPEN_METEO_GEOCODING", "LOCAL_TOOL", "SYSTEM_INTEGRATION", "REFERENCE_ONLY"]);
+    const RUNTIME_ADAPTERS = Object.freeze(["EXTERNAL_WEB", "WAYBACK_AVAILABILITY", "OPEN_METEO_GEOCODING", "GOOGLE_DNS_DOH", "RIPESTAT_NETWORK_INFO", "LOCAL_TOOL", "SYSTEM_INTEGRATION", "REFERENCE_ONLY"]);
 
     const CAPABILITIES = Object.freeze([
         "RESEARCH_DISCOVERY",
@@ -172,6 +172,16 @@
         if (provider.runtimeAdapter === "OPEN_METEO_GEOCODING") {
             if (provider.id !== "open-meteo-geocoding" || provider.providerType !== "REST_API" || provider.accessMode !== "API" || !provider.integrationAllowed || !provider.capabilities.includes("GEOSPATIAL_VERIFICATION")) {
                 errors.push("OPEN_METEO_GEOCODING runtimeAdapter requires the approved geospatial REST API provider configuration");
+            }
+        }
+        if (provider.runtimeAdapter === "GOOGLE_DNS_DOH") {
+            if (provider.id !== "google-public-dns" || provider.providerType !== "REST_API" || provider.accessMode !== "API" || !provider.integrationAllowed || !provider.capabilities.includes("INFRASTRUCTURE_CONTEXT") || provider.launchAllowed || provider.copyUrlAllowed) {
+                errors.push("GOOGLE_DNS_DOH runtimeAdapter requires the approved non-launchable DNS REST API provider configuration");
+            }
+        }
+        if (provider.runtimeAdapter === "RIPESTAT_NETWORK_INFO") {
+            if (provider.id !== "ripestat-network-info" || provider.providerType !== "REST_API" || provider.accessMode !== "API" || !provider.integrationAllowed || !provider.capabilities.includes("INFRASTRUCTURE_CONTEXT") || provider.launchAllowed || provider.copyUrlAllowed) {
+                errors.push("RIPESTAT_NETWORK_INFO runtimeAdapter requires the approved non-launchable public-IP REST API provider configuration");
             }
         }
         if (provider.runtimeAdapter === "LOCAL_TOOL" && provider.id === "local-media-inspection") {

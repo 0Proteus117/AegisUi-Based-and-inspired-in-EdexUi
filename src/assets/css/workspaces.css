@@ -3561,6 +3561,119 @@ button.eng-thread-row.active {
     scrollbar-gutter: stable;
 }
 
+/* Phase 7: passive domain context is deliberately content-sized and follows
+   normal Grid flow. Provider data may be absent or long; no result body uses
+   an absolute offset or a fixed screenshot-oriented height. */
+.engineering-mode .osint-domain-header,
+.engineering-mode .osint-domain-query,
+.engineering-mode .osint-domain-target,
+.engineering-mode .osint-domain-dns,
+.engineering-mode .osint-domain-network,
+.engineering-mode .osint-domain-registration,
+.engineering-mode .osint-domain-certificate,
+.engineering-mode .osint-domain-observation,
+.engineering-mode .osint-domain-policy {
+    min-width: 0;
+    border-color: var(--aegis-border-subtle);
+    background: linear-gradient(145deg, rgba(59, 167, 255, .08), transparent 48%), var(--aegis-surface);
+    color: var(--aegis-text);
+}
+.engineering-mode .workspace-grid.osint-command-grid:has(.osint-domain-header) {
+    display: grid;
+    grid-template-columns: minmax(17rem, .88fr) minmax(20rem, 1.12fr) minmax(17rem, .9fr);
+    grid-template-areas:
+        "domain-header domain-header domain-header"
+        "domain-query domain-target domain-registration"
+        "domain-dns domain-network domain-certificate"
+        "domain-observation domain-observation domain-policy";
+    grid-template-rows: repeat(4, auto);
+    gap: .85vh;
+    min-height: 0;
+    overflow: auto;
+    align-content: start;
+}
+.engineering-mode .osint-domain-header { grid-area: domain-header; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 1vh; align-items: center; padding: 1vh 1.15vh; }
+.engineering-mode .osint-domain-query { grid-area: domain-query; }
+.engineering-mode .osint-domain-target { grid-area: domain-target; }
+.engineering-mode .osint-domain-dns { grid-area: domain-dns; }
+.engineering-mode .osint-domain-network { grid-area: domain-network; }
+.engineering-mode .osint-domain-registration { grid-area: domain-registration; }
+.engineering-mode .osint-domain-certificate { grid-area: domain-certificate; }
+.engineering-mode .osint-domain-observation { grid-area: domain-observation; }
+.engineering-mode .osint-domain-policy { grid-area: domain-policy; }
+.engineering-mode .osint-domain-query,
+.engineering-mode .osint-domain-target,
+.engineering-mode .osint-domain-dns,
+.engineering-mode .osint-domain-network,
+.engineering-mode .osint-domain-registration,
+.engineering-mode .osint-domain-certificate,
+.engineering-mode .osint-domain-observation,
+.engineering-mode .osint-domain-policy { display: grid; grid-template-rows: auto minmax(0, 1fr); min-height: min-content; }
+.engineering-mode .osint-domain-header > div,
+.engineering-mode .osint-domain-query .workspace-panel-content,
+.engineering-mode .osint-domain-target .workspace-panel-content,
+.engineering-mode .osint-domain-dns .workspace-panel-content,
+.engineering-mode .osint-domain-network .workspace-panel-content,
+.engineering-mode .osint-domain-registration .workspace-panel-content,
+.engineering-mode .osint-domain-certificate .workspace-panel-content,
+.engineering-mode .osint-domain-observation .workspace-panel-content,
+.engineering-mode .osint-domain-policy .workspace-panel-content {
+    position: relative;
+    inset: auto;
+    min-width: 0;
+    display: grid;
+    align-content: start;
+    gap: .75vh;
+    min-height: min-content;
+    padding: .82vh;
+    overflow: visible;
+}
+.engineering-mode .osint-domain-header small,
+.engineering-mode .osint-domain-query label > span,
+.engineering-mode .osint-domain-network-select label > span,
+.engineering-mode .osint-domain-observation label > span,
+.engineering-mode .osint-domain-status small,
+.engineering-mode .osint-domain-target-readout small,
+.engineering-mode .osint-domain-network-readout small { display: block; color: var(--aegis-text-faint); font: .56vh var(--font_mono); letter-spacing: .1em; }
+.engineering-mode .osint-domain-header h2 { margin: .16vh 0; color: var(--aegis-text); font: 1.45vh var(--font_main); font-weight: normal; letter-spacing: .08em; overflow-wrap: anywhere; }
+.engineering-mode .osint-domain-header p,
+.engineering-mode .osint-domain-query form > small,
+.engineering-mode .osint-domain-registration p,
+.engineering-mode .osint-domain-certificate p,
+.engineering-mode .osint-domain-observation p,
+.engineering-mode .osint-domain-policy p,
+.engineering-mode .osint-domain-network-select small { margin: 0; color: var(--aegis-text-muted); font: .65vh var(--font_main); line-height: 1.38; overflow-wrap: anywhere; }
+.engineering-mode .osint-domain-status { display: grid; gap: .28vh; min-width: 12vh; padding: .52vh .68vh; border-left: .12vh solid var(--aegis-accent); text-align: right; }
+.engineering-mode .osint-domain-status strong { color: var(--aegis-accent-soft); font: .76vh var(--font_mono); letter-spacing: .08em; }
+.engineering-mode .osint-domain-status span { color: var(--aegis-text-muted); font: .54vh var(--font_mono); }
+.engineering-mode .osint-domain-query form,
+.engineering-mode .osint-domain-query label,
+.engineering-mode .osint-domain-network-select,
+.engineering-mode .osint-domain-observation label { display: grid; gap: .5vh; min-width: 0; }
+.engineering-mode .osint-domain-query .aegis-input,
+.engineering-mode .osint-domain-network-select .aegis-select,
+.engineering-mode .osint-domain-observation .aegis-input { width: 100%; min-width: 0; box-sizing: border-box; color: var(--aegis-text); border-color: var(--aegis-border); background: var(--aegis-surface-input); }
+.engineering-mode .osint-domain-observation textarea { min-height: 8vh; resize: vertical; }
+.engineering-mode .osint-domain-query footer,
+.engineering-mode .osint-domain-observation footer,
+.engineering-mode .osint-domain-network-select { display: flex; flex-wrap: wrap; gap: .55vh; align-items: center; }
+.engineering-mode .osint-domain-network-select label { flex: 1 1 17rem; }
+.engineering-mode .osint-domain-query button,
+.engineering-mode .osint-domain-network button,
+.engineering-mode .osint-domain-observation button { border: .08vh solid var(--aegis-border); color: var(--aegis-accent-soft); background: var(--aegis-surface-raised); padding: .52vh .7vh; font: .6vh var(--font_main); letter-spacing: .08em; }
+.engineering-mode .osint-domain-target-readout,
+.engineering-mode .osint-domain-network-readout { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .58vh; }
+.engineering-mode .osint-domain-target-readout > div,
+.engineering-mode .osint-domain-network-readout > div { min-width: 0; padding: .58vh; border-left: .12vh solid var(--aegis-accent); background: var(--aegis-surface-muted); }
+.engineering-mode .osint-domain-target-readout strong,
+.engineering-mode .osint-domain-network-readout strong { display: block; margin-top: .16vh; color: var(--aegis-text); font: .62vh var(--font_mono); line-height: 1.3; overflow-wrap: anywhere; }
+.engineering-mode .osint-domain-records { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .58vh; }
+.engineering-mode .osint-domain-records > section { min-width: 0; padding: .58vh; border-left: .12vh solid var(--aegis-accent); background: var(--aegis-surface-muted); }
+.engineering-mode .osint-domain-records header { display: flex; justify-content: space-between; gap: .5vh; color: var(--aegis-accent-soft); font: .61vh var(--font_mono); }
+.engineering-mode .osint-domain-records header span { color: var(--aegis-text-faint); font-size: .52vh; }
+.engineering-mode .osint-domain-records ul { display: grid; gap: .25vh; margin: .48vh 0 0; padding-left: 1.35vh; color: var(--aegis-text); font: .59vh var(--font_mono); line-height: 1.28; overflow-wrap: anywhere; }
+.engineering-mode .osint-domain-records p { margin: .48vh 0 0; color: var(--aegis-text-faint); font: .54vh var(--font_mono); }
+
 .engineering-mode .osint-command-deck {
     grid-template-rows: 8.8vh 5.1vh minmax(0, 1fr);
 }
@@ -5010,6 +5123,16 @@ button.eng-thread-row.active {
     .engineering-mode .osint-media-readout-group {
         padding: .46vh;
     }
+
+    .engineering-mode .workspace-grid.osint-command-grid:has(.osint-domain-header) {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        grid-template-areas:
+            "domain-header domain-header"
+            "domain-query domain-target"
+            "domain-dns domain-network"
+            "domain-registration domain-certificate"
+            "domain-observation domain-policy";
+    }
 }
 
 @media (max-width: 900px), (max-aspect-ratio: 5/4) {
@@ -5079,6 +5202,25 @@ button.eng-thread-row.active {
     .engineering-mode .osint-media-status { text-align: left; }
     .engineering-mode .osint-media-readout { grid-template-columns: minmax(0, 1fr); }
     .engineering-mode .osint-media-preview figure { height: min(28vh, 16rem); }
+
+    .engineering-mode .workspace-grid.osint-command-grid:has(.osint-domain-header) {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-areas:
+            "domain-header"
+            "domain-query"
+            "domain-target"
+            "domain-dns"
+            "domain-network"
+            "domain-registration"
+            "domain-certificate"
+            "domain-observation"
+            "domain-policy";
+    }
+    .engineering-mode .osint-domain-header { grid-template-columns: minmax(0, 1fr); }
+    .engineering-mode .osint-domain-status { text-align: left; }
+    .engineering-mode .osint-domain-target-readout,
+    .engineering-mode .osint-domain-network-readout,
+    .engineering-mode .osint-domain-records { grid-template-columns: minmax(0, 1fr); }
 }
 
 @media (max-aspect-ratio: 16/10) {

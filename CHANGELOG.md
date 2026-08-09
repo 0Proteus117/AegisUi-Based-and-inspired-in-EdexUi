@@ -1,5 +1,19 @@
 # Changelog
 
+## 2.5.3 - 2026-08-09
+
+### OSINT Domain & Infrastructure Context
+
+- Added one explicit, passive domain/public-IP context surface with local
+  normalization, cancellation, bounded results and Evidence promotion.
+- Added two fixed native adapters only: Google Public DNS for six exact domain
+  record types and RIPEstat Network Info for one explicit public IP.
+- Added redaction-before-integrity support for normalized infrastructure
+  evidence. Raw provider responses, hidden target history and automatic
+  infrastructure follow-up remain excluded.
+- Kept authoritative RDAP and certificate context link-only/deferred; AegisUI
+  does not probe target sockets, scan, enumerate or mutate the global map.
+
 ## 2.5.2 - 2026-08-09
 
 ### OSINT Visual & Media Verification hotfix

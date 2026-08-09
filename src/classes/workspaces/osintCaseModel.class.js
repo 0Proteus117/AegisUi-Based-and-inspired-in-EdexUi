@@ -14,7 +14,7 @@
     const TIMELINE_EVENTS = Object.freeze(["CASE_CREATED", "CASE_UPDATED", "CASE_STATUS_CHANGED", "EVIDENCE_ADDED", "EVIDENCE_UPDATED", "EVIDENCE_REMOVED", "NOTE_ADDED", "NOTE_UPDATED", "EXPORT_CREATED", "INTEGRITY_WARNING", "CASE_IMPORTED"]);
     const ERROR_CODES = Object.freeze(["CASE_NOT_FOUND", "CASE_ALREADY_EXISTS", "CASE_INVALID", "CASE_BUSY", "CASE_ARCHIVED", "EVIDENCE_NOT_FOUND", "EVIDENCE_INVALID", "EVIDENCE_INTEGRITY_FAILED", "STORAGE_UNAVAILABLE", "STORAGE_WRITE_FAILED", "STORAGE_READ_FAILED", "INDEX_CORRUPTED", "EXPORT_CANCELLED", "EXPORT_FAILED", "UNSUPPORTED_SCHEMA_VERSION", "PATH_REJECTED", "PAYLOAD_TOO_LARGE", "POLICY_BLOCKED"]);
     const LIMITS = Object.freeze({title: 160, description: 4000, note: 8000, tags: 12, tag: 40, evidenceBytes: 65536, caseEvidence: 500, timeline: 1000, exportBytes: 10485760, payloadBytes: 65536, objectDepth: 10});
-    const REDACTABLE_FIELDS = Object.freeze(["queryInput", "canonicalUrl", "sourceUrl", "data.originalInput", "data.canonicalUrl", "data.snapshotUrl", "data.geo.latitude", "data.geo.longitude", "data.geo.displayName", "data.geo.locality", "data.geo.region", "data.geo.country", "data.geo.countryCode", "data.geo.elevationM", "data.geo.observations", "data.media.displayLabel", "data.media.captureTimestamp", "data.media.normalizedTimestamp", "data.media.cameraMake", "data.media.cameraModel", "data.media.lens", "data.media.geo", "data.media.softwareTag", "data.media.analystObservation"]);
+    const REDACTABLE_FIELDS = Object.freeze(["queryInput", "canonicalUrl", "sourceUrl", "data.originalInput", "data.canonicalUrl", "data.snapshotUrl", "data.geo.latitude", "data.geo.longitude", "data.geo.displayName", "data.geo.locality", "data.geo.region", "data.geo.country", "data.geo.countryCode", "data.geo.elevationM", "data.geo.observations", "data.media.displayLabel", "data.media.captureTimestamp", "data.media.normalizedTimestamp", "data.media.cameraMake", "data.media.cameraModel", "data.media.lens", "data.media.geo", "data.media.softwareTag", "data.media.analystObservation", "data.infrastructure.normalizedTarget", "data.infrastructure.dns", "data.infrastructure.network", "data.infrastructure.provenance"]);
 
     class CaseError extends Error {
         constructor(code, message, details = null) {
@@ -208,13 +208,14 @@
     function sanitizeNormalizedResult(value) {
         assertAllowedKeys(value, ["requestId", "providerId", "capability", "status", "queriedAt", "completedAt", "durationMs", "summary", "data", "warnings", "source", "confidence", "rawAvailable", "error"], "Normalized result");
         if (!["SUCCESS", "EMPTY", "PARTIAL"].includes(value.status)) throw new CaseError("POLICY_BLOCKED", "Only successful, empty or partial results can become evidence.");
-        const allowedData = ["available", "originalInput", "canonicalUrl", "snapshotUrl", "snapshotTimestamp", "provider", "queriedAt", "completedAt", "confidence", "warnings", "geo", "media"];
+        const allowedData = ["available", "originalInput", "canonicalUrl", "snapshotUrl", "snapshotTimestamp", "provider", "queriedAt", "completedAt", "confidence", "warnings", "geo", "media", "infrastructure", "analystObservation"];
         const data = value.data && typeof value.data === "object" && !Array.isArray(value.data) ? value.data : {};
         assertAllowedKeys(data, allowedData, "Normalized result data");
         const source = value.source && typeof value.source === "object" && !Array.isArray(value.source) ? value.source : {};
         assertAllowedKeys(source, ["provider", "type"], "Normalized result source");
         const geo = data.geo === undefined || data.geo === null ? null : sanitizeGeoEvidenceData(data.geo);
         const media = data.media === undefined || data.media === null ? null : sanitizeMediaEvidenceData(data.media);
+        const infrastructure = data.infrastructure === undefined || data.infrastructure === null ? null : sanitizeInfrastructureEvidenceData(data.infrastructure);
         const normalizedData = {
             available: data.available === true,
             originalInput: nullableText(data.originalInput, 2048, "Original input"),
@@ -231,6 +232,8 @@
         // acquire a synthetic `geo: null` property during this migration.
         if (geo !== null) normalizedData.geo = geo;
         if (media !== null) normalizedData.media = media;
+        if (infrastructure !== null) normalizedData.infrastructure = infrastructure;
+        if (data.analystObservation !== undefined) normalizedData.analystObservation = nullableText(data.analystObservation, 4000, "Infrastructure analyst observation");
         return {
             providerId: plainText(value.providerId, 80, "Provider identifier"),
             capability: plainText(value.capability, 80, "Capability"),
@@ -307,6 +310,42 @@
             focalLengthMm: number("focalLengthMm", 0, 100000), exposureSeconds: number("exposureSeconds", 0, 100000), aperture: number("aperture", 0, 1000), iso: number("iso", 0, 10000000), flash: number("flash", 0, 65535),
             geo, softwareTag: nullableText(value.softwareTag, 240, "Media software tag"), originalMediaHash: hash.toLowerCase(), metadataStatus: plainText(value.metadataStatus, 40, "Media metadata status"), analystObservation: nullableText(value.analystObservation, 4000, "Media analyst observation")
         };
+    }
+
+    function sanitizeInfrastructureEvidenceData(value) {
+        assertAllowedKeys(value, ["normalizedTarget", "targetType", "inputSource", "verificationStatus", "confidence", "registration", "dns", "network", "certificate", "provenance"], "Infrastructure normalized data");
+        const target = plainText(value.normalizedTarget, 253, "Infrastructure target").toLowerCase();
+        const targetType = assertEnum(value.targetType, ["DOMAIN", "IPv4", "IPv6"], "Infrastructure target type");
+        const sanitizeAvailabilityContext = (input, label) => {
+            if (input === null || input === undefined) return null;
+            assertAllowedKeys(input, ["available", "observation"], label);
+            return {available: input.available === true, observation: nullableText(input.observation, 320, `${label} observation`)};
+        };
+        const registration = sanitizeAvailabilityContext(value.registration, "Registration context");
+        const certificate = sanitizeAvailabilityContext(value.certificate, "Certificate context");
+        const dns = value.dns === null || value.dns === undefined ? null : (() => {
+            assertAllowedKeys(value.dns, ["records", "warnings"], "DNS context");
+            const records = Array.isArray(value.dns.records) ? value.dns.records : [];
+            if (records.length > 36) throw new CaseError("PAYLOAD_TOO_LARGE", "Too many DNS records.");
+            return {records: records.map(record => {
+                assertAllowedKeys(record, ["type", "values", "status"], "DNS record");
+                const values = Array.isArray(record.values) ? record.values : [];
+                if (values.length > 12) throw new CaseError("PAYLOAD_TOO_LARGE", "Too many values in a DNS record.");
+                return {type: assertEnum(record.type, ["A", "AAAA", "MX", "NS", "TXT", "CNAME"], "DNS record type"), values: values.map(item => plainText(String(item), 1024, "DNS value")), status: plainText(record.status || "UNKNOWN", 32, "DNS status")};
+            }), warnings: Array.isArray(value.dns.warnings) ? value.dns.warnings.map(item => plainText(String(item), 240, "DNS warning")).slice(0, 12) : []};
+        })();
+        const network = value.network === null || value.network === undefined ? null : (() => {
+            assertAllowedKeys(value.network, ["ip", "asns", "prefix", "rir", "country", "allocationContext"], "Network context");
+            const asns = Array.isArray(value.network.asns) ? value.network.asns : [];
+            if (asns.length > 12) throw new CaseError("PAYLOAD_TOO_LARGE", "Too many ASN values.");
+            return {ip: nullableText(value.network.ip, 80, "Network IP"), asns: asns.map(item => plainText(String(item), 32, "ASN")), prefix: nullableText(value.network.prefix, 80, "Network prefix"), rir: nullableText(value.network.rir, 80, "Network RIR"), country: nullableText(value.network.country, 80, "Network country"), allocationContext: nullableText(value.network.allocationContext, 320, "Network allocation context")};
+        })();
+        const provenance = Array.isArray(value.provenance) ? value.provenance : [];
+        if (provenance.length > 8) throw new CaseError("PAYLOAD_TOO_LARGE", "Too many provider observations.");
+        return {normalizedTarget: target, targetType, inputSource: plainText(value.inputSource || "MANUAL_INPUT", 40, "Infrastructure input source"), verificationStatus: plainText(value.verificationStatus || "UNVERIFIED", 40, "Infrastructure verification status"), confidence: plainText(value.confidence || "LOW", 40, "Infrastructure confidence"), registration, dns, network, certificate, provenance: provenance.map(item => {
+            assertAllowedKeys(item, ["providerId", "providerName", "type", "observedAt", "status", "summary"], "Infrastructure provider observation");
+            return {providerId: nullableText(item.providerId, 80, "Provider identifier"), providerName: nullableText(item.providerName, 160, "Provider name"), type: nullableText(item.type, 80, "Provider type"), observedAt: item.observedAt ? assertTimestamp(item.observedAt, "Provider observation timestamp") : null, status: nullableText(item.status, 40, "Provider status"), summary: nullableText(item.summary, 360, "Provider summary")};
+        })};
     }
 
     function applyRedactions(draft, fields, clock) {
@@ -397,12 +436,13 @@
     function validateEvidenceRecord(value) {
         assertAllowedKeys(value, ["id", "caseId", "type", "title", "summary", "providerId", "providerName", "capability", "source", "sourceUrl", "canonicalUrl", "acquisitionMethod", "queryInput", "queriedAt", "capturedAt", "createdAt", "confidence", "warnings", "data", "notes", "tags", "integrity", "schemaVersion", "redactions", "legalContext", "riskContext"], "Evidence");
         if (value.schemaVersion !== CASE_SCHEMA_VERSION) throw new CaseError("UNSUPPORTED_SCHEMA_VERSION", "Evidence schema version is not supported.");
-        const evidenceDataKeys = ["available", "originalInput", "canonicalUrl", "snapshotUrl", "snapshotTimestamp", "provider", "queriedAt", "completedAt", "confidence", "warnings", "geo", "media", "status", "runtimeStatus"];
+        const evidenceDataKeys = ["available", "originalInput", "canonicalUrl", "snapshotUrl", "snapshotTimestamp", "provider", "queriedAt", "completedAt", "confidence", "warnings", "geo", "media", "infrastructure", "analystObservation", "status", "runtimeStatus"];
         assertAllowedKeys(value.source && typeof value.source === "object" ? value.source : {}, ["provider", "type"], "Evidence source");
         assertAllowedKeys(value.data && typeof value.data === "object" ? value.data : {}, evidenceDataKeys, "Evidence data");
         const normalizedData = value.data && typeof value.data === "object" ? canonicalize(value.data) : {};
         if (normalizedData.geo) normalizedData.geo = sanitizeGeoEvidenceData(normalizedData.geo, {requireCoordinates: false});
         if (normalizedData.media) normalizedData.media = sanitizeMediaEvidenceData(normalizedData.media);
+        if (normalizedData.infrastructure) normalizedData.infrastructure = sanitizeInfrastructureEvidenceData(normalizedData.infrastructure);
         const evidence = {...value,
             id: safeId(value.id, "evidence"), caseId: safeId(value.caseId, "case"), type: assertEnum(value.type, EVIDENCE_TYPES, "Evidence type"),
             title: plainText(value.title, LIMITS.title, "Evidence title"), summary: plainText(value.summary, LIMITS.description, "Evidence summary"),
@@ -453,5 +493,5 @@
         };
     }
 
-    return Object.freeze({CASE_SCHEMA_VERSION, CASE_STATUSES, CASE_PRIORITIES, EVIDENCE_TYPES, ACQUISITION_METHODS, INTEGRITY_STATES, TIMELINE_EVENTS, ERROR_CODES, LIMITS, REDACTABLE_FIELDS, CaseError, now, bytesOf, rejectUnsafeObject, assertAllowedKeys, plainText, nullableText, safeId, generateId, normalizeTags, assertEnum, assertTimestamp, safeUrl, canonicalize, canonicalStringify, sha256, integrityPayload, createIntegrity, validateIntegrity, validateCaseRecord, createCase, updateCase, sanitizeNormalizedResult, sanitizeMediaEvidenceData, applyRedactions, createProviderEvidence, createManualEvidence, validateEvidenceRecord, createTimelineEvent, createNote, updateNote});
+    return Object.freeze({CASE_SCHEMA_VERSION, CASE_STATUSES, CASE_PRIORITIES, EVIDENCE_TYPES, ACQUISITION_METHODS, INTEGRITY_STATES, TIMELINE_EVENTS, ERROR_CODES, LIMITS, REDACTABLE_FIELDS, CaseError, now, bytesOf, rejectUnsafeObject, assertAllowedKeys, plainText, nullableText, safeId, generateId, normalizeTags, assertEnum, assertTimestamp, safeUrl, canonicalize, canonicalStringify, sha256, integrityPayload, createIntegrity, validateIntegrity, validateCaseRecord, createCase, updateCase, sanitizeNormalizedResult, sanitizeMediaEvidenceData, sanitizeInfrastructureEvidenceData, applyRedactions, createProviderEvidence, createManualEvidence, validateEvidenceRecord, createTimelineEvent, createNote, updateNote});
 });
