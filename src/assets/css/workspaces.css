@@ -3515,6 +3515,7 @@ button.eng-thread-row.active {
 }
 .engineering-mode .osint-media-file-input,
 .engineering-mode .osint-media-observation label { display: grid; gap: .42vh; min-width: 0; }
+.engineering-mode .osint-media-selected-file { color: var(--aegis-accent-soft); font: .58vh var(--font_mono); overflow-wrap: anywhere; }
 .engineering-mode .osint-media-file-input .aegis-input,
 .engineering-mode .osint-media-observation .aegis-input { width: 100%; min-width: 0; box-sizing: border-box; color: var(--aegis-text); border-color: var(--aegis-border); background: var(--aegis-surface-input); }
 .engineering-mode .osint-media-file-input input[type="file"] { padding: .48vh; font: .58vh var(--font_mono); }
@@ -3550,6 +3551,15 @@ button.eng-thread-row.active {
 .engineering-mode .osint-media-warnings p,
 .engineering-mode .osint-media-warnings ul { margin: 0; color: var(--aegis-text-muted); font: .61vh var(--font_main); line-height: 1.36; }
 .engineering-mode .osint-media-warnings ul { display: grid; gap: .3vh; padding-left: 1.5vh; }
+.engineering-mode .osint-media-metadata { min-height: 0; overflow: hidden; }
+.engineering-mode .osint-media-metadata .workspace-panel-content {
+    grid-template-rows: max-content max-content max-content;
+    align-items: start;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+}
 
 .engineering-mode .osint-command-deck {
     grid-template-rows: 8.8vh 5.1vh minmax(0, 1fr);
@@ -4988,6 +4998,17 @@ button.eng-thread-row.active {
             "media-input media-preview"
             "media-metadata media-observation"
             "media-policy media-policy";
+    }
+
+    /* Keep verification context in normal flow at medium desktop sizes. The
+       readout is informational rather than a vertical stack, so it can use
+       the available width and leave room for assessment limits and actions. */
+    .engineering-mode .osint-media-readout {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .engineering-mode .osint-media-readout-group {
+        padding: .46vh;
     }
 }
 

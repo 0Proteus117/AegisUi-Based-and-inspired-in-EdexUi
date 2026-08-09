@@ -168,9 +168,20 @@ async function prepareSurface(socket) {
         })()`);
         return;
     }
-    if (target === "media" || target === "media-rich" || target === "media-no-metadata" || target === "media-evidence") {
+    if (target === "media" || target === "media-rich" || target === "media-no-metadata" || target === "media-evidence" || target === "media-file") {
         await evaluate(socket, `(() => {
             window.workspaceManager.activate('osint', false);
+            if (${JSON.stringify(target)} === 'media-file') {
+                const manager = window.workspaceManager;
+                manager.osintCaseState = {...manager.osintCaseState, mode: 'CATALOG'};
+                manager.osintGeoState = {...manager.osintGeoState, mode: 'CATALOG'};
+                manager.osintMediaState = {...manager.osintMediaState, mode: 'MEDIA', phase: 'IDLE', result: null, previewUrl: null, analystObservation: '', lastError: null, selectedFile: null};
+                const bytes = Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScL0XQAAAABJRU5ErkJggg=='), value => value.charCodeAt(0));
+                return manager.inspectOSINTMediaFile(new File([bytes], 'synthetic-preview.png', {type: 'image/png'})).then(() => {
+                    const image = document.querySelector('.osint-media-preview img');
+                    return Boolean(image && image.complete && image.naturalWidth > 0);
+                });
+            }
             const rich = ['media-rich', 'media-evidence'].includes(${JSON.stringify(target)});
             const result = {
                 capability: 'VISUAL_MEDIA_VERIFICATION',
@@ -314,6 +325,8 @@ async function main() {
             const mediaPreview = document.querySelector('.osint-media-preview');
             const mediaMetadata = document.querySelector('.osint-media-metadata');
             const mediaObservation = document.querySelector('.osint-media-observation');
+            const mediaMetadataContent = mediaMetadata && mediaMetadata.querySelector('.workspace-panel-content');
+            const mediaAssessment = mediaMetadata && mediaMetadata.querySelector('.osint-media-warnings');
             const evidenceDialog = document.querySelector('.osint-case-dialog-overlay.visible .osint-case-dialog');
             const evidenceDetailRoot = evidenceDialog && evidenceDialog.querySelector('.osint-evidence-detail');
             const popup = document.querySelector(
@@ -333,7 +346,7 @@ async function main() {
                 workspace: window.workspaceManager && window.workspaceManager.activeId,
                 mediaGrid: document.querySelector('.osint-command-grid:has(.osint-media-header)') ? getComputedStyle(document.querySelector('.osint-command-grid:has(.osint-media-header)')).gridTemplateRows : null,
                 geo: geoHeader && geoInput && geoResult && geoObservation ? {header: rect(geoHeader), input: rect(geoInput), result: rect(geoResult), observation: rect(geoObservation)} : null,
-                media: mediaHeader && mediaInput && mediaPreview && mediaMetadata && mediaObservation ? {header: rect(mediaHeader), input: rect(mediaInput), preview: rect(mediaPreview), metadata: rect(mediaMetadata), observation: rect(mediaObservation), image: rect(mediaPreview.querySelector('img')), action: rect(mediaMetadata.querySelector('footer'))} : null,
+                media: mediaHeader && mediaInput && mediaPreview && mediaMetadata && mediaObservation ? {header: rect(mediaHeader), input: rect(mediaInput), preview: rect(mediaPreview), metadata: rect(mediaMetadata), metadataContent: rect(mediaMetadataContent), assessment: rect(mediaAssessment), observation: rect(mediaObservation), image: rect(mediaPreview.querySelector('img')), action: rect(mediaMetadata.querySelector('footer'))} : null,
                 activeCase: active ? {
                     title: rect(active.querySelector('h2')),
                     status: rect(active.querySelector('.osint-case-status')),
@@ -368,14 +381,17 @@ async function main() {
                 && !intersect(report.geo.header, report.geo.result)
                 && !intersect(report.geo.result, report.geo.observation)
                 && visible(geoInput)));
-            report.mediaAvailable = !['media', 'media-rich', 'media-no-metadata', 'media-evidence'].includes(report.target) || Boolean(report.media);
+            report.mediaAvailable = !['media', 'media-rich', 'media-no-metadata', 'media-evidence', 'media-file'].includes(report.target) || Boolean(report.media);
             report.mediaFlow = report.target === 'media-evidence'
                 ? Boolean(report.popup)
                 : report.mediaAvailable && (!report.media || (!intersect(report.media.header, report.media.input)
                 && !intersect(report.media.header, report.media.preview)
                 && !intersect(report.media.preview, report.media.metadata)
                 && !intersect(report.media.metadata, report.media.observation)
-                && visible(mediaInput) && visible(mediaPreview.querySelector('img')) && visible(mediaMetadata.querySelector('footer'))));
+                && visible(mediaInput) && visible(mediaPreview.querySelector('img')) && visible(mediaMetadata.querySelector('footer'))
+                && (!report.media.assessment || (!intersect(report.media.assessment, report.media.action)
+                    && report.media.assessment.top >= report.media.metadataContent.top - 1
+                    && report.media.assessment.bottom <= report.media.metadataContent.bottom + 1))));
             return report;
         })()`);
         failures.push(!print("LIVE_THEME_APPEARANCE", report.appearance === expectedAppearance && report.preference === appearance, JSON.stringify({appearance: report.appearance, preference: report.preference, expectedAppearance, expectedPreference: appearance})));

@@ -6,7 +6,7 @@ Local-first macOS engineering cockpit based on the visual spirit of eDEX-UI.
 [![CodeQL](https://github.com/0Proteus117/AegisUi-Based-and-inspired-in-EdexUi/actions/workflows/codeql-analysis.yml/badge.svg?branch=feature%2Fsystems-online-pass)](https://github.com/0Proteus117/AegisUi-Based-and-inspired-in-EdexUi/actions/workflows/codeql-analysis.yml)
 ![Platform](https://img.shields.io/badge/platform-macOS%20Apple%20Silicon-3BA7FF)
 ![Local first](https://img.shields.io/badge/local--first-yes-7CCBFF)
-![Version](https://img.shields.io/badge/version-2.5.1-13263A)
+![Version](https://img.shields.io/badge/version-2.5.2-13263A)
 
 ## Current status
 
@@ -43,7 +43,7 @@ snapshot automatically. v2.4.0 adds an explicit local Investigation Case layer
 for selected normalized results only: cases, evidence metadata, notes,
 timeline, SHA-256 integrity checks and JSON/Markdown export. It never persists
 the ephemeral session by default or sends case data to a provider.
-  v2.5.1 adds Visual & Media Verification for one explicitly selected local
+  v2.5.2 hardens Visual & Media Verification for one explicitly selected local
   JPEG/PNG/WebP image at a time: bounded preview, normalized file metadata and
   original-byte SHA-256. It does not upload the media, infer authenticity or
   silently persist the original. Image GPS can only hand off to Geospatial
