@@ -6,7 +6,7 @@ Local-first macOS engineering cockpit based on the visual spirit of eDEX-UI.
 [![CodeQL](https://github.com/0Proteus117/AegisUi-Based-and-inspired-in-EdexUi/actions/workflows/codeql-analysis.yml/badge.svg?branch=feature%2Fsystems-online-pass)](https://github.com/0Proteus117/AegisUi-Based-and-inspired-in-EdexUi/actions/workflows/codeql-analysis.yml)
 ![Platform](https://img.shields.io/badge/platform-macOS%20Apple%20Silicon-3BA7FF)
 ![Local first](https://img.shields.io/badge/local--first-yes-7CCBFF)
-![Version](https://img.shields.io/badge/version-2.5.4-13263A)
+![Version](https://img.shields.io/badge/version-2.5.5-13263A)
 
 ## Current status
 
@@ -43,7 +43,10 @@ snapshot automatically. v2.4.0 adds an explicit local Investigation Case layer
 for selected normalized results only: cases, evidence metadata, notes,
 timeline, SHA-256 integrity checks and JSON/Markdown export. It never persists
 the ephemeral session by default or sends case data to a provider.
-  v2.5.4 adds an explicit Research / Documents / Source Verification surface
+  v2.5.5 preserves the v2.5.4 Research / Documents / Source Verification
+  capability and corrects its content-sized Source Context and Excerpt layout
+  at compact widths. It keeps long metadata and every Evidence control in
+  normal scrollable document flow. v2.5.4 adds an explicit Research / Documents / Source Verification surface
   for one public URL, DOI or local PDF at a time. Crossref retrieves metadata
   for a DOI through one fixed endpoint; URL archive availability reuses the
   existing explicit Wayback action, and PDF inspection is local and bounded.

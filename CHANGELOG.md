@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.5.5 - 2026-08-09
+
+### OSINT Source Verification layout hotfix
+
+- Corrected the shared content-sizing contract in Source Verification panels.
+  Long `SOURCE CONTEXT` metadata and every `EXCERPT / CLAIM CONTEXT` control
+  now contribute to their grid row instead of overflowing beneath the next row.
+- Added compact-layout regression coverage for content-sized medium and narrow
+  grid tracks. The command deck owns scrolling when a compact window cannot
+  show the complete surface at once.
+
 ## 2.5.4 - 2026-08-09
 
 ### OSINT Research / Documents / Source Verification

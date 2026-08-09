@@ -95,7 +95,8 @@ async function main() {
     check("RESEARCH_NO_NEW_IPC", !/ipc\.invoke\(\s*["']osint-research-|ipcMain\.handle\(\s*["']osint-research-/.test(manager));
     check("RESEARCH_UI_LOAD_ORDER", ui.indexOf("osintResearchSourceVerification.class.js") < ui.indexOf("osintProviderAdapters.class.js"));
     const contentRule = styles.match(/\.engineering-mode \.osint-research-input \.workspace-panel-content,[\s\S]*?\.engineering-mode \.osint-research-policy \.workspace-panel-content\s*\{([\s\S]*?)\n\}/);
-    check("RESEARCH_LAYOUT_NORMAL_FLOW", Boolean(contentRule) && /position:\s*relative/.test(contentRule[1]) && /inset:\s*auto/.test(contentRule[1]) && /min-height:\s*min-content/.test(contentRule[1]) && /osint-research-header/.test(styles));
+    check("RESEARCH_LAYOUT_NORMAL_FLOW", Boolean(contentRule) && /position:\s*relative/.test(contentRule[1]) && /inset:\s*auto/.test(contentRule[1]) && /min-height:\s*min-content/.test(contentRule[1]) && /Dynamic result bodies[\s\S]*?grid-template-rows:\s*auto auto/.test(styles) && /osint-research-header/.test(styles));
+    check("RESEARCH_COMPACT_CONTENT_SIZED", /osint-research-context \.workspace-panel-content,[\s\S]*?grid-auto-rows:\s*max-content/.test(styles) && /osint-research-excerpt \.workspace-panel-content/.test(styles) && /grid-template-rows:\s*repeat\(5, max-content\)/.test(styles) && /grid-template-rows:\s*repeat\(9, max-content\)/.test(styles));
     check("RESEARCH_PREVIEW_REDACTIONS", manager.includes("RESEARCH / NORMALIZED URL") && manager.includes("RESEARCH / DOCUMENT DISPLAY LABEL") && manager.includes("RESEARCH / ANALYST OBSERVATION"));
     check("RESEARCH_NO_AUTOMATIC_URL_FETCH", !/fetch\(/.test(sourceCode) && /state\.sourceKind === "URL"/.test(manager));
     console.log(`OSINT_RESEARCH_SOURCE_VERIFICATION: ${failures.length ? "FAIL" : "OK"}`);

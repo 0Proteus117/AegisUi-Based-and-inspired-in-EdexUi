@@ -3587,7 +3587,11 @@ button.eng-thread-row.active {
         "research-input research-context research-archive"
         "research-document research-provenance research-excerpt"
         "research-observation research-observation research-policy";
-    grid-template-rows: repeat(4, auto);
+    /* Each declared research row is content-sized. At the medium and compact
+       breakpoints these areas are reflowed into more rows, which must retain
+       the same intrinsic sizing contract instead of inheriting a collapsed
+       flexible track. */
+    grid-template-rows: repeat(4, max-content);
     gap: .85vh;
     min-height: 0;
     overflow: auto;
@@ -3609,7 +3613,15 @@ button.eng-thread-row.active {
 .engineering-mode .osint-research-provenance-panel,
 .engineering-mode .osint-research-excerpt,
 .engineering-mode .osint-research-observation,
-.engineering-mode .osint-research-policy { display: grid; grid-template-rows: auto minmax(0, 1fr); min-height: min-content; }
+.engineering-mode .osint-research-policy {
+    /* Dynamic result bodies must contribute their full intrinsic height to the
+       parent grid. A minmax(0, 1fr) body row allowed long source cards and the
+       excerpt controls to collapse below their header at compact widths. */
+    display: grid;
+    grid-template-rows: auto auto;
+    align-self: start;
+    min-height: min-content;
+}
 .engineering-mode .osint-research-header > div,
 .engineering-mode .osint-research-input .workspace-panel-content,
 .engineering-mode .osint-research-context .workspace-panel-content,
@@ -3628,6 +3640,13 @@ button.eng-thread-row.active {
     min-height: min-content;
     padding: .82vh;
     overflow: visible;
+}
+.engineering-mode .osint-research-context .workspace-panel-content,
+.engineering-mode .osint-research-excerpt .workspace-panel-content {
+    /* Preserve the complete readout and every excerpt control in normal flow;
+       the command deck itself owns scrolling when the window is compact. */
+    grid-auto-rows: max-content;
+    align-self: start;
 }
 .engineering-mode .osint-research-header small,
 .engineering-mode .osint-research-input label > span,
@@ -5267,6 +5286,7 @@ button.eng-thread-row.active {
             "research-archive research-document"
             "research-provenance research-excerpt"
             "research-observation research-policy";
+        grid-template-rows: repeat(5, max-content);
     }
 }
 
@@ -5369,6 +5389,7 @@ button.eng-thread-row.active {
             "research-excerpt"
             "research-observation"
             "research-policy";
+        grid-template-rows: repeat(9, max-content);
     }
     .engineering-mode .osint-research-header { grid-template-columns: minmax(0, 1fr); }
     .engineering-mode .osint-research-status { text-align: left; }
