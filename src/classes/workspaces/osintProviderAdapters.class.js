@@ -13,6 +13,8 @@
 
     const WAYBACK_AVAILABILITY_ENDPOINT = "https://archive.org/wayback/available";
     const WAYBACK_TIMEOUT_MS = 9000;
+    const OPEN_METEO_GEOCODING_ENDPOINT = "https://geocoding-api.open-meteo.com/v1/search";
+    const OPEN_METEO_TIMEOUT_MS = 8000;
 
     function safeText(value, fallback = "Provider request failed.") {
         return String(value || fallback).replace(/https?:\/\/[^\s]+/gi, "[URL REDACTED]").replace(/\s+/g, " ").trim().slice(0, 240) || fallback;
@@ -42,6 +44,17 @@
         }
         parsed.hash = "";
         return parsed.toString();
+    }
+
+    function validateOpenMeteoPlaceInput(input) {
+        if (!input || typeof input !== "object" || Array.isArray(input) || input.kind !== "PLACE_TEXT") {
+            throw new Runtime.ProviderError("INVALID_INPUT", "Open-Meteo Geocoding accepts one public place name only.");
+        }
+        const query = String(input.query || "").replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim();
+        if (!query || query.length > 240 || /<\/?script\b|javascript:|data:|https?:\/\//i.test(query)) {
+            throw new Runtime.ProviderError("INVALID_INPUT", "Enter a short public place name only.");
+        }
+        return Object.freeze({kind: "PLACE_TEXT", query});
     }
 
     function retryAfterMs(response) {
@@ -154,6 +167,45 @@
         }
     }
 
+    class OpenMeteoGeocodingAdapter extends RestApiAdapter {
+        validateInput(input) { return validateOpenMeteoPlaceInput(input); }
+        buildRequest(input, context) {
+            const url = new URL(OPEN_METEO_GEOCODING_ENDPOINT);
+            url.searchParams.set("name", input.query);
+            url.searchParams.set("count", "5");
+            url.searchParams.set("language", String(context && context.locale || "en").slice(0, 2));
+            url.searchParams.set("format", "json");
+            return url.toString();
+        }
+        async checkHealth(context) {
+            if (!context || !context.userInitiated) return {status: "UNKNOWN", checkedAt: new Date().toISOString()};
+            return {status: "UNKNOWN", checkedAt: new Date().toISOString(), note: "Health is evaluated by an explicit geospatial query; no background polling occurs."};
+        }
+        async query(input, context) {
+            const validated = this.validateInput(input);
+            const raw = await this.fetchJson(this.buildRequest(validated, context), context, OPEN_METEO_TIMEOUT_MS);
+            return this.normalizeResult(raw, context, validated);
+        }
+        normalizeResult(raw, context, input) {
+            if (!raw || typeof raw !== "object" || (raw.results !== undefined && !Array.isArray(raw.results))) {
+                throw new Runtime.ProviderError("NORMALIZATION_FAILED", "The geocoding response did not match the expected format.", {providerId: context.providerId});
+            }
+            const completedAt = new Date().toISOString();
+            const base = {requestId: context.requestId, providerId: context.providerId, capability: context.capability, queriedAt: context.startedAt, completedAt, durationMs: Math.max(0, new Date(completedAt).getTime() - new Date(context.startedAt).getTime()), source: {provider: "Open-Meteo Geocoding", type: "PUBLIC_GEOCODING_API"}, confidence: "PROVIDER_REPORTED"};
+            const candidates = (raw.results || []).map(item => {
+                const latitude = Number(item && item.latitude);
+                const longitude = Number(item && item.longitude);
+                if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90 || !Number.isFinite(longitude) || longitude < -180 || longitude > 180) return null;
+                const label = [item.name, item.admin1, item.country].filter(Boolean).map(value => String(value).replace(/\s+/g, " ").trim()).join(", ");
+                return {latitude: Number(latitude.toFixed(7)), longitude: Number(longitude.toFixed(7)), displayName: label || null, locality: item.name ? String(item.name).slice(0, 180) : null, region: item.admin1 ? String(item.admin1).slice(0, 180) : null, country: item.country ? String(item.country).slice(0, 180) : null, countryCode: item.country_code ? String(item.country_code).slice(0, 12).toUpperCase() : null, elevationM: Number.isFinite(Number(item.elevation)) ? Number(Number(item.elevation).toFixed(2)) : null};
+            }).filter(Boolean).slice(0, 5);
+            if (!candidates.length) {
+                return Runtime.createNormalizedResult({...base, status: "EMPTY", summary: "No public geocoding candidate was returned for this place text.", data: {available: false, originalInput: input.query, canonicalUrl: null, snapshotUrl: null, snapshotTimestamp: null, provider: "Open-Meteo Geocoding", queriedAt: context.startedAt, completedAt, confidence: "PROVIDER_REPORTED", warnings: [], geoCandidates: []}, warnings: []});
+            }
+            return Runtime.createNormalizedResult({...base, status: "SUCCESS", summary: `${candidates.length} public geocoding candidate${candidates.length === 1 ? "" : "s"} returned; choose one before treating it as a normalized location.`, data: {available: true, originalInput: input.query, canonicalUrl: null, snapshotUrl: null, snapshotTimestamp: null, provider: "Open-Meteo Geocoding", queriedAt: context.startedAt, completedAt, confidence: "PROVIDER_REPORTED", warnings: [], geoCandidates: candidates}, warnings: []});
+        }
+    }
+
     class AdapterFactory {
         constructor(options = {}) {
             this.providerRegistry = options.providerRegistry;
@@ -168,6 +220,7 @@
             if (Policy.isReferenceOnly(provider)) throw new Runtime.ProviderError("REFERENCE_ONLY_PROVIDER", "Reference-only entries cannot receive an operational adapter.", {providerId});
             if (["DISABLED", "UNSUPPORTED"].includes(provider.providerStatus)) throw new Runtime.ProviderError("PROVIDER_DISABLED", "This provider is disabled.", {providerId});
             if (provider.runtimeAdapter === "WAYBACK_AVAILABILITY") return new WaybackAdapter(provider, {fetchImpl: this.fetchImpl});
+            if (provider.runtimeAdapter === "OPEN_METEO_GEOCODING") return new OpenMeteoGeocodingAdapter(provider, {fetchImpl: this.fetchImpl});
             if (provider.runtimeAdapter === "EXTERNAL_WEB") return new ExternalWebAdapter(provider, {fetchImpl: this.fetchImpl});
             if (provider.runtimeAdapter === "LOCAL_TOOL") return new LocalToolAdapter(provider, {fetchImpl: this.fetchImpl});
             if (provider.runtimeAdapter === "SYSTEM_INTEGRATION") return new SystemIntegrationAdapter(provider, {fetchImpl: this.fetchImpl});
@@ -181,5 +234,5 @@
         }
     }
 
-    return Object.freeze({WAYBACK_AVAILABILITY_ENDPOINT, WAYBACK_TIMEOUT_MS, ProviderAdapter, ExternalWebAdapter, RestApiAdapter, LocalToolAdapter, SystemIntegrationAdapter, ReferenceOnlyAdapter, WaybackAdapter, AdapterFactory, validateWaybackInput, safeText});
+    return Object.freeze({WAYBACK_AVAILABILITY_ENDPOINT, WAYBACK_TIMEOUT_MS, OPEN_METEO_GEOCODING_ENDPOINT, OPEN_METEO_TIMEOUT_MS, ProviderAdapter, ExternalWebAdapter, RestApiAdapter, LocalToolAdapter, SystemIntegrationAdapter, ReferenceOnlyAdapter, WaybackAdapter, OpenMeteoGeocodingAdapter, AdapterFactory, validateWaybackInput, validateOpenMeteoPlaceInput, safeText});
 });

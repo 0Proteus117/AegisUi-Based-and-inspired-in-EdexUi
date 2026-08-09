@@ -306,9 +306,49 @@
         })
     ]);
 
+    // The only Phase 5 live Geo adapter. Its host, method and parameters are
+    // fixed in OpenMeteoGeocodingAdapter; it is not a generic HTTP bridge.
+    const GEOSPATIAL_NATIVE_PROVIDERS = Object.freeze([
+        Object.freeze({
+            id: "open-meteo-geocoding",
+            name: "Open-Meteo Geocoding",
+            shortName: "Open-Meteo Geo",
+            description: "Public place-text geocoding used only after an explicit investigator query to normalize candidate geographic context.",
+            category: "geospatial",
+            capabilities: ["GEOSPATIAL_VERIFICATION"],
+            providerType: "REST_API",
+            accessMode: "API",
+            providerStatus: "ACTIVE",
+            riskProfile: "PASSIVE",
+            legalStatus: "GENERALLY_LEGAL",
+            inputs: ["PLACE_TEXT"],
+            outputs: ["NORMALIZED_GEO_CONTEXT", "PROVIDER_OBSERVATION"],
+            authentication: "NONE",
+            costModel: "PUBLIC_NO_KEY",
+            officialUrl: "https://open-meteo.com/en/docs/geocoding-api",
+            docsUrl: "https://open-meteo.com/en/docs/geocoding-api",
+            publicReferenceUrl: null,
+            launchAllowed: false,
+            copyUrlAllowed: false,
+            integrationAllowed: true,
+            installationAllowed: false,
+            runtimeAdapter: "OPEN_METEO_GEOCODING",
+            referenceReason: "Approved as the small, no-key public provider set for explicit place-name normalization in the Phase 5 geospatial capability.",
+            legalDisclaimer: "AegisUI submits only the place text explicitly entered by the investigator. Provider output is normalized locally and is not retained unless the investigator explicitly promotes a reviewed result to a local case.",
+            jurisdictionNote: "Public geocoding availability and geographic names can vary by provider coverage and jurisdiction; results are contextual, not authoritative proof.",
+            tags: Object.freeze(["geocoding", "coordinates", "public-api", "native-query"]),
+            lastReviewed: REVIEW_DATE,
+            sourceConfidence: "VERIFIED_OFFICIAL",
+            icon: "OM",
+            featured: false,
+            featuredOrder: 0
+        })
+    ]);
+
     const PROVIDERS = Object.freeze([
         ...PROVIDER_SEEDS.map(normalizeSeed),
-        ...REFERENCE_ONLY_PROVIDERS
+        ...REFERENCE_ONLY_PROVIDERS,
+        ...GEOSPATIAL_NATIVE_PROVIDERS
     ]);
 
     const CATEGORIES = Object.freeze(CATEGORY_DEFINITIONS.map(category => Object.freeze({

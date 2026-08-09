@@ -5,9 +5,9 @@
 })(typeof window !== "undefined" ? window : null, function() {
     "use strict";
 
-    const RESULT_STATUSES = Object.freeze(["SUCCESS", "EMPTY", "PARTIAL", "ERROR", "CANCELLED", "POLICY_BLOCKED", "OFFLINE", "RATE_LIMITED", "KEY_REQUIRED"]);
+    const RESULT_STATUSES = Object.freeze(["SUCCESS", "EMPTY", "PARTIAL", "ERROR", "CANCELLED", "POLICY_BLOCKED", "OFFLINE", "RATE_LIMITED", "KEY_REQUIRED", "PROVIDER_UNAVAILABLE"]);
     const HEALTH_STATES = Object.freeze(["UNKNOWN", "READY", "DEGRADED", "OFFLINE", "RATE_LIMITED", "KEY_REQUIRED", "DISABLED", "REFERENCE_ONLY"]);
-    const ERROR_CODES = Object.freeze(["PROVIDER_NOT_FOUND", "ADAPTER_NOT_FOUND", "PROVIDER_DISABLED", "REFERENCE_ONLY_PROVIDER", "POLICY_BLOCKED", "INVALID_INPUT", "NETWORK_DISABLED", "OFFLINE", "TIMEOUT", "RATE_LIMITED", "KEY_REQUIRED", "AUTH_FAILED", "PROVIDER_ERROR", "NORMALIZATION_FAILED", "CANCELLED", "UNKNOWN_ERROR", "UNSUPPORTED"]);
+    const ERROR_CODES = Object.freeze(["PROVIDER_NOT_FOUND", "ADAPTER_NOT_FOUND", "PROVIDER_DISABLED", "REFERENCE_ONLY_PROVIDER", "POLICY_BLOCKED", "INVALID_INPUT", "NETWORK_DISABLED", "OFFLINE", "TIMEOUT", "RATE_LIMITED", "KEY_REQUIRED", "AUTH_FAILED", "PROVIDER_ERROR", "PROVIDER_UNAVAILABLE", "NORMALIZATION_FAILED", "CANCELLED", "UNKNOWN_ERROR", "UNSUPPORTED"]);
     let requestSequence = 0;
 
     class ProviderError extends Error {
@@ -87,7 +87,7 @@
         const safe = error instanceof ProviderError
             ? error
             : new ProviderError("UNKNOWN_ERROR", "The provider returned an unexpected error.", {providerId: context.providerId});
-        const statusByCode = {CANCELLED: "CANCELLED", POLICY_BLOCKED: "POLICY_BLOCKED", OFFLINE: "OFFLINE", TIMEOUT: "ERROR", RATE_LIMITED: "RATE_LIMITED", KEY_REQUIRED: "KEY_REQUIRED"};
+        const statusByCode = {CANCELLED: "CANCELLED", POLICY_BLOCKED: "POLICY_BLOCKED", OFFLINE: "OFFLINE", TIMEOUT: "ERROR", RATE_LIMITED: "RATE_LIMITED", KEY_REQUIRED: "KEY_REQUIRED", PROVIDER_UNAVAILABLE: "PROVIDER_UNAVAILABLE"};
         return createNormalizedResult({
             requestId: context.requestId,
             providerId: context.providerId,
@@ -211,7 +211,7 @@
         }
 
         updateResultState(providerId, result) {
-            const healthByResult = {SUCCESS: "READY", EMPTY: "READY", PARTIAL: "DEGRADED", OFFLINE: "OFFLINE", RATE_LIMITED: "RATE_LIMITED", KEY_REQUIRED: "KEY_REQUIRED"};
+            const healthByResult = {SUCCESS: "READY", EMPTY: "READY", PARTIAL: "DEGRADED", OFFLINE: "OFFLINE", PROVIDER_UNAVAILABLE: "OFFLINE", RATE_LIMITED: "RATE_LIMITED", KEY_REQUIRED: "KEY_REQUIRED"};
             if (healthByResult[result.status]) this.setHealth(providerId, healthByResult[result.status]);
             if (result.status === "RATE_LIMITED" && result.data && result.data.rateLimit) this.rateLimitByProvider.set(providerId, createRateLimitState(result.data.rateLimit));
             this.logger({providerId, requestId: result.requestId, state: result.status, duration: result.durationMs, errorCode: result.error && result.error.code || null});

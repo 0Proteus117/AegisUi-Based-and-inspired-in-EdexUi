@@ -77,9 +77,51 @@ async function main() {
         check("EVIDENCE_REDACTION_BEFORE_HASH", !Object.prototype.hasOwnProperty.call(promoted.evidence.data, "originalInput") && !Object.prototype.hasOwnProperty.call(promoted.evidence.data, "canonicalUrl") && !Object.prototype.hasOwnProperty.call(promoted.evidence.data, "snapshotUrl"));
         check("EVIDENCE_NO_RAW_RESPONSE", !Object.prototype.hasOwnProperty.call(promoted.evidence, "raw") && !Object.prototype.hasOwnProperty.call(promoted.evidence, "headers"));
 
+        const geoPromotion = await service.promote(created.case.id, {
+            normalizedResult: normalizedResult({
+                providerId: "open-meteo-geocoding",
+                capability: "GEOSPATIAL_VERIFICATION",
+                summary: "A normalized public geocoding observation supports the supplied coordinates.",
+                data: {
+                    available: true,
+                    originalInput: "51.5074, -0.1278",
+                    provider: "Open-Meteo Geocoding",
+                    queriedAt: "2026-08-08T12:00:00.000Z",
+                    completedAt: "2026-08-08T12:00:01.000Z",
+                    confidence: "MEDIUM",
+                    warnings: [],
+                    geo: {
+                        latitude: 51.5074,
+                        longitude: -0.1278,
+                        coordinateFormat: "DECIMAL",
+                        displayName: "London, Greater London, United Kingdom",
+                        locality: "London",
+                        region: "Greater London",
+                        country: "United Kingdom",
+                        countryCode: "GB",
+                        elevationM: 14,
+                        verificationStatus: "PARTIALLY_VERIFIED",
+                        verificationConfidence: "MEDIUM",
+                        observations: [{providerId: "open-meteo-geocoding", providerName: "Open-Meteo Geocoding", latitude: 51.5074, longitude: -0.1278, observedAt: "2026-08-08T12:00:00.000Z"}]
+                    }
+                },
+                source: {provider: "Open-Meteo Geocoding", type: "REST_API"},
+                confidence: "MEDIUM"
+            }),
+            draft: {
+                title: "Normalized geospatial finding",
+                summary: "Explicit local capture of normalized coordinates only.",
+                tags: ["geospatial", "verification"],
+                redactions: ["data.geo.displayName", "data.geo.country"]
+            }
+        });
+        check("GEO_EVIDENCE_PROMOTION", geoPromotion.ok && geoPromotion.evidence.data.geo.latitude === 51.5074 && geoPromotion.evidence.data.geo.longitude === -0.1278);
+        check("GEO_EVIDENCE_REDACTION", geoPromotion.ok && !Object.prototype.hasOwnProperty.call(geoPromotion.evidence.data.geo, "displayName") && !Object.prototype.hasOwnProperty.call(geoPromotion.evidence.data.geo, "country"));
+        check("GEO_EVIDENCE_NO_RAW_RESPONSE", geoPromotion.ok && !Object.prototype.hasOwnProperty.call(geoPromotion.evidence.data, "raw"));
+
         const evidenceId = promoted.evidence.id;
         const loaded = await service.read(created.case.id);
-        check("CASE_READ", loaded.ok && loaded.evidence.length === 1 && loaded.timeline.some(event => event.type === "EVIDENCE_ADDED"));
+        check("CASE_READ", loaded.ok && loaded.evidence.length === 2 && loaded.timeline.filter(event => event.type === "EVIDENCE_ADDED").length === 2);
         const verified = await service.verifyEvidence(created.case.id, evidenceId);
         check("EVIDENCE_VERIFY_VALID", verified.ok && verified.evidence.integrity.status === "VALID");
 

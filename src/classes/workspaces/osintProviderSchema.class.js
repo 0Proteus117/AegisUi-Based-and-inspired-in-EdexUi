@@ -13,7 +13,7 @@
         legalStatus: Object.freeze(["GENERALLY_LEGAL", "AUTHORIZATION_REQUIRED", "CONTEXT_DEPENDENT", "JURISDICTION_DEPENDENT", "POTENTIALLY_ILLEGAL", "UNKNOWN"]),
         sourceConfidence: Object.freeze(["VERIFIED_OFFICIAL", "VERIFIED_PUBLIC", "MULTIPLE_PUBLIC_SOURCES", "UNVERIFIED", "HISTORICAL"])
     });
-    const RUNTIME_ADAPTERS = Object.freeze(["EXTERNAL_WEB", "WAYBACK_AVAILABILITY", "LOCAL_TOOL", "SYSTEM_INTEGRATION", "REFERENCE_ONLY"]);
+    const RUNTIME_ADAPTERS = Object.freeze(["EXTERNAL_WEB", "WAYBACK_AVAILABILITY", "OPEN_METEO_GEOCODING", "LOCAL_TOOL", "SYSTEM_INTEGRATION", "REFERENCE_ONLY"]);
 
     const CAPABILITIES = Object.freeze([
         "RESEARCH_DISCOVERY",
@@ -166,6 +166,11 @@
         if (provider.runtimeAdapter === "WAYBACK_AVAILABILITY") {
             if (provider.id !== "wayback" || provider.providerType !== "REST_API" || provider.accessMode !== "API" || !provider.integrationAllowed) {
                 errors.push("WAYBACK_AVAILABILITY runtimeAdapter requires the approved Wayback REST API provider configuration");
+            }
+        }
+        if (provider.runtimeAdapter === "OPEN_METEO_GEOCODING") {
+            if (provider.id !== "open-meteo-geocoding" || provider.providerType !== "REST_API" || provider.accessMode !== "API" || !provider.integrationAllowed || !provider.capabilities.includes("GEOSPATIAL_VERIFICATION")) {
+                errors.push("OPEN_METEO_GEOCODING runtimeAdapter requires the approved geospatial REST API provider configuration");
             }
         }
         return errors;

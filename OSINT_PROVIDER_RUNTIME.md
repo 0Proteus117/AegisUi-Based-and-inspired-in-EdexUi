@@ -2,9 +2,10 @@
 
 ## Scope
 
-Phase 3 introduces a typed renderer-side runtime for approved OSINT
-capabilities. It is deliberately narrow: the only operational adapter is the
-user-initiated Internet Archive Wayback Availability query.
+Phase 3 introduced a typed renderer-side runtime for approved OSINT
+capabilities. Phase 5 keeps that deliberately narrow boundary: the operational
+adapters are the user-initiated Internet Archive Wayback Availability query
+and one fixed Open-Meteo place-geocoding query.
 
 `src/classes/workspaces/osintProviderRuntime.class.js` owns request identity,
 query context, cancellation, health state, rate-limit observations, normalized
@@ -31,7 +32,7 @@ Supported adapter families are:
 - `ReferenceOnlyAdapter` — metadata-only; health, query, launch and integration
   all reject before network or disk activity.
 
-## Current operational adapter
+## Current operational adapters
 
 `WaybackAdapter` is bound to `https://archive.org/wayback/available`. It accepts
 one public HTTP(S) URL or domain entered manually by the user. It does not
@@ -39,12 +40,20 @@ accept arrays, objects, private/local targets, file/data/javascript URLs or
 arbitrary endpoints. There is no proxy, crawler, scheduler, batch mode,
 automatic snapshot opening or URL persistence.
 
+`OpenMeteoGeocodingAdapter` is bound to
+`https://geocoding-api.open-meteo.com/v1/search`. It accepts one manually
+entered bounded place text through an explicit Geo verification action. Decimal
+and DMS coordinate parsing stays local. The adapter builds only a fixed GET
+request with bounded result count, omits credentials, normalizes candidate
+fields and never retains raw provider payloads or a search history.
+
 ## Phase 4 relationship
 
 v2.4.0 consumes the existing Normalized Result contract only after an explicit
 `SAVE TO CASE` action. The new case service does not rerun a query, add a
 provider, widen a context, retain the raw response or send case metadata back
-to a provider. Wayback remains the sole active native adapter.
+to a provider. Phase 5 adds only its constrained place-geocoding adapter; no
+Case action can select a provider or create a generic network request.
 
 ## Boundaries
 
@@ -52,5 +61,6 @@ to a provider. Wayback remains the sole active native adapter.
   main process; it is not provider IPC and cannot issue a provider query.
 - `_boot.js` and its legacy WebContentsView stay unchanged.
 - No credentials, cookies, account sessions or API keys are handled.
-- No queries survive an app restart.
+- No queries survive an app restart unless the investigator explicitly captures
+  a reviewed, normalized finding through the existing Case evidence flow.
 - No raw response is exposed from normalized results.

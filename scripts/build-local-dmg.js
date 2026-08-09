@@ -14,6 +14,7 @@
 
 const crypto = require("crypto");
 const fs = require("fs");
+const os = require("os");
 const path = require("path");
 const {execFileSync} = require("child_process");
 
@@ -29,6 +30,10 @@ const stagedApp = path.join(appResources, "app");
 const calendarHelperSource = path.join(ROOT, "src", "native", "EdexUiEngCalendar.app");
 const calendarHelperDestination = path.join(appResources, "AegisUiCalendar.app");
 const dmg = path.join(dist, `AegisUi-${version}-arm64.dmg`);
+// DiskImages can create a malformed UDZO when its sparse staging work happens
+// directly on removable filesystems. Build the image on the local APFS volume,
+// then copy the completed immutable artifact to the requested external output.
+const temporaryDmg = path.join(os.tmpdir(), `aegisui-${version}-${process.pid}.dmg`);
 
 function run(file, args, options = {}) {
     return execFileSync(file, args, {cwd: ROOT, stdio: options.stdio || "inherit"});
@@ -90,6 +95,7 @@ if (!fs.existsSync(calendarHelperSource)) {
 fs.mkdirSync(outputDir, {recursive: true});
 fs.rmSync(app, {recursive: true, force: true});
 fs.rmSync(dmg, {force: true});
+fs.rmSync(temporaryDmg, {force: true});
 // Electron.framework contains internal relative symlinks. Preserve them; an
 // eager dereference turns them into links back to the template and invalidates
 // the final signature.
@@ -136,7 +142,9 @@ if (!fs.existsSync(calendarHelperExecutable)) throw new Error("Calendar helper e
 fs.chmodSync(calendarHelperExecutable, 0o755);
 run("/usr/bin/codesign", ["--force", "--deep", "--sign", "-", "--timestamp=none", calendarHelperDestination], {stdio: "ignore"});
 run("/usr/bin/codesign", ["--force", "--deep", "--sign", "-", "--timestamp=none", app], {stdio: "ignore"});
-run("/usr/bin/hdiutil", ["create", "-volname", `AegisUi ${version}`, "-srcfolder", app, "-ov", "-format", "UDZO", dmg]);
+run("/usr/bin/hdiutil", ["create", "-volname", `AegisUi ${version}`, "-srcfolder", app, "-ov", "-format", "UDZO", temporaryDmg]);
+fs.copyFileSync(temporaryDmg, dmg);
+fs.rmSync(temporaryDmg, {force: true});
 
 console.log(`PACKAGED_APP: ${app}`);
 console.log(`DMG: ${dmg}`);
