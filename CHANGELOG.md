@@ -1,5 +1,20 @@
 # Changelog
 
+## 2.5.1 - 2026-08-09
+
+### OSINT Visual & Media Verification
+
+- Added a passive, explicit local JPEG/PNG/WebP inspection workspace with
+  bounded preview, normalized metadata and original-byte SHA-256.
+- Added safe metadata semantics: missing fields remain absent/unknown; EXIF,
+  GPS and software observations never claim authenticity or manipulation.
+- Added an explicit `IMAGE_METADATA` handoff to Geospatial Verification with no
+  automatic provider query, global-map mutation or persistence.
+- Reused Evidence Preview/redaction and deterministic integrity hashing for
+  normalized records only; original media attachment remains deferred.
+- Preserved the OSINT provider policy, Cases/Evidence model, legacy-runtime
+  disconnection, all other workspaces and existing map-provider boundaries.
+
 ## 2.5.0 - 2026-08-09
 
 ### OSINT Geospatial Verification

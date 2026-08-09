@@ -6,14 +6,14 @@ Local-first macOS engineering cockpit based on the visual spirit of eDEX-UI.
 [![CodeQL](https://github.com/0Proteus117/AegisUi-Based-and-inspired-in-EdexUi/actions/workflows/codeql-analysis.yml/badge.svg?branch=feature%2Fsystems-online-pass)](https://github.com/0Proteus117/AegisUi-Based-and-inspired-in-EdexUi/actions/workflows/codeql-analysis.yml)
 ![Platform](https://img.shields.io/badge/platform-macOS%20Apple%20Silicon-3BA7FF)
 ![Local first](https://img.shields.io/badge/local--first-yes-7CCBFF)
-![Version](https://img.shields.io/badge/version-2.5.0-13263A)
+![Version](https://img.shields.io/badge/version-2.5.1-13263A)
 
 ## Current status
 
 AegisUi is currently developed on `feature/systems-online-pass`.
 
 The application, bundle display name and release artifacts are branded
-`AegisUi`. The active local release line is `v2.4.x`.
+`AegisUi`. The active local release line is `v2.5.x`.
 
 ### Appearance
 
@@ -43,6 +43,11 @@ snapshot automatically. v2.4.0 adds an explicit local Investigation Case layer
 for selected normalized results only: cases, evidence metadata, notes,
 timeline, SHA-256 integrity checks and JSON/Markdown export. It never persists
 the ephemeral session by default or sends case data to a provider.
+  v2.5.1 adds Visual & Media Verification for one explicitly selected local
+  JPEG/PNG/WebP image at a time: bounded preview, normalized file metadata and
+  original-byte SHA-256. It does not upload the media, infer authenticity or
+  silently persist the original. Image GPS can only hand off to Geospatial
+  Verification after an explicit analyst action.
 - Live systems map with TomTom traffic, AISStream maritime traffic,
   RainViewer radar, Open-Meteo Marine conditions and CelesTrak SAT support.
 - Assistant presence layer with Angie/Gustav/Ares/Aphrodite profiles,
@@ -132,6 +137,11 @@ See [OSINT_PROVIDER_SCHEMA.md](OSINT_PROVIDER_SCHEMA.md),
 [OSINT_GEO_QUERY_MODEL.md](OSINT_GEO_QUERY_MODEL.md),
 [OSINT_GEO_EVIDENCE_MODEL.md](OSINT_GEO_EVIDENCE_MODEL.md),
 [OSINT_GEO_SECURITY.md](OSINT_GEO_SECURITY.md) and
+[OSINT_VISUAL_MEDIA_VERIFICATION.md](OSINT_VISUAL_MEDIA_VERIFICATION.md),
+[OSINT_MEDIA_METADATA_MODEL.md](OSINT_MEDIA_METADATA_MODEL.md),
+[OSINT_MEDIA_EVIDENCE_MODEL.md](OSINT_MEDIA_EVIDENCE_MODEL.md),
+[OSINT_MEDIA_GEO_HANDOFF.md](OSINT_MEDIA_GEO_HANDOFF.md),
+[OSINT_MEDIA_SECURITY.md](OSINT_MEDIA_SECURITY.md) and
 [OSINT_PHASE3_VALIDATION.md](OSINT_PHASE3_VALIDATION.md).
 
 ## Assistant
@@ -266,6 +276,12 @@ See [SECURITY.md](SECURITY.md) and [CONFIGURATION.md](CONFIGURATION.md).
 - [OSINT_GEO_EVIDENCE_MODEL.md](OSINT_GEO_EVIDENCE_MODEL.md)
 - [OSINT_GEO_SECURITY.md](OSINT_GEO_SECURITY.md)
 - [OSINT_PHASE5_VALIDATION.md](OSINT_PHASE5_VALIDATION.md)
+- [OSINT_VISUAL_MEDIA_VERIFICATION.md](OSINT_VISUAL_MEDIA_VERIFICATION.md)
+- [OSINT_MEDIA_METADATA_MODEL.md](OSINT_MEDIA_METADATA_MODEL.md)
+- [OSINT_MEDIA_EVIDENCE_MODEL.md](OSINT_MEDIA_EVIDENCE_MODEL.md)
+- [OSINT_MEDIA_GEO_HANDOFF.md](OSINT_MEDIA_GEO_HANDOFF.md)
+- [OSINT_MEDIA_SECURITY.md](OSINT_MEDIA_SECURITY.md)
+- [OSINT_PHASE6_VALIDATION.md](OSINT_PHASE6_VALIDATION.md)
 - [MAP_LAYERS.md](MAP_LAYERS.md)
 - [MAP_PROVIDER_HARDENING.md](MAP_PROVIDER_HARDENING.md)
 - [APPLE_MUSIC.md](APPLE_MUSIC.md)

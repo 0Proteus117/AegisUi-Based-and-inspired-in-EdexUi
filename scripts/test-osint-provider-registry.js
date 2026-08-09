@@ -22,7 +22,7 @@ function copy(value) {
 
 const providerErrors = registry.validate();
 const providers = registry.PROVIDERS;
-const legacyNormalProviders = providers.filter(provider => !policy.isReferenceOnly(provider) && provider.id !== "open-meteo-geocoding");
+const legacyNormalProviders = providers.filter(provider => !policy.isReferenceOnly(provider) && provider.id !== "open-meteo-geocoding" && provider.id !== "local-media-inspection");
 const normalProviders = providers.filter(provider => !policy.isReferenceOnly(provider));
 const referenceProviders = providers.filter(provider => policy.isReferenceOnly(provider));
 const providerIds = new Set(providers.map(provider => provider.id));
@@ -34,8 +34,8 @@ check("OSINT_REQUIRED_FIELDS", schema.REQUIRED_FIELDS.every(field => providers.e
 check("OSINT_PROVIDER_IDS", providerIds.size === providers.length, `${providerIds.size}/${providers.length}`);
 check("OSINT_CATEGORIES", registry.CATEGORIES.length === 9, String(registry.CATEGORIES.length));
 check("OSINT_MIGRATED_LEGACY_TOOLS", legacyNormalProviders.length === 161, String(legacyNormalProviders.length));
-check("OSINT_TOTAL_PROVIDERS", providers.length === 163, String(providers.length));
-check("OSINT_NORMAL_URLS", normalProviders.every(provider => typeof provider.officialUrl === "string" && /^https?:\/\//.test(provider.officialUrl)));
+check("OSINT_TOTAL_PROVIDERS", providers.length === 164, String(providers.length));
+check("OSINT_NORMAL_URLS", normalProviders.filter(provider => provider.accessMode === "WEB").every(provider => typeof provider.officialUrl === "string" && /^https?:\/\//.test(provider.officialUrl)));
 check("OSINT_COMPATIBILITY_EXPORT", registry.TOOLS.length === providers.length && registry.TOOLS.every(tool => providerIds.has(tool.id)));
 check("OSINT_CATEGORY_COUNTS_DERIVED", registry.CATEGORIES.every(category => category.count === categoryCounts[category.id] && category.count === registry.getProvidersForCategory(category.id).length));
 check("OSINT_FEATURED_DERIVED", registry.FEATURED.join(",") === registry.getFeaturedProviders().map(provider => provider.id).join(","));
@@ -47,6 +47,10 @@ check("OSINT_LEGAL_FILTER", registry.getProviders({legalStatus: "AUTHORIZATION_R
 const geoProvider = registry.getProvider("open-meteo-geocoding");
 check("OSINT_GEO_PROVIDER", geoProvider && geoProvider.runtimeAdapter === "OPEN_METEO_GEOCODING" && policy.canQuery(geoProvider).allowed);
 check("OSINT_GEO_PROVIDER_FIXED_POLICY", geoProvider && !geoProvider.launchAllowed && !geoProvider.copyUrlAllowed && geoProvider.integrationAllowed);
+
+const mediaProvider = registry.getProvider("local-media-inspection");
+check("OSINT_MEDIA_PROVIDER", mediaProvider && mediaProvider.runtimeAdapter === "LOCAL_TOOL" && mediaProvider.providerType === "LOCAL_TOOL" && mediaProvider.accessMode === "LOCAL");
+check("OSINT_MEDIA_PROVIDER_FIXED_POLICY", mediaProvider && mediaProvider.integrationAllowed && !mediaProvider.launchAllowed && !mediaProvider.copyUrlAllowed && mediaProvider.capabilities.includes("VISUAL_MEDIA_VERIFICATION"));
 
 const base = registry.getProvider("wayback");
 const missingRequired = copy(base);

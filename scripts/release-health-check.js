@@ -102,7 +102,9 @@ function main() {
         && exists("scripts/test-osint-provider-registry.js")
         && exists("scripts/test-osint-reference-only-policy.js")
         && exists("scripts/test-osint-tool-access-panel.js")
-        && exists("scripts/test-osint-provider-runtime.js");
+        && exists("scripts/test-osint-provider-runtime.js")
+        && exists("src/classes/workspaces/osintVisualMediaVerification.class.js")
+        && exists("scripts/test-osint-visual-media-verification.js");
     const osintCaseWorkspace = exists("src/classes/workspaces/osintCaseModel.class.js")
         && exists("src/classes/workspaces/osintCaseStorage.class.js")
         && exists("src/classes/workspaces/osintCaseServices.class.js")
@@ -114,6 +116,9 @@ function main() {
     const osintGeospatialVerification = exists("src/classes/workspaces/osintGeospatialVerification.class.js")
         && exists("scripts/test-osint-geospatial-verification.js")
         && fs.readFileSync(path.join(ROOT, "src/classes/workspaces/osintTools.registry.js"), "utf8").includes("open-meteo-geocoding");
+    const osintVisualMediaVerification = exists("src/classes/workspaces/osintVisualMediaVerification.class.js")
+        && exists("scripts/test-osint-visual-media-verification.js")
+        && fs.readFileSync(path.join(ROOT, "src/classes/workspaces/osintTools.registry.js"), "utf8").includes("local-media-inspection");
     const themeIntegrity = exists("src/assets/css/aegis_theme.css")
         && exists("scripts/test-aegis-theme-integrity.js")
         && exists("scripts/test-calendar-theme-integrity.js")
@@ -133,6 +138,7 @@ function main() {
     if (!osintFoundation) failures.push("OSINT native access foundation files missing");
     if (!osintCaseWorkspace) failures.push("OSINT investigation case workspace files missing");
     if (!osintGeospatialVerification) failures.push("OSINT geospatial verification files missing");
+    if (!osintVisualMediaVerification) failures.push("OSINT visual media verification files missing");
     if (!themeIntegrity) failures.push("Aegis semantic theme integrity files missing");
 
     print("PACKAGE_VERSION", pkg.version || "UNKNOWN");
@@ -154,6 +160,7 @@ function main() {
     print("OSINT_PROVIDER_REGISTRY", exists("src/classes/workspaces/osintProviderSchema.class.js") && exists("src/classes/workspaces/osintProviderPolicy.class.js") && exists("src/classes/workspaces/osintToolAccessPanel.class.js") ? "PRESENT" : "MISSING");
     print("OSINT_CASE_WORKSPACE", osintCaseWorkspace ? "PRESENT" : "MISSING");
     print("OSINT_GEOSPATIAL_VERIFICATION", osintGeospatialVerification ? "PRESENT" : "MISSING");
+    print("OSINT_VISUAL_MEDIA_VERIFICATION", osintVisualMediaVerification ? "PRESENT" : "MISSING");
     print("AEGIS_THEME_INTEGRITY", themeIntegrity ? "PRESENT" : "MISSING");
     print("CALENDAR_THEME_INTEGRITY", exists("scripts/test-calendar-theme-integrity.js") ? "PRESENT" : "MISSING");
     print("PACKAGED_CALENDAR_HELPER", exists("scripts/test-packaged-calendar-helper.js") ? "PRESENT" : "MISSING");

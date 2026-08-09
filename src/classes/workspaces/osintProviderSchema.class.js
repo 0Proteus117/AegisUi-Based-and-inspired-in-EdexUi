@@ -22,6 +22,7 @@
         "INFRASTRUCTURE_CONTEXT",
         "THREAT_REPUTATION",
         "GEOSPATIAL_VERIFICATION",
+        "VISUAL_MEDIA_VERIFICATION",
         "MEDIA_VERIFICATION",
         "ENTITY_RESEARCH",
         "PUBLIC_PRESENCE",
@@ -171,6 +172,11 @@
         if (provider.runtimeAdapter === "OPEN_METEO_GEOCODING") {
             if (provider.id !== "open-meteo-geocoding" || provider.providerType !== "REST_API" || provider.accessMode !== "API" || !provider.integrationAllowed || !provider.capabilities.includes("GEOSPATIAL_VERIFICATION")) {
                 errors.push("OPEN_METEO_GEOCODING runtimeAdapter requires the approved geospatial REST API provider configuration");
+            }
+        }
+        if (provider.runtimeAdapter === "LOCAL_TOOL" && provider.id === "local-media-inspection") {
+            if (provider.providerType !== "LOCAL_TOOL" || provider.accessMode !== "LOCAL" || !provider.integrationAllowed || !provider.capabilities.includes("VISUAL_MEDIA_VERIFICATION") || provider.launchAllowed || provider.copyUrlAllowed) {
+                errors.push("local-media-inspection must remain an integrated, non-launchable LOCAL_TOOL for VISUAL_MEDIA_VERIFICATION");
             }
         }
         return errors;

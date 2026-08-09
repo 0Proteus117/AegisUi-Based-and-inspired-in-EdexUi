@@ -168,6 +168,36 @@ async function prepareSurface(socket) {
         })()`);
         return;
     }
+    if (target === "media" || target === "media-rich" || target === "media-no-metadata" || target === "media-evidence") {
+        await evaluate(socket, `(() => {
+            window.workspaceManager.activate('osint', false);
+            const rich = ${JSON.stringify(target)} !== 'media-no-metadata';
+            const result = {
+                capability: 'VISUAL_MEDIA_VERIFICATION',
+                status: rich ? 'METADATA_AVAILABLE' : 'NO_METADATA',
+                confidence: 'LOW',
+                file: {displayLabel: rich ? 'synthetic-gps-validation.jpg' : 'synthetic-no-metadata.png', mediaType: rich ? 'image/jpeg' : 'image/png', byteSize: rich ? 184320 : 4096},
+                image: {width: rich ? 1600 : 480, height: rich ? 900 : 1600, aspectRatio: rich ? 1.77778 : .3, orientation: 1, colorProfile: 'UNKNOWN', hasAlpha: !rich},
+                exif: {captureTimestamp: rich ? '2026:08:09 10:11:12' : null, normalizedTimestamp: rich ? '2026-08-09T10:11:12' : null, timezoneStatus: rich ? 'UNKNOWN' : 'ABSENT', cameraMake: rich ? 'Synthetic Camera' : null, cameraModel: rich ? 'Validation Model' : null, lens: rich ? '50 mm validation lens' : null},
+                geo: rich ? {latitude: 51.5074, longitude: -0.1278, altitudeM: 25, directionDegrees: 180, source: 'IMAGE_METADATA'} : null,
+                software: {tag: rich ? 'Synthetic validation editor tag' : null},
+                integrity: {originalMediaHash: 'a'.repeat(64), algorithm: 'SHA-256', scope: 'ORIGINAL_SUPPLIED_BYTES'},
+                warnings: rich ? ['GPS metadata is present; it is not independently verified until explicit Geo verification.', 'Editing software metadata is present; this is neutral metadata context.'] : ['No software tag is not proof that the image is original.', 'No GPS metadata is available from this supplied file.']
+            };
+            window.workspaceManager.osintMediaState = {mode: 'MEDIA', phase: 'COMPLETE', result, previewUrl: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="1600" height="900"%3E%3Crect width="100%25" height="100%25" fill="%23121d2a"/%3E%3Cpath d="M0 700 L500 250 L900 620 L1200 340 L1600 720" stroke="%233ba7ff" stroke-width="18" fill="none"/%3E%3C/svg%3E', analystObservation: 'Synthetic validation note with deliberately long but non-private text to verify normal wrapping inside the observation surface.', lastError: null, selectedFile: null};
+            window.workspaceManager.renderOSINTState();
+            if (${JSON.stringify(target)} !== 'media-evidence') return Boolean(document.querySelector('.osint-media-header'));
+            const manager = window.workspaceManager;
+            return manager.ipc.invoke('osint-case-create', {title: 'Disposable media validation case', description: 'Synthetic local visual-validation fixture only.', priority: 'LOW', tags: 'media, validation'}).then(async created => {
+                if (!created || !created.ok) throw new Error('Media validation case fixture unavailable');
+                await manager.refreshOSINTCases({render: false});
+                await manager.openOSINTCaseById(created.case.id, {render: false, silent: true});
+                manager.promoteOSINTMediaEvidence(document.body);
+                return Boolean(document.querySelector('.osint-case-dialog'));
+            });
+        })()`);
+        return;
+    }
     if (target === "assistant-expanded") {
         await evaluate(socket, `(() => {
             window.assistantPresence?.panel?.setOpen(true);
@@ -277,6 +307,11 @@ async function main() {
             const geoInput = document.querySelector('[data-osint-geo-input]');
             const geoResult = document.querySelector('.osint-geo-result');
             const geoObservation = document.querySelector('.osint-geo-observation');
+            const mediaHeader = document.querySelector('.osint-media-header');
+            const mediaInput = document.querySelector('.osint-media-input');
+            const mediaPreview = document.querySelector('.osint-media-preview');
+            const mediaMetadata = document.querySelector('.osint-media-metadata');
+            const mediaObservation = document.querySelector('.osint-media-observation');
             const evidenceDialog = document.querySelector('.osint-case-dialog-overlay.visible .osint-case-dialog');
             const evidenceDetailRoot = evidenceDialog && evidenceDialog.querySelector('.osint-evidence-detail');
             const popup = document.querySelector(
@@ -294,7 +329,9 @@ async function main() {
                 bodyColor: style.color,
                 viewport: {width: innerWidth, height: innerHeight, dpr: devicePixelRatio},
                 workspace: window.workspaceManager && window.workspaceManager.activeId,
+                mediaGrid: document.querySelector('.osint-command-grid:has(.osint-media-header)') ? getComputedStyle(document.querySelector('.osint-command-grid:has(.osint-media-header)')).gridTemplateRows : null,
                 geo: geoHeader && geoInput && geoResult && geoObservation ? {header: rect(geoHeader), input: rect(geoInput), result: rect(geoResult), observation: rect(geoObservation)} : null,
+                media: mediaHeader && mediaInput && mediaPreview && mediaMetadata && mediaObservation ? {header: rect(mediaHeader), input: rect(mediaInput), preview: rect(mediaPreview), metadata: rect(mediaMetadata), observation: rect(mediaObservation), image: rect(mediaPreview.querySelector('img')), action: rect(mediaMetadata.querySelector('footer'))} : null,
                 activeCase: active ? {
                     title: rect(active.querySelector('h2')),
                     status: rect(active.querySelector('.osint-case-status')),
@@ -329,6 +366,14 @@ async function main() {
                 && !intersect(report.geo.header, report.geo.result)
                 && !intersect(report.geo.result, report.geo.observation)
                 && visible(geoInput)));
+            report.mediaAvailable = !['media', 'media-rich', 'media-no-metadata', 'media-evidence'].includes(report.target) || Boolean(report.media);
+            report.mediaFlow = report.target === 'media-evidence'
+                ? Boolean(report.popup)
+                : report.mediaAvailable && (!report.media || (!intersect(report.media.header, report.media.input)
+                && !intersect(report.media.header, report.media.preview)
+                && !intersect(report.media.preview, report.media.metadata)
+                && !intersect(report.media.metadata, report.media.observation)
+                && visible(mediaInput) && visible(mediaPreview.querySelector('img')) && visible(mediaMetadata.querySelector('footer'))));
             return report;
         })()`);
         failures.push(!print("LIVE_THEME_APPEARANCE", report.appearance === expectedAppearance && report.preference === appearance, JSON.stringify({appearance: report.appearance, preference: report.preference, expectedAppearance, expectedPreference: appearance})));
@@ -337,8 +382,11 @@ async function main() {
         failures.push(!print("LIVE_THEME_EVIDENCE_FLOW", report.evidenceFlow));
         failures.push(!print("LIVE_THEME_POPUP_FLOW", report.popupFlow, report.popup ? JSON.stringify(report.popup) : ""));
         failures.push(!print("LIVE_THEME_GEO_FLOW", report.geoFlow));
+        failures.push(!print("LIVE_THEME_MEDIA_FLOW", report.mediaFlow));
         console.log(`LIVE_THEME_VIEWPORT: ${JSON.stringify(report.viewport)}`);
         console.log(`LIVE_THEME_SURFACE: ${surface}`);
+        if (report.media) console.log(`LIVE_THEME_MEDIA: ${JSON.stringify(report.media)}`);
+        if (report.mediaGrid) console.log(`LIVE_THEME_MEDIA_GRID: ${report.mediaGrid}`);
         if (screenshotPath) {
             const screenshotOptions = {format: "png", captureBeyondViewport: false};
             if (screenshotRegion === "sanitized") {
@@ -354,11 +402,24 @@ async function main() {
             }
             if (screenshotRegion === "content") {
                 const contentBounds = await evaluate(socket, `(() => {
-                    const view = document.getElementById('workspace_views');
+                    const view = document.querySelector('.osint-command-grid') || document.getElementById('workspace_views');
                     const rect = view && view.getBoundingClientRect();
-                    return rect ? {x: 0, y: Math.max(0, rect.top), width: innerWidth, height: Math.max(1, innerHeight - rect.top)} : null;
+                    return rect ? {
+                        x: Math.max(0, rect.left),
+                        y: Math.max(0, rect.top),
+                        width: Math.max(1, rect.right - Math.max(0, rect.left)),
+                        height: Math.max(1, innerHeight - rect.top)
+                    } : null;
                 })()`);
                 if (contentBounds) screenshotOptions.clip = {...contentBounds, scale: 1};
+            }
+            if (screenshotRegion === "dialog") {
+                const dialogBounds = await evaluate(socket, `(() => {
+                    const dialog = document.querySelector('.osint-case-dialog-overlay.visible .osint-case-dialog');
+                    const rect = dialog && dialog.getBoundingClientRect();
+                    return rect ? {x: rect.left, y: rect.top, width: rect.width, height: rect.height} : null;
+                })()`);
+                if (dialogBounds) screenshotOptions.clip = {...dialogBounds, scale: 1};
             }
             const capture = await command(socket, "Page.captureScreenshot", screenshotOptions);
             fs.writeFileSync(screenshotPath, Buffer.from(capture.data, "base64"));

@@ -219,7 +219,7 @@
         archives: ["HISTORICAL_ARCHIVE", "EVIDENCE_PRESERVATION"],
         infrastructure: ["INFRASTRUCTURE_CONTEXT"],
         threat: ["THREAT_REPUTATION"],
-        geospatial: ["GEOSPATIAL_VERIFICATION", "MEDIA_VERIFICATION"],
+        geospatial: ["GEOSPATIAL_VERIFICATION", "VISUAL_MEDIA_VERIFICATION", "MEDIA_VERIFICATION"],
         entities: ["ENTITY_RESEARCH"],
         presence: ["PUBLIC_PRESENCE"],
         data: ["DATA_ANALYSIS"],
@@ -345,10 +345,50 @@
         })
     ]);
 
+    // This provider is local-only. The user selects one supported browser File;
+    // the renderer parses bytes in-process and never receives filesystem paths.
+    const VISUAL_MEDIA_LOCAL_PROVIDERS = Object.freeze([
+        Object.freeze({
+            id: "local-media-inspection",
+            name: "Local Media Inspection",
+            shortName: "Media Inspect",
+            description: "Passive metadata inspection for one explicitly selected JPEG, PNG or WebP image. No upload, reverse-image search or background collection.",
+            category: "geospatial",
+            capabilities: ["VISUAL_MEDIA_VERIFICATION"],
+            providerType: "LOCAL_TOOL",
+            accessMode: "LOCAL",
+            providerStatus: "ACTIVE",
+            riskProfile: "PASSIVE",
+            legalStatus: "GENERALLY_LEGAL",
+            inputs: ["LOCAL_IMAGE"],
+            outputs: ["NORMALIZED_MEDIA_METADATA", "ORIGINAL_MEDIA_HASH", "OPTIONAL_GEO_CONTEXT"],
+            authentication: "NONE",
+            costModel: "LOCAL_ONLY",
+            officialUrl: null,
+            docsUrl: null,
+            publicReferenceUrl: null,
+            launchAllowed: false,
+            copyUrlAllowed: false,
+            integrationAllowed: true,
+            installationAllowed: false,
+            runtimeAdapter: "LOCAL_TOOL",
+            referenceReason: "Built-in passive media metadata inspection. Original bytes remain in the explicit, ephemeral analyst selection and are not persisted by this provider.",
+            legalDisclaimer: "AegisUI reads only metadata actually present in one analyst-selected local image. Metadata is contextual and does not establish authenticity, authorship, capture time, location or manipulation.",
+            jurisdictionNote: "The analyst remains responsible for lawful possession and handling of the supplied media. No external media service is contacted in this capability.",
+            tags: Object.freeze(["metadata", "image", "local", "passive", "sha-256"]),
+            lastReviewed: REVIEW_DATE,
+            sourceConfidence: "VERIFIED_OFFICIAL",
+            icon: "VM",
+            featured: false,
+            featuredOrder: 0
+        })
+    ]);
+
     const PROVIDERS = Object.freeze([
         ...PROVIDER_SEEDS.map(normalizeSeed),
         ...REFERENCE_ONLY_PROVIDERS,
-        ...GEOSPATIAL_NATIVE_PROVIDERS
+        ...GEOSPATIAL_NATIVE_PROVIDERS,
+        ...VISUAL_MEDIA_LOCAL_PROVIDERS
     ]);
 
     const CATEGORIES = Object.freeze(CATEGORY_DEFINITIONS.map(category => Object.freeze({

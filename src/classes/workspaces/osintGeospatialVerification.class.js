@@ -187,6 +187,7 @@
         return Object.freeze({
             id: String(input.id || `geo-${Date.now().toString(36)}`),
             query: Object.freeze({kind: parsed.kind, originalInput: parsed.originalInput || parsed.query || null, coordinateFormat: parsed.coordinateFormat || null}),
+            provenance: cleanField(input.provenance, 40) || "MANUAL_INPUT",
             normalizedLocation: location,
             providerObservations: Object.freeze(observations),
             investigatorObservations: Object.freeze((input.investigatorObservations || []).map(item => Object.freeze({assessment: ["SUPPORTS", "CONTRADICTS", "INCONCLUSIVE"].includes(item.assessment) ? item.assessment : "INCONCLUSIVE", note: cleanField(item.note, 1200), recordedAt: cleanField(item.recordedAt, 64) || new Date().toISOString()}))),
@@ -224,6 +225,7 @@
                 elevationM: location.elevationM,
                 verificationStatus: verification.verificationStatus,
                 verificationConfidence: verification.confidence,
+                provenance: verification.provenance || "MANUAL_INPUT",
                 observations: verification.providerObservations.slice(0, 8).map(item => ({providerId: item.providerId, providerName: item.providerName, latitude: item.latitude, longitude: item.longitude, observedAt: item.observedAt}))
             }
         });
