@@ -171,7 +171,7 @@ async function prepareSurface(socket) {
     if (target === "media" || target === "media-rich" || target === "media-no-metadata" || target === "media-evidence") {
         await evaluate(socket, `(() => {
             window.workspaceManager.activate('osint', false);
-            const rich = ${JSON.stringify(target)} !== 'media-no-metadata';
+            const rich = ['media-rich', 'media-evidence'].includes(${JSON.stringify(target)});
             const result = {
                 capability: 'VISUAL_MEDIA_VERIFICATION',
                 status: rich ? 'METADATA_AVAILABLE' : 'NO_METADATA',
@@ -184,6 +184,8 @@ async function prepareSurface(socket) {
                 integrity: {originalMediaHash: 'a'.repeat(64), algorithm: 'SHA-256', scope: 'ORIGINAL_SUPPLIED_BYTES'},
                 warnings: rich ? ['GPS metadata is present; it is not independently verified until explicit Geo verification.', 'Editing software metadata is present; this is neutral metadata context.'] : ['No software tag is not proof that the image is original.', 'No GPS metadata is available from this supplied file.']
             };
+            window.workspaceManager.osintCaseState = {...window.workspaceManager.osintCaseState, mode: 'CATALOG'};
+            window.workspaceManager.osintGeoState = {...window.workspaceManager.osintGeoState, mode: 'CATALOG'};
             window.workspaceManager.osintMediaState = {mode: 'MEDIA', phase: 'COMPLETE', result, previewUrl: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="1600" height="900"%3E%3Crect width="100%25" height="100%25" fill="%23121d2a"/%3E%3Cpath d="M0 700 L500 250 L900 620 L1200 340 L1600 720" stroke="%233ba7ff" stroke-width="18" fill="none"/%3E%3C/svg%3E', analystObservation: 'Synthetic validation note with deliberately long but non-private text to verify normal wrapping inside the observation surface.', lastError: null, selectedFile: null};
             window.workspaceManager.renderOSINTState();
             if (${JSON.stringify(target)} !== 'media-evidence') return Boolean(document.querySelector('.osint-media-header'));
