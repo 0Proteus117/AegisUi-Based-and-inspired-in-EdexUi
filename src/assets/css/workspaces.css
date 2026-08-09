@@ -3396,11 +3396,32 @@ button.eng-thread-row.active {
 .engineering-mode .osint-geo-query,
 .engineering-mode .osint-geo-result,
 .engineering-mode .osint-geo-observation,
-.engineering-mode .osint-geo-policy { display: grid; grid-template-rows: auto minmax(0, 1fr); min-height: 0; }
+.engineering-mode .osint-geo-policy {
+    /* Dynamic OSINT panels have an intrinsic header and an intrinsic body. The
+       original minmax(0, 1fr) body track only works when a parent assigns a
+       definite height; this command deck grows in normal flow, so the body
+       could collapse to zero while its absolute content escaped. Keep the
+       shared dynamic-panel contract used by Media, Domain, Research, Entity
+       and Case Overview: header + content in ordinary grid flow. */
+    display: grid;
+    grid-template-rows: auto auto;
+    align-self: start;
+    min-height: min-content;
+}
 .engineering-mode .osint-geo-query .workspace-panel-content,
 .engineering-mode .osint-geo-result .workspace-panel-content,
 .engineering-mode .osint-geo-observation .workspace-panel-content,
-.engineering-mode .osint-geo-policy .workspace-panel-content { min-width: 0; display: grid; align-content: start; gap: .85vh; overflow: auto; }
+.engineering-mode .osint-geo-policy .workspace-panel-content {
+    position: relative;
+    inset: auto;
+    min-width: 0;
+    min-height: min-content;
+    display: grid;
+    align-content: start;
+    gap: .85vh;
+    padding: .82vh;
+    overflow: visible;
+}
 .engineering-mode .osint-geo-query form,
 .engineering-mode .osint-geo-observation form { display: grid; gap: .8vh; }
 .engineering-mode .osint-geo-query label,

@@ -1,5 +1,22 @@
 # Changelog
 
+## 2.6.0 - 2026-08-09
+
+### OSINT Analyst Desk Milestone
+
+- Consolidated the existing OSINT Analyst Desk capabilities into the v2.6.0
+  milestone without adding a new provider or autonomous workflow.
+- Hardened workspace teardown so every active OSINT provider-backed request is
+  cancelled when the analyst leaves the workspace, including Domain and Source
+  verification requests.
+- Isolated ephemeral Investigation Context when an analyst opens another Case;
+  selections and provenance from a previous Case cannot carry over.
+- Added bounded large-Case, context-isolation and provider-teardown regression
+  coverage, plus the current architecture and validation audit.
+- Preserved explicit-prefill-only handoffs, Evidence Preview, redaction before
+  canonical SHA-256 integrity, Reference Only fail-closed policy and the
+  disconnected legacy OSINT runtime.
+
 ## 2.5.7 - 2026-08-09
 
 ### OSINT Investigation Orchestration / Case Overview

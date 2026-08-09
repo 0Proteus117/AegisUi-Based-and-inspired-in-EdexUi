@@ -114,6 +114,14 @@ async function prepareSurface(socket) {
     if (target === "geo" || target === "geo-stress" || target === "geo-provider" || target === "geo-evidence") {
         await evaluate(socket, `(() => {
             window.workspaceManager.activate('osint', false);
+            /* Each visual fixture owns the visible OSINT mode. A prior Case
+               fixture must not win renderOSINTState()'s explicit priority and
+               turn this Geo validation into an accidental Case screenshot. */
+            window.workspaceManager.osintCaseState = {...window.workspaceManager.osintCaseState, mode: 'CATALOG'};
+            window.workspaceManager.osintMediaState = {...window.workspaceManager.osintMediaState, mode: 'CATALOG'};
+            window.workspaceManager.osintDomainState = {...window.workspaceManager.osintDomainState, mode: 'CATALOG'};
+            window.workspaceManager.osintResearchState = {...window.workspaceManager.osintResearchState, mode: 'CATALOG'};
+            window.workspaceManager.osintEntityState = {...window.workspaceManager.osintEntityState, mode: 'CATALOG'};
             window.workspaceManager.osintGeoState.mode = 'GEO';
             window.workspaceManager.osintGeoState.input = 'London';
             if (${JSON.stringify(target)} === 'geo-stress') {
