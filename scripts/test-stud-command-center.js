@@ -28,7 +28,7 @@ try {
     const urgent = store.createEntity("ASSIGNMENT", {courseId: course.id, title: "Known deadline", dueDate: tomorrow, status: "NOT_STARTED", localProgress: 0});
     const manual = store.createEntity("ASSIGNMENT", {courseId: course.id, title: "Manual priority", dueDate: distant, status: "IN_PROGRESS", localProgress: 67, priority: "HIGH"});
 
-    check("SCHEMA_V2_PRIORITY", () => assert.strictEqual(store.schemaInfo().version, Model.SCHEMA_VERSION));
+    check("SCHEMA_CURRENT_PRIORITY", () => assert.strictEqual(store.schemaInfo().version, Model.SCHEMA_VERSION));
     check("LOCAL_PROGRESS_NUMERIC_BOUNDED", () => {
         assert.strictEqual(store.getEntity("ASSIGNMENT", manual.id).localProgress, 67);
         assert.throws(() => store.updateEntity("ASSIGNMENT", manual.id, {localProgress: 101}), /between 0 and 100/);
@@ -63,16 +63,17 @@ try {
     check("COMMAND_CENTER_RENDERER_BOUNDARY", () => {
         assert.ok(manager.includes("new StudCommandCenter"));
         assert.ok(commandCenter.includes("STUDENT COMMAND CENTER"));
-        assert.ok(commandCenter.includes("PHASE 3"));
+        assert.ok(commandCenter.includes('"RESEARCH", "NOTES", "SERVICES"'));
         assert.ok(commandCenter.includes("FTS5 searches only local canonical academic records"));
         assert.ok(commandCenter.includes("STUD DOES NOT SCAN, OPEN OR COPY EXTERNAL CONTENT"));
         assert.ok(!commandCenter.includes("fetch("));
         assert.ok(!commandCenter.includes("localStorage"));
     });
-    check("IPC_IS_NARROW_AND_OFFLINE", () => {
+    check("IPC_IS_NARROW_AND_EXPLICIT", () => {
         assert.ok(ipc.includes('"stud-command-center"'));
         assert.ok(ipc.includes('"stud-reference-link"'));
-        assert.ok(!ipc.includes("stud-network"));
+        assert.ok(ipc.includes('"stud-research-search"'));
+        assert.ok(!ipc.includes("generic-proxy"));
         assert.ok(!ipc.includes("stud-calendar-open"));
         assert.ok(!ipc.includes("stud-email-open"));
     });

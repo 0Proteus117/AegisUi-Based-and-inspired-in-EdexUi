@@ -1,13 +1,10 @@
 "use strict";
 
-const ACTIVE_VIEWS = Object.freeze(["OVERVIEW", "MODULES", "ASSIGNMENTS"]);
+const ACTIVE_VIEWS = Object.freeze(["OVERVIEW", "MODULES", "ASSIGNMENTS", "RESEARCH", "NOTES", "SERVICES"]);
 const FUTURE_VIEWS = Object.freeze([
-    ["RESEARCH", "Academic discovery and paper workflow", "PHASE 3"],
-    ["NOTES", "Structured academic notes", "FUTURE"],
     ["REVISION", "Explicit revision workflow", "FUTURE"],
     ["TOOLS", "Academic utilities and policy", "FUTURE"],
-    ["PROGRESS", "Derived local work reporting", "FUTURE"],
-    ["SERVICES", "Moodle, Zotero and connected services", "FUTURE"]
+    ["PROGRESS", "Derived local work reporting", "FUTURE"]
 ]);
 const ACTIVE_ASSIGNMENT_STATUSES = Object.freeze(["NOT_STARTED", "IN_PROGRESS"]);
 const COMPLETED_ASSIGNMENT_STATUSES = Object.freeze(["SUBMITTED", "GRADED"]);
@@ -40,6 +37,7 @@ class StudCommandCenter {
         this.showToast = options.showToast || (() => {});
         this.state = null;
         this.view = null;
+        this.research = null;
     }
 
     mount(view) {
@@ -54,6 +52,7 @@ class StudCommandCenter {
             assignmentFilters: {courseId: "", status: "ALL", sort: "DUE_ASC", query: ""},
             schema: null, error: null, dialogReturnFocus: null
         };
+        this.research = new StudResearchWorkspace({request: (channel, payload) => this.request(channel, payload), escape: value => this.escape(value), showToast: (target, message) => this.showToast(target, message), parent: this});
         grid.innerHTML = `
             <section class="stud-command-header workspace-panel">
                 <div><small>STUD / LOCAL ACADEMIC CONTEXT</small><h2>STUDENT COMMAND CENTER</h2><p>Courses, assignments and local work context remain explicit, offline and provenance-aware.</p></div>
@@ -64,7 +63,7 @@ class StudCommandCenter {
             <main class="stud-command-main" data-stud-main></main>
             <dialog class="stud-dialog" data-stud-dialog-element aria-labelledby="stud_dialog_title"><header><h2 id="stud_dialog_title">STUD</h2><button type="button" data-stud-close-dialog aria-label="Close dialog">×</button></header><div data-stud-dialog-body></div></dialog>`;
         this.bind();
-        return this.refresh();
+        return Promise.all([this.research.initialize(), this.refresh()]).then(() => this.render());
     }
 
     async request(channel, payload = {}) {
@@ -118,6 +117,8 @@ class StudCommandCenter {
 
     setActiveView(view) {
         if (!ACTIVE_VIEWS.includes(view)) return;
+        if (view !== this.state.activeView) this.research.deactivate();
+        this.research.disposeEditor();
         this.state.activeView = view;
         this.render();
     }
@@ -149,7 +150,11 @@ class StudCommandCenter {
         if (this.state.error) main.innerHTML = `<section class="workspace-panel stud-empty-state"><header><h2>STUD LOCAL STORE</h2><span>ERROR</span></header><div class="workspace-panel-content"><strong>LOCAL ACADEMIC CONTEXT UNAVAILABLE</strong><p>${this.escape(this.state.error)}</p></div></section>`;
         else if (this.state.activeView === "OVERVIEW") main.innerHTML = this.renderOverview();
         else if (this.state.activeView === "MODULES") main.innerHTML = this.renderModules();
-        else main.innerHTML = this.renderAssignments();
+        else if (this.state.activeView === "ASSIGNMENTS") main.innerHTML = this.renderAssignments();
+        else if (this.state.activeView === "RESEARCH") main.innerHTML = this.research.renderResearch();
+        else if (this.state.activeView === "NOTES") main.innerHTML = this.research.renderNotes();
+        else main.innerHTML = this.research.renderServices();
+        this.research.afterRender(this.state.activeView).catch(() => {});
     }
 
     renderNavigation() {
@@ -239,12 +244,16 @@ class StudCommandCenter {
     renderAssignmentDetail(context) {
         const {assignment, provenance, relationships, references, resources} = context;
         const course = this.state.courses.find(item => item.id === assignment.courseId);
+        const papers = this.research.state.library.filter(paper => relationships.some(relation =>
+            (relation.fromType === "ASSIGNMENT" && relation.fromId === assignment.id && relation.toType === "RESEARCH_PAPER" && relation.toId === paper.id) ||
+            (relation.toType === "ASSIGNMENT" && relation.toId === assignment.id && relation.fromType === "RESEARCH_PAPER" && relation.fromId === paper.id)));
         const deadlines = [["RELEASE", assignment.releaseDate], ["DUE", assignment.dueDate], ["CUTOFF", assignment.cutoffDate]];
         return `<div class="stud-detail-heading"><small>ASSIGNMENT</small><h3>${this.escape(assignment.title)}</h3><span>${this.escape(course ? this.courseLabel(course.id) : "NO MODULE")} · ${this.escape(assignment.status)}</span></div>
             <div class="stud-deadline-grid">${deadlines.map(([label, value]) => `<section><small>${label}</small><strong>${value ? dateText(value) : "UNKNOWN"}</strong></section>`).join("")}</div>
             <form class="stud-edit-grid" data-stud-form="EDIT_ASSIGNMENT" data-stud-entity-id="${this.escape(assignment.id)}"><label>TITLE<input class="aegis-input" name="title" required maxlength="240" value="${this.escape(assignment.title)}"></label><label>STATUS<select class="aegis-select" name="status">${["NOT_STARTED", "IN_PROGRESS", "SUBMITTED", "GRADED"].map(status => `<option${assignment.status === status ? " selected" : ""}>${status}</option>`).join("")}</select></label><label>DUE DATE<input class="aegis-input" name="dueDate" type="datetime-local" value="${inputDate(assignment.dueDate)}"></label><label>LOCAL PROGRESS<input class="aegis-input" name="localProgress" type="number" min="0" max="100" step="1" value="${assignment.localProgress ?? ""}" placeholder="0–100"></label><label>PRIORITY<select class="aegis-select" name="priority"><option value="">AUTO / DETERMINISTIC</option>${["URGENT", "HIGH", "NORMAL", "LOW"].map(priority => `<option${assignment.priority === priority ? " selected" : ""}>${priority}</option>`).join("")}</select></label><label class="stud-wide-label">DESCRIPTION<textarea class="aegis-input" name="description" maxlength="12000">${this.escape(assignment.description || "")}</textarea></label><button type="submit">SAVE LOCAL WORK</button></form>
             <section class="stud-academic-data"><small>ACADEMIC DATA · ONLY WHEN KNOWN</small><p>SUBMISSION ${this.escape(assignment.submissionStatus || "UNKNOWN")} · GRADE ${assignment.grade ?? "UNKNOWN"}${assignment.gradeMaximum !== null ? ` / ${assignment.gradeMaximum}` : ""} · WEIGHT ${assignment.weight ?? "UNKNOWN"}</p>${assignment.feedback ? `<p>${this.escape(assignment.feedback)}</p>` : ""}</section>
             ${resources.length ? `<section class="stud-object-section"><header><h3>RELATED RESOURCES</h3><span>${resources.length}</span></header><div>${resources.map(item => `<button type="button" data-stud-search-result="${this.escape(item.id)}" data-stud-search-type="RESOURCE"><strong>${this.escape(item.title)}</strong><small>${this.escape(item.type)}</small></button>`).join("")}</div></section>` : `<div class="stud-empty-inline">NO RELATED RESOURCES.</div>`}
+            <section class="stud-object-section stud-assignment-research"><header><h3>RESEARCH</h3><span>${papers.length} PAPERS</span></header>${papers.length ? `<div>${papers.map(item => `<button type="button" data-stud-paper-id="${this.escape(item.id)}"><strong>${this.escape(item.title)}</strong><small>${this.escape(item.year || "YEAR UNKNOWN")} · ${this.escape(item.doi || "DOI UNAVAILABLE")} · ${item.localDocumentReference ? "LOCAL PDF" : "NO LOCAL PDF"}</small></button>`).join("")}</div>` : `<p>NO PAPERS LINKED TO THIS ASSIGNMENT.</p>`}<div class="stud-detail-actions"><button type="button" data-stud-assignment-research="${this.escape(assignment.id)}">RESEARCH FOR ASSIGNMENT</button></div></section>
             <div class="stud-detail-actions"><button type="button" data-stud-dialog="CREATE_NOTE">ADD NOTE</button><button type="button" data-stud-dialog="ADD_RESOURCE">ADD RESOURCE</button><button type="button" data-stud-dialog="LINK_CALENDAR">LINK CALENDAR REFERENCE</button><button type="button" data-stud-dialog="LINK_EMAIL">LINK EMAIL REFERENCE</button></div>
             ${this.renderReferences("ASSIGNMENT", assignment.id, references)}${this.renderProvenanceSummary("ASSIGNMENT", assignment.id, provenance, ["dueDate", "title", "status"])}<section class="stud-relations"><small>RELATED CONTEXT · ${relationships.length}</small><p>${relationships.length ? "Bounded local relationships are available; no external item is fetched automatically." : "NO RELATED ACADEMIC OBJECTS HAVE BEEN LINKED."}</p></section>`;
     }
@@ -306,7 +315,8 @@ class StudCommandCenter {
     bind() {
         if (this.view.dataset.studPhase2Bound) return;
         this.view.dataset.studPhase2Bound = "true";
-        this.view.addEventListener("click", event => {
+        this.view.addEventListener("click", async event => {
+            if (await this.research.handleClick(event)) return;
             const nav = event.target.closest("[data-stud-nav-view]");
             const course = event.target.closest("[data-stud-open-course]");
             const assignment = event.target.closest("[data-stud-open-assignment]");
@@ -314,6 +324,7 @@ class StudCommandCenter {
             const dialog = event.target.closest("[data-stud-dialog]");
             const provenance = event.target.closest("[data-stud-provenance]");
             const unlink = event.target.closest("[data-stud-reference-unlink]");
+            const assignmentResearch = event.target.closest("[data-stud-assignment-research]");
             if (nav) this.setActiveView(nav.dataset.studNavView);
             else if (course) this.selectCourse(course.dataset.studOpenCourse);
             else if (assignment) this.selectAssignment(assignment.dataset.studOpenAssignment);
@@ -321,9 +332,10 @@ class StudCommandCenter {
             else if (dialog) this.openDialog(dialog.dataset.studDialog, dialog);
             else if (provenance) this.openProvenance(provenance.dataset.studProvenance, provenance);
             else if (unlink) this.unlinkReference(unlink);
+            else if (assignmentResearch) { this.research.state.assignmentId = assignmentResearch.dataset.studAssignmentResearch; this.setActiveView("RESEARCH"); }
             else if (event.target.closest("[data-stud-close-dialog]")) this.closeDialog();
         });
-        this.view.addEventListener("submit", event => this.handleForm(event));
+        this.view.addEventListener("submit", async event => { if (!await this.research.handleSubmit(event)) this.handleForm(event); });
         const dialog = this.view.querySelector("[data-stud-dialog-element]");
         dialog.addEventListener("close", () => { const target = this.state.dialogReturnFocus; this.state.dialogReturnFocus = null; if (target && document.contains(target)) target.focus(); });
     }
@@ -331,6 +343,8 @@ class StudCommandCenter {
     async openSearchResult(entityType, entityId) {
         if (entityType === "COURSE") return this.selectCourse(entityId, "MODULES");
         if (entityType === "ASSIGNMENT") return this.selectAssignment(entityId, "ASSIGNMENTS");
+        if (entityType === "RESEARCH_PAPER") { this.research.state.tab = "LIBRARY"; await this.research.selectPaper(entityId); return this.setActiveView("RESEARCH"); }
+        if (entityType === "NOTE") { this.research.state.selectedNoteId = entityId; return this.setActiveView("NOTES"); }
         this.showToast(this.view, `${entityType.replace(/_/g, " ")} IS AVAILABLE IN THE LOCAL ACADEMIC STORE`);
     }
 

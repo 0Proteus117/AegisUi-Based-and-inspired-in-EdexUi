@@ -1,5 +1,24 @@
 # Changelog
 
+## 2.6.3 - 2026-08-11
+
+### STUD Research & Academic Writing
+
+- Activated Research, Notes and Academic Services surfaces inside the existing
+  Student Command Center without creating a second academic database.
+- Added bounded explicit OpenAlex discovery, Crossref/DataCite DOI resolution
+  and Unpaywall legal-open-access lookup with typed failures and cancellation.
+- Added canonical paper deduplication, field provenance, Course/Assignment
+  relationships, offline FTS and an explicit managed-PDF workflow.
+- Added a local PDF.js viewer, Tiptap/ProseMirror structured notes, KaTeX math,
+  bounded PDF-selection provenance and Citation.js/CSL bibliography output.
+- Hardened the complete native PDF selector-to-managed-store contract so only
+  validated persistent document metadata crosses the strict IPC/store boundary.
+- Added optional read-only Zotero local-API interoperability, responsive
+  Dark/Light/System validation and 5,000-paper/5,000-note scale coverage.
+- Preserved HUB, ENG, OSINT, Calendar, Email references, Assistant, Map and
+  isolated GearLab behavior; no paid dependency or hidden research history was added.
+
 ## 2.6.2 - 2026-08-11
 
 ### STUD Student Command Center
