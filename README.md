@@ -68,7 +68,14 @@ the ephemeral session by default or sends case data to a provider.
   original-byte SHA-256. It does not upload the media, infer authenticity or
   silently persist the original. Image GPS can only hand off to Geospatial
   Verification after an explicit analyst action.
-- STUD v2.6.3 adds a serious local-first Research and Academic Writing desk to
+- STUD v2.6.4 adds an explicit, capability-driven and read-only Moodle
+  connection surface to the local-first Student Command Center. A sanctioned
+  institution-issued Moodle Web Service token is encrypted through macOS
+  secure storage; optional same-host ICS exports supply a constrained fallback
+  when REST is unavailable. Moodle never receives a university password from
+  AegisUi, and no Moodle action can submit work, modify a course, message,
+  grade, enrol, upload or mutate Calendar. v2.6.3 adds a serious local-first
+  Research and Academic Writing desk to
   the Student Command Center. Explicit OpenAlex/Crossref/DataCite/Unpaywall
   lookups normalize only selected papers into the canonical SQLite store;
   PDF.js, structured Tiptap/ProseMirror notes, KaTeX and Citation.js continue

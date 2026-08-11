@@ -24,7 +24,7 @@ source ID, authority and observed time. Multiple records for the same field are
 valid: corroborating and conflicting observations stay visible; STUD never
 resolves them automatically.
 
-Source types: `USER`, `MOODLE`, `CALENDAR`, `EMAIL`, `COURSE_DOCUMENT`,
+Source types: `USER`, `MOODLE`, `MOODLE_ICS`, `CALENDAR`, `EMAIL`, `COURSE_DOCUMENT`,
 `RESEARCH_PROVIDER`, `LOCAL_EXTRACTION`, `AI_SUGGESTION`, `IMPORT`, `UNKNOWN`.
 Authority is explicit: `AUTHORITATIVE`, `TRUSTED`, `CORROBORATING`, `INFERRED`,
 `SUGGESTED` or `UNKNOWN`.
@@ -44,6 +44,18 @@ title/description, Resource title, Paper title/abstract and Note title/content.
 Queries are tokenized locally, parameterized, bounded to 100 results and may
 filter by canonical entity types and Course ID. Credentials, hidden metadata,
 raw email content and filesystem paths are not indexed.
+
+## Moodle normalization
+
+Schema v4 adds a non-secret `stud_provider_instances` record for configured
+provider status, capability observations and sync timestamps. It deliberately
+does not include a token, password, cookie, ICS URL or raw provider response.
+Moodle course, assignment, resource and ICS identifiers use namespaced
+external identifiers while canonical STUD IDs remain stable. Moodle and ICS
+observations create field-level provenance records; an explicit `USER`
+observation remains the canonical value when it conflicts with a later
+provider observation. A missing remote object never triggers a destructive
+local deletion.
 
 ## Future economics metadata
 

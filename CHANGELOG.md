@@ -1,5 +1,24 @@
 # Changelog
 
+## 2.6.4 - 2026-08-11
+
+### STUD Moodle capability probe and read-only LMS integration
+
+- Added a generic, capability-driven LMS boundary with the first audited
+  `MoodleAdapter`; no Canvas, Blackboard or other LMS adapter was introduced.
+- Added explicit, read-only Moodle REST capability probing and bounded
+  canonical synchronization for courses, assignments, resources, grades,
+  feedback, completion observations and calendar observations.
+- Added macOS `safeStorage` credential handling for sanctioned Moodle tokens
+  and optional same-host ICS exports. University usernames/passwords, browser
+  cookies, raw provider payloads and tokens never enter SQLite, settings,
+  logs or Git.
+- Added a connected Moodle surface in STUD with real capability states,
+  `POLICY_DISABLED` write actions, REST → ICS → normal-browser fallbacks and
+  offline retention. Aegis Calendar is never mutated by the LMS adapter.
+- Preserved local-first STUD data ownership, explicit sync/cancellation,
+  field-level provenance and user-observation conflict preservation.
+
 ## 2.6.3 - 2026-08-11
 
 ### STUD Research & Academic Writing

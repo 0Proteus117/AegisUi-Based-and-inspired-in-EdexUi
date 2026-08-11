@@ -162,6 +162,13 @@ class StudAcademicStore {
             ALTER TABLE stud_notes ADD COLUMN document_json TEXT;
             CREATE INDEX stud_research_papers_doi_index ON stud_research_papers(doi);
             CREATE INDEX stud_notes_assignment_updated_index ON stud_notes(assignment_id, updated_at);
+        `}, {version: 4, sql: `
+            CREATE TABLE stud_provider_instances (
+                id TEXT PRIMARY KEY, provider_type TEXT NOT NULL, display_name TEXT NOT NULL, base_url TEXT NOT NULL,
+                status TEXT NOT NULL, capabilities_json TEXT NOT NULL, last_successful_sync TEXT, last_attempt TEXT,
+                last_error_code TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+            );
+            CREATE INDEX stud_provider_instances_type_index ON stud_provider_instances(provider_type, updated_at);
         `}];
         for (const migration of migrations) {
             if (applied.has(migration.version)) continue;
@@ -182,6 +189,117 @@ class StudAcademicStore {
         this.initialize();
         const row = this.db.prepare("SELECT MAX(version) AS version FROM stud_schema_migrations").get();
         return Object.freeze({version: row && row.version || 0, dbPathPolicy: "userData/stud/academic.sqlite", journalMode: "WAL"});
+    }
+
+    listProviderInstances(providerType = null) {
+        this.initialize();
+        const rows = providerType
+            ? this.db.prepare("SELECT * FROM stud_provider_instances WHERE provider_type = ? ORDER BY updated_at DESC").all(String(providerType).toUpperCase())
+            : this.db.prepare("SELECT * FROM stud_provider_instances ORDER BY updated_at DESC").all();
+        return Object.freeze(rows.map(row => Object.freeze({...rowToCamel(row), capabilities: Object.freeze(parseJson(row.capabilities_json, {}))})));
+    }
+
+    getProviderInstance(id) {
+        this.initialize();
+        const row = this.db.prepare("SELECT * FROM stud_provider_instances WHERE id = ?").get(Model.safeId(id, "Provider ID"));
+        return row ? Object.freeze({...rowToCamel(row), capabilities: Object.freeze(parseJson(row.capabilities_json, {}))}) : null;
+    }
+
+    saveProviderInstance(input = {}) {
+        this.initialize();
+        Model.assertAllowedKeys(input, ["id", "providerType", "displayName", "baseUrl", "status", "capabilities", "lastSuccessfulSync", "lastAttempt", "lastErrorCode"], "Provider instance");
+        const id = Model.safeId(input.id, "Provider ID");
+        const providerType = Model.requiredText(input.providerType, "Provider type", 64).toUpperCase();
+        const displayName = Model.requiredText(input.displayName, "Provider display name", 160);
+        const baseUrl = Model.requiredText(input.baseUrl, "Provider base URL", 1024);
+        const status = Model.requiredText(input.status, "Provider status", 64).toUpperCase();
+        const capabilities = input.capabilities && typeof input.capabilities === "object" && !Array.isArray(input.capabilities) ? input.capabilities : {};
+        const lastSuccessfulSync = input.lastSuccessfulSync || null;
+        const lastAttempt = input.lastAttempt || null;
+        const lastErrorCode = input.lastErrorCode || null;
+        const current = this.getProviderInstance(id);
+        const timestamp = Model.now();
+        this.db.prepare(`INSERT INTO stud_provider_instances (id,provider_type,display_name,base_url,status,capabilities_json,last_successful_sync,last_attempt,last_error_code,created_at,updated_at)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?)
+            ON CONFLICT(id) DO UPDATE SET provider_type=excluded.provider_type,display_name=excluded.display_name,base_url=excluded.base_url,status=excluded.status,capabilities_json=excluded.capabilities_json,last_successful_sync=excluded.last_successful_sync,last_attempt=excluded.last_attempt,last_error_code=excluded.last_error_code,updated_at=excluded.updated_at`)
+            .run(id, providerType, displayName, baseUrl, status, JSON.stringify(capabilities), lastSuccessfulSync, lastAttempt, lastErrorCode, current && current.createdAt || timestamp, timestamp);
+        return this.getProviderInstance(id);
+    }
+
+    providerFieldCanUpdate(entityType, entityId, field, currentValue) {
+        if (currentValue === null || currentValue === undefined || currentValue === "") return true;
+        const latest = this.db.prepare("SELECT source_type FROM stud_provenance_records WHERE entity_type=? AND entity_id=? AND field=? ORDER BY observed_at DESC, created_at DESC LIMIT 1").get(entityType, entityId, field);
+        return !latest || latest.source_type !== "USER";
+    }
+
+    recordProviderObservation(entityType, entityId, field, value, sourceType, sourceId, metadata = {}) {
+        const prior = this.db.prepare("SELECT observed_value, source_type, source_id FROM stud_provenance_records WHERE entity_type=? AND entity_id=? AND field=? ORDER BY observed_at DESC, created_at DESC LIMIT 1").get(entityType, entityId, field);
+        const observedValue = value === null || value === undefined ? null : String(value);
+        if (prior && prior.observed_value === observedValue && prior.source_type === sourceType && prior.source_id === sourceId) return;
+        this.createProvenance({entityType, entityId, field, observedValue, sourceType, sourceId, sourceAuthority: "AUTHORITATIVE", observedAt: Model.now(), metadata});
+    }
+
+    upsertProviderEntity(entityType, namespace, externalId, sourceType, sourceId, value, fieldNames, metadata = {}) {
+        const existingIdentifier = this.findByExternalIdentifier(namespace, externalId)[0];
+        let entity;
+        if (existingIdentifier) {
+            entity = this.getEntity(entityType, existingIdentifier.entityId, true);
+            if (!entity) throw new Model.StudError("NOT_FOUND", "Provider identifier points to a missing academic object.");
+            const updates = {};
+            fieldNames.forEach(field => { if (Object.prototype.hasOwnProperty.call(value, field) && this.providerFieldCanUpdate(entityType, entity.id, field, entity[field])) updates[field] = value[field]; });
+            if (Object.keys(updates).length) entity = this.updateEntity(entityType, entity.id, updates);
+        } else {
+            entity = this.createEntity(entityType, value);
+            this.createExternalIdentifier({entityType, entityId: entity.id, namespace, externalId, source: sourceType});
+        }
+        fieldNames.forEach(field => {
+            if (Object.prototype.hasOwnProperty.call(value, field)) this.recordProviderObservation(entityType, entity.id, field, value[field], sourceType, sourceId, metadata);
+        });
+        return entity;
+    }
+
+    syncMoodleObservations(provider, payload) {
+        this.initialize();
+        const providerId = Model.safeId(provider.id, "Provider ID");
+        const courses = Array.isArray(payload.courses) ? payload.courses : [];
+        const assignments = Array.isArray(payload.assignments) ? payload.assignments : [];
+        const resources = Array.isArray(payload.resources) ? payload.resources : [];
+        const completion = Array.isArray(payload.completion) ? payload.completion : [];
+        const sourceType = payload.sourceType === "MOODLE_ICS" ? "MOODLE_ICS" : "MOODLE";
+        const courseIds = new Map();
+        const assignmentIds = new Map();
+        const results = {courses: 0, assignments: 0, resources: 0, conflicts: 0};
+        courses.slice(0, 100).forEach(raw => {
+                const {moodleId, uid, ...courseInput} = raw;
+                const value = Model.normalizeByEntityType("COURSE", courseInput);
+                const external = String(moodleId || uid);
+                const entity = this.upsertProviderEntity("COURSE", `${sourceType}_COURSE:${providerId}`, external, sourceType, `course:${external}`, value, ["title", "shortName", "code", "description", "startDate", "endDate", "status"], {providerId, capability: "COURSES"});
+                courseIds.set(external, entity.id); results.courses += 1;
+        });
+        assignments.slice(0, 300).forEach(raw => {
+                const courseId = courseIds.get(String(raw.courseMoodleId || "")) || null;
+                const {moodleId, uid, courseMoodleId, url, ...assignmentInput} = raw;
+                const value = Model.normalizeByEntityType("ASSIGNMENT", {...assignmentInput, courseId});
+                const external = String(moodleId || uid);
+                const entity = this.upsertProviderEntity("ASSIGNMENT", `${sourceType}_ASSIGNMENT:${providerId}`, external, sourceType, `assignment:${external}`, value, ["title", "description", "releaseDate", "dueDate", "cutoffDate", "status", "submissionStatus", "submittedAt", "grade", "gradeMaximum", "weight", "feedback"], {providerId, capability: payload.sourceType === "MOODLE_ICS" ? "CALENDAR" : "ASSIGNMENTS"});
+                assignmentIds.set(external, entity.id); results.assignments += 1;
+        });
+        resources.slice(0, 1000).forEach(raw => {
+                const courseId = courseIds.get(String(raw.courseMoodleId || "")) || null;
+                const assignmentId = assignmentIds.get(String(raw.assignmentMoodleId || "")) || null;
+                const {moodleId, uid, courseMoodleId, assignmentMoodleId, moduleContext, ...resourceInput} = raw;
+                const value = Model.normalizeByEntityType("RESOURCE", {...resourceInput, courseId, assignmentId});
+                const external = String(moodleId || uid);
+                this.upsertProviderEntity("RESOURCE", `${sourceType}_RESOURCE:${providerId}`, external, sourceType, `resource:${external}`, value, ["type", "title", "url", "mimeType"], {providerId, capability: "RESOURCES"});
+                results.resources += 1;
+        });
+        completion.slice(0, 100).forEach(item => {
+            const courseId = courseIds.get(String(item.courseMoodleId || ""));
+            if (!courseId) return;
+            const summary = JSON.stringify(item.value || {}).slice(0, Model.LIMITS.content);
+            this.recordProviderObservation("COURSE", courseId, "moodleCompletion", summary, sourceType, `completion:${item.courseMoodleId}`, {providerId, capability: "COMPLETION"});
+        });
+        return Object.freeze(results);
     }
 
     transaction(work) {

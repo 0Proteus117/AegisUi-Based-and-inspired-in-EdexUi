@@ -1,6 +1,6 @@
 "use strict";
 
-const ACTIVE_VIEWS = Object.freeze(["OVERVIEW", "MODULES", "ASSIGNMENTS", "RESEARCH", "NOTES", "SERVICES"]);
+const ACTIVE_VIEWS = Object.freeze(["OVERVIEW", "MODULES", "ASSIGNMENTS", "RESEARCH", "NOTES", "SERVICES", "MOODLE"]);
 const FUTURE_VIEWS = Object.freeze([
     ["REVISION", "Explicit revision workflow", "FUTURE"],
     ["TOOLS", "Academic utilities and policy", "FUTURE"],
@@ -38,6 +38,7 @@ class StudCommandCenter {
         this.state = null;
         this.view = null;
         this.research = null;
+        this.moodle = null;
     }
 
     mount(view) {
@@ -53,6 +54,7 @@ class StudCommandCenter {
             schema: null, error: null, dialogReturnFocus: null
         };
         this.research = new StudResearchWorkspace({request: (channel, payload) => this.request(channel, payload), escape: value => this.escape(value), showToast: (target, message) => this.showToast(target, message), parent: this});
+        this.moodle = new StudMoodleWorkspace({request: (channel, payload) => this.request(channel, payload), escape: value => this.escape(value), showToast: (target, message) => this.showToast(target, message), parent: this});
         grid.innerHTML = `
             <section class="stud-command-header workspace-panel">
                 <div><small>STUD / LOCAL ACADEMIC CONTEXT</small><h2>STUDENT COMMAND CENTER</h2><p>Courses, assignments and local work context remain explicit, offline and provenance-aware.</p></div>
@@ -63,7 +65,7 @@ class StudCommandCenter {
             <main class="stud-command-main" data-stud-main></main>
             <dialog class="stud-dialog" data-stud-dialog-element aria-labelledby="stud_dialog_title"><header><h2 id="stud_dialog_title">STUD</h2><button type="button" data-stud-close-dialog aria-label="Close dialog">×</button></header><div data-stud-dialog-body></div></dialog>`;
         this.bind();
-        return Promise.all([this.research.initialize(), this.refresh()]).then(() => this.render());
+        return Promise.all([this.research.initialize(), this.moodle.initialize(), this.refresh()]).then(() => this.render());
     }
 
     async request(channel, payload = {}) {
@@ -153,7 +155,8 @@ class StudCommandCenter {
         else if (this.state.activeView === "ASSIGNMENTS") main.innerHTML = this.renderAssignments();
         else if (this.state.activeView === "RESEARCH") main.innerHTML = this.research.renderResearch();
         else if (this.state.activeView === "NOTES") main.innerHTML = this.research.renderNotes();
-        else main.innerHTML = this.research.renderServices();
+        else if (this.state.activeView === "MOODLE") main.innerHTML = this.moodle.render();
+        else main.innerHTML = this.renderServices();
         this.research.afterRender(this.state.activeView).catch(() => {});
     }
 
@@ -161,6 +164,11 @@ class StudCommandCenter {
         const nav = this.view.querySelector("[data-stud-nav]");
         if (!nav) return;
         nav.innerHTML = `${ACTIVE_VIEWS.map(view => `<button type="button" data-stud-nav-view="${view}"${this.state.activeView === view ? " aria-current=\"page\" class=\"active\"" : ""}>${view}</button>`).join("")}${FUTURE_VIEWS.map(([view, description, phase]) => `<span class="stud-nav-deferred" title="${this.escape(description)}"><strong>${view}</strong><small>${phase}</small></span>`).join("")}`;
+    }
+
+    renderServices() {
+        const services = this.research.renderServices();
+        return services.replace("</section>", `${this.moodle.renderServiceCard()}</section>`);
     }
 
     renderSearch() {
@@ -317,6 +325,7 @@ class StudCommandCenter {
         this.view.dataset.studPhase2Bound = "true";
         this.view.addEventListener("click", async event => {
             if (await this.research.handleClick(event)) return;
+            if (await this.moodle.handleClick(event)) return;
             const nav = event.target.closest("[data-stud-nav-view]");
             const course = event.target.closest("[data-stud-open-course]");
             const assignment = event.target.closest("[data-stud-open-assignment]");
@@ -335,7 +344,7 @@ class StudCommandCenter {
             else if (assignmentResearch) { this.research.state.assignmentId = assignmentResearch.dataset.studAssignmentResearch; this.setActiveView("RESEARCH"); }
             else if (event.target.closest("[data-stud-close-dialog]")) this.closeDialog();
         });
-        this.view.addEventListener("submit", async event => { if (!await this.research.handleSubmit(event)) this.handleForm(event); });
+        this.view.addEventListener("submit", async event => { if (await this.research.handleSubmit(event)) return; if (await this.moodle.handleSubmit(event)) return; this.handleForm(event); });
         const dialog = this.view.querySelector("[data-stud-dialog-element]");
         dialog.addEventListener("close", () => { const target = this.state.dialogReturnFocus; this.state.dialogReturnFocus = null; if (target && document.contains(target)) target.focus(); });
     }

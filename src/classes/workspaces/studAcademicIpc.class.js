@@ -4,6 +4,7 @@ const path = require("path");
 const Model = require("./studAcademicModel.class.js");
 const {StudAcademicStore} = require("./studAcademicStore.class.js");
 const {StudResearchRuntime} = require("./studResearchRuntime.class.js");
+const {StudLmsRuntime} = require("./studLmsRuntime.class.js");
 
 const CHANNELS = Object.freeze([
     "stud-core-status",
@@ -43,7 +44,14 @@ const CHANNELS = Object.freeze([
     "stud-citation-render",
     "stud-zotero-status",
     "stud-zotero-list",
-    "stud-zotero-import"
+    "stud-zotero-import",
+    "stud-moodle-status",
+    "stud-moodle-configure",
+    "stud-moodle-probe",
+    "stud-moodle-sync",
+    "stud-moodle-ics-sync",
+    "stud-moodle-cancel",
+    "stud-moodle-open-web"
 ]);
 
 function senderIsTrusted(event) {
@@ -81,6 +89,7 @@ function registerStudAcademicIpc(options = {}) {
     let dialog = options.dialog || null;
     if (!dialog) { try { dialog = require("electron").dialog; } catch (error) {} }
     const runtime = options.researchRuntime || new StudResearchRuntime({root: resolveStorageRoot(options.app, options), dialog, env: options.env || process.env, fetch: options.fetch});
+    const lmsRuntime = options.lmsRuntime || new StudLmsRuntime({store, root: resolveStorageRoot(options.app, options), fetch: options.fetch, safeStorage: options.safeStorage, shell: options.shell, allowLocalDevelopment: options.allowLocalDevelopment === true});
     const handlers = new Map();
     const add = (channel, keys, handler) => {
         if (handlers.has(channel)) throw new Error(`Duplicate STUD IPC channel: ${channel}`);
@@ -164,11 +173,22 @@ function registerStudAcademicIpc(options = {}) {
         try { store.createExternalIdentifier({entityType: "RESEARCH_PAPER", entityId: saved.paper.id, namespace: "ZOTERO", externalId: result.normalized.providerRecordId, source: "ZOTERO_LOCAL"}); } catch (error) { if (error.code !== "DUPLICATE_EXTERNAL_IDENTIFIER") throw error; }
         return saved;
     });
+    // Moodle is an explicitly configured, capability-driven provider. These
+    // channels never expose a secret back to the renderer or accept an endpoint,
+    // HTTP method or headers outside the adapter's fixed contract.
+    add("stud-moodle-status", [], () => lmsRuntime.status());
+    add("stud-moodle-configure", ["baseUrl", "displayName", "token", "icsUrl", "clearToken", "clearIcsUrl"], payload => lmsRuntime.configure(payload));
+    add("stud-moodle-probe", ["requestId"], payload => lmsRuntime.probe(payload));
+    add("stud-moodle-sync", ["requestId"], payload => lmsRuntime.sync(payload));
+    add("stud-moodle-ics-sync", ["requestId"], payload => lmsRuntime.syncIcs(payload));
+    add("stud-moodle-cancel", ["requestId"], payload => lmsRuntime.cancel(payload.requestId));
+    add("stud-moodle-open-web", [], () => lmsRuntime.openWeb());
 
     return Object.freeze({channels: CHANNELS, store, dispose: () => {
         if (typeof ipc.removeHandler === "function") handlers.forEach((_handler, channel) => ipc.removeHandler(channel));
         handlers.clear();
         runtime.dispose();
+        lmsRuntime.dispose();
         store.close();
     }});
 }
