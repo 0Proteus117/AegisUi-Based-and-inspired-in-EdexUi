@@ -6372,15 +6372,62 @@ button.eng-thread-row.active {
 .engineering-mode .stud-compute-plot { display: grid; justify-items: center; gap: .25vh; padding: .52vh; border: .08vh solid var(--aegis-border-subtle); background: var(--aegis-surface-muted); }.engineering-mode .stud-compute-plot svg { width: min(100%, 52vh); max-height: 29vh; background: var(--aegis-surface); }.engineering-mode .stud-compute-plot path { stroke: var(--aegis-border); fill: none; }.engineering-mode .stud-compute-plot polyline { stroke: var(--aegis-accent); stroke-width: 2; }.engineering-mode .stud-compute-plot text { fill: var(--aegis-text-muted); font: 10px var(--font_mono); text-anchor: middle; }.engineering-mode .stud-compute-plot strong { color: var(--aegis-text); font: .59vh var(--font_mono); overflow-wrap: anywhere; text-align: center; }
 .engineering-mode .stud-compute-policy p { margin: 0; color: var(--aegis-text-muted); font: .59vh var(--font_main_light); line-height: 1.45; overflow-wrap: anywhere; }.engineering-mode .stud-compute-capabilities { display: grid; grid-template-columns: repeat(auto-fit, minmax(16vh, 1fr)); gap: .4vh; margin-top: .55vh; }.engineering-mode .stud-compute-capabilities article { display: grid; gap: .15vh; min-width: 0; padding: .45vh; border-left: .14vh solid var(--aegis-warning); background: var(--aegis-surface-muted); }.engineering-mode .stud-compute-capabilities strong { color: var(--aegis-text); font: .56vh var(--font_mono); }.engineering-mode .stud-compute-capabilities span { color: var(--aegis-warning); font: .53vh var(--font_mono); }.engineering-mode .stud-compute-capabilities small { color: var(--aegis-text-faint); font: .47vh var(--font_mono); line-height: 1.35; overflow-wrap: anywhere; }
 
+/* STUD Phase 8 Document Intelligence. All dynamic extraction data stays in
+ * normal grid flow; page text has its own bounded scroll region and cannot
+ * push policy/capability panels outside the workspace at compact sizes. */
+.engineering-mode .stud-document-shell { display: grid; gap: .7vh; min-width: 0; }
+.engineering-mode .stud-document-intro { display: grid; grid-template-columns: minmax(0, 1fr) max-content; gap: 1vh; align-items: start; }
+.engineering-mode .stud-document-intro h2,.engineering-mode .stud-document-intro p { margin: 0; }
+.engineering-mode .stud-document-intro h2 { color: var(--aegis-text-primary); font: 1.05vh var(--font_mono); letter-spacing: .12vh; }
+.engineering-mode .stud-document-intro p { margin-top: .25vh; max-width: 100ch; color: var(--aegis-text-muted); font: .62vh/1.45 var(--font_main_light); overflow-wrap: anywhere; }
+.engineering-mode .stud-document-state { display: grid; justify-items: end; gap: .12vh; text-align: right; }
+.engineering-mode .stud-document-state small,.engineering-mode .stud-document-state span { color: var(--aegis-text-faint); font: .5vh var(--font_mono); letter-spacing: .08vh; }
+.engineering-mode .stud-document-state strong { color: var(--aegis-accent-soft); font: .66vh var(--font_mono); }
+.engineering-mode .stud-document-grid { display: grid; grid-template-columns: minmax(22vh, .42fr) minmax(0, 1.58fr); gap: .7vh; align-items: start; min-width: 0; }
+.engineering-mode .stud-document-list { display: grid; align-content: start; gap: .38vh; max-height: 70vh; overflow: auto; }
+.engineering-mode .stud-document-import-form { display: grid; gap: .34vh; min-width: 0; padding-bottom: .55vh; border-bottom: .08vh solid var(--aegis-border-subtle); }
+.engineering-mode .stud-document-import-form label { display: grid; gap: .16vh; min-width: 0; color: var(--aegis-text-faint); font: .48vh var(--font_mono); letter-spacing: .06vh; }
+.engineering-mode .stud-document-import-form .aegis-input { min-width: 0; width: 100%; box-sizing: border-box; }
+.engineering-mode .stud-document-import-form small { color: var(--aegis-text-faint); font: .48vh/1.35 var(--font_mono); overflow-wrap: anywhere; }
+.engineering-mode .stud-document-list > button:not(:first-child) { display: grid; gap: .15vh; min-width: 0; padding: .5vh; text-align: left; border-color: var(--aegis-border-subtle); background: var(--aegis-surface-muted); }
+.engineering-mode .stud-document-list > button.selected { border-color: var(--aegis-accent); background: var(--aegis-surface-selected); }
+.engineering-mode .stud-document-list strong,.engineering-mode .stud-document-list small { color: var(--aegis-text); font: .59vh/1.35 var(--font_mono); overflow-wrap: anywhere; }
+.engineering-mode .stud-document-list small { color: var(--aegis-text-muted); font-size: .51vh; }
+.engineering-mode .stud-document-detail { min-width: 0; }
+.engineering-mode .stud-document-empty,.engineering-mode .stud-document-heading,.engineering-mode .stud-document-content { display: grid; gap: .45vh; min-width: 0; }
+.engineering-mode .stud-document-empty { min-height: 25vh; align-content: center; justify-items: start; color: var(--aegis-text-muted); font: .64vh/1.5 var(--font_main_light); }
+.engineering-mode .stud-document-empty strong,.engineering-mode .stud-document-heading h3,.engineering-mode .stud-document-content h3 { margin: 0; color: var(--aegis-accent-soft); font: .72vh var(--font_mono); letter-spacing: .08vh; }
+.engineering-mode .stud-document-empty p,.engineering-mode .stud-document-content p { margin: 0; overflow-wrap: anywhere; }
+.engineering-mode .stud-document-heading { border-bottom: .08vh solid var(--aegis-border-subtle); padding-bottom: .55vh; }
+.engineering-mode .stud-document-heading small,.engineering-mode .stud-document-content header span { color: var(--aegis-text-faint); font: .5vh var(--font_mono); letter-spacing: .08vh; }
+.engineering-mode .stud-document-actions { display: flex; flex-wrap: wrap; gap: .35vh; }
+.engineering-mode .stud-document-metadata { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .4vh; margin: .6vh 0; }
+.engineering-mode .stud-document-metadata div { min-width: 0; padding: .46vh; border-left: .15vh solid var(--aegis-accent); background: var(--aegis-surface-muted); }
+.engineering-mode .stud-document-metadata dt { color: var(--aegis-text-faint); font: .5vh var(--font_mono); letter-spacing: .07vh; }
+.engineering-mode .stud-document-metadata dd { margin: .16vh 0 0; color: var(--aegis-text); font: .56vh/1.35 var(--font_mono); overflow-wrap: anywhere; }
+.engineering-mode .stud-document-content { margin-top: .58vh; padding-top: .55vh; border-top: .08vh solid var(--aegis-border-subtle); }
+.engineering-mode .stud-document-content > header { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .4vh; }
+.engineering-mode .stud-document-content pre { max-height: 26vh; margin: 0; padding: .55vh; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; border: .08vh solid var(--aegis-border-subtle); background: var(--aegis-code-surface, var(--aegis-surface-muted)); color: var(--aegis-text-primary); font: .57vh/1.45 var(--font_mono); }
+.engineering-mode .stud-document-chunks { display: grid; gap: .42vh; max-height: 43vh; overflow: auto; }
+.engineering-mode .stud-document-chunks article { display: grid; gap: .25vh; min-width: 0; padding: .52vh; border: .08vh solid var(--aegis-border-subtle); background: var(--aegis-surface-muted); }
+.engineering-mode .stud-document-chunks small { color: var(--aegis-text-faint); font: .5vh var(--font_mono); }.engineering-mode .stud-document-chunks p { color: var(--aegis-text); font: .6vh/1.45 var(--font_main_light); overflow-wrap: anywhere; }.engineering-mode .stud-document-chunks footer { display: flex; flex-wrap: wrap; gap: .35vh; }
+.engineering-mode .stud-document-content ul { display: grid; gap: .25vh; margin: 0; padding-left: 1.5vh; color: var(--aegis-text-muted); font: .57vh/1.35 var(--font_mono); overflow-wrap: anywhere; }
+.engineering-mode .stud-document-capabilities { display: grid; grid-template-columns: repeat(auto-fit, minmax(18vh, 1fr)); gap: .42vh; }
+.engineering-mode .stud-document-capabilities article { display: grid; gap: .15vh; min-width: 0; padding: .48vh; border-left: .15vh solid var(--aegis-warning); background: var(--aegis-surface-muted); }
+.engineering-mode .stud-document-capabilities article:first-child { border-left-color: var(--aegis-accent); }.engineering-mode .stud-document-capabilities strong { color: var(--aegis-text); font: .57vh var(--font_mono); }.engineering-mode .stud-document-capabilities span { color: var(--aegis-warning); font: .53vh var(--font_mono); }.engineering-mode .stud-document-capabilities small,.engineering-mode .stud-document-policy p { color: var(--aegis-text-faint); font: .5vh/1.35 var(--font_mono); overflow-wrap: anywhere; }.engineering-mode .stud-document-policy p { margin: .55vh 0 0; }
+.engineering-mode .stud-document-error { padding: .55vh; border-left: .16vh solid var(--aegis-warning); color: var(--aegis-warning); background: color-mix(in srgb, var(--aegis-warning) 8%, var(--aegis-surface)); font: .58vh/1.4 var(--font_mono); overflow-wrap: anywhere; }
+
 @media (max-width: 1450px) {
     .engineering-mode .stud-moodle-control-grid,.engineering-mode .stud-moodle-data-grid { grid-template-columns: minmax(0, 1fr); }
     .engineering-mode .stud-moodle-list { max-height: 28vh; }
     .engineering-mode .stud-compute-grid { grid-template-columns: minmax(0, 1fr); }
+    .engineering-mode .stud-document-grid { grid-template-columns: minmax(0, 1fr); }.engineering-mode .stud-document-list { max-height: 28vh; }
 }
 @media (max-width: 1230px) {
     .engineering-mode .stud-moodle-config-form,.engineering-mode .stud-moodle-status-grid,.engineering-mode .stud-moodle-mini-status { grid-template-columns: minmax(0, 1fr); }
     .engineering-mode .stud-moodle-config-form label:first-child,.engineering-mode .stud-moodle-config-form label:nth-child(3),.engineering-mode .stud-moodle-config-form label:nth-child(4),.engineering-mode .stud-moodle-config-form .stud-moodle-security-note,.engineering-mode .stud-moodle-config-form footer { grid-column: auto; }
     .engineering-mode .stud-compute-intro,.engineering-mode .stud-compute-save form { grid-template-columns: minmax(0, 1fr); }.engineering-mode .stud-compute-status { justify-items: start; text-align: left; }
+    .engineering-mode .stud-document-intro,.engineering-mode .stud-document-metadata { grid-template-columns: minmax(0, 1fr); }.engineering-mode .stud-document-state { justify-items: start; text-align: left; }
 }
 
 @media (max-width: 1450px) {

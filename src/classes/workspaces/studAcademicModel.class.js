@@ -2,10 +2,10 @@
 
 const crypto = require("crypto");
 
-const SCHEMA_VERSION = 8;
-const ENTITY_TYPES = Object.freeze(["COURSE", "ASSIGNMENT", "RESOURCE", "RESEARCH_PAPER", "NOTE", "REVISION_ITEM", "COMPUTE_RESULT"]);
+const SCHEMA_VERSION = 9;
+const ENTITY_TYPES = Object.freeze(["COURSE", "ASSIGNMENT", "RESOURCE", "RESEARCH_PAPER", "NOTE", "REVISION_ITEM", "COMPUTE_RESULT", "ACADEMIC_DOCUMENT"]);
 const RELATIONSHIP_ENTITY_TYPES = Object.freeze([...ENTITY_TYPES, "EXTERNAL_IDENTIFIER"]);
-const RELATIONSHIP_TYPES = Object.freeze(["BELONGS_TO", "RELATES_TO", "SUPPORTS", "USES", "REFERENCES", "HAS_RESOURCE", "HAS_NOTE", "HAS_PAPER", "CITES", "RELATED_EMAIL", "RELATED_CALENDAR_EVENT"]);
+const RELATIONSHIP_TYPES = Object.freeze(["BELONGS_TO", "RELATES_TO", "SUPPORTS", "USES", "REFERENCES", "HAS_RESOURCE", "HAS_NOTE", "HAS_PAPER", "HAS_DOCUMENT", "CITES", "DERIVED_FROM_DOCUMENT", "RELATED_EMAIL", "RELATED_CALENDAR_EVENT"]);
 const PROVENANCE_SOURCE_TYPES = Object.freeze(["USER", "MOODLE", "MOODLE_ICS", "CALENDAR", "EMAIL", "COURSE_DOCUMENT", "RESEARCH_PROVIDER", "LOCAL_EXTRACTION", "AEGIS_ENGINEERING_COMPUTE", "AI_SUGGESTION", "IMPORT", "UNKNOWN"]);
 const PROVENANCE_AUTHORITIES = Object.freeze(["AUTHORITATIVE", "USER_OVERRIDE", "TRUSTED", "CORROBORATING", "INFERRED", "SUGGESTED", "UNKNOWN"]);
 const COST_MODELS = Object.freeze(["FREE_OPEN", "FREE_LOCAL", "FREE_SERVICE", "FREEMIUM", "PAID", "SUBSCRIPTION"]);
@@ -16,6 +16,8 @@ const PRIORITY_LEVELS = Object.freeze(["URGENT", "HIGH", "NORMAL", "LOW"]);
 const REVISION_STATUSES = Object.freeze(["ACTIVE", "PAUSED", "COMPLETED", "ARCHIVED"]);
 const REVISION_DIFFICULTIES = Object.freeze(["UNKNOWN", "LOW", "MEDIUM", "HIGH"]);
 const REVISION_CONFIDENCE = Object.freeze(["UNKNOWN", "LOW", "MEDIUM", "HIGH"]);
+const DOCUMENT_TYPES = Object.freeze(["UNKNOWN", "ARTICLE", "BOOK", "BOOK_CHAPTER", "THESIS", "REPORT", "COURSE_MATERIAL", "LECTURE_SLIDES", "LEGAL_MATERIAL", "CASE_LAW", "POLICY", "DATASET_DOCUMENTATION", "TECHNICAL_STANDARD", "OTHER"]);
+const DOCUMENT_EXTRACTION_STATUSES = Object.freeze(["NOT_ANALYZED", "READY", "PARTIAL", "NO_TEXT", "OCR_REQUIRED", "ENCRYPTED", "CANCELLED", "FAILED"]);
 const LIMITS = Object.freeze({
     title: 240,
     code: 80,
@@ -267,6 +269,30 @@ function normalizeComputeResult(input = {}, existing = {}) {
     };
 }
 
+function normalizeAcademicDocument(input = {}, existing = {}) {
+    assertAllowedKeys(input, ["title", "documentType", "displayName", "managedReference", "mimeType", "byteSize", "checksum", "pageCount", "extractionStatus", "extractionEngine", "extractionVersion", "courseId", "assignmentId", "sourcePaperId"], "Academic document");
+    const byteSize = input.byteSize === undefined ? existing.byteSize ?? null : optionalNonNegativeInteger(input.byteSize, "Document byte size", 50 * 1024 * 1024);
+    const pageCount = input.pageCount === undefined ? existing.pageCount ?? null : optionalNonNegativeInteger(input.pageCount, "Document page count", 10000);
+    const checksum = input.checksum === undefined ? existing.checksum || null : optionalText(input.checksum, "Document checksum", 128);
+    if (checksum && !/^[a-f0-9]{64}$/i.test(checksum)) throw new StudError("INVALID_INPUT", "Document checksum must be a SHA-256 value.");
+    return {
+        title: input.title === undefined ? existing.title : requiredText(input.title, "Document title"),
+        documentType: input.documentType === undefined ? existing.documentType || "UNKNOWN" : enumValue(input.documentType, DOCUMENT_TYPES, "Document type", "UNKNOWN"),
+        displayName: input.displayName === undefined ? existing.displayName || null : optionalText(input.displayName, "Document display name", LIMITS.title),
+        managedReference: input.managedReference === undefined ? existing.managedReference || null : optionalText(input.managedReference, "Managed document reference", 260),
+        mimeType: input.mimeType === undefined ? existing.mimeType || null : optionalText(input.mimeType, "Document MIME type", 120),
+        byteSize,
+        checksum: checksum ? checksum.toLowerCase() : null,
+        pageCount,
+        extractionStatus: input.extractionStatus === undefined ? existing.extractionStatus || "NOT_ANALYZED" : enumValue(input.extractionStatus, DOCUMENT_EXTRACTION_STATUSES, "Document extraction status", "NOT_ANALYZED"),
+        extractionEngine: input.extractionEngine === undefined ? existing.extractionEngine || null : optionalText(input.extractionEngine, "Document extraction engine", 120),
+        extractionVersion: input.extractionVersion === undefined ? existing.extractionVersion || null : optionalText(input.extractionVersion, "Document extraction version", 120),
+        courseId: input.courseId === undefined ? existing.courseId || null : (input.courseId ? safeId(input.courseId, "Course ID") : null),
+        assignmentId: input.assignmentId === undefined ? existing.assignmentId || null : (input.assignmentId ? safeId(input.assignmentId, "Assignment ID") : null),
+        sourcePaperId: input.sourcePaperId === undefined ? existing.sourcePaperId || null : (input.sourcePaperId ? safeId(input.sourcePaperId, "Research paper ID") : null)
+    };
+}
+
 function normalizeByEntityType(type, input, existing) {
     switch (validateEntityType(type)) {
     case "COURSE": return normalizeCourse(input, existing);
@@ -276,6 +302,7 @@ function normalizeByEntityType(type, input, existing) {
     case "NOTE": return normalizeNote(input, existing);
     case "REVISION_ITEM": return normalizeRevisionItem(input, existing);
     case "COMPUTE_RESULT": return normalizeComputeResult(input, existing);
+    case "ACADEMIC_DOCUMENT": return normalizeAcademicDocument(input, existing);
     default: throw new StudError("INVALID_INPUT", "Unsupported academic entity type.");
     }
 }
@@ -319,9 +346,9 @@ function normalizedSearchTerms(query) {
 
 module.exports = Object.freeze({
     SCHEMA_VERSION, ENTITY_TYPES, RELATIONSHIP_ENTITY_TYPES, RELATIONSHIP_TYPES, PROVENANCE_SOURCE_TYPES,
-    PROVENANCE_AUTHORITIES, COST_MODELS, COURSE_STATUSES, ASSIGNMENT_STATUSES,
+    PROVENANCE_AUTHORITIES, COST_MODELS, COURSE_STATUSES, ASSIGNMENT_STATUSES, DOCUMENT_TYPES, DOCUMENT_EXTRACTION_STATUSES,
     SUBMISSION_STATUSES, PRIORITY_LEVELS, REVISION_STATUSES, REVISION_DIFFICULTIES, REVISION_CONFIDENCE, LIMITS, StudError, now, bytesOf, assertPlainObject,
     assertAllowedKeys, requiredText, optionalText, optionalNumber, optionalProgress, optionalNonNegativeInteger, optionalDate, enumValue,
-    safeId, createId, validateEntityType, validateRelationshipEntityType, normalizeByEntityType, normalizeComputeResult,
+    safeId, createId, validateEntityType, validateRelationshipEntityType, normalizeByEntityType, normalizeComputeResult, normalizeAcademicDocument,
     normalizeProvenance, normalizeRelationship, normalizedSearchTerms
 });

@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.6.8 - 2026-08-11
+
+### STUD — Document Intelligence
+- Added the generic, discipline-neutral `AcademicDocument` model with local PDF provenance, extraction state and explicit Course, Assignment, ResearchPaper and Resource context.
+- Added local PDF.js page/chunk extraction, bounded local document search and direct identifier observations without cloud parsing or fabricated structure.
+- Added explicit note and revision-item promotion from normalized document chunks.
+- Added honest optional-engine capability states for Docling, GROBID and OCR; none are bundled or called by default.
+- Added the STUD DOCUMENTS workbench with offline-first ingestion, extraction and page-level context.
+
 ## 2.6.7 - 2026-08-11
 
 ### STUD Phase 7 — Engineering Compute / Local STEM Workbench
