@@ -2,10 +2,10 @@
 
 ## Canonical objects
 
-| Object | Phase 1 role |
+| Object | Canonical role |
 | --- | --- |
 | Course | Local module/course context, dates and status. |
-| Assignment | First-class convergence object; course, deadlines, submission and local progress remain optional. |
+| Assignment | First-class convergence object; course, deadlines, submission, explicit 0–100 local progress and optional manual priority remain local/optional. |
 | Resource | Bounded title/type/URL or safe local reference metadata; no file ingestion. |
 | ResearchPaper | Local bibliographic shell; no research-provider request. |
 | Note | Lightweight title/content placeholder for a future rich editor. |
@@ -21,7 +21,7 @@ of casually deleting related academic history.
 `stud_provenance_records` describes an observed value independently of a
 canonical object value. It records entity, field, observed value, source type,
 source ID, authority and observed time. Multiple records for the same field are
-valid: corroborating and conflicting observations stay visible; Phase 1 never
+valid: corroborating and conflicting observations stay visible; STUD never
 resolves them automatically.
 
 Source types: `USER`, `MOODLE`, `CALENDAR`, `EMAIL`, `COURSE_DOCUMENT`,
@@ -31,7 +31,7 @@ Authority is explicit: `AUTHORITATIVE`, `TRUSTED`, `CORROBORATING`, `INFERRED`,
 
 ## Relationships
 
-Relationships are normalized and require valid endpoints. Phase 1 supports
+Relationships are normalized and require valid endpoints. STUD supports
 `BELONGS_TO`, `RELATES_TO`, `SUPPORTS`, `USES`, `REFERENCES`, `HAS_RESOURCE`,
 `HAS_NOTE`, `HAS_PAPER`, `RELATED_EMAIL` and `RELATED_CALENDAR_EVENT`.
 Calendar and Email references target an ExternalIdentifier, not duplicated
@@ -50,3 +50,11 @@ raw email content and filesystem paths are not indexed.
 The model reserves provider economics without creating a provider catalog:
 `FREE_OPEN`, `FREE_LOCAL`, `FREE_SERVICE`, `FREEMIUM`, `PAID`, `SUBSCRIPTION`.
 Core STUD workflows require none of them.
+
+## Command Center derivations
+
+Schema v2 stores an optional Assignment priority (`URGENT`, `HIGH`, `NORMAL`,
+`LOW`). When absent, Overview presents a deterministic deadline-based priority;
+it does not write an inferred value back to the record. `localProgress` is
+validated as a number from 0 to 100 and is never derived from completion,
+grade or timeline activity.

@@ -2,7 +2,7 @@
 
 const crypto = require("crypto");
 
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 const ENTITY_TYPES = Object.freeze(["COURSE", "ASSIGNMENT", "RESOURCE", "RESEARCH_PAPER", "NOTE", "REVISION_ITEM"]);
 const RELATIONSHIP_ENTITY_TYPES = Object.freeze([...ENTITY_TYPES, "EXTERNAL_IDENTIFIER"]);
 const RELATIONSHIP_TYPES = Object.freeze(["BELONGS_TO", "RELATES_TO", "SUPPORTS", "USES", "REFERENCES", "HAS_RESOURCE", "HAS_NOTE", "HAS_PAPER", "RELATED_EMAIL", "RELATED_CALENDAR_EVENT"]);
@@ -12,6 +12,7 @@ const COST_MODELS = Object.freeze(["FREE_OPEN", "FREE_LOCAL", "FREE_SERVICE", "F
 const COURSE_STATUSES = Object.freeze(["ACTIVE", "COMPLETED", "ARCHIVED"]);
 const ASSIGNMENT_STATUSES = Object.freeze(["NOT_STARTED", "IN_PROGRESS", "SUBMITTED", "GRADED", "ARCHIVED"]);
 const SUBMISSION_STATUSES = Object.freeze(["UNKNOWN", "NOT_SUBMITTED", "SUBMITTED"]);
+const PRIORITY_LEVELS = Object.freeze(["URGENT", "HIGH", "NORMAL", "LOW"]);
 const LIMITS = Object.freeze({
     title: 240,
     code: 80,
@@ -73,6 +74,13 @@ function optionalNumber(value, label) {
     return number;
 }
 
+function optionalProgress(value) {
+    const progress = optionalNumber(value, "Local progress");
+    if (progress === null) return null;
+    if (progress < 0 || progress > 100) throw new StudError("INVALID_INPUT", "Local progress must be between 0 and 100.");
+    return progress;
+}
+
 function optionalDate(value, label) {
     if (value === undefined || value === null || value === "") return null;
     const date = new Date(value);
@@ -117,7 +125,7 @@ function normalizeCourse(input = {}, existing = {}) {
 }
 
 function normalizeAssignment(input = {}, existing = {}) {
-    assertAllowedKeys(input, ["courseId", "title", "description", "releaseDate", "dueDate", "cutoffDate", "status", "submissionStatus", "submittedAt", "grade", "gradeMaximum", "weight", "feedback", "localProgress"], "Assignment");
+    assertAllowedKeys(input, ["courseId", "title", "description", "releaseDate", "dueDate", "cutoffDate", "status", "submissionStatus", "submittedAt", "grade", "gradeMaximum", "weight", "feedback", "localProgress", "priority"], "Assignment");
     const result = {
         courseId: input.courseId === undefined ? existing.courseId || null : (input.courseId ? safeId(input.courseId, "Course ID") : null),
         title: input.title === undefined ? existing.title : requiredText(input.title, "Assignment title"),
@@ -132,7 +140,8 @@ function normalizeAssignment(input = {}, existing = {}) {
         gradeMaximum: input.gradeMaximum === undefined ? existing.gradeMaximum ?? null : optionalNumber(input.gradeMaximum, "Maximum grade"),
         weight: input.weight === undefined ? existing.weight ?? null : optionalNumber(input.weight, "Assignment weight"),
         feedback: input.feedback === undefined ? existing.feedback || null : optionalText(input.feedback, "Assignment feedback"),
-        localProgress: input.localProgress === undefined ? existing.localProgress || null : optionalText(input.localProgress, "Local progress", 120)
+        localProgress: input.localProgress === undefined ? existing.localProgress ?? null : optionalProgress(input.localProgress),
+        priority: input.priority === undefined ? existing.priority || null : enumValue(input.priority, PRIORITY_LEVELS, "Assignment priority")
     };
     if (result.grade !== null && result.gradeMaximum !== null && result.grade > result.gradeMaximum) throw new StudError("INVALID_INPUT", "Grade cannot exceed maximum grade.");
     return result;
@@ -236,8 +245,8 @@ function normalizedSearchTerms(query) {
 module.exports = Object.freeze({
     SCHEMA_VERSION, ENTITY_TYPES, RELATIONSHIP_ENTITY_TYPES, RELATIONSHIP_TYPES, PROVENANCE_SOURCE_TYPES,
     PROVENANCE_AUTHORITIES, COST_MODELS, COURSE_STATUSES, ASSIGNMENT_STATUSES,
-    SUBMISSION_STATUSES, LIMITS, StudError, now, bytesOf, assertPlainObject,
-    assertAllowedKeys, requiredText, optionalText, optionalDate, enumValue,
+    SUBMISSION_STATUSES, PRIORITY_LEVELS, LIMITS, StudError, now, bytesOf, assertPlainObject,
+    assertAllowedKeys, requiredText, optionalText, optionalNumber, optionalProgress, optionalDate, enumValue,
     safeId, createId, validateEntityType, validateRelationshipEntityType, normalizeByEntityType,
     normalizeProvenance, normalizeRelationship, normalizedSearchTerms
 });

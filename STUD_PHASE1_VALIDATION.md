@@ -1,4 +1,8 @@
-# STUD Phase 1 validation
+# STUD Phase 1 validation (preserved baseline)
+
+Phase 2 retains the SQLite/IPC/FTS contract and advances its schema to v2 for
+explicit Assignment priority. Phase 2 UI validation is recorded separately in
+`STUD_PHASE2_VALIDATION.md`.
 
 ## Repository audit
 

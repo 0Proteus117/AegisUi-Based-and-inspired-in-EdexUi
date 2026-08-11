@@ -32,7 +32,7 @@ async function run() {
 try {
     const store = new StudAcademicStore({root: tempRoot, applicationVersion: "phase1-test"});
     const schema = store.schemaInfo();
-    check("DATABASE_INITIALIZATION", schema.version === 1 && schema.journalMode === "WAL");
+    check("DATABASE_INITIALIZATION", schema.version === Model.SCHEMA_VERSION && schema.journalMode === "WAL");
     check("DATABASE_PATH_POLICY", !schema.dbPathPolicy.includes("repo") && schema.dbPathPolicy === "userData/stud/academic.sqlite");
 
     const course = store.createEntity("COURSE", {title: "Synthetic Applied Mechanics", code: "MECH-101", description: "Local-only synthetic academic record."}, {

@@ -1,4 +1,4 @@
-# STUD academic core
+# STUD academic core and Command Center
 
 STUD is AegisUi's canonical, local-first academic context. It owns academic
 objects and their provenance; it does not own Moodle, Calendar, Email, Zotero
@@ -25,9 +25,11 @@ systems. Phase 1 stores Course, Assignment, Resource, ResearchPaper, Note and
 RevisionItem records. External identifiers remain separate, so a future Moodle
 ID, ICS UID, DOI or Zotero key never becomes a primary key.
 
-The compact STUD surface is a validation harness, not a replacement Student
-Command Center. It creates/selects/edits Courses and Assignments, creates and
-links local Notes/Resources, shows field provenance and queries FTS5.
+Phase 2 introduces the Student Command Center without adding a second storage
+model. Overview, Modules and Assignments are renderer views over the same
+SQLite records and typed IPC boundary. It creates/selects/edits Courses and
+Assignments, creates and links local Notes/Resources, shows field provenance
+and queries FTS5. Calendar and Email remain opaque explicit identifiers.
 
 ## Boundaries
 
@@ -38,5 +40,6 @@ There is no Moodle, provider, research API, file ingestion, PDF viewer, rich
 editor, FSRS scheduler, AI/RAG or network dependency in Phase 1.
 
 Detailed model, provenance, relationships and search behavior are in
-[STUD_DATA_MODEL.md](STUD_DATA_MODEL.md) and validation evidence is in
-[STUD_PHASE1_VALIDATION.md](STUD_PHASE1_VALIDATION.md).
+[STUD_DATA_MODEL.md](STUD_DATA_MODEL.md), [STUD_COMMAND_CENTER.md](STUD_COMMAND_CENTER.md)
+and validation evidence are in [STUD_PHASE1_VALIDATION.md](STUD_PHASE1_VALIDATION.md)
+and [STUD_PHASE2_VALIDATION.md](STUD_PHASE2_VALIDATION.md).

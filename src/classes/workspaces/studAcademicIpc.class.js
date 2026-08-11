@@ -17,7 +17,12 @@ const CHANNELS = Object.freeze([
     "stud-provenance-list",
     "stud-relationship-create",
     "stud-relationship-list",
-    "stud-search"
+    "stud-search",
+    "stud-command-center",
+    "stud-course-context",
+    "stud-reference-list",
+    "stud-reference-link",
+    "stud-reference-unlink"
 ]);
 
 function senderIsTrusted(event) {
@@ -66,7 +71,7 @@ function registerStudAcademicIpc(options = {}) {
     };
 
     add("stud-core-status", [], () => store.schemaInfo());
-    add("stud-entity-list", ["entityType", "courseId", "limit", "includeArchived"], payload => store.listEntities(payload.entityType, payload));
+    add("stud-entity-list", ["entityType", "courseId", "assignmentId", "limit", "includeArchived"], payload => store.listEntities(payload.entityType, payload));
     add("stud-entity-read", ["entityType", "entityId", "includeArchived"], payload => store.getEntity(payload.entityType, payload.entityId, payload.includeArchived === true));
     add("stud-entity-create", ["entityType", "value", "provenance"], payload => store.createEntity(payload.entityType, payload.value, {provenance: payload.provenance || null}));
     add("stud-entity-update", ["entityType", "entityId", "value"], payload => store.updateEntity(payload.entityType, payload.entityId, payload.value));
@@ -81,6 +86,11 @@ function registerStudAcademicIpc(options = {}) {
     add("stud-relationship-create", ["fromType", "fromId", "relationType", "toType", "toId", "source"], payload => store.createRelationship(payload));
     add("stud-relationship-list", ["entityType", "entityId"], payload => store.listRelationships(payload.entityType, payload.entityId));
     add("stud-search", ["query", "options"], payload => store.search(payload.query, payload.options || {}));
+    add("stud-command-center", ["now", "limit"], payload => store.getCommandCenter(payload));
+    add("stud-course-context", ["courseId", "limit"], payload => store.getCourseContext(payload.courseId, {limit: payload.limit}));
+    add("stud-reference-list", ["entityType", "entityId"], payload => store.listReferences(payload.entityType, payload.entityId));
+    add("stud-reference-link", ["entityType", "entityId", "kind", "externalId"], payload => store.linkReference(payload));
+    add("stud-reference-unlink", ["entityType", "entityId", "identifierId", "confirmation"], payload => store.unlinkReference(payload));
 
     return Object.freeze({channels: CHANNELS, store, dispose: () => {
         if (typeof ipc.removeHandler === "function") handlers.forEach((_handler, channel) => ipc.removeHandler(channel));

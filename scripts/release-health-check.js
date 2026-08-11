@@ -95,8 +95,12 @@ function main() {
         && exists("src/classes/workspaces/studAcademicIpc.class.js")
         && exists("scripts/test-stud-academic-core.js")
         && exists("scripts/test-stud-workspace.js")
+        && exists("scripts/test-stud-command-center.js")
+        && exists("src/classes/workspaces/studCommandCenter.class.js")
         && exists("STUD_ARCHITECTURE.md")
-        && exists("STUD_PHASE1_VALIDATION.md");
+        && exists("STUD_PHASE1_VALIDATION.md")
+        && exists("STUD_COMMAND_CENTER.md")
+        && exists("STUD_PHASE2_VALIDATION.md");
     const osintFoundation = exists("src/classes/workspaces/osintTools.registry.js")
         && exists("src/classes/workspaces/osintProviderSchema.class.js")
         && exists("src/classes/workspaces/osintProviderPolicy.class.js")
