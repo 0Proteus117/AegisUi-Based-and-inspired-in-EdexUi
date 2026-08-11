@@ -1,5 +1,19 @@
 # Changelog
 
+## 2.6.1 - 2026-08-11
+
+### STUD Academic Core & Provenance
+
+- Replaced the STUD foundation placeholder with a local-first canonical
+  academic store for Courses, Assignments, Resources, Papers, Notes, Revision
+  Items, External Identifiers, relationships and field-level provenance.
+- Added main-process SQLite FTS5 storage with transactional schema migration,
+  stable local IDs, archive semantics, bounded search and offline operation.
+- Added a restrained STUD validation harness for Course/Assignment CRUD,
+  local Note/Resource linking, provenance inspection and academic search.
+- Kept Moodle, research providers, PDF.js, Calendar mutation, Email sync,
+  rich editing, revision scheduling and AI/RAG explicitly out of scope.
+
 ## 2.6.0 - 2026-08-09
 
 ### OSINT Analyst Desk Milestone

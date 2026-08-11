@@ -2560,6 +2560,290 @@ button.eng-thread-row.active {
     overflow: auto;
 }
 
+/* STUD Phase 1 uses the same compact cockpit language but keeps dynamic
+ * academic content in normal grid flow; no data panel relies on fixed pixels. */
+.engineering-mode .stud-academic-deck .workspace-quickbar {
+    display: none;
+}
+
+.engineering-mode .stud-academic-deck {
+    grid-template-rows: 8.8vh minmax(0, 1fr);
+}
+
+.engineering-mode .stud-academic-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr) minmax(0, .9fr);
+    /* Every row is content-sized. Fixed fractional tracks caused longer
+       academic forms to overlap the following panel at compact heights. */
+    grid-template-rows: repeat(3, max-content);
+    grid-template-areas:
+        "header header header"
+        "courses assignments detail"
+        "search search references";
+    align-content: start;
+    overflow-y: auto;
+}
+
+.engineering-mode .stud-core-header { grid-area: header; }
+.engineering-mode .stud-course-panel { grid-area: courses; }
+.engineering-mode .stud-assignment-panel { grid-area: assignments; }
+.engineering-mode .stud-detail-panel { grid-area: detail; }
+.engineering-mode .stud-search-panel { grid-area: search; }
+.engineering-mode .stud-reference-panel { grid-area: references; }
+
+.engineering-mode .stud-core-header {
+    min-width: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(17vh, .3fr);
+    align-items: stretch;
+    gap: 1.2vh;
+    padding: 1vh 1.2vh;
+    align-self: start;
+    min-height: min-content;
+    overflow: visible;
+}
+
+.engineering-mode .stud-core-header > div:first-child { min-width: 0; }
+.engineering-mode .stud-core-header small,
+.engineering-mode .stud-detail-title small,
+.engineering-mode .stud-provenance small,
+.engineering-mode .stud-relations small,
+.engineering-mode .stud-reference-grid small {
+    color: rgba(124, 203, 255, .5);
+    font: .62vh var(--font_mono);
+    letter-spacing: .13vh;
+}
+
+.engineering-mode .stud-core-header h2 {
+    margin: .28vh 0;
+    color: #d8f1ff;
+    font: 1.45vh var(--font_main);
+    letter-spacing: .08vh;
+}
+
+.engineering-mode .stud-core-header p,
+.engineering-mode .stud-relations p,
+.engineering-mode .stud-reference-grid p {
+    margin: 0;
+    color: rgba(216, 241, 255, .62);
+    font: .74vh var(--font_main_light);
+    line-height: 1.42;
+}
+
+.engineering-mode .stud-core-status {
+    display: grid;
+    align-content: center;
+    justify-items: end;
+    gap: .28vh;
+    text-align: right;
+}
+
+.engineering-mode .stud-core-status strong {
+    color: #7CFFB2;
+    font: .95vh var(--font_main);
+}
+
+.engineering-mode .stud-core-status span {
+    color: rgba(124, 203, 255, .58);
+    font: .62vh var(--font_mono);
+}
+
+.engineering-mode .stud-course-panel .workspace-panel-content,
+.engineering-mode .stud-assignment-panel .workspace-panel-content,
+.engineering-mode .stud-detail-panel .workspace-panel-content,
+.engineering-mode .stud-search-panel .workspace-panel-content,
+.engineering-mode .stud-reference-panel .workspace-panel-content {
+    /* Generic workspace panels position their bodies absolutely because most
+       dashboards have fixed visual slots. STUD forms and lists are dynamic:
+       participate in grid flow so no controls can paint past their panel. */
+    position: relative;
+    inset: auto;
+    min-height: min-content;
+    display: grid;
+    align-content: start;
+    gap: .72vh;
+    overflow: visible;
+}
+
+.engineering-mode .stud-course-panel,
+.engineering-mode .stud-assignment-panel,
+.engineering-mode .stud-detail-panel,
+.engineering-mode .stud-search-panel,
+.engineering-mode .stud-reference-panel {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    align-self: start;
+    min-height: min-content;
+    overflow: visible;
+}
+
+.engineering-mode .stud-form {
+    display: grid;
+    gap: .52vh;
+    padding: .65vh;
+    border: .08vh solid rgba(36, 68, 95, .62);
+    background: rgba(4, 10, 16, .34);
+}
+
+.engineering-mode .stud-form label {
+    min-width: 0;
+    display: grid;
+    gap: .23vh;
+    color: rgba(124, 203, 255, .58);
+    font: .57vh var(--font_mono);
+    letter-spacing: .08vh;
+}
+
+.engineering-mode .stud-form .aegis-input,
+.engineering-mode .stud-form .aegis-select,
+.engineering-mode .stud-search-form .aegis-input,
+.engineering-mode .stud-search-form .aegis-select {
+    width: 100%;
+    min-width: 0;
+    min-height: 2.35vh;
+    box-sizing: border-box;
+    border: .08vh solid rgba(48, 116, 161, .72);
+    color: #d8f1ff;
+    background: rgba(2, 8, 14, .78);
+    font: .72vh var(--font_mono);
+}
+
+.engineering-mode .stud-form textarea.aegis-input {
+    min-height: 4.4vh;
+    resize: vertical;
+    line-height: 1.35;
+}
+
+.engineering-mode .stud-form .aegis-input:focus,
+.engineering-mode .stud-form .aegis-select:focus,
+.engineering-mode .stud-search-form .aegis-input:focus,
+.engineering-mode .stud-search-form .aegis-select:focus {
+    outline: none;
+    border-color: #3BA7FF;
+    box-shadow: 0 0 .7vh rgba(59, 167, 255, .28);
+}
+
+.engineering-mode .stud-field-row,
+.engineering-mode .stud-search-form {
+    min-width: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .5vh;
+}
+
+.engineering-mode .stud-search-form { grid-template-columns: minmax(0, 1fr) minmax(12vh, .34fr) auto; }
+
+.engineering-mode .stud-form button,
+.engineering-mode .stud-search-form button,
+.engineering-mode .stud-provenance button {
+    min-height: 2.35vh;
+    border: .08vh solid rgba(59, 167, 255, .68);
+    color: #7CCBFF;
+    background: rgba(10, 35, 53, .74);
+    font: .65vh var(--font_mono);
+    letter-spacing: .08vh;
+}
+
+.engineering-mode .stud-form button:hover,
+.engineering-mode .stud-search-form button:hover,
+.engineering-mode .stud-provenance button:hover {
+    color: #d8f1ff;
+    border-color: #7CCBFF;
+    background: rgba(19, 64, 96, .84);
+}
+
+.engineering-mode .stud-list,
+.engineering-mode .stud-search-results {
+    min-width: 0;
+    display: grid;
+    align-content: start;
+    gap: .35vh;
+}
+
+.engineering-mode .stud-list-row,
+.engineering-mode .stud-search-results button {
+    min-width: 0;
+    display: grid;
+    gap: .18vh;
+    padding: .5vh .6vh;
+    border: .08vh solid rgba(36, 68, 95, .56);
+    border-left: .18vh solid rgba(59, 167, 255, .58);
+    color: rgba(216, 241, 255, .84);
+    background: rgba(5, 13, 20, .48);
+    text-align: left;
+}
+
+.engineering-mode .stud-list-row:hover,
+.engineering-mode .stud-list-row.selected,
+.engineering-mode .stud-search-results button:hover {
+    border-color: rgba(59, 167, 255, .9);
+    background: rgba(21, 54, 79, .7);
+}
+
+.engineering-mode .stud-list-row strong,
+.engineering-mode .stud-search-results strong {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font: .75vh var(--font_main);
+    font-weight: normal;
+}
+
+.engineering-mode .stud-list-row small,
+.engineering-mode .stud-search-results small {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: rgba(124, 203, 255, .55);
+    font: .58vh var(--font_mono);
+}
+
+.engineering-mode .stud-detail-title {
+    display: grid;
+    gap: .25vh;
+    padding-bottom: .5vh;
+    border-bottom: .08vh solid rgba(36, 68, 95, .58);
+}
+
+.engineering-mode .stud-detail-title strong { color: #d8f1ff; font: .98vh var(--font_main); }
+.engineering-mode .stud-detail-title span { color: #7CFFB2; font: .58vh var(--font_mono); }
+.engineering-mode .stud-provenance,
+.engineering-mode .stud-relations { display: grid; gap: .38vh; }
+.engineering-mode .stud-provenance header { display: flex; justify-content: space-between; align-items: center; gap: .5vh; }
+.engineering-mode .stud-provenance button { min-height: 1.8vh; font-size: .55vh; }
+.engineering-mode .stud-provenance ul { display: grid; gap: .28vh; margin: 0; padding: 0; list-style: none; }
+.engineering-mode .stud-provenance li { display: grid; grid-template-columns: minmax(0, .35fr) minmax(0, .65fr); gap: .25vh .55vh; padding: .36vh .45vh; border-left: .14vh solid rgba(59, 167, 255, .42); background: rgba(5, 13, 20, .44); }
+.engineering-mode .stud-provenance li strong { color: #7CCBFF; font: .6vh var(--font_mono); }
+.engineering-mode .stud-provenance li span,
+.engineering-mode .stud-provenance li small { min-width: 0; overflow-wrap: anywhere; color: rgba(216, 241, 255, .68); font: .58vh var(--font_mono); }
+.engineering-mode .stud-provenance li small { grid-column: 1 / -1; color: rgba(124, 203, 255, .54); }
+
+.engineering-mode .stud-reference-grid { display: grid; gap: .48vh; }
+.engineering-mode .stud-reference-grid section { display: grid; gap: .23vh; padding: .55vh; border-left: .16vh solid rgba(59, 167, 255, .5); background: rgba(5, 13, 20, .42); }
+.engineering-mode .stud-reference-grid strong { color: #7CCBFF; font: .72vh var(--font_main); font-weight: normal; }
+
+@media (max-width: 1450px) {
+    .engineering-mode .stud-academic-grid {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        grid-template-rows: repeat(4, max-content);
+        grid-template-areas: "header header" "courses assignments" "detail search" "references references";
+    }
+}
+
+@media (max-width: 1240px) {
+    .engineering-mode .stud-academic-grid {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: repeat(6, max-content);
+        grid-template-areas: "header" "courses" "assignments" "detail" "search" "references";
+        overflow-y: auto;
+        padding-right: .4vh;
+    }
+    .engineering-mode .stud-core-header { grid-template-columns: minmax(0, 1fr); }
+    .engineering-mode .stud-core-status { justify-items: start; text-align: left; }
+    .engineering-mode .stud-search-form { grid-template-columns: minmax(0, 1fr); }
+}
+
 .engineering-mode .workspace-tool-group + .workspace-tool-group {
     margin-top: .8vh;
 }

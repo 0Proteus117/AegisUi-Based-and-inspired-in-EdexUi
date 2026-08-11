@@ -30,6 +30,9 @@ api-keys.local.json
 secrets.local.json
 local-data/
 user-data/
+academic.sqlite
+academic.sqlite-wal
+academic.sqlite-shm
 exports/
 imports/
 assistant/profiles/private/

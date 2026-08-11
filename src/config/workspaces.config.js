@@ -157,37 +157,16 @@
         },
         {
             id: "student",
-            navigationLabel: "STUDENT",
-            name: "Student Study Deck",
-            description: "Academic planning, papers, writing, bibliography, notes and spaced repetition.",
-            status: "placeholder",
-            implementation: "foundation",
-            categories: ["courses", "deadlines", "papers", "writing", "bibliography", "revision"],
-            quickActions: [
-                link("MOODLE", "https://moodle.org/"),
-                link("GOOGLE SCHOLAR", "https://scholar.google.com/"),
-                app("ZOTERO", ["Zotero"]),
-                app("ANKI", ["Anki"])
-            ],
-            recommendedTools: [
-                {
-                    category: "RESEARCH & STUDY",
-                    items: [
-                        link("GOOGLE SCHOLAR", "https://scholar.google.com/"),
-                        app("ZOTERO", ["Zotero"]),
-                        app("ANKI", ["Anki"]),
-                        app("MICROSOFT WORD", ["Microsoft Word"])
-                    ]
-                }
-            ],
-            widgets: [
-                {id: "student-deadlines", name: "Academic deadlines", type: "placeholder", status: "future"},
-                {id: "student-reading", name: "Paper reading queue", type: "placeholder", status: "future"},
-                {id: "student-writing", name: "Writing desk", type: "placeholder", status: "future"},
-                {id: "student-bibliography", name: "Bibliography status", type: "placeholder", status: "future"},
-                {id: "student-review", name: "Flashcard review", type: "placeholder", status: "future"}
-            ],
-            futureModules: ["Moodle deadlines", "Zotero library", "Anki review counts", "Academic calendar"]
+            navigationLabel: "STUD",
+            name: "STUD / Student Command Center",
+            description: "Canonical local academic context for courses, assignments, resources, notes and provenance.",
+            status: "active",
+            implementation: "academic core · local first",
+            categories: ["courses", "assignments", "resources", "notes", "provenance", "search"],
+            quickActions: [],
+            recommendedTools: [],
+            widgets: [],
+            futureModules: ["Explicit Moodle import", "Zotero context", "Academic calendar linking", "Revision scheduling"]
         },
         {
             id: "artist",
