@@ -25,6 +25,10 @@ const CHANNELS = Object.freeze([
     "stud-reference-list",
     "stud-reference-link",
     "stud-reference-unlink",
+    "stud-orchestration-context",
+    "stud-orchestration-propose-reference",
+    "stud-orchestration-confirm-reference",
+    "stud-orchestration-user-override",
     "stud-research-status",
     "stud-research-search",
     "stud-research-resolve-crossref",
@@ -124,6 +128,12 @@ function registerStudAcademicIpc(options = {}) {
     add("stud-reference-list", ["entityType", "entityId"], payload => store.listReferences(payload.entityType, payload.entityId));
     add("stud-reference-link", ["entityType", "entityId", "kind", "externalId"], payload => store.linkReference(payload));
     add("stud-reference-unlink", ["entityType", "entityId", "identifierId", "confirmation"], payload => store.unlinkReference(payload));
+    // These local-only actions are intentionally bounded. They cannot query a
+    // provider, inspect a mailbox or mutate Calendar/Moodle.
+    add("stud-orchestration-context", ["assignmentId"], payload => store.assignmentOrchestrationContext(payload.assignmentId));
+    add("stud-orchestration-propose-reference", ["assignmentId", "kind", "externalId", "title", "courseCode", "dueDate", "startDate", "endDate"], payload => store.proposeReferenceCandidate(payload));
+    add("stud-orchestration-confirm-reference", ["assignmentId", "kind", "externalId", "title", "courseCode", "dueDate", "startDate", "endDate", "confirmation"], payload => store.confirmReferenceCandidate(payload));
+    add("stud-orchestration-user-override", ["entityType", "entityId", "field", "value", "note"], payload => store.applyUserOverride(payload));
     add("stud-research-status", [], () => runtime.status());
     add("stud-research-search", ["query", "year", "limit", "requestId"], payload => runtime.searchOpenAlex(payload));
     add("stud-research-resolve-crossref", ["doi", "requestId"], payload => runtime.resolveCrossref(payload));

@@ -6,6 +6,7 @@ const {DatabaseSync} = require("node:sqlite");
 const Model = require("./studAcademicModel.class.js");
 const Research = require("./studResearchModel.class.js");
 const Citations = require("./studCitationService.class.js");
+const Orchestration = require("./studAcademicOrchestration.class.js");
 
 const TABLES = Object.freeze({
     COURSE: "stud_courses",
@@ -169,6 +170,15 @@ class StudAcademicStore {
                 last_error_code TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
             );
             CREATE INDEX stud_provider_instances_type_index ON stud_provider_instances(provider_type, updated_at);
+        `}, {version: 5, sql: `
+            CREATE TABLE stud_orchestration_links (
+                id TEXT PRIMARY KEY, entity_type TEXT NOT NULL, entity_id TEXT NOT NULL,
+                reference_kind TEXT NOT NULL, external_id TEXT NOT NULL, title TEXT,
+                observed_start TEXT, observed_end TEXT, source_context_json TEXT,
+                match_confidence TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+                UNIQUE(entity_type, entity_id, reference_kind, external_id)
+            );
+            CREATE INDEX stud_orchestration_links_entity_index ON stud_orchestration_links(entity_type, entity_id, updated_at DESC);
         `}];
         for (const migration of migrations) {
             if (applied.has(migration.version)) continue;
@@ -636,6 +646,99 @@ class StudAcademicStore {
         return Object.freeze(rows.map(row => Object.freeze({...rowToCamel(row), kind: row.relation_type === "RELATED_CALENDAR_EVENT" ? "CALENDAR" : row.relation_type === "RELATED_EMAIL" ? "EMAIL" : "REFERENCE"})));
     }
 
+    listOrchestrationLinks(entityType, entityId) {
+        this.initialize();
+        const type = Model.validateEntityType(entityType);
+        const id = Model.safeId(entityId, "Orchestration entity ID");
+        this.requireEntity(type, id);
+        const rows = this.db.prepare("SELECT * FROM stud_orchestration_links WHERE entity_type=? AND entity_id=? ORDER BY updated_at DESC").all(type, id);
+        return Object.freeze(rows.map(row => Object.freeze({...rowToCamel(row), sourceContext: parseJson(row.source_context_json, {})})));
+    }
+
+    assignmentOrchestrationContext(assignmentId) {
+        this.initialize();
+        const assignment = this.getEntity("ASSIGNMENT", assignmentId);
+        if (!assignment) throw new Model.StudError("NOT_FOUND", "Assignment does not exist.");
+        const course = assignment.courseId ? this.getEntity("COURSE", assignment.courseId) : null;
+        const provenance = this.listProvenance("ASSIGNMENT", assignment.id);
+        const references = this.listReferences("ASSIGNMENT", assignment.id);
+        const links = this.listOrchestrationLinks("ASSIGNMENT", assignment.id);
+        const conflicts = Orchestration.detectConflicts("ASSIGNMENT", provenance);
+        const relationships = this.listRelationships("ASSIGNMENT", assignment.id);
+        const notes = relationships.filter(item => item.fromType === "ASSIGNMENT" && item.toType === "NOTE").map(item => this.getEntity("NOTE", item.toId)).filter(Boolean);
+        const papers = relationships.filter(item => item.fromType === "ASSIGNMENT" && item.toType === "RESEARCH_PAPER").map(item => this.getEntity("RESEARCH_PAPER", item.toId)).filter(Boolean);
+        const resources = this.listEntities("RESOURCE", {assignmentId: assignment.id, limit: 100});
+        const status = Orchestration.orchestrationStatus({references, conflicts});
+        return Object.freeze({assignment, course, provenance, references, links, conflicts, relationships, notes: Object.freeze(notes), papers: Object.freeze(papers), resources, status});
+    }
+
+    proposeReferenceCandidate(input = {}) {
+        this.initialize();
+        Model.assertAllowedKeys(input, ["assignmentId", "kind", "externalId", "title", "courseCode", "dueDate", "startDate", "endDate"], "Academic match candidate");
+        const assignment = this.getEntity("ASSIGNMENT", input.assignmentId);
+        if (!assignment) throw new Model.StudError("NOT_FOUND", "Assignment does not exist.");
+        const kind = Model.enumValue(input.kind, ["CALENDAR", "EMAIL"], "Reference kind");
+        const externalId = Model.requiredText(input.externalId, "Reference identifier", Model.LIMITS.identifier);
+        const course = assignment.courseId ? this.getEntity("COURSE", assignment.courseId) : null;
+        const namespace = kind === "CALENDAR" ? "ICS_UID" : "EMAIL_MESSAGE";
+        const knownExternalIds = this.findByExternalIdentifier(namespace, externalId).map(item => item.externalId);
+        const candidate = {
+            externalId, title: Model.optionalText(input.title, "Candidate title", 240),
+            courseCode: Model.optionalText(input.courseCode, "Candidate course code", 80),
+            dueDate: input.dueDate ? Model.optionalDate(input.dueDate, "Candidate due date") : null,
+            startDate: input.startDate ? Model.optionalDate(input.startDate, "Candidate start date") : null,
+            endDate: input.endDate ? Model.optionalDate(input.endDate, "Candidate end date") : null,
+            knownExternalIds
+        };
+        const match = Orchestration.classifyCandidate(assignment, course, candidate);
+        return Object.freeze({kind, assignmentId: assignment.id, candidate: Object.freeze({...candidate, knownExternalIds: undefined}), ...match});
+    }
+
+    confirmReferenceCandidate(input = {}) {
+        this.initialize();
+        Model.assertAllowedKeys(input, ["assignmentId", "kind", "externalId", "title", "courseCode", "dueDate", "startDate", "endDate", "confirmation"], "Academic match confirmation");
+        if (input.confirmation !== true) throw new Model.StudError("POLICY_BLOCKED", "Linking a suggested academic relationship requires explicit confirmation.");
+        const {confirmation, ...candidateInput} = input;
+        const proposal = this.proposeReferenceCandidate(candidateInput);
+        if (proposal.confidence === "UNRESOLVED") throw new Model.StudError("NO_MATCH", "This reference does not have sufficient deterministic context to link.");
+        const assignment = this.getEntity("ASSIGNMENT", proposal.assignmentId);
+        const link = this.transaction(() => {
+            let reference;
+            const existing = this.listReferences("ASSIGNMENT", assignment.id).find(item => item.kind === proposal.kind && item.externalId === proposal.candidate.externalId);
+            if (existing) reference = Object.freeze({identifier: existing, relationship: null, kind: proposal.kind, existing: true});
+            else {
+                const namespace = proposal.kind === "CALENDAR" ? "ICS_UID" : "EMAIL_MESSAGE";
+                const relationType = proposal.kind === "CALENDAR" ? "RELATED_CALENDAR_EVENT" : "RELATED_EMAIL";
+                const identifier = this.createExternalIdentifier({entityType: "ASSIGNMENT", entityId: assignment.id, namespace, externalId: proposal.candidate.externalId, source: proposal.kind});
+                const relationship = this.createRelationship({fromType: "ASSIGNMENT", fromId: assignment.id, relationType, toType: "EXTERNAL_IDENTIFIER", toId: identifier.id, source: proposal.kind});
+                reference = Object.freeze({identifier, relationship, kind: proposal.kind, existing: false});
+            }
+            const id = Model.createId("orchestration_link");
+            const timestamp = Model.now();
+            this.db.prepare(`INSERT INTO stud_orchestration_links (id,entity_type,entity_id,reference_kind,external_id,title,observed_start,observed_end,source_context_json,match_confidence,created_at,updated_at)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+                ON CONFLICT(entity_type,entity_id,reference_kind,external_id) DO UPDATE SET title=excluded.title,observed_start=excluded.observed_start,observed_end=excluded.observed_end,source_context_json=excluded.source_context_json,match_confidence=excluded.match_confidence,updated_at=excluded.updated_at`)
+                .run(id, "ASSIGNMENT", assignment.id, proposal.kind, proposal.candidate.externalId, proposal.candidate.title || null, proposal.candidate.startDate || proposal.candidate.dueDate || null, proposal.candidate.endDate || null, JSON.stringify({courseCode: proposal.candidate.courseCode || null, signals: proposal.signals, conflicts: proposal.conflicts}), proposal.confidence, timestamp, timestamp);
+            if (proposal.candidate.dueDate) this.createProvenance({entityType: "ASSIGNMENT", entityId: assignment.id, field: "dueDate", observedValue: proposal.candidate.dueDate, sourceType: proposal.kind, sourceId: proposal.candidate.externalId, sourceAuthority: proposal.confidence === "EXACT" || proposal.confidence === "STRONG" ? "CORROBORATING" : "SUGGESTED", observedAt: timestamp, metadata: {matchConfidence: proposal.confidence, signals: proposal.signals, conflicts: proposal.conflicts}});
+            return {reference, proposal};
+        });
+        return Object.freeze({...link, context: this.assignmentOrchestrationContext(assignment.id)});
+    }
+
+    applyUserOverride(input = {}) {
+        this.initialize();
+        Model.assertAllowedKeys(input, ["entityType", "entityId", "field", "value", "note"], "Academic user override");
+        const entityType = Model.validateEntityType(input.entityType);
+        const entity = this.getEntity(entityType, input.entityId);
+        if (!entity) throw new Model.StudError("NOT_FOUND", "Academic object does not exist.");
+        const field = Model.requiredText(input.field, "Override field", Model.LIMITS.field);
+        const normalized = Model.normalizeByEntityType(entityType, {[field]: input.value}, entity);
+        const value = normalized[field];
+        const updated = this.updateEntity(entityType, entity.id, {[field]: value});
+        const provenance = this.createProvenance({entityType, entityId: entity.id, field, observedValue: value === null ? null : String(value), sourceType: "USER", sourceId: "STUD_USER_OVERRIDE", sourceAuthority: "USER_OVERRIDE", observedAt: Model.now(), metadata: {note: Model.optionalText(input.note, "Override note", 1000), resolution: "USER_OVERRIDE"}});
+        return Object.freeze({entity: updated, provenance});
+    }
+
     linkReference(input = {}) {
         this.initialize();
         Model.assertAllowedKeys(input, ["entityType", "entityId", "kind", "externalId"], "Academic reference");
@@ -703,7 +806,13 @@ class StudAcademicStore {
             const nearest = related.filter(item => item.dueDate).sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))[0] || null;
             return Object.freeze({...course, activeAssignmentCount: related.length, nearestDueDate: nearest && nearest.dueDate || null});
         });
-        return Object.freeze({today: Object.freeze(today), upcoming: Object.freeze(upcoming), priority: Object.freeze(priority), continue: Object.freeze(recent), moduleStatus: Object.freeze(moduleStatus), generatedAt: now.toISOString()});
+        const attention = active.slice(0, 150).map(assignment => {
+            const provenance = this.listProvenance("ASSIGNMENT", assignment.id);
+            const conflicts = Orchestration.detectConflicts("ASSIGNMENT", provenance);
+            const references = this.listReferences("ASSIGNMENT", assignment.id);
+            return {assignment, conflicts, references, status: Orchestration.orchestrationStatus({references, conflicts})};
+        }).filter(item => item.conflicts.length || item.status === "UNMATCHED").slice(0, limit);
+        return Object.freeze({today: Object.freeze(today), upcoming: Object.freeze(upcoming), priority: Object.freeze(priority), continue: Object.freeze(recent), moduleStatus: Object.freeze(moduleStatus), attention: Object.freeze(attention), generatedAt: now.toISOString()});
     }
 
     getCourseContext(courseId, options = {}) {

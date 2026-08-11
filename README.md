@@ -68,8 +68,11 @@ the ephemeral session by default or sends case data to a provider.
   original-byte SHA-256. It does not upload the media, infer authenticity or
   silently persist the original. Image GPS can only hand off to Geospatial
   Verification after an explicit analyst action.
-- STUD v2.6.4 adds an explicit, capability-driven and read-only Moodle
-  connection surface to the local-first Student Command Center. A sanctioned
+- STUD v2.6.5 adds deterministic academic orchestration: Moodle observations,
+  explicitly selected Calendar/Email references, local resources, notes and
+  research can be reviewed around canonical Courses and Assignments without
+  automatic external actions. Phase 4's Moodle connection surface remains
+  capability-driven and read-only. A sanctioned
   institution-issued Moodle Web Service token is encrypted through macOS
   secure storage; optional same-host ICS exports supply a constrained fallback
   when REST is unavailable. Moodle never receives a university password from

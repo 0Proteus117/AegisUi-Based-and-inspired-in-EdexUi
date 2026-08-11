@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.6.5 - 2026-08-11
+
+### STUD Phase 5 — Academic Orchestration
+
+- Added deterministic, local-first academic relationship matching across Moodle observations, explicit Calendar references, bounded Email references and canonical STUD objects.
+- Added Assignment Academic Context, conflict presentation, provenance trace, user overrides and Overview attention items.
+- Preserved strict read-only external boundaries: no Moodle, Calendar or Email mutation; no mailbox scan; no hidden provider chaining.
+- Added orchestration migration, focused tests and responsive Dark/Light/System styling.
+
 ## 2.6.4 - 2026-08-11
 
 ### STUD Moodle capability probe and read-only LMS integration
