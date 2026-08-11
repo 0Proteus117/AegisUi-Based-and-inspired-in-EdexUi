@@ -3,6 +3,7 @@
 const path = require("path");
 const Model = require("./studAcademicModel.class.js");
 const {StudAcademicStore} = require("./studAcademicStore.class.js");
+const {StudResearchRuntime} = require("./studResearchRuntime.class.js");
 
 const CHANNELS = Object.freeze([
     "stud-core-status",
@@ -22,7 +23,27 @@ const CHANNELS = Object.freeze([
     "stud-course-context",
     "stud-reference-list",
     "stud-reference-link",
-    "stud-reference-unlink"
+    "stud-reference-unlink",
+    "stud-research-status",
+    "stud-research-search",
+    "stud-research-resolve-crossref",
+    "stud-research-resolve-datacite",
+    "stud-research-open-access",
+    "stud-research-cancel",
+    "stud-research-save",
+    "stud-research-library",
+    "stud-research-context",
+    "stud-research-link",
+    "stud-paper-import-pdf",
+    "stud-paper-save-oa-pdf",
+    "stud-paper-read-pdf",
+    "stud-paper-read-oa-pdf",
+    "stud-paper-set-oa",
+    "stud-note-save-structured",
+    "stud-citation-render",
+    "stud-zotero-status",
+    "stud-zotero-list",
+    "stud-zotero-import"
 ]);
 
 function senderIsTrusted(event) {
@@ -57,6 +78,9 @@ function registerStudAcademicIpc(options = {}) {
     if (!ipc || typeof ipc.handle !== "function") throw new Error("ipcMain.handle is required for STUD academic IPC.");
     const store = createStore(options.app, options);
     store.initialize();
+    let dialog = options.dialog || null;
+    if (!dialog) { try { dialog = require("electron").dialog; } catch (error) {} }
+    const runtime = options.researchRuntime || new StudResearchRuntime({root: resolveStorageRoot(options.app, options), dialog, env: options.env || process.env, fetch: options.fetch});
     const handlers = new Map();
     const add = (channel, keys, handler) => {
         if (handlers.has(channel)) throw new Error(`Duplicate STUD IPC channel: ${channel}`);
@@ -91,10 +115,60 @@ function registerStudAcademicIpc(options = {}) {
     add("stud-reference-list", ["entityType", "entityId"], payload => store.listReferences(payload.entityType, payload.entityId));
     add("stud-reference-link", ["entityType", "entityId", "kind", "externalId"], payload => store.linkReference(payload));
     add("stud-reference-unlink", ["entityType", "entityId", "identifierId", "confirmation"], payload => store.unlinkReference(payload));
+    add("stud-research-status", [], () => runtime.status());
+    add("stud-research-search", ["query", "year", "limit", "requestId"], payload => runtime.searchOpenAlex(payload));
+    add("stud-research-resolve-crossref", ["doi", "requestId"], payload => runtime.resolveCrossref(payload));
+    add("stud-research-resolve-datacite", ["doi", "requestId"], payload => runtime.resolveDataCite(payload));
+    add("stud-research-open-access", ["doi", "requestId"], payload => runtime.findOpenAccess(payload));
+    add("stud-research-cancel", ["requestId"], payload => runtime.cancel(payload.requestId));
+    add("stud-research-save", ["token", "courseId", "assignmentId"], payload => {
+        const result = runtime.resolveToken(payload.token);
+        return store.saveResearchObservation(result.normalized, {courseId: payload.courseId || null, assignmentId: payload.assignmentId || null, source: result.provider});
+    });
+    add("stud-research-library", ["limit"], payload => store.researchLibrary(payload));
+    add("stud-research-context", ["paperId"], payload => store.researchContext(payload.paperId));
+    add("stud-research-link", ["paperId", "courseId", "assignmentId"], payload => {
+        store.linkPaperContext(Model.safeId(payload.paperId, "Paper ID"), {courseId: payload.courseId || null, assignmentId: payload.assignmentId || null, source: "USER"});
+        return store.researchContext(payload.paperId);
+    });
+    add("stud-paper-import-pdf", ["paperId"], async payload => {
+        const document = await runtime.chooseAndImportPdf({paperId: payload.paperId});
+        if (document.cancelled) return document;
+        const {cancelled, ...managedDocument} = document;
+        return {document: managedDocument, paper: store.setPaperDocument(payload.paperId, managedDocument)};
+    });
+    add("stud-paper-save-oa-pdf", ["paperId", "pdfToken", "requestId"], async payload => {
+        const document = await runtime.saveOaPdf(payload);
+        return {document, paper: store.setPaperDocument(payload.paperId, document)};
+    });
+    add("stud-paper-read-oa-pdf", ["pdfToken", "requestId"], payload => runtime.readOaPdf(payload));
+    add("stud-paper-read-pdf", ["paperId"], payload => {
+        const paper = store.getEntity("RESEARCH_PAPER", payload.paperId);
+        if (!paper || !paper.localDocumentReference) throw new Model.StudError("DOCUMENT_MISSING", "This research object has no managed local PDF.");
+        return runtime.readManagedPdf(paper.localDocumentReference);
+    });
+    add("stud-paper-set-oa", ["paperId", "oa"], payload => store.setPaperOpenAccess(payload.paperId, payload.oa));
+    add("stud-note-save-structured", ["noteId", "title", "document", "courseId", "assignmentId", "paperIds", "selectionProvenance"], payload => store.saveStructuredNote(payload));
+    add("stud-citation-render", ["paperIds", "style"], payload => {
+        const ids = Array.isArray(payload.paperIds) ? payload.paperIds.slice(0, 100) : [];
+        const papers = ids.map(id => store.getEntity("RESEARCH_PAPER", id)).filter(Boolean);
+        if (!papers.length) throw new Model.StudError("INVALID_INPUT", "Select at least one saved research object.");
+        return runtime.citation(papers, payload.style);
+    });
+    add("stud-zotero-status", ["requestId"], payload => runtime.checkZotero(payload));
+    add("stud-zotero-list", ["requestId", "limit"], payload => runtime.listZotero(payload));
+    add("stud-zotero-import", ["token", "courseId", "assignmentId"], payload => {
+        const result = runtime.resolveToken(payload.token);
+        if (result.provider !== "ZOTERO_LOCAL") throw new Model.StudError("POLICY_BLOCKED", "Only an explicitly selected Zotero local item can be imported here.");
+        const saved = store.saveResearchObservation(result.normalized, {courseId: payload.courseId || null, assignmentId: payload.assignmentId || null, source: "ZOTERO_LOCAL"});
+        try { store.createExternalIdentifier({entityType: "RESEARCH_PAPER", entityId: saved.paper.id, namespace: "ZOTERO", externalId: result.normalized.providerRecordId, source: "ZOTERO_LOCAL"}); } catch (error) { if (error.code !== "DUPLICATE_EXTERNAL_IDENTIFIER") throw error; }
+        return saved;
+    });
 
     return Object.freeze({channels: CHANNELS, store, dispose: () => {
         if (typeof ipc.removeHandler === "function") handlers.forEach((_handler, channel) => ipc.removeHandler(channel));
         handlers.clear();
+        runtime.dispose();
         store.close();
     }});
 }

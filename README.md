@@ -6,7 +6,7 @@ Local-first macOS engineering cockpit based on the visual spirit of eDEX-UI.
 [![CodeQL](https://github.com/0Proteus117/AegisUi-Based-and-inspired-in-EdexUi/actions/workflows/codeql-analysis.yml/badge.svg?branch=feature%2Fsystems-online-pass)](https://github.com/0Proteus117/AegisUi-Based-and-inspired-in-EdexUi/actions/workflows/codeql-analysis.yml)
 ![Platform](https://img.shields.io/badge/platform-macOS%20Apple%20Silicon-3BA7FF)
 ![Local first](https://img.shields.io/badge/local--first-yes-7CCBFF)
-![Version](https://img.shields.io/badge/version-2.6.2-13263A)
+![Version](https://img.shields.io/badge/version-2.6.3-13263A)
 
 ## Current status
 
@@ -68,10 +68,12 @@ the ephemeral session by default or sends case data to a provider.
   original-byte SHA-256. It does not upload the media, infer authenticity or
   silently persist the original. Image GPS can only hand off to Geospatial
   Verification after an explicit analyst action.
-- STUD v2.6.2 turns the same offline canonical academic core into the Student
-  Command Center: Overview, Modules and Assignments derive solely from SQLite
-  FTS5 records and explicit relationships. Calendar/Email remain opaque
-  reference IDs; Moodle, external research and synchronization remain out of scope.
+- STUD v2.6.3 adds a serious local-first Research and Academic Writing desk to
+  the Student Command Center. Explicit OpenAlex/Crossref/DataCite/Unpaywall
+  lookups normalize only selected papers into the canonical SQLite store;
+  PDF.js, structured Tiptap/ProseMirror notes, KaTeX and Citation.js continue
+  working offline after material is explicitly saved. Zotero interoperability
+  is optional, local and read-only; no paid service is required.
 - Live systems map with TomTom traffic, AISStream maritime traffic,
   RainViewer radar, Open-Meteo Marine conditions and CelesTrak SAT support.
 - Assistant presence layer with Angie/Gustav/Ares/Aphrodite profiles,

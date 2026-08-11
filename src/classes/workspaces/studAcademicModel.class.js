@@ -2,10 +2,10 @@
 
 const crypto = require("crypto");
 
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 const ENTITY_TYPES = Object.freeze(["COURSE", "ASSIGNMENT", "RESOURCE", "RESEARCH_PAPER", "NOTE", "REVISION_ITEM"]);
 const RELATIONSHIP_ENTITY_TYPES = Object.freeze([...ENTITY_TYPES, "EXTERNAL_IDENTIFIER"]);
-const RELATIONSHIP_TYPES = Object.freeze(["BELONGS_TO", "RELATES_TO", "SUPPORTS", "USES", "REFERENCES", "HAS_RESOURCE", "HAS_NOTE", "HAS_PAPER", "RELATED_EMAIL", "RELATED_CALENDAR_EVENT"]);
+const RELATIONSHIP_TYPES = Object.freeze(["BELONGS_TO", "RELATES_TO", "SUPPORTS", "USES", "REFERENCES", "HAS_RESOURCE", "HAS_NOTE", "HAS_PAPER", "CITES", "RELATED_EMAIL", "RELATED_CALENDAR_EVENT"]);
 const PROVENANCE_SOURCE_TYPES = Object.freeze(["USER", "MOODLE", "CALENDAR", "EMAIL", "COURSE_DOCUMENT", "RESEARCH_PROVIDER", "LOCAL_EXTRACTION", "AI_SUGGESTION", "IMPORT", "UNKNOWN"]);
 const PROVENANCE_AUTHORITIES = Object.freeze(["AUTHORITATIVE", "TRUSTED", "CORROBORATING", "INFERRED", "SUGGESTED", "UNKNOWN"]);
 const COST_MODELS = Object.freeze(["FREE_OPEN", "FREE_LOCAL", "FREE_SERVICE", "FREEMIUM", "PAID", "SUBSCRIPTION"]);
@@ -162,23 +162,34 @@ function normalizeResource(input = {}, existing = {}) {
 }
 
 function normalizePaper(input = {}, existing = {}) {
-    assertAllowedKeys(input, ["title", "year", "abstract", "venue", "authors", "localDocumentReference"], "Research paper");
+    assertAllowedKeys(input, ["title", "objectType", "year", "publishedDate", "abstract", "venue", "publisher", "authors", "doi", "sourceUrl", "citationJson", "oaJson", "localDocumentReference", "documentMetadataJson"], "Research paper");
     return {
         title: input.title === undefined ? existing.title : requiredText(input.title, "Paper title"),
+        objectType: input.objectType === undefined ? existing.objectType || "ARTICLE" : enumValue(input.objectType, ["ARTICLE", "BOOK", "CHAPTER", "DATASET", "SOFTWARE", "REPORT", "THESIS", "OTHER"], "Research object type", "OTHER"),
         year: input.year === undefined ? existing.year ?? null : optionalNumber(input.year, "Paper year"),
+        publishedDate: input.publishedDate === undefined ? existing.publishedDate || null : optionalText(input.publishedDate, "Published date", 80),
         abstract: input.abstract === undefined ? existing.abstract || null : optionalText(input.abstract, "Paper abstract"),
         venue: input.venue === undefined ? existing.venue || null : optionalText(input.venue, "Paper venue", 500),
+        publisher: input.publisher === undefined ? existing.publisher || null : optionalText(input.publisher, "Paper publisher", 500),
         authors: input.authors === undefined ? existing.authors || null : optionalText(input.authors, "Paper authors", 4000),
-        localDocumentReference: input.localDocumentReference === undefined ? existing.localDocumentReference || null : optionalText(input.localDocumentReference, "Local document reference", 260)
+        doi: input.doi === undefined ? existing.doi || null : optionalText(input.doi, "DOI", 300),
+        sourceUrl: input.sourceUrl === undefined ? existing.sourceUrl || null : optionalText(input.sourceUrl, "Source URL", 2048),
+        citationJson: input.citationJson === undefined ? existing.citationJson || null : optionalText(input.citationJson, "Citation JSON", LIMITS.content),
+        oaJson: input.oaJson === undefined ? existing.oaJson || null : optionalText(input.oaJson, "Open access metadata", 12000),
+        localDocumentReference: input.localDocumentReference === undefined ? existing.localDocumentReference || null : optionalText(input.localDocumentReference, "Local document reference", 260),
+        documentMetadataJson: input.documentMetadataJson === undefined ? existing.documentMetadataJson || null : optionalText(input.documentMetadataJson, "Document metadata", 12000)
     };
 }
 
 function normalizeNote(input = {}, existing = {}) {
-    assertAllowedKeys(input, ["title", "content", "courseId"], "Note");
+    assertAllowedKeys(input, ["title", "content", "courseId", "assignmentId", "documentVersion", "documentJson"], "Note");
     return {
         title: input.title === undefined ? existing.title : requiredText(input.title, "Note title"),
         content: input.content === undefined ? existing.content || "" : optionalText(input.content, "Note content", LIMITS.content) || "",
-        courseId: input.courseId === undefined ? existing.courseId || null : (input.courseId ? safeId(input.courseId, "Course ID") : null)
+        courseId: input.courseId === undefined ? existing.courseId || null : (input.courseId ? safeId(input.courseId, "Course ID") : null),
+        assignmentId: input.assignmentId === undefined ? existing.assignmentId || null : (input.assignmentId ? safeId(input.assignmentId, "Assignment ID") : null),
+        documentVersion: input.documentVersion === undefined ? existing.documentVersion || 1 : Math.max(1, Math.min(10, Number(input.documentVersion) || 1)),
+        documentJson: input.documentJson === undefined ? existing.documentJson || null : optionalText(input.documentJson, "Structured note document", LIMITS.content)
     };
 }
 

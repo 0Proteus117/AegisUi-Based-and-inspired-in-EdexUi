@@ -107,7 +107,7 @@ try {
     const untrustedEvent = {sender: {isDestroyed: () => false, getURL: () => "https://example.invalid/"}};
     check("IPC_ALLOWLIST", registration.channels.length === Ipc.CHANNELS.length && ipc.handlers.size === Ipc.CHANNELS.length);
     check("IPC_REJECTS_UNTRUSTED_SENDER", (await ipc.handlers.get("stud-core-status")(untrustedEvent, {})).code === "POLICY_BLOCKED");
-    check("IPC_HAS_NO_NETWORK_CHANNEL", !Ipc.CHANNELS.some(channel => /fetch|url|network|provider/i.test(channel)));
+    check("IPC_HAS_ONLY_TYPED_RESEARCH_CHANNELS", Ipc.CHANNELS.includes("stud-research-search") && !Ipc.CHANNELS.some(channel => /proxy|arbitrary|shell/i.test(channel)));
     registration.dispose();
 
     const source = fs.readFileSync(path.join(ROOT, "src/classes/workspaces/studAcademicIpc.class.js"), "utf8");

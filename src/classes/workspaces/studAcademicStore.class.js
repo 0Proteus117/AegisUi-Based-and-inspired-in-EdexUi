@@ -4,6 +4,8 @@ const fs = require("fs");
 const path = require("path");
 const {DatabaseSync} = require("node:sqlite");
 const Model = require("./studAcademicModel.class.js");
+const Research = require("./studResearchModel.class.js");
+const Citations = require("./studCitationService.class.js");
 
 const TABLES = Object.freeze({
     COURSE: "stud_courses",
@@ -146,6 +148,20 @@ class StudAcademicStore {
             ALTER TABLE stud_assignments ADD COLUMN priority TEXT;
             CREATE INDEX stud_assignments_due_index ON stud_assignments(due_date, status);
             CREATE INDEX stud_assignments_course_updated_index ON stud_assignments(course_id, updated_at);
+        `}, {version: 3, sql: `
+            ALTER TABLE stud_research_papers ADD COLUMN object_type TEXT NOT NULL DEFAULT 'ARTICLE';
+            ALTER TABLE stud_research_papers ADD COLUMN published_date TEXT;
+            ALTER TABLE stud_research_papers ADD COLUMN publisher TEXT;
+            ALTER TABLE stud_research_papers ADD COLUMN doi TEXT;
+            ALTER TABLE stud_research_papers ADD COLUMN source_url TEXT;
+            ALTER TABLE stud_research_papers ADD COLUMN citation_json TEXT;
+            ALTER TABLE stud_research_papers ADD COLUMN oa_json TEXT;
+            ALTER TABLE stud_research_papers ADD COLUMN document_metadata_json TEXT;
+            ALTER TABLE stud_notes ADD COLUMN assignment_id TEXT REFERENCES stud_assignments(id);
+            ALTER TABLE stud_notes ADD COLUMN document_version INTEGER NOT NULL DEFAULT 1;
+            ALTER TABLE stud_notes ADD COLUMN document_json TEXT;
+            CREATE INDEX stud_research_papers_doi_index ON stud_research_papers(doi);
+            CREATE INDEX stud_notes_assignment_updated_index ON stud_notes(assignment_id, updated_at);
         `}];
         for (const migration of migrations) {
             if (applied.has(migration.version)) continue;
@@ -215,7 +231,7 @@ class StudAcademicStore {
         const params = [];
         let where = options.includeArchived ? "1=1" : "archived_at IS NULL";
         if (["ASSIGNMENT", "RESOURCE", "NOTE", "REVISION_ITEM"].includes(entityType) && options.courseId) { where += " AND course_id = ?"; params.push(Model.safeId(options.courseId, "Course ID")); }
-        if (entityType === "RESOURCE" && options.assignmentId) { where += " AND assignment_id = ?"; params.push(Model.safeId(options.assignmentId, "Assignment ID")); }
+        if (["RESOURCE", "NOTE"].includes(entityType) && options.assignmentId) { where += " AND assignment_id = ?"; params.push(Model.safeId(options.assignmentId, "Assignment ID")); }
         const rows = this.db.prepare(`SELECT * FROM ${table} WHERE ${where} ORDER BY updated_at DESC, created_at DESC LIMIT ?`).all(...params, limit);
         return Object.freeze(rows.map(row => Object.freeze({...rowToCamel(row), entityType})));
     }
@@ -274,8 +290,8 @@ class StudAcademicStore {
         case "COURSE": this.db.prepare("INSERT INTO stud_courses (id,title,short_name,code,description,start_date,end_date,status,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)").run(id,value.title,value.shortName,value.code,value.description,value.startDate,value.endDate,value.status,timestamp,timestamp); break;
         case "ASSIGNMENT": this.db.prepare("INSERT INTO stud_assignments (id,course_id,title,description,release_date,due_date,cutoff_date,status,submission_status,submitted_at,grade,grade_maximum,weight,feedback,local_progress,priority,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)").run(id,value.courseId,value.title,value.description,value.releaseDate,value.dueDate,value.cutoffDate,value.status,value.submissionStatus,value.submittedAt,value.grade,value.gradeMaximum,value.weight,value.feedback,value.localProgress,value.priority,timestamp,timestamp); break;
         case "RESOURCE": this.db.prepare("INSERT INTO stud_resources (id,course_id,assignment_id,type,title,url,local_reference,mime_type,checksum,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)").run(id,value.courseId,value.assignmentId,value.type,value.title,value.url,value.localReference,value.mimeType,value.checksum,timestamp,timestamp); break;
-        case "RESEARCH_PAPER": this.db.prepare("INSERT INTO stud_research_papers (id,title,year,abstract,venue,authors,local_document_reference,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?)").run(id,value.title,value.year,value.abstract,value.venue,value.authors,value.localDocumentReference,timestamp,timestamp); break;
-        case "NOTE": this.db.prepare("INSERT INTO stud_notes (id,title,content,course_id,created_at,updated_at) VALUES (?,?,?,?,?,?)").run(id,value.title,value.content,value.courseId,timestamp,timestamp); break;
+        case "RESEARCH_PAPER": this.db.prepare("INSERT INTO stud_research_papers (id,title,object_type,year,published_date,abstract,venue,publisher,authors,doi,source_url,citation_json,oa_json,local_document_reference,document_metadata_json,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)").run(id,value.title,value.objectType,value.year,value.publishedDate,value.abstract,value.venue,value.publisher,value.authors,value.doi,value.sourceUrl,value.citationJson,value.oaJson,value.localDocumentReference,value.documentMetadataJson,timestamp,timestamp); break;
+        case "NOTE": this.db.prepare("INSERT INTO stud_notes (id,title,content,course_id,assignment_id,document_version,document_json,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?)").run(id,value.title,value.content,value.courseId,value.assignmentId,value.documentVersion,value.documentJson,timestamp,timestamp); break;
         case "REVISION_ITEM": this.db.prepare("INSERT INTO stud_revision_items (id,course_id,prompt,answer,source_type,source_id,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?)").run(id,value.courseId,value.prompt,value.answer,value.sourceType,value.sourceId,timestamp,timestamp); break;
         }
     }
@@ -285,8 +301,8 @@ class StudAcademicStore {
         case "COURSE": this.db.prepare("UPDATE stud_courses SET title=?,short_name=?,code=?,description=?,start_date=?,end_date=?,status=?,updated_at=? WHERE id=?").run(value.title,value.shortName,value.code,value.description,value.startDate,value.endDate,value.status,timestamp,id); break;
         case "ASSIGNMENT": this.db.prepare("UPDATE stud_assignments SET course_id=?,title=?,description=?,release_date=?,due_date=?,cutoff_date=?,status=?,submission_status=?,submitted_at=?,grade=?,grade_maximum=?,weight=?,feedback=?,local_progress=?,priority=?,updated_at=? WHERE id=?").run(value.courseId,value.title,value.description,value.releaseDate,value.dueDate,value.cutoffDate,value.status,value.submissionStatus,value.submittedAt,value.grade,value.gradeMaximum,value.weight,value.feedback,value.localProgress,value.priority,timestamp,id); break;
         case "RESOURCE": this.db.prepare("UPDATE stud_resources SET course_id=?,assignment_id=?,type=?,title=?,url=?,local_reference=?,mime_type=?,checksum=?,updated_at=? WHERE id=?").run(value.courseId,value.assignmentId,value.type,value.title,value.url,value.localReference,value.mimeType,value.checksum,timestamp,id); break;
-        case "RESEARCH_PAPER": this.db.prepare("UPDATE stud_research_papers SET title=?,year=?,abstract=?,venue=?,authors=?,local_document_reference=?,updated_at=? WHERE id=?").run(value.title,value.year,value.abstract,value.venue,value.authors,value.localDocumentReference,timestamp,id); break;
-        case "NOTE": this.db.prepare("UPDATE stud_notes SET title=?,content=?,course_id=?,updated_at=? WHERE id=?").run(value.title,value.content,value.courseId,timestamp,id); break;
+        case "RESEARCH_PAPER": this.db.prepare("UPDATE stud_research_papers SET title=?,object_type=?,year=?,published_date=?,abstract=?,venue=?,publisher=?,authors=?,doi=?,source_url=?,citation_json=?,oa_json=?,local_document_reference=?,document_metadata_json=?,updated_at=? WHERE id=?").run(value.title,value.objectType,value.year,value.publishedDate,value.abstract,value.venue,value.publisher,value.authors,value.doi,value.sourceUrl,value.citationJson,value.oaJson,value.localDocumentReference,value.documentMetadataJson,timestamp,id); break;
+        case "NOTE": this.db.prepare("UPDATE stud_notes SET title=?,content=?,course_id=?,assignment_id=?,document_version=?,document_json=?,updated_at=? WHERE id=?").run(value.title,value.content,value.courseId,value.assignmentId,value.documentVersion,value.documentJson,timestamp,id); break;
         case "REVISION_ITEM": this.db.prepare("UPDATE stud_revision_items SET course_id=?,prompt=?,answer=?,source_type=?,source_id=?,updated_at=? WHERE id=?").run(value.courseId,value.prompt,value.answer,value.sourceType,value.sourceId,timestamp,id); break;
         }
     }
@@ -295,7 +311,7 @@ class StudAcademicStore {
         const entity = this.getEntity(type, id);
         this.db.prepare("DELETE FROM stud_search WHERE entity_type = ? AND entity_id = ?").run(type, id);
         if (!entity || !["COURSE", "ASSIGNMENT", "RESOURCE", "RESEARCH_PAPER", "NOTE"].includes(type)) return;
-        const content = cleanText([entity.description, entity.abstract, entity.content, entity.code, entity.authors, entity.venue].filter(Boolean).join(" "));
+        const content = cleanText([entity.description, entity.abstract, entity.content, entity.code, entity.authors, entity.venue, entity.doi, entity.publisher].filter(Boolean).join(" "));
         this.db.prepare("INSERT INTO stud_search (entity_type,entity_id,course_id,title,content) VALUES (?,?,?,?,?)").run(type, id, entity.courseId || "", entity.title || "", content);
     }
 
@@ -323,6 +339,124 @@ class StudAcademicStore {
         const normalizedNamespace = Model.requiredText(namespace, "Identifier namespace", 80).toUpperCase();
         const normalizedExternalId = Model.requiredText(externalId, "External identifier", Model.LIMITS.identifier);
         return Object.freeze(this.db.prepare("SELECT * FROM stud_external_identifiers WHERE namespace = ? AND external_id = ?").all(normalizedNamespace, normalizedExternalId).map(row => Object.freeze(rowToCamel(row))));
+    }
+
+    saveResearchObservation(normalized, options = {}) {
+        this.initialize();
+        Model.assertAllowedKeys(options, ["courseId", "assignmentId", "source"], "Research save options");
+        const merged = Research.mergeNormalizedPapers(Array.isArray(normalized) ? normalized : [normalized]);
+        for (const identifier of merged.identifiers) {
+            const existing = this.findByExternalIdentifier(identifier.namespace, identifier.value)[0];
+            if (existing) {
+                const paper = this.getEntity("RESEARCH_PAPER", existing.entityId);
+                if (paper) {
+                    this.linkPaperContext(paper.id, options);
+                    return Object.freeze({paper, deduplicated: true, conflicts: merged.conflicts});
+                }
+            }
+        }
+        const canonical = merged.canonical;
+        const paperValue = {
+            title: canonical.title,
+            objectType: canonical.objectType || "OTHER",
+            year: canonical.year,
+            publishedDate: canonical.publishedDate,
+            abstract: canonical.abstract,
+            venue: canonical.venue,
+            publisher: canonical.publisher,
+            authors: canonical.authors,
+            doi: merged.identifiers.find(item => item.namespace === "DOI")?.value || null,
+            sourceUrl: canonical.sourceUrl,
+            citationJson: null,
+            oaJson: null,
+            localDocumentReference: null,
+            documentMetadataJson: null
+        };
+        const paper = this.createEntity("RESEARCH_PAPER", paperValue);
+        const citation = Citations.toCsl(paper);
+        this.updateEntity("RESEARCH_PAPER", paper.id, {citationJson: JSON.stringify(citation)});
+        merged.identifiers.forEach(identifier => this.createExternalIdentifier({entityType: "RESEARCH_PAPER", entityId: paper.id, namespace: identifier.namespace, externalId: identifier.value, source: options.source || normalized.provider || "RESEARCH_PROVIDER"}));
+        merged.observations.forEach(observation => this.createProvenance({
+            entityType: "RESEARCH_PAPER", entityId: paper.id, field: observation.field,
+            observedValue: Array.isArray(observation.value) ? observation.value.join("; ") : String(observation.value),
+            sourceType: "RESEARCH_PROVIDER", sourceId: observation.source,
+            sourceAuthority: observation.authority >= 3 ? "TRUSTED" : "CORROBORATING", observedAt: observation.observedAt
+        }));
+        this.linkPaperContext(paper.id, options);
+        return Object.freeze({paper: this.getEntity("RESEARCH_PAPER", paper.id), deduplicated: false, conflicts: merged.conflicts});
+    }
+
+    linkPaperContext(paperId, options = {}) {
+        const targets = [];
+        if (options.assignmentId) targets.push({type: "ASSIGNMENT", id: Model.safeId(options.assignmentId, "Assignment ID")});
+        if (options.courseId) targets.push({type: "COURSE", id: Model.safeId(options.courseId, "Course ID")});
+        targets.forEach(target => {
+            this.requireEntity(target.type, target.id);
+            try { this.createRelationship({fromType: target.type, fromId: target.id, relationType: "HAS_PAPER", toType: "RESEARCH_PAPER", toId: paperId, source: options.source || "USER"}); }
+            catch (error) { if (error.code !== "DUPLICATE_RELATIONSHIP") throw error; }
+        });
+    }
+
+    setPaperOpenAccess(paperId, oa) {
+        const paper = this.getEntity("RESEARCH_PAPER", paperId);
+        if (!paper) throw new Model.StudError("NOT_FOUND", "Research paper does not exist.");
+        const bounded = JSON.stringify(oa || null);
+        if (Buffer.byteLength(bounded, "utf8") > 12000) throw new Model.StudError("PAYLOAD_TOO_LARGE", "Open-access metadata is too large.");
+        return this.updateEntity("RESEARCH_PAPER", paper.id, {oaJson: bounded});
+    }
+
+    setPaperDocument(paperId, document) {
+        Model.assertAllowedKeys(document, ["reference", "displayName", "mimeType", "size", "sha256"], "Local PDF metadata");
+        const paper = this.getEntity("RESEARCH_PAPER", paperId);
+        if (!paper) throw new Model.StudError("NOT_FOUND", "Research paper does not exist.");
+        return this.updateEntity("RESEARCH_PAPER", paper.id, {
+            localDocumentReference: Model.requiredText(document.reference, "Managed document reference", 260),
+            documentMetadataJson: JSON.stringify({displayName: Model.optionalText(document.displayName, "PDF display name", 240), mimeType: "application/pdf", size: Number(document.size) || 0, sha256: Model.requiredText(document.sha256, "PDF checksum", 64)})
+        });
+    }
+
+    saveStructuredNote(input = {}) {
+        Model.assertAllowedKeys(input, ["noteId", "title", "document", "courseId", "assignmentId", "paperIds", "selectionProvenance"], "Structured note");
+        const structured = Research.sanitizeNoteDocument(input.document);
+        const value = {
+            title: Model.requiredText(input.title, "Note title"), content: structured.plainText,
+            courseId: input.courseId || null, assignmentId: input.assignmentId || null,
+            documentVersion: structured.version, documentJson: JSON.stringify(structured.document)
+        };
+        const note = input.noteId ? this.updateEntity("NOTE", input.noteId, value) : this.createEntity("NOTE", value);
+        if (!input.noteId && input.assignmentId) this.createRelationship({fromType: "ASSIGNMENT", fromId: input.assignmentId, relationType: "HAS_NOTE", toType: "NOTE", toId: note.id, source: "USER"});
+        if (!input.noteId && input.courseId) this.createRelationship({fromType: "COURSE", fromId: input.courseId, relationType: "HAS_NOTE", toType: "NOTE", toId: note.id, source: "USER"});
+        (Array.isArray(input.paperIds) ? input.paperIds : []).slice(0, 100).forEach(paperId => {
+            try { this.createRelationship({fromType: "NOTE", fromId: note.id, relationType: "CITES", toType: "RESEARCH_PAPER", toId: paperId, source: "USER"}); }
+            catch (error) { if (error.code !== "DUPLICATE_RELATIONSHIP") throw error; }
+        });
+        if (input.selectionProvenance) {
+            Model.assertAllowedKeys(input.selectionProvenance, ["sourceType", "paperId", "documentReference", "page", "selectionTextHash", "excerpt", "createdAt"], "PDF selection provenance");
+            const sourceType = ["LOCAL_DOCUMENT", "OA_DOCUMENT"].includes(input.selectionProvenance.sourceType) ? input.selectionProvenance.sourceType : null;
+            const hash = String(input.selectionProvenance.selectionTextHash || "").toLowerCase();
+            if (!sourceType || !/^[a-f0-9]{64}$/.test(hash)) throw new Model.StudError("INVALID_INPUT", "PDF selection provenance is invalid.");
+            const paperId = Model.safeId(input.selectionProvenance.paperId, "Selection paper ID");
+            this.createProvenance({
+                entityType: "NOTE", entityId: note.id, field: "document.selection",
+                observedValue: Model.requiredText(input.selectionProvenance.excerpt, "Selected excerpt", 4000),
+                sourceType: "LOCAL_EXTRACTION", sourceId: paperId, sourceAuthority: "TRUSTED",
+                observedAt: input.selectionProvenance.createdAt || new Date().toISOString(),
+                metadata: {sourceType, documentReference: Model.optionalText(input.selectionProvenance.documentReference, "Document reference", 260), page: Math.max(1, Number(input.selectionProvenance.page) || 1), selectionTextHash: hash}
+            });
+        }
+        return this.getEntity("NOTE", note.id);
+    }
+
+    researchLibrary(options = {}) {
+        const limit = Math.max(1, Math.min(Number(options.limit) || 100, 500));
+        return this.listEntities("RESEARCH_PAPER", {limit});
+    }
+
+    researchContext(paperId) {
+        const paper = this.getEntity("RESEARCH_PAPER", paperId);
+        if (!paper) throw new Model.StudError("NOT_FOUND", "Research paper does not exist.");
+        const identifiers = this.db.prepare("SELECT * FROM stud_external_identifiers WHERE entity_type = 'RESEARCH_PAPER' AND entity_id = ? ORDER BY created_at").all(paper.id).map(rowToCamel);
+        return Object.freeze({paper, identifiers: Object.freeze(identifiers), provenance: this.listProvenance("RESEARCH_PAPER", paper.id), relationships: this.listRelationships("RESEARCH_PAPER", paper.id)});
     }
 
     createProvenance(input = {}) {
