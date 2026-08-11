@@ -3648,26 +3648,8 @@ class WorkspaceManager {
     }
 
     renderStudent(view, definition) {
-        const grid = view.querySelector(".workspace-grid");
-        view.classList.add("stud-academic-deck");
-        grid.classList.add("stud-academic-grid");
-        this.studentView = view;
-        this.studentState = {
-            courses: [], assignments: [], notes: [], resources: [], searchResults: [],
-            selectedCourseId: "", selectedAssignmentId: "", selectedEntityType: "",
-            selectedEntity: null, provenance: [], relationships: [], schema: null, error: null
-        };
-        grid.innerHTML = `
-            <section class="stud-core-header workspace-panel">
-                <div><small>STUD / CANONICAL ACADEMIC CONTEXT</small><h2>STUDENT COMMAND CENTER</h2><p>Local-first academic records with explicit provenance, relationships and offline search. Moodle, Calendar and Email remain separate sources.</p></div>
-                <div class="stud-core-status"><small>STORE</small><strong data-stud-status>INITIALIZING</strong><span data-stud-schema>SCHEMA —</span></div>
-            </section>
-            <section class="stud-course-panel workspace-panel"><header><h2>COURSES</h2><span data-stud-course-count>0 LOCAL</span></header><div class="workspace-panel-content" data-stud-panel="courses"></div></section>
-            <section class="stud-assignment-panel workspace-panel"><header><h2>ASSIGNMENTS</h2><span data-stud-assignment-count>0 LOCAL</span></header><div class="workspace-panel-content" data-stud-panel="assignments"></div></section>
-            <section class="stud-detail-panel workspace-panel"><header><h2>ACADEMIC DETAIL</h2><span>PROVENANCE AWARE</span></header><div class="workspace-panel-content" data-stud-panel="detail"></div></section>
-            <section class="stud-search-panel workspace-panel"><header><h2>ACADEMIC SEARCH</h2><span>SQLITE FTS5</span></header><div class="workspace-panel-content" data-stud-panel="search"></div></section>
-            <section class="stud-reference-panel workspace-panel"><header><h2>INTEGRATION BOUNDARIES</h2><span>EXPLICIT / LOCAL</span></header><div class="workspace-panel-content" data-stud-panel="references"></div></section>`;
-        this.refreshStudentCore();
+        if (!this.studCommandCenter) this.studCommandCenter = new StudCommandCenter({ipc: this.ipc, escape: value => this.escape(value), showToast: (target, message) => this.showToast(target, message)});
+        this.studCommandCenter.mount(view, definition);
     }
 
     studentEntityLabel(entity) {

@@ -283,6 +283,82 @@ html[data-aegis-appearance="light"] .engineering-mode .stud-provenance button {
     background: var(--aegis-surface-selected) !important;
 }
 
+/* STUD Phase 2 keeps the Command Center semantic in every appearance. The
+ * dark cockpit remains the default; Light resolves every record/card/control
+ * through Aegis tokens rather than inheriting legacy opaque fills. */
+html[data-aegis-appearance="light"] .engineering-mode .stud-command-header,
+html[data-aegis-appearance="light"] .engineering-mode .stud-command-main .workspace-panel,
+html[data-aegis-appearance="light"] .engineering-mode .stud-command-search,
+html[data-aegis-appearance="light"] .engineering-mode .stud-object-section,
+html[data-aegis-appearance="light"] .engineering-mode .stud-references,
+html[data-aegis-appearance="light"] .engineering-mode .stud-provenance-summary,
+html[data-aegis-appearance="light"] .engineering-mode .stud-relations,
+html[data-aegis-appearance="light"] .engineering-mode .stud-deadline-grid section,
+html[data-aegis-appearance="light"] .engineering-mode .stud-academic-data,
+html[data-aegis-appearance="light"] .engineering-mode .stud-global-results button,
+html[data-aegis-appearance="light"] .engineering-mode .stud-object-row,
+html[data-aegis-appearance="light"] .engineering-mode .stud-assignment-row,
+html[data-aegis-appearance="light"] .engineering-mode .stud-module-list button,
+html[data-aegis-appearance="light"] .engineering-mode .stud-module-status-list button,
+html[data-aegis-appearance="light"] .engineering-mode .stud-object-section button,
+html[data-aegis-appearance="light"] .engineering-mode .stud-references article,
+html[data-aegis-appearance="light"] .engineering-mode .stud-provenance-summary article,
+html[data-aegis-appearance="light"] .engineering-mode .stud-dialog,
+html[data-aegis-appearance="light"] .engineering-mode .stud-provenance-dialog section {
+    color: var(--aegis-text) !important;
+    border-color: var(--aegis-border-subtle) !important;
+    background: var(--aegis-surface-raised) !important;
+}
+
+html[data-aegis-appearance="light"] .engineering-mode .stud-command-center-deck .aegis-input,
+html[data-aegis-appearance="light"] .engineering-mode .stud-command-center-deck .aegis-select {
+    color: var(--aegis-text) !important;
+    border-color: var(--aegis-border) !important;
+    background: var(--aegis-surface-input) !important;
+}
+
+html[data-aegis-appearance="light"] .engineering-mode .stud-command-nav button,
+html[data-aegis-appearance="light"] .engineering-mode .stud-command-main button,
+html[data-aegis-appearance="light"] .engineering-mode .stud-command-search button,
+html[data-aegis-appearance="light"] .engineering-mode .stud-dialog button {
+    color: var(--aegis-accent) !important;
+    border-color: var(--aegis-accent) !important;
+    background: var(--aegis-surface-selected) !important;
+}
+
+html[data-aegis-appearance="light"] .engineering-mode .stud-command-header h2,
+html[data-aegis-appearance="light"] .engineering-mode .stud-detail-heading h3,
+html[data-aegis-appearance="light"] .engineering-mode .stud-global-results strong,
+html[data-aegis-appearance="light"] .engineering-mode .stud-object-row strong,
+html[data-aegis-appearance="light"] .engineering-mode .stud-assignment-row strong,
+html[data-aegis-appearance="light"] .engineering-mode .stud-module-list strong,
+html[data-aegis-appearance="light"] .engineering-mode .stud-module-status-list strong,
+html[data-aegis-appearance="light"] .engineering-mode .stud-object-section strong,
+html[data-aegis-appearance="light"] .engineering-mode .stud-deadline-grid strong,
+html[data-aegis-appearance="light"] .engineering-mode .stud-dialog h2 {
+    color: var(--aegis-text) !important;
+}
+
+html[data-aegis-appearance="light"] .engineering-mode .stud-command-header small,
+html[data-aegis-appearance="light"] .engineering-mode .stud-command-header p,
+html[data-aegis-appearance="light"] .engineering-mode .stud-command-status small,
+html[data-aegis-appearance="light"] .engineering-mode .stud-command-status span,
+html[data-aegis-appearance="light"] .engineering-mode .stud-command-main small,
+html[data-aegis-appearance="light"] .engineering-mode .stud-command-main header > span,
+html[data-aegis-appearance="light"] .engineering-mode .stud-command-search label,
+html[data-aegis-appearance="light"] .engineering-mode .stud-dialog label,
+html[data-aegis-appearance="light"] .engineering-mode .stud-global-results span,
+html[data-aegis-appearance="light"] .engineering-mode .stud-object-row small,
+html[data-aegis-appearance="light"] .engineering-mode .stud-assignment-row small,
+html[data-aegis-appearance="light"] .engineering-mode .stud-module-list small,
+html[data-aegis-appearance="light"] .engineering-mode .stud-module-status-list small,
+html[data-aegis-appearance="light"] .engineering-mode .stud-object-section small,
+html[data-aegis-appearance="light"] .engineering-mode .stud-references article span,
+html[data-aegis-appearance="light"] .engineering-mode .stud-provenance-summary article span,
+html[data-aegis-appearance="light"] .engineering-mode .stud-provenance-summary article small {
+    color: var(--aegis-text-muted) !important;
+}
+
 /* HUB legacy controls use opaque dark fills in the inherited eDEX rules.
    These are ordinary data/control surfaces, unlike the map canvas and
    terminal, so they resolve through the same semantic palette as the rest of

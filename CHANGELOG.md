@@ -1,5 +1,20 @@
 # Changelog
 
+## 2.6.2 - 2026-08-11
+
+### STUD Student Command Center
+
+- Replaced the Phase 1 validation harness with local-first Overview, Modules
+  and Assignments screens backed by the same canonical SQLite academic model.
+- Added derived Today, Upcoming, Priority, Continue and Module Status views;
+  local progress remains explicit and priority is transparent/manual when set.
+- Added Course/Assignment detail workflows for local Notes, Resources,
+  field-level provenance and opaque Calendar/Email reference identifiers.
+- Added bounded offline FTS search, responsive Dark/Light/System layout rules,
+  command-center validation and schema v2 assignment priority migration.
+- Kept Moodle, provider APIs, Calendar/Email mutation, synchronization,
+  external document access and hidden persistence out of scope.
+
 ## 2.6.1 - 2026-08-11
 
 ### STUD Academic Core & Provenance

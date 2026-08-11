@@ -24,12 +24,36 @@ function rowToCamel(row) {
     const result = {};
     Object.entries(row).forEach(([key, value]) => {
         const camel = key.replace(/_([a-z])/g, (_match, letter) => letter.toUpperCase());
-        result[camel] = value;
+        const progress = key === "local_progress" && value !== null ? Number(value) : null;
+        result[camel] = key === "local_progress" && value !== null
+            ? (Number.isFinite(progress) && progress >= 0 && progress <= 100 ? progress : null)
+            : value;
     });
     return result;
 }
 
 function cleanText(value) { return String(value || "").replace(/\s+/g, " ").trim(); }
+
+function isCompletedAssignment(assignment) {
+    return ["SUBMITTED", "GRADED", "ARCHIVED"].includes(assignment.status);
+}
+
+function localDayStart(value) {
+    const date = new Date(value);
+    date.setHours(0, 0, 0, 0);
+    return date;
+}
+
+function derivePriority(assignment, now = new Date()) {
+    if (assignment.priority) return assignment.priority;
+    if (isCompletedAssignment(assignment)) return "LOW";
+    if (!assignment.dueDate) return "NORMAL";
+    const days = (new Date(assignment.dueDate).getTime() - now.getTime()) / 86400000;
+    if (days <= 1) return "URGENT";
+    if (days <= 7) return "HIGH";
+    if (days <= 21) return "NORMAL";
+    return "LOW";
+}
 
 class StudAcademicStore {
     constructor(options = {}) {
@@ -118,6 +142,10 @@ class StudAcademicStore {
             CREATE INDEX stud_relationship_from_index ON stud_relationships(from_type, from_id);
             CREATE INDEX stud_relationship_to_index ON stud_relationships(to_type, to_id);
             CREATE VIRTUAL TABLE stud_search USING fts5(entity_type UNINDEXED, entity_id UNINDEXED, course_id UNINDEXED, title, content, tokenize='unicode61 remove_diacritics 2');
+        `}, {version: 2, sql: `
+            ALTER TABLE stud_assignments ADD COLUMN priority TEXT;
+            CREATE INDEX stud_assignments_due_index ON stud_assignments(due_date, status);
+            CREATE INDEX stud_assignments_course_updated_index ON stud_assignments(course_id, updated_at);
         `}];
         for (const migration of migrations) {
             if (applied.has(migration.version)) continue;
@@ -186,7 +214,8 @@ class StudAcademicStore {
         const limit = Math.max(1, Math.min(Number(options.limit) || 100, 500));
         const params = [];
         let where = options.includeArchived ? "1=1" : "archived_at IS NULL";
-        if (entityType === "ASSIGNMENT" && options.courseId) { where += " AND course_id = ?"; params.push(Model.safeId(options.courseId, "Course ID")); }
+        if (["ASSIGNMENT", "RESOURCE", "NOTE", "REVISION_ITEM"].includes(entityType) && options.courseId) { where += " AND course_id = ?"; params.push(Model.safeId(options.courseId, "Course ID")); }
+        if (entityType === "RESOURCE" && options.assignmentId) { where += " AND assignment_id = ?"; params.push(Model.safeId(options.assignmentId, "Assignment ID")); }
         const rows = this.db.prepare(`SELECT * FROM ${table} WHERE ${where} ORDER BY updated_at DESC, created_at DESC LIMIT ?`).all(...params, limit);
         return Object.freeze(rows.map(row => Object.freeze({...rowToCamel(row), entityType})));
     }
@@ -243,7 +272,7 @@ class StudAcademicStore {
     insertEntity(type, id, value, timestamp) {
         switch (type) {
         case "COURSE": this.db.prepare("INSERT INTO stud_courses (id,title,short_name,code,description,start_date,end_date,status,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)").run(id,value.title,value.shortName,value.code,value.description,value.startDate,value.endDate,value.status,timestamp,timestamp); break;
-        case "ASSIGNMENT": this.db.prepare("INSERT INTO stud_assignments (id,course_id,title,description,release_date,due_date,cutoff_date,status,submission_status,submitted_at,grade,grade_maximum,weight,feedback,local_progress,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)").run(id,value.courseId,value.title,value.description,value.releaseDate,value.dueDate,value.cutoffDate,value.status,value.submissionStatus,value.submittedAt,value.grade,value.gradeMaximum,value.weight,value.feedback,value.localProgress,timestamp,timestamp); break;
+        case "ASSIGNMENT": this.db.prepare("INSERT INTO stud_assignments (id,course_id,title,description,release_date,due_date,cutoff_date,status,submission_status,submitted_at,grade,grade_maximum,weight,feedback,local_progress,priority,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)").run(id,value.courseId,value.title,value.description,value.releaseDate,value.dueDate,value.cutoffDate,value.status,value.submissionStatus,value.submittedAt,value.grade,value.gradeMaximum,value.weight,value.feedback,value.localProgress,value.priority,timestamp,timestamp); break;
         case "RESOURCE": this.db.prepare("INSERT INTO stud_resources (id,course_id,assignment_id,type,title,url,local_reference,mime_type,checksum,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)").run(id,value.courseId,value.assignmentId,value.type,value.title,value.url,value.localReference,value.mimeType,value.checksum,timestamp,timestamp); break;
         case "RESEARCH_PAPER": this.db.prepare("INSERT INTO stud_research_papers (id,title,year,abstract,venue,authors,local_document_reference,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?)").run(id,value.title,value.year,value.abstract,value.venue,value.authors,value.localDocumentReference,timestamp,timestamp); break;
         case "NOTE": this.db.prepare("INSERT INTO stud_notes (id,title,content,course_id,created_at,updated_at) VALUES (?,?,?,?,?,?)").run(id,value.title,value.content,value.courseId,timestamp,timestamp); break;
@@ -254,7 +283,7 @@ class StudAcademicStore {
     updateEntityRow(type, id, value, timestamp) {
         switch (type) {
         case "COURSE": this.db.prepare("UPDATE stud_courses SET title=?,short_name=?,code=?,description=?,start_date=?,end_date=?,status=?,updated_at=? WHERE id=?").run(value.title,value.shortName,value.code,value.description,value.startDate,value.endDate,value.status,timestamp,id); break;
-        case "ASSIGNMENT": this.db.prepare("UPDATE stud_assignments SET course_id=?,title=?,description=?,release_date=?,due_date=?,cutoff_date=?,status=?,submission_status=?,submitted_at=?,grade=?,grade_maximum=?,weight=?,feedback=?,local_progress=?,updated_at=? WHERE id=?").run(value.courseId,value.title,value.description,value.releaseDate,value.dueDate,value.cutoffDate,value.status,value.submissionStatus,value.submittedAt,value.grade,value.gradeMaximum,value.weight,value.feedback,value.localProgress,timestamp,id); break;
+        case "ASSIGNMENT": this.db.prepare("UPDATE stud_assignments SET course_id=?,title=?,description=?,release_date=?,due_date=?,cutoff_date=?,status=?,submission_status=?,submitted_at=?,grade=?,grade_maximum=?,weight=?,feedback=?,local_progress=?,priority=?,updated_at=? WHERE id=?").run(value.courseId,value.title,value.description,value.releaseDate,value.dueDate,value.cutoffDate,value.status,value.submissionStatus,value.submittedAt,value.grade,value.gradeMaximum,value.weight,value.feedback,value.localProgress,value.priority,timestamp,id); break;
         case "RESOURCE": this.db.prepare("UPDATE stud_resources SET course_id=?,assignment_id=?,type=?,title=?,url=?,local_reference=?,mime_type=?,checksum=?,updated_at=? WHERE id=?").run(value.courseId,value.assignmentId,value.type,value.title,value.url,value.localReference,value.mimeType,value.checksum,timestamp,id); break;
         case "RESEARCH_PAPER": this.db.prepare("UPDATE stud_research_papers SET title=?,year=?,abstract=?,venue=?,authors=?,local_document_reference=?,updated_at=? WHERE id=?").run(value.title,value.year,value.abstract,value.venue,value.authors,value.localDocumentReference,timestamp,id); break;
         case "NOTE": this.db.prepare("UPDATE stud_notes SET title=?,content=?,course_id=?,updated_at=? WHERE id=?").run(value.title,value.content,value.courseId,timestamp,id); break;
@@ -337,6 +366,107 @@ class StudAcademicStore {
         const type = Model.validateRelationshipEntityType(entityType);
         const id = Model.safeId(entityId, "Relationship entity ID");
         return Object.freeze(this.db.prepare("SELECT * FROM stud_relationships WHERE (from_type = ? AND from_id = ?) OR (to_type = ? AND to_id = ?) ORDER BY created_at DESC").all(type,id,type,id).map(row => Object.freeze(rowToCamel(row))));
+    }
+
+    listReferences(entityType, entityId) {
+        this.initialize();
+        const type = Model.validateEntityType(entityType);
+        const id = Model.safeId(entityId, "Reference entity ID");
+        this.requireEntity(type, id);
+        const rows = this.db.prepare(`
+            SELECT r.id AS relationship_id, r.relation_type, r.source, r.created_at,
+                e.id AS identifier_id, e.namespace, e.external_id, e.source AS identifier_source
+            FROM stud_relationships r
+            JOIN stud_external_identifiers e ON e.id = r.to_id
+            WHERE r.from_type = ? AND r.from_id = ? AND r.to_type = 'EXTERNAL_IDENTIFIER'
+            ORDER BY r.created_at DESC
+        `).all(type, id);
+        return Object.freeze(rows.map(row => Object.freeze({...rowToCamel(row), kind: row.relation_type === "RELATED_CALENDAR_EVENT" ? "CALENDAR" : row.relation_type === "RELATED_EMAIL" ? "EMAIL" : "REFERENCE"})));
+    }
+
+    linkReference(input = {}) {
+        this.initialize();
+        Model.assertAllowedKeys(input, ["entityType", "entityId", "kind", "externalId"], "Academic reference");
+        const entityType = Model.validateEntityType(input.entityType);
+        const entityId = Model.safeId(input.entityId, "Reference entity ID");
+        const kind = Model.enumValue(input.kind, ["CALENDAR", "EMAIL"], "Reference kind");
+        const externalId = Model.requiredText(input.externalId, "Reference identifier", Model.LIMITS.identifier);
+        this.requireEntity(entityType, entityId);
+        const namespace = kind === "CALENDAR" ? "ICS_UID" : "EMAIL_MESSAGE";
+        const relationType = kind === "CALENDAR" ? "RELATED_CALENDAR_EVENT" : "RELATED_EMAIL";
+        return this.transaction(() => {
+            const identifier = this.createExternalIdentifier({entityType, entityId, namespace, externalId, source: kind});
+            const relationship = this.createRelationship({fromType: entityType, fromId: entityId, relationType, toType: "EXTERNAL_IDENTIFIER", toId: identifier.id, source: kind});
+            return Object.freeze({identifier, relationship, kind});
+        });
+    }
+
+    unlinkReference(input = {}) {
+        this.initialize();
+        Model.assertAllowedKeys(input, ["entityType", "entityId", "identifierId", "confirmation"], "Academic reference unlink");
+        if (input.confirmation !== true) throw new Model.StudError("POLICY_BLOCKED", "Unlinking an academic reference requires explicit confirmation.");
+        const entityType = Model.validateEntityType(input.entityType);
+        const entityId = Model.safeId(input.entityId, "Reference entity ID");
+        const identifierId = Model.safeId(input.identifierId, "Reference identifier ID");
+        this.requireEntity(entityType, entityId);
+        const identifier = this.db.prepare("SELECT id FROM stud_external_identifiers WHERE id = ? AND entity_type = ? AND entity_id = ?").get(identifierId, entityType, entityId);
+        if (!identifier) throw new Model.StudError("NOT_FOUND", "Academic reference does not exist.");
+        return this.transaction(() => {
+            this.db.prepare("DELETE FROM stud_relationships WHERE from_type = ? AND from_id = ? AND to_type = 'EXTERNAL_IDENTIFIER' AND to_id = ?").run(entityType, entityId, identifierId);
+            this.db.prepare("DELETE FROM stud_external_identifiers WHERE id = ?").run(identifierId);
+            return Object.freeze({identifierId, unlinked: true});
+        });
+    }
+
+    getCommandCenter(options = {}) {
+        this.initialize();
+        Model.assertAllowedKeys(options, ["now", "limit"], "Command Center options");
+        const now = options.now ? new Date(Model.optionalDate(options.now, "Command Center time")) : new Date();
+        const limit = Math.max(1, Math.min(Number(options.limit) || 12, 50));
+        const courses = this.listEntities("COURSE", {limit: 100});
+        const assignments = this.listEntities("ASSIGNMENT", {limit: 500});
+        const start = localDayStart(now).getTime();
+        const end = start + 86400000;
+        const active = assignments.filter(item => !isCompletedAssignment(item));
+        const knownDue = active.filter(item => item.dueDate).sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+        const today = knownDue.filter(item => {
+            const due = new Date(item.dueDate).getTime();
+            return due >= start && due < end;
+        }).slice(0, limit);
+        const upcoming = knownDue.filter(item => new Date(item.dueDate).getTime() >= start).slice(0, limit);
+        const priority = active.map(item => Object.freeze({...item, priorityPresentation: derivePriority(item, now)}))
+            .sort((a, b) => {
+                const order = {URGENT: 0, HIGH: 1, NORMAL: 2, LOW: 3};
+                return order[a.priorityPresentation] - order[b.priorityPresentation] || String(a.dueDate || "9999").localeCompare(String(b.dueDate || "9999"));
+            }).slice(0, limit);
+        const recent = [
+            ...this.listEntities("COURSE", {limit: limit * 2}),
+            ...this.listEntities("ASSIGNMENT", {limit: limit * 2}),
+            ...this.listEntities("NOTE", {limit: limit * 2}),
+            ...this.listEntities("RESOURCE", {limit: limit * 2}),
+            ...this.listEntities("RESEARCH_PAPER", {limit: limit * 2})
+        ].sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt))).slice(0, limit);
+        const moduleStatus = courses.map(course => {
+            const related = assignments.filter(item => item.courseId === course.id && !isCompletedAssignment(item));
+            const nearest = related.filter(item => item.dueDate).sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))[0] || null;
+            return Object.freeze({...course, activeAssignmentCount: related.length, nearestDueDate: nearest && nearest.dueDate || null});
+        });
+        return Object.freeze({today: Object.freeze(today), upcoming: Object.freeze(upcoming), priority: Object.freeze(priority), continue: Object.freeze(recent), moduleStatus: Object.freeze(moduleStatus), generatedAt: now.toISOString()});
+    }
+
+    getCourseContext(courseId, options = {}) {
+        this.initialize();
+        Model.assertAllowedKeys(options, ["limit"], "Course context options");
+        const course = this.getEntity("COURSE", courseId);
+        if (!course) throw new Model.StudError("NOT_FOUND", "Course does not exist.");
+        const limit = Math.max(1, Math.min(Number(options.limit) || 100, 200));
+        const assignments = this.listEntities("ASSIGNMENT", {courseId: course.id, limit});
+        const resources = this.listEntities("RESOURCE", {courseId: course.id, limit});
+        const notes = this.listEntities("NOTE", {courseId: course.id, limit});
+        const relationships = this.listRelationships("COURSE", course.id);
+        const papers = relationships.filter(item => item.fromId === course.id ? item.toType === "RESEARCH_PAPER" : item.fromType === "RESEARCH_PAPER")
+            .map(item => this.getEntity("RESEARCH_PAPER", item.fromId === course.id ? item.toId : item.fromId)).filter(Boolean).slice(0, limit);
+        return Object.freeze({course, assignments, resources, notes, papers: Object.freeze(papers), references: this.listReferences("COURSE", course.id), provenance: this.listProvenance("COURSE", course.id)});
     }
 
     search(query, options = {}) {
