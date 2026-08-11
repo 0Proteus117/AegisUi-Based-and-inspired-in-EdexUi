@@ -68,7 +68,12 @@ the ephemeral session by default or sends case data to a provider.
   original-byte SHA-256. It does not upload the media, infer authenticity or
   silently persist the original. Image GPS can only hand off to Geospatial
   Verification after an explicit analyst action.
-- STUD v2.6.6 adds deterministic local revision and study planning: canonical
+- STUD v2.6.7 adds an explicit local Engineering Compute workbench for bounded
+  equations, units, numerical methods, numeric data and plots. Its typed
+  engine runs offline and saves a result only on explicit academic promotion;
+  SymPy/Pint/CoolProp/python-control remain honest optional local packs rather
+  than cloud dependencies. It also retains v2.6.6 deterministic local revision
+  and study planning: canonical
   RevisionItems, explicit academic links, bounded study sessions, offline
   history and explainable schedules. It preserves v2.6.5 academic orchestration:
   Moodle observations,

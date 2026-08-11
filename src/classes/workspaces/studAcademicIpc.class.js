@@ -5,6 +5,7 @@ const Model = require("./studAcademicModel.class.js");
 const {StudAcademicStore} = require("./studAcademicStore.class.js");
 const {StudResearchRuntime} = require("./studResearchRuntime.class.js");
 const {StudLmsRuntime} = require("./studLmsRuntime.class.js");
+const {StudComputeRuntime} = require("./studComputeRuntime.class.js");
 
 const CHANNELS = Object.freeze([
     "stud-core-status",
@@ -37,6 +38,10 @@ const CHANNELS = Object.freeze([
     "stud-study-session-start",
     "stud-study-session-transition",
     "stud-study-session-history",
+    "stud-compute-capabilities",
+    "stud-compute-run",
+    "stud-compute-save-result",
+    "stud-compute-list",
     "stud-research-status",
     "stud-research-search",
     "stud-research-resolve-crossref",
@@ -102,6 +107,9 @@ function registerStudAcademicIpc(options = {}) {
     if (!dialog) { try { dialog = require("electron").dialog; } catch (error) {} }
     const runtime = options.researchRuntime || new StudResearchRuntime({root: resolveStorageRoot(options.app, options), dialog, env: options.env || process.env, fetch: options.fetch});
     const lmsRuntime = options.lmsRuntime || new StudLmsRuntime({store, root: resolveStorageRoot(options.app, options), fetch: options.fetch, safeStorage: options.safeStorage, shell: options.shell, allowLocalDevelopment: options.allowLocalDevelopment === true});
+    // The compute runtime is pure local code. It has no process spawning,
+    // filesystem, provider or network capability.
+    const computeRuntime = options.computeRuntime || new StudComputeRuntime();
     const handlers = new Map();
     const add = (channel, keys, handler) => {
         if (handlers.has(channel)) throw new Error(`Duplicate STUD IPC channel: ${channel}`);
@@ -152,6 +160,12 @@ function registerStudAcademicIpc(options = {}) {
     add("stud-study-session-start", ["revisionItemId"], payload => store.startStudySession(payload));
     add("stud-study-session-transition", ["sessionId", "action", "difficulty", "confidence", "note", "scheduleNext"], payload => store.transitionStudySession(payload));
     add("stud-study-session-history", ["revisionItemId", "limit", "includeCancelled"], payload => store.listStudySessions(payload.revisionItemId, payload));
+    add("stud-compute-capabilities", [], () => computeRuntime.capabilities());
+    add("stud-compute-run", ["tool", "operation", "input"], payload => computeRuntime.run(payload));
+    // The renderer supplies the same typed request again; main recomputes it
+    // before persistence instead of accepting a renderer-provided result.
+    add("stud-compute-save-result", ["request", "context"], payload => store.saveComputeResult(computeRuntime.run(payload.request), payload.context || {}));
+    add("stud-compute-list", ["courseId", "assignmentId", "limit", "includeArchived"], payload => store.listComputeResults(payload));
     add("stud-research-status", [], () => runtime.status());
     add("stud-research-search", ["query", "year", "limit", "requestId"], payload => runtime.searchOpenAlex(payload));
     add("stud-research-resolve-crossref", ["doi", "requestId"], payload => runtime.resolveCrossref(payload));

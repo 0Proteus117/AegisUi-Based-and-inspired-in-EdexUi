@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.6.7 - 2026-08-11
+
+### STUD Phase 7 — Engineering Compute / Local STEM Workbench
+
+- Activated the STUD Tools surface with a bounded, offline-first local STEM calculation engine for equations, units, numerical methods, numeric CSV/TSV inspection and locally rendered plots.
+- Added explicit canonical `COMPUTE_RESULT` records with Course, Assignment and Note associations plus `AEGIS_ENGINEERING_COMPUTE` provenance; results are never saved automatically.
+- Added typed main-process computation IPC without shell execution, arbitrary Python, network access, provider calls, local path persistence or secret exposure.
+- Exposed SymPy, Pint, CoolProp and python-control as honest optional `NOT_INSTALLED` capabilities rather than fabricating scientific results or adding cloud fallbacks.
+
 ## 2.6.6 - 2026-08-11
 
 ### STUD Phase 6 — Revision & Study Planning
