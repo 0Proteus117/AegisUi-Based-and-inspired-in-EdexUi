@@ -6342,13 +6342,45 @@ button.eng-thread-row.active {
 .engineering-mode .stud-moodle-fallbacks .workspace-panel-content { display: grid; gap: .5vh; }
 .engineering-mode .stud-moodle-service-card { min-width: 0; }
 
+/* STUD Phase 7 Engineering Compute. Dynamic calculation content remains in
+ * ordinary grid flow so long equations, JSON results and plot metadata cannot
+ * overlap adjacent panels at compact Electron sizes. */
+.engineering-mode .stud-compute-shell { display: grid; gap: .7vh; min-width: 0; }
+.engineering-mode .stud-compute-intro { display: grid; grid-template-columns: minmax(0, 1fr) max-content; gap: 1vh; align-items: start; }
+.engineering-mode .stud-compute-intro h2,.engineering-mode .stud-compute-intro p { margin: 0; }
+.engineering-mode .stud-compute-intro h2 { color: var(--aegis-text-primary); font: 1.05vh var(--font_mono); letter-spacing: .12vh; }
+.engineering-mode .stud-compute-intro p { margin-top: .25vh; max-width: 100ch; color: var(--aegis-text-muted); font: .62vh var(--font_main_light); line-height: 1.45; overflow-wrap: anywhere; }
+.engineering-mode .stud-compute-status { display: grid; gap: .12vh; justify-items: end; text-align: right; }
+.engineering-mode .stud-compute-status small,.engineering-mode .stud-compute-status span { color: var(--aegis-text-faint); font: .5vh var(--font_mono); letter-spacing: .08vh; }
+.engineering-mode .stud-compute-status strong { color: var(--aegis-accent-soft); font: .66vh var(--font_mono); }
+.engineering-mode .stud-compute-tools { display: flex; flex-wrap: wrap; gap: .35vh; min-width: 0; }
+.engineering-mode .stud-compute-tools button { min-width: 0; display: grid; gap: .1vh; padding: .42vh .58vh; border-color: var(--aegis-border-subtle); background: var(--aegis-surface-muted); color: var(--aegis-text-muted); font: .58vh var(--font_mono); }
+.engineering-mode .stud-compute-tools button.active { border-color: var(--aegis-accent); background: var(--aegis-surface-selected); color: var(--aegis-text-primary); }
+.engineering-mode .stud-compute-tools small { color: var(--aegis-warning); font: .43vh var(--font_mono); }
+.engineering-mode .stud-compute-grid { display: grid; grid-template-columns: minmax(24vh, .9fr) minmax(0, 1.1fr); gap: .7vh; align-items: start; min-width: 0; }
+.engineering-mode .stud-compute-form { display: grid; gap: .48vh; min-width: 0; }
+.engineering-mode .stud-compute-form label,.engineering-mode .stud-compute-save label { display: grid; min-width: 0; gap: .18vh; color: var(--aegis-text-faint); font: .53vh var(--font_mono); letter-spacing: .07vh; }
+.engineering-mode .stud-compute-form label small,.engineering-mode .stud-compute-hint { color: var(--aegis-text-muted); font: .49vh var(--font_mono); letter-spacing: 0; line-height: 1.4; overflow-wrap: anywhere; }
+.engineering-mode .stud-compute-form textarea { min-height: 5.5vh; resize: vertical; }
+.engineering-mode .stud-compute-data-state,.engineering-mode .stud-compute-unavailable { padding: .6vh; border-left: .16vh solid var(--aegis-accent); color: var(--aegis-text-muted); background: var(--aegis-surface-muted); font: .58vh var(--font_mono); line-height: 1.45; overflow-wrap: anywhere; }
+.engineering-mode .stud-compute-unavailable { border-left-color: var(--aegis-warning); display: grid; gap: .3vh; }.engineering-mode .stud-compute-unavailable p { margin: 0; color: var(--aegis-text); }
+.engineering-mode .stud-compute-result-body { display: grid; gap: .55vh; min-width: 0; }.engineering-mode .stud-compute-result-body > section { min-width: 0; }
+.engineering-mode .stud-compute-result-body pre { margin: .2vh 0 0; max-height: 23vh; overflow: auto; padding: .52vh; border: .08vh solid var(--aegis-border-subtle); background: var(--aegis-code-surface, var(--aegis-surface-muted)); color: var(--aegis-text-primary); font: .58vh/1.4 var(--font_mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+.engineering-mode .stud-compute-error { padding: .7vh; border-left: .18vh solid var(--aegis-warning); background: color-mix(in srgb, var(--aegis-warning) 8%, var(--aegis-surface)); color: var(--aegis-text); }.engineering-mode .stud-compute-error p { margin: .3vh 0 0; color: var(--aegis-text-muted); overflow-wrap: anywhere; }
+.engineering-mode .stud-compute-save { padding-top: .55vh; border-top: .08vh solid var(--aegis-border-subtle); }.engineering-mode .stud-compute-save h3,.engineering-mode .stud-compute-save p { margin: 0; }.engineering-mode .stud-compute-save h3 { color: var(--aegis-accent-soft); font: .66vh var(--font_mono); }.engineering-mode .stud-compute-save p { margin-top: .2vh; color: var(--aegis-text-muted); font: .56vh var(--font_main_light); line-height: 1.4; }
+.engineering-mode .stud-compute-save form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .42vh; margin-top: .5vh; }.engineering-mode .stud-compute-save button { grid-column: 1 / -1; }
+.engineering-mode .stud-compute-plot { display: grid; justify-items: center; gap: .25vh; padding: .52vh; border: .08vh solid var(--aegis-border-subtle); background: var(--aegis-surface-muted); }.engineering-mode .stud-compute-plot svg { width: min(100%, 52vh); max-height: 29vh; background: var(--aegis-surface); }.engineering-mode .stud-compute-plot path { stroke: var(--aegis-border); fill: none; }.engineering-mode .stud-compute-plot polyline { stroke: var(--aegis-accent); stroke-width: 2; }.engineering-mode .stud-compute-plot text { fill: var(--aegis-text-muted); font: 10px var(--font_mono); text-anchor: middle; }.engineering-mode .stud-compute-plot strong { color: var(--aegis-text); font: .59vh var(--font_mono); overflow-wrap: anywhere; text-align: center; }
+.engineering-mode .stud-compute-policy p { margin: 0; color: var(--aegis-text-muted); font: .59vh var(--font_main_light); line-height: 1.45; overflow-wrap: anywhere; }.engineering-mode .stud-compute-capabilities { display: grid; grid-template-columns: repeat(auto-fit, minmax(16vh, 1fr)); gap: .4vh; margin-top: .55vh; }.engineering-mode .stud-compute-capabilities article { display: grid; gap: .15vh; min-width: 0; padding: .45vh; border-left: .14vh solid var(--aegis-warning); background: var(--aegis-surface-muted); }.engineering-mode .stud-compute-capabilities strong { color: var(--aegis-text); font: .56vh var(--font_mono); }.engineering-mode .stud-compute-capabilities span { color: var(--aegis-warning); font: .53vh var(--font_mono); }.engineering-mode .stud-compute-capabilities small { color: var(--aegis-text-faint); font: .47vh var(--font_mono); line-height: 1.35; overflow-wrap: anywhere; }
+
 @media (max-width: 1450px) {
     .engineering-mode .stud-moodle-control-grid,.engineering-mode .stud-moodle-data-grid { grid-template-columns: minmax(0, 1fr); }
     .engineering-mode .stud-moodle-list { max-height: 28vh; }
+    .engineering-mode .stud-compute-grid { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 1230px) {
     .engineering-mode .stud-moodle-config-form,.engineering-mode .stud-moodle-status-grid,.engineering-mode .stud-moodle-mini-status { grid-template-columns: minmax(0, 1fr); }
     .engineering-mode .stud-moodle-config-form label:first-child,.engineering-mode .stud-moodle-config-form label:nth-child(3),.engineering-mode .stud-moodle-config-form label:nth-child(4),.engineering-mode .stud-moodle-config-form .stud-moodle-security-note,.engineering-mode .stud-moodle-config-form footer { grid-column: auto; }
+    .engineering-mode .stud-compute-intro,.engineering-mode .stud-compute-save form { grid-template-columns: minmax(0, 1fr); }.engineering-mode .stud-compute-status { justify-items: start; text-align: left; }
 }
 
 @media (max-width: 1450px) {

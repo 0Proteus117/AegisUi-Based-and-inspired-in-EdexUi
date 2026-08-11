@@ -15,7 +15,8 @@ const TABLES = Object.freeze({
     RESOURCE: "stud_resources",
     RESEARCH_PAPER: "stud_research_papers",
     NOTE: "stud_notes",
-    REVISION_ITEM: "stud_revision_items"
+    REVISION_ITEM: "stud_revision_items",
+    COMPUTE_RESULT: "stud_compute_results"
 });
 
 function parseJson(value, fallback = null) {
@@ -66,6 +67,7 @@ class StudAcademicStore {
         this.dbPath = path.join(this.root, "academic.sqlite");
         this.applicationVersion = options.applicationVersion || "unknown";
         this.db = null;
+        this.transactionDepth = 0;
     }
 
     initialize() {
@@ -216,6 +218,17 @@ class StudAcademicStore {
             );
             CREATE INDEX stud_study_sessions_item_index ON stud_study_sessions(revision_item_id, started_at DESC);
             CREATE INDEX stud_study_sessions_status_index ON stud_study_sessions(status, updated_at DESC);
+        `}, {version: 8, sql: `
+            CREATE TABLE stud_compute_results (
+                id TEXT PRIMARY KEY, title TEXT NOT NULL, capability TEXT NOT NULL, tool TEXT NOT NULL, operation TEXT NOT NULL,
+                input_json TEXT, normalized_input_json TEXT, output_json TEXT NOT NULL, units_json TEXT, plot_json TEXT,
+                runtime_json TEXT NOT NULL, course_id TEXT, assignment_id TEXT, note_id TEXT,
+                created_at TEXT NOT NULL, updated_at TEXT NOT NULL, archived_at TEXT,
+                FOREIGN KEY(course_id) REFERENCES stud_courses(id),
+                FOREIGN KEY(assignment_id) REFERENCES stud_assignments(id),
+                FOREIGN KEY(note_id) REFERENCES stud_notes(id)
+            );
+            CREATE INDEX stud_compute_results_context_index ON stud_compute_results(course_id, assignment_id, updated_at DESC);
         `}];
         for (const migration of migrations) {
             if (applied.has(migration.version)) continue;
@@ -351,7 +364,9 @@ class StudAcademicStore {
 
     transaction(work) {
         this.initialize();
+        if (this.transactionDepth > 0) return work();
         try {
+            this.transactionDepth += 1;
             this.db.exec("BEGIN IMMEDIATE;");
             const value = work();
             this.db.exec("COMMIT;");
@@ -359,6 +374,8 @@ class StudAcademicStore {
         } catch (error) {
             try { this.db.exec("ROLLBACK;"); } catch (rollbackError) {}
             throw error;
+        } finally {
+            this.transactionDepth = Math.max(0, this.transactionDepth - 1);
         }
     }
 
@@ -395,8 +412,8 @@ class StudAcademicStore {
         const limit = Math.max(1, Math.min(Number(options.limit) || 100, 500));
         const params = [];
         let where = options.includeArchived ? "1=1" : "archived_at IS NULL";
-        if (["ASSIGNMENT", "RESOURCE", "NOTE", "REVISION_ITEM"].includes(entityType) && options.courseId) { where += " AND course_id = ?"; params.push(Model.safeId(options.courseId, "Course ID")); }
-        if (["RESOURCE", "NOTE"].includes(entityType) && options.assignmentId) { where += " AND assignment_id = ?"; params.push(Model.safeId(options.assignmentId, "Assignment ID")); }
+        if (["ASSIGNMENT", "RESOURCE", "NOTE", "REVISION_ITEM", "COMPUTE_RESULT"].includes(entityType) && options.courseId) { where += " AND course_id = ?"; params.push(Model.safeId(options.courseId, "Course ID")); }
+        if (["RESOURCE", "NOTE", "COMPUTE_RESULT"].includes(entityType) && options.assignmentId) { where += " AND assignment_id = ?"; params.push(Model.safeId(options.assignmentId, "Assignment ID")); }
         const rows = this.db.prepare(`SELECT * FROM ${table} WHERE ${where} ORDER BY updated_at DESC, created_at DESC LIMIT ?`).all(...params, limit);
         return Object.freeze(rows.map(row => Object.freeze({...rowToCamel(row), entityType})));
     }
@@ -447,6 +464,7 @@ class StudAcademicStore {
     assertReferences(entityType, value) {
         if (value.courseId) this.requireEntity("COURSE", value.courseId);
         if (value.assignmentId) this.requireEntity("ASSIGNMENT", value.assignmentId);
+        if (value.noteId) this.requireEntity("NOTE", value.noteId);
         if (entityType === "REVISION_ITEM" && value.sourceType && value.sourceId) this.requireEntity(value.sourceType, value.sourceId);
     }
 
@@ -459,6 +477,7 @@ class StudAcademicStore {
         case "NOTE": this.db.prepare("INSERT INTO stud_notes (id,title,content,course_id,assignment_id,document_version,document_json,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?)").run(id,value.title,value.content,value.courseId,value.assignmentId,value.documentVersion,value.documentJson,timestamp,timestamp); break;
         case "REVISION_ITEM": this.db.prepare(`INSERT INTO stud_revision_items (id,course_id,prompt,answer,source_type,source_id,title,description,status,priority,difficulty,confidence,estimated_duration_minutes,accumulated_study_minutes,last_studied_at,next_planned_revision_at,scheduled_revision_at,target_mastery,current_mastery,spaced_revision_enabled,successful_revision_count,pinned,plan_position,suggestion_dismissed_until,created_at,updated_at)
             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(id,value.courseId,value.prompt,value.answer,value.sourceType,value.sourceId,value.title,value.description,value.status,value.priority,value.difficulty,value.confidence,value.estimatedDurationMinutes,value.accumulatedStudyMinutes,value.lastStudiedAt,value.nextPlannedRevisionAt,value.scheduledRevisionAt,value.targetMastery,value.currentMastery,value.spacedRevisionEnabled ? 1 : 0,value.successfulRevisionCount,value.pinned ? 1 : 0,value.planPosition,value.suggestionDismissedUntil,timestamp,timestamp); break;
+        case "COMPUTE_RESULT": this.db.prepare("INSERT INTO stud_compute_results (id,title,capability,tool,operation,input_json,normalized_input_json,output_json,units_json,plot_json,runtime_json,course_id,assignment_id,note_id,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)").run(id,value.title,value.capability,value.tool,value.operation,value.inputJson,value.normalizedInputJson,value.outputJson,value.unitsJson,value.plotJson,value.runtimeJson,value.courseId,value.assignmentId,value.noteId,timestamp,timestamp); break;
         }
     }
 
@@ -470,14 +489,15 @@ class StudAcademicStore {
         case "RESEARCH_PAPER": this.db.prepare("UPDATE stud_research_papers SET title=?,object_type=?,year=?,published_date=?,abstract=?,venue=?,publisher=?,authors=?,doi=?,source_url=?,citation_json=?,oa_json=?,local_document_reference=?,document_metadata_json=?,updated_at=? WHERE id=?").run(value.title,value.objectType,value.year,value.publishedDate,value.abstract,value.venue,value.publisher,value.authors,value.doi,value.sourceUrl,value.citationJson,value.oaJson,value.localDocumentReference,value.documentMetadataJson,timestamp,id); break;
         case "NOTE": this.db.prepare("UPDATE stud_notes SET title=?,content=?,course_id=?,assignment_id=?,document_version=?,document_json=?,updated_at=? WHERE id=?").run(value.title,value.content,value.courseId,value.assignmentId,value.documentVersion,value.documentJson,timestamp,id); break;
         case "REVISION_ITEM": this.db.prepare(`UPDATE stud_revision_items SET course_id=?,prompt=?,answer=?,source_type=?,source_id=?,title=?,description=?,status=?,priority=?,difficulty=?,confidence=?,estimated_duration_minutes=?,accumulated_study_minutes=?,last_studied_at=?,next_planned_revision_at=?,scheduled_revision_at=?,target_mastery=?,current_mastery=?,spaced_revision_enabled=?,successful_revision_count=?,pinned=?,plan_position=?,suggestion_dismissed_until=?,updated_at=? WHERE id=?`).run(value.courseId,value.prompt,value.answer,value.sourceType,value.sourceId,value.title,value.description,value.status,value.priority,value.difficulty,value.confidence,value.estimatedDurationMinutes,value.accumulatedStudyMinutes,value.lastStudiedAt,value.nextPlannedRevisionAt,value.scheduledRevisionAt,value.targetMastery,value.currentMastery,value.spacedRevisionEnabled ? 1 : 0,value.successfulRevisionCount,value.pinned ? 1 : 0,value.planPosition,value.suggestionDismissedUntil,timestamp,id); break;
+        case "COMPUTE_RESULT": this.db.prepare("UPDATE stud_compute_results SET title=?,capability=?,tool=?,operation=?,input_json=?,normalized_input_json=?,output_json=?,units_json=?,plot_json=?,runtime_json=?,course_id=?,assignment_id=?,note_id=?,updated_at=? WHERE id=?").run(value.title,value.capability,value.tool,value.operation,value.inputJson,value.normalizedInputJson,value.outputJson,value.unitsJson,value.plotJson,value.runtimeJson,value.courseId,value.assignmentId,value.noteId,timestamp,id); break;
         }
     }
 
     syncSearch(type, id) {
         const entity = this.getEntity(type, id);
         this.db.prepare("DELETE FROM stud_search WHERE entity_type = ? AND entity_id = ?").run(type, id);
-        if (!entity || !["COURSE", "ASSIGNMENT", "RESOURCE", "RESEARCH_PAPER", "NOTE", "REVISION_ITEM"].includes(type)) return;
-        const content = cleanText([entity.description, entity.abstract, entity.content, entity.prompt, entity.answer, entity.code, entity.authors, entity.venue, entity.doi, entity.publisher].filter(Boolean).join(" "));
+        if (!entity || !["COURSE", "ASSIGNMENT", "RESOURCE", "RESEARCH_PAPER", "NOTE", "REVISION_ITEM", "COMPUTE_RESULT"].includes(type)) return;
+        const content = cleanText([entity.description, entity.abstract, entity.content, entity.prompt, entity.answer, entity.code, entity.authors, entity.venue, entity.doi, entity.publisher, entity.capability, entity.tool, entity.operation].filter(Boolean).join(" "));
         this.db.prepare("INSERT INTO stud_search (entity_type,entity_id,course_id,title,content) VALUES (?,?,?,?,?)").run(type, id, entity.courseId || "", entity.title || entity.prompt || "", content);
     }
 
@@ -613,6 +633,61 @@ class StudAcademicStore {
         return this.getEntity("NOTE", note.id);
     }
 
+    // Compute persistence is deliberately explicit: a previewed calculation is
+    // ephemeral until the analyst asks to save it to academic context.
+    saveComputeResult(run, context = {}) {
+        this.initialize();
+        Model.assertPlainObject(run, "Compute result");
+        Model.assertAllowedKeys(context, ["title", "courseId", "assignmentId", "noteId"], "Compute context");
+        if (run.status !== "SUCCESS" || !run.runtime || run.runtime.engine !== "AEGIS_BOUNDED_LOCAL_COMPUTE") throw new Model.StudError("INVALID_INPUT", "Only a successful bounded local calculation can be saved.");
+        const assignmentId = context.assignmentId ? Model.safeId(context.assignmentId, "Assignment ID") : null;
+        let courseId = context.courseId ? Model.safeId(context.courseId, "Course ID") : null;
+        const noteId = context.noteId ? Model.safeId(context.noteId, "Note ID") : null;
+        if (assignmentId) {
+            const assignment = this.getEntity("ASSIGNMENT", assignmentId);
+            if (!assignment) throw new Model.StudError("NOT_FOUND", "Assignment does not exist.");
+            if (courseId && assignment.courseId && courseId !== assignment.courseId) throw new Model.StudError("INVALID_INPUT", "Selected course does not match the selected assignment.");
+            courseId ||= assignment.courseId || null;
+        }
+        if (courseId) this.requireEntity("COURSE", courseId);
+        if (noteId) this.requireEntity("NOTE", noteId);
+        const title = context.title ? Model.requiredText(context.title, "Compute result title") : `${run.tool.replace(/_/g, " ")} · ${run.operation}`;
+        const value = {
+            title, capability: "ENGINEERING_COMPUTE", tool: run.tool, operation: run.operation,
+            inputJson: JSON.stringify(run.originalInput), normalizedInputJson: JSON.stringify(run.normalizedInput), outputJson: JSON.stringify(run.result),
+            unitsJson: run.units ? JSON.stringify(run.units) : null, plotJson: run.plot ? JSON.stringify(run.plot) : null,
+            runtimeJson: JSON.stringify(run.runtime), courseId, assignmentId, noteId
+        };
+        return this.transaction(() => {
+            const result = this.createEntity("COMPUTE_RESULT", value, {provenance: {
+                field: "result", observedValue: JSON.stringify(run.result), sourceType: "AEGIS_ENGINEERING_COMPUTE",
+                sourceId: run.runtime.version, sourceAuthority: "AUTHORITATIVE", metadata: {tool: run.tool, operation: run.operation, offline: true}
+            }});
+            const relate = (fromType, fromId) => { try { this.createRelationship({fromType, fromId, relationType: "USES", toType: "COMPUTE_RESULT", toId: result.id, source: "AEGIS_ENGINEERING_COMPUTE"}); } catch (error) { if (error.code !== "DUPLICATE_RELATIONSHIP") throw error; } };
+            if (courseId) relate("COURSE", courseId);
+            if (assignmentId) relate("ASSIGNMENT", assignmentId);
+            if (noteId) {
+                try { this.createRelationship({fromType: "NOTE", fromId: noteId, relationType: "REFERENCES", toType: "COMPUTE_RESULT", toId: result.id, source: "AEGIS_ENGINEERING_COMPUTE"}); } catch (error) { if (error.code !== "DUPLICATE_RELATIONSHIP") throw error; }
+                const note = this.getEntity("NOTE", noteId);
+                const document = parseJson(note.documentJson, {type: "doc", content: []});
+                if (!Array.isArray(document.content)) document.content = [];
+                const inputText = JSON.stringify(run.normalizedInput).slice(0, 1600);
+                const outputText = JSON.stringify(run.result).slice(0, 1600);
+                document.content.push(
+                    {type: "heading", attrs: {level: 2}, content: [{type: "text", text: `Engineering Compute · ${title}`}]},
+                    {type: "paragraph", content: [{type: "text", text: `Tool: ${run.tool} · Operation: ${run.operation}`}]},
+                    {type: "codeBlock", content: [{type: "text", text: `Input: ${inputText}\nResult: ${outputText}`}]},
+                    {type: "paragraph", content: [{type: "text", text: "Source: AEGIS ENGINEERING COMPUTE · local deterministic calculation · explicit save."}]}
+                );
+                const structured = Research.sanitizeNoteDocument(document);
+                this.updateEntity("NOTE", note.id, {title: note.title, courseId: note.courseId, assignmentId: note.assignmentId, content: structured.plainText, documentVersion: structured.version, documentJson: JSON.stringify(structured.document)});
+            }
+            return this.getEntity("COMPUTE_RESULT", result.id);
+        });
+    }
+
+    listComputeResults(options = {}) { return this.listEntities("COMPUTE_RESULT", options); }
+
     researchLibrary(options = {}) {
         const limit = Math.max(1, Math.min(Number(options.limit) || 100, 500));
         return this.listEntities("RESEARCH_PAPER", {limit});
@@ -706,9 +781,10 @@ class StudAcademicStore {
         const notes = relationships.filter(item => item.fromType === "ASSIGNMENT" && item.toType === "NOTE").map(item => this.getEntity("NOTE", item.toId)).filter(Boolean);
         const papers = relationships.filter(item => item.fromType === "ASSIGNMENT" && item.toType === "RESEARCH_PAPER").map(item => this.getEntity("RESEARCH_PAPER", item.toId)).filter(Boolean);
         const resources = this.listEntities("RESOURCE", {assignmentId: assignment.id, limit: 100});
+        const computeResults = this.listComputeResults({assignmentId: assignment.id, limit: 100});
         const revisions = this.listRevisionItems({assignmentId: assignment.id, limit: 100});
         const status = Orchestration.orchestrationStatus({references, conflicts});
-        return Object.freeze({assignment, course, provenance, references, links, conflicts, relationships, notes: Object.freeze(notes), papers: Object.freeze(papers), resources, revisions, status});
+        return Object.freeze({assignment, course, provenance, references, links, conflicts, relationships, notes: Object.freeze(notes), papers: Object.freeze(papers), resources, computeResults, revisions, status});
     }
 
     recoverInterruptedStudySessions() {
@@ -1013,6 +1089,7 @@ class StudAcademicStore {
             ...this.listEntities("NOTE", {limit: limit * 2}),
             ...this.listEntities("RESOURCE", {limit: limit * 2}),
             ...this.listEntities("RESEARCH_PAPER", {limit: limit * 2}),
+            ...this.listComputeResults({limit: limit * 2}),
             ...this.listRevisionItems({limit: limit * 2})
         ].sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt))).slice(0, limit);
         const moduleStatus = courses.map(course => {
@@ -1038,11 +1115,12 @@ class StudAcademicStore {
         const assignments = this.listEntities("ASSIGNMENT", {courseId: course.id, limit});
         const resources = this.listEntities("RESOURCE", {courseId: course.id, limit});
         const notes = this.listEntities("NOTE", {courseId: course.id, limit});
+        const computeResults = this.listComputeResults({courseId: course.id, limit});
         const revisions = this.listRevisionItems({courseId: course.id, limit});
         const relationships = this.listRelationships("COURSE", course.id);
         const papers = relationships.filter(item => item.fromId === course.id ? item.toType === "RESEARCH_PAPER" : item.fromType === "RESEARCH_PAPER")
             .map(item => this.getEntity("RESEARCH_PAPER", item.fromId === course.id ? item.toId : item.fromId)).filter(Boolean).slice(0, limit);
-        return Object.freeze({course, assignments, resources, notes, revisions, papers: Object.freeze(papers), references: this.listReferences("COURSE", course.id), provenance: this.listProvenance("COURSE", course.id)});
+        return Object.freeze({course, assignments, resources, notes, computeResults, revisions, papers: Object.freeze(papers), references: this.listReferences("COURSE", course.id), provenance: this.listProvenance("COURSE", course.id)});
     }
 
     search(query, options = {}) {
@@ -1050,8 +1128,8 @@ class StudAcademicStore {
         Model.assertAllowedKeys(options, ["entityTypes", "courseId", "limit"], "Search options");
         const match = Model.normalizedSearchTerms(query);
         const types = Array.isArray(options.entityTypes) && options.entityTypes.length
-            ? options.entityTypes.map(Model.validateEntityType).filter(type => ["COURSE", "ASSIGNMENT", "RESOURCE", "RESEARCH_PAPER", "NOTE", "REVISION_ITEM"].includes(type))
-            : ["COURSE", "ASSIGNMENT", "RESOURCE", "RESEARCH_PAPER", "NOTE", "REVISION_ITEM"];
+            ? options.entityTypes.map(Model.validateEntityType).filter(type => ["COURSE", "ASSIGNMENT", "RESOURCE", "RESEARCH_PAPER", "NOTE", "REVISION_ITEM", "COMPUTE_RESULT"].includes(type))
+            : ["COURSE", "ASSIGNMENT", "RESOURCE", "RESEARCH_PAPER", "NOTE", "REVISION_ITEM", "COMPUTE_RESULT"];
         if (!types.length) return Object.freeze([]);
         const limit = Math.max(1, Math.min(Number(options.limit) || 30, Model.LIMITS.searchLimit));
         const params = [match];

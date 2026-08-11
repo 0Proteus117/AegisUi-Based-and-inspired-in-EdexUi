@@ -20,6 +20,37 @@ The renderer uses only narrowly allowlisted `stud-*` IPC methods. SQLite is
 opened in the main process; the renderer has no direct SQL, filesystem path or
 network capability.
 
+## Engineering Compute (Phase 7)
+
+The STUD Tools view includes a deliberately bounded, offline-first Engineering
+Compute workbench. It is not a terminal, notebook or generic Python bridge:
+the renderer submits a typed request to the main process and receives a
+normalized result. The local runtime supports a practical deterministic subset
+of equations, SI-oriented unit conversion, numerical operations, bounded CSV
+or TSV data summaries and SVG plot metadata. It never launches a shell,
+selects an executable, reads arbitrary Aegis files or contacts a network
+provider.
+
+The calculation engine intentionally does not claim full SymPy, Pint, NumPy,
+SciPy, pandas or Matplotlib compatibility. Optional Python engines (including
+CoolProp and python-control) are reported as capability-detected and remain
+`NOT_INSTALLED` unless a separately maintained local runtime is supplied in a
+future, explicitly scoped change. There is no cloud fallback.
+
+Results remain ephemeral until the analyst explicitly saves them. The main
+process reruns the typed request before persistence, then writes a canonical
+`COMPUTE_RESULT` with local deterministic provenance. A result can be linked
+explicitly to a Course, Assignment and/or Note; Note insertion appends a
+labelled provenance block and does not overwrite prior academic observations.
+The original imported dataset file and its absolute path are never persisted.
+
+Detailed use, supported bounded operations, security boundary, data/plot
+limits and validation evidence are in
+[STUD_ENGINEERING_COMPUTE.md](STUD_ENGINEERING_COMPUTE.md),
+[STUD_COMPUTE_SECURITY.md](STUD_COMPUTE_SECURITY.md),
+[STUD_COMPUTE_DATA_PLOTS.md](STUD_COMPUTE_DATA_PLOTS.md) and
+[STUD_PHASE7_VALIDATION.md](STUD_PHASE7_VALIDATION.md).
+
 ## Phase 1 model
 
 Canonical IDs are generated locally and remain independent of external

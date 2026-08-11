@@ -2,11 +2,11 @@
 
 const crypto = require("crypto");
 
-const SCHEMA_VERSION = 7;
-const ENTITY_TYPES = Object.freeze(["COURSE", "ASSIGNMENT", "RESOURCE", "RESEARCH_PAPER", "NOTE", "REVISION_ITEM"]);
+const SCHEMA_VERSION = 8;
+const ENTITY_TYPES = Object.freeze(["COURSE", "ASSIGNMENT", "RESOURCE", "RESEARCH_PAPER", "NOTE", "REVISION_ITEM", "COMPUTE_RESULT"]);
 const RELATIONSHIP_ENTITY_TYPES = Object.freeze([...ENTITY_TYPES, "EXTERNAL_IDENTIFIER"]);
 const RELATIONSHIP_TYPES = Object.freeze(["BELONGS_TO", "RELATES_TO", "SUPPORTS", "USES", "REFERENCES", "HAS_RESOURCE", "HAS_NOTE", "HAS_PAPER", "CITES", "RELATED_EMAIL", "RELATED_CALENDAR_EVENT"]);
-const PROVENANCE_SOURCE_TYPES = Object.freeze(["USER", "MOODLE", "MOODLE_ICS", "CALENDAR", "EMAIL", "COURSE_DOCUMENT", "RESEARCH_PROVIDER", "LOCAL_EXTRACTION", "AI_SUGGESTION", "IMPORT", "UNKNOWN"]);
+const PROVENANCE_SOURCE_TYPES = Object.freeze(["USER", "MOODLE", "MOODLE_ICS", "CALENDAR", "EMAIL", "COURSE_DOCUMENT", "RESEARCH_PROVIDER", "LOCAL_EXTRACTION", "AEGIS_ENGINEERING_COMPUTE", "AI_SUGGESTION", "IMPORT", "UNKNOWN"]);
 const PROVENANCE_AUTHORITIES = Object.freeze(["AUTHORITATIVE", "USER_OVERRIDE", "TRUSTED", "CORROBORATING", "INFERRED", "SUGGESTED", "UNKNOWN"]);
 const COST_MODELS = Object.freeze(["FREE_OPEN", "FREE_LOCAL", "FREE_SERVICE", "FREEMIUM", "PAID", "SUBSCRIPTION"]);
 const COURSE_STATUSES = Object.freeze(["ACTIVE", "COMPLETED", "ARCHIVED"]);
@@ -237,6 +237,36 @@ function normalizeRevisionItem(input = {}, existing = {}) {
     };
 }
 
+function normalizedJson(value, label, max = LIMITS.content) {
+    if (value === undefined || value === null || value === "") return null;
+    if (typeof value !== "string") throw new StudError("INVALID_INPUT", `${label} must be JSON text.`);
+    if (value.length > max) throw new StudError("BOUNDS_EXCEEDED", `${label} is too large.`);
+    try {
+        const parsed = JSON.parse(value);
+        if (!parsed || typeof parsed !== "object") throw new Error("not object");
+        return JSON.stringify(parsed);
+    } catch (error) { throw new StudError("INVALID_INPUT", `${label} must be valid structured JSON.`); }
+}
+
+function normalizeComputeResult(input = {}, existing = {}) {
+    assertAllowedKeys(input, ["title", "capability", "tool", "operation", "inputJson", "normalizedInputJson", "outputJson", "unitsJson", "plotJson", "runtimeJson", "courseId", "assignmentId", "noteId"], "Engineering compute result");
+    return {
+        title: input.title === undefined ? existing.title : requiredText(input.title, "Compute result title"),
+        capability: input.capability === undefined ? existing.capability || "ENGINEERING_COMPUTE" : requiredText(input.capability, "Compute capability", 80).toUpperCase(),
+        tool: input.tool === undefined ? existing.tool : requiredText(input.tool, "Compute tool", 80).toUpperCase(),
+        operation: input.operation === undefined ? existing.operation : requiredText(input.operation, "Compute operation", 80).toUpperCase(),
+        inputJson: input.inputJson === undefined ? existing.inputJson || null : normalizedJson(input.inputJson, "Compute input"),
+        normalizedInputJson: input.normalizedInputJson === undefined ? existing.normalizedInputJson || null : normalizedJson(input.normalizedInputJson, "Normalized compute input"),
+        outputJson: input.outputJson === undefined ? existing.outputJson || null : normalizedJson(input.outputJson, "Compute output"),
+        unitsJson: input.unitsJson === undefined ? existing.unitsJson || null : normalizedJson(input.unitsJson, "Compute units", 12000),
+        plotJson: input.plotJson === undefined ? existing.plotJson || null : normalizedJson(input.plotJson, "Compute plot", LIMITS.content),
+        runtimeJson: input.runtimeJson === undefined ? existing.runtimeJson || null : normalizedJson(input.runtimeJson, "Compute runtime", 12000),
+        courseId: input.courseId === undefined ? existing.courseId || null : (input.courseId ? safeId(input.courseId, "Course ID") : null),
+        assignmentId: input.assignmentId === undefined ? existing.assignmentId || null : (input.assignmentId ? safeId(input.assignmentId, "Assignment ID") : null),
+        noteId: input.noteId === undefined ? existing.noteId || null : (input.noteId ? safeId(input.noteId, "Note ID") : null)
+    };
+}
+
 function normalizeByEntityType(type, input, existing) {
     switch (validateEntityType(type)) {
     case "COURSE": return normalizeCourse(input, existing);
@@ -245,6 +275,7 @@ function normalizeByEntityType(type, input, existing) {
     case "RESEARCH_PAPER": return normalizePaper(input, existing);
     case "NOTE": return normalizeNote(input, existing);
     case "REVISION_ITEM": return normalizeRevisionItem(input, existing);
+    case "COMPUTE_RESULT": return normalizeComputeResult(input, existing);
     default: throw new StudError("INVALID_INPUT", "Unsupported academic entity type.");
     }
 }
@@ -291,6 +322,6 @@ module.exports = Object.freeze({
     PROVENANCE_AUTHORITIES, COST_MODELS, COURSE_STATUSES, ASSIGNMENT_STATUSES,
     SUBMISSION_STATUSES, PRIORITY_LEVELS, REVISION_STATUSES, REVISION_DIFFICULTIES, REVISION_CONFIDENCE, LIMITS, StudError, now, bytesOf, assertPlainObject,
     assertAllowedKeys, requiredText, optionalText, optionalNumber, optionalProgress, optionalNonNegativeInteger, optionalDate, enumValue,
-    safeId, createId, validateEntityType, validateRelationshipEntityType, normalizeByEntityType,
+    safeId, createId, validateEntityType, validateRelationshipEntityType, normalizeByEntityType, normalizeComputeResult,
     normalizeProvenance, normalizeRelationship, normalizedSearchTerms
 });
