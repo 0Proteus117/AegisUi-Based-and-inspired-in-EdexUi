@@ -6253,6 +6253,65 @@ button.eng-thread-row.active {
 .engineering-mode .stud-pdf-stage canvas { max-width: none; box-shadow: 0 .4vh 1.5vh rgba(0,0,0,.35); }
 .engineering-mode .stud-pdf-text { width: min(100%, 90rem); max-height: 8vh; overflow: auto; padding: .5vh; color: #d8f1ff; background: #07101a; font: .56vh var(--font_mono); line-height: 1.4; }
 
+/* STUD Phase 4 Moodle. The result surfaces remain ordinary grid/flex flow so
+ * variable capability matrices, long institutional labels and partial states
+ * cannot collide with sync actions or overflow the command deck. */
+.engineering-mode .stud-moodle-shell { display: grid; gap: .68vh; min-width: 0; }
+.engineering-mode .stud-moodle-control-grid,
+.engineering-mode .stud-moodle-data-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .68vh; align-items: start; min-width: 0; }
+.engineering-mode .stud-moodle-config-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .48vh; min-width: 0; }
+.engineering-mode .stud-moodle-config-form label { display: grid; gap: .2vh; min-width: 0; color: var(--aegis-text-faint); font: .56vh var(--font_mono); letter-spacing: .07vh; }
+.engineering-mode .stud-moodle-config-form label:first-child,
+.engineering-mode .stud-moodle-config-form label:nth-child(3),
+.engineering-mode .stud-moodle-config-form label:nth-child(4),
+.engineering-mode .stud-moodle-config-form .stud-moodle-security-note,
+.engineering-mode .stud-moodle-config-form footer { grid-column: 1 / -1; }
+.engineering-mode .stud-moodle-config-form footer { display: flex; flex-wrap: wrap; gap: .4vh; }
+.engineering-mode .stud-moodle-security-note,
+.engineering-mode .stud-moodle-policy-copy,
+.engineering-mode .stud-moodle-fallbacks p { margin: 0; color: var(--aegis-text-muted); font: .61vh var(--font_main_light); line-height: 1.5; overflow-wrap: anywhere; }
+.engineering-mode .stud-moodle-error { padding: .62vh .75vh; border-left: .18vh solid var(--aegis-warning); color: var(--aegis-warning); background: color-mix(in srgb, var(--aegis-warning) 8%, var(--aegis-surface)); font: .64vh var(--font_mono); overflow-wrap: anywhere; }
+.engineering-mode .stud-moodle-error p { margin: .25vh 0 0; }
+.engineering-mode .stud-moodle-status-grid,
+.engineering-mode .stud-moodle-mini-status { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .42vh; margin: 0; }
+.engineering-mode .stud-moodle-status-grid div,
+.engineering-mode .stud-moodle-mini-status div { min-width: 0; padding: .48vh; border-left: .15vh solid var(--aegis-accent); background: var(--aegis-surface-muted); }
+.engineering-mode .stud-moodle-status-grid dt,
+.engineering-mode .stud-moodle-mini-status dt { color: var(--aegis-text-faint); font: .52vh var(--font_mono); letter-spacing: .07vh; }
+.engineering-mode .stud-moodle-status-grid dd,
+.engineering-mode .stud-moodle-mini-status dd { margin: .18vh 0 0; color: var(--aegis-text); font: .6vh var(--font_mono); line-height: 1.38; overflow-wrap: anywhere; }
+.engineering-mode .stud-moodle-capability-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(15vh, 1fr)); gap: .42vh; }
+.engineering-mode .stud-moodle-capability-grid article { min-width: 0; display: grid; gap: .16vh; padding: .48vh; border: .08vh solid var(--aegis-border-subtle); background: var(--aegis-surface-muted); }
+.engineering-mode .stud-moodle-capability-grid article.policy-disabled { border-color: color-mix(in srgb, var(--aegis-warning) 58%, var(--aegis-border)); }
+.engineering-mode .stud-moodle-capability-grid strong { color: var(--aegis-text); font: .61vh var(--font_mono); overflow-wrap: anywhere; }
+.engineering-mode .stud-moodle-capability-grid span { color: var(--aegis-accent-soft); font: .57vh var(--font_mono); overflow-wrap: anywhere; }
+.engineering-mode .stud-moodle-capability-grid small { color: var(--aegis-text-faint); font: .5vh var(--font_mono); line-height: 1.35; overflow-wrap: anywhere; }
+.engineering-mode .stud-moodle-policy-copy { margin-top: .56vh; padding-top: .56vh; border-top: .08vh solid var(--aegis-border-subtle); }
+.engineering-mode .stud-moodle-list { display: grid; gap: .35vh; max-height: 54vh; overflow: auto; align-content: start; }
+.engineering-mode .stud-moodle-list button,
+.engineering-mode .stud-moodle-course-readout button { min-width: 0; display: grid; gap: .18vh; padding: .52vh .6vh; text-align: left; border-color: var(--aegis-border-subtle); background: var(--aegis-surface-muted); }
+.engineering-mode .stud-moodle-list button.selected { border-color: var(--aegis-accent); background: var(--aegis-surface-selected); }
+.engineering-mode .stud-moodle-list strong,
+.engineering-mode .stud-moodle-list small,
+.engineering-mode .stud-moodle-course-readout strong,
+.engineering-mode .stud-moodle-course-readout span { color: var(--aegis-text); font: .62vh var(--font_mono); line-height: 1.4; overflow-wrap: anywhere; }
+.engineering-mode .stud-moodle-list small,
+.engineering-mode .stud-moodle-course-readout span { color: var(--aegis-text-muted); font-size: .55vh; }
+.engineering-mode .stud-moodle-course-readout { display: grid; gap: .36vh; margin-top: .65vh; padding-top: .58vh; border-top: .08vh solid var(--aegis-border-subtle); }
+.engineering-mode .stud-moodle-course-readout h3 { margin: 0; color: var(--aegis-accent-soft); font: .63vh var(--font_mono); letter-spacing: .07vh; }
+.engineering-mode .stud-moodle-course-readout p { margin: 0; color: var(--aegis-text-muted); font: .61vh var(--font_main_light); }
+.engineering-mode .stud-moodle-fallbacks .workspace-panel-content { display: grid; gap: .5vh; }
+.engineering-mode .stud-moodle-service-card { min-width: 0; }
+
+@media (max-width: 1450px) {
+    .engineering-mode .stud-moodle-control-grid,.engineering-mode .stud-moodle-data-grid { grid-template-columns: minmax(0, 1fr); }
+    .engineering-mode .stud-moodle-list { max-height: 28vh; }
+}
+@media (max-width: 1230px) {
+    .engineering-mode .stud-moodle-config-form,.engineering-mode .stud-moodle-status-grid,.engineering-mode .stud-moodle-mini-status { grid-template-columns: minmax(0, 1fr); }
+    .engineering-mode .stud-moodle-config-form label:first-child,.engineering-mode .stud-moodle-config-form label:nth-child(3),.engineering-mode .stud-moodle-config-form label:nth-child(4),.engineering-mode .stud-moodle-config-form .stud-moodle-security-note,.engineering-mode .stud-moodle-config-form footer { grid-column: auto; }
+}
+
 @media (max-width: 1450px) {
     .engineering-mode .stud-research-grid,.engineering-mode .stud-library-grid,.engineering-mode .stud-citation-grid,.engineering-mode .stud-notes-grid { grid-template-columns: minmax(0, 1fr); }
     .engineering-mode .stud-paper-results,.engineering-mode .stud-note-list { max-height: 28vh; }

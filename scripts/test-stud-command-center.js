@@ -63,7 +63,7 @@ try {
     check("COMMAND_CENTER_RENDERER_BOUNDARY", () => {
         assert.ok(manager.includes("new StudCommandCenter"));
         assert.ok(commandCenter.includes("STUDENT COMMAND CENTER"));
-        assert.ok(commandCenter.includes('"RESEARCH", "NOTES", "SERVICES"'));
+        assert.ok(commandCenter.includes('"RESEARCH", "NOTES", "SERVICES", "MOODLE"'));
         assert.ok(commandCenter.includes("FTS5 searches only local canonical academic records"));
         assert.ok(commandCenter.includes("STUD DOES NOT SCAN, OPEN OR COPY EXTERNAL CONTENT"));
         assert.ok(!commandCenter.includes("fetch("));
@@ -73,7 +73,11 @@ try {
         assert.ok(ipc.includes('"stud-command-center"'));
         assert.ok(ipc.includes('"stud-reference-link"'));
         assert.ok(ipc.includes('"stud-research-search"'));
+        assert.ok(ipc.includes('"stud-moodle-probe"'));
+        assert.ok(ipc.includes('"stud-moodle-sync"'));
+        assert.ok(ipc.includes('"stud-moodle-ics-sync"'));
         assert.ok(!ipc.includes("generic-proxy"));
+        assert.ok(!ipc.includes("stud-moodle-request"));
         assert.ok(!ipc.includes("stud-calendar-open"));
         assert.ok(!ipc.includes("stud-email-open"));
     });

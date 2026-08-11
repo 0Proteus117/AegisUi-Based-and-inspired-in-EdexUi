@@ -2,7 +2,9 @@
 
 STUD is AegisUi's canonical, local-first academic context. It owns academic
 objects and their provenance; it does not own Moodle, Calendar, Email, Zotero
-or any commercial service.
+or any commercial service. Moodle is an explicit, optional read-only provider:
+it observes bounded institutional data only after the student configures and
+starts a sync. It never replaces the canonical STUD model.
 
 ## Local store
 
@@ -42,4 +44,8 @@ editor, FSRS scheduler, AI/RAG or network dependency in Phase 1.
 Detailed model, provenance, relationships and search behavior are in
 [STUD_DATA_MODEL.md](STUD_DATA_MODEL.md), [STUD_COMMAND_CENTER.md](STUD_COMMAND_CENTER.md)
 and validation evidence are in [STUD_PHASE1_VALIDATION.md](STUD_PHASE1_VALIDATION.md)
-and [STUD_PHASE2_VALIDATION.md](STUD_PHASE2_VALIDATION.md).
+and [STUD_PHASE2_VALIDATION.md](STUD_PHASE2_VALIDATION.md). The generic LMS
+boundary, Moodle adapter, secure credential policy and REST/ICS/Web fallback
+are documented in [STUD_LMS_ARCHITECTURE.md](STUD_LMS_ARCHITECTURE.md),
+[STUD_MOODLE_ADAPTER.md](STUD_MOODLE_ADAPTER.md) and
+[STUD_MOODLE_FALLBACKS.md](STUD_MOODLE_FALLBACKS.md).
