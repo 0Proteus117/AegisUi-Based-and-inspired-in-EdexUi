@@ -6,7 +6,7 @@ Local-first macOS engineering cockpit based on the visual spirit of eDEX-UI.
 [![CodeQL](https://github.com/0Proteus117/AegisUi-Based-and-inspired-in-EdexUi/actions/workflows/codeql-analysis.yml/badge.svg?branch=feature%2Fsystems-online-pass)](https://github.com/0Proteus117/AegisUi-Based-and-inspired-in-EdexUi/actions/workflows/codeql-analysis.yml)
 ![Platform](https://img.shields.io/badge/platform-macOS%20Apple%20Silicon-3BA7FF)
 ![Local first](https://img.shields.io/badge/local--first-yes-7CCBFF)
-![Version](https://img.shields.io/badge/version-2.6.0-13263A)
+![Version](https://img.shields.io/badge/version-2.6.1-13263A)
 
 ## Current status
 
@@ -68,6 +68,10 @@ the ephemeral session by default or sends case data to a provider.
   original-byte SHA-256. It does not upload the media, infer authenticity or
   silently persist the original. Image GPS can only hand off to Geospatial
   Verification after an explicit analyst action.
+- STUD v2.6.1 establishes the offline canonical academic core: SQLite FTS5
+  storage for Courses, Assignments, Resources, Papers, Notes, Revision Items,
+  relationships and field-level provenance. Moodle, external research,
+  Calendar mutation and Email sync remain separate future integrations.
 - Live systems map with TomTom traffic, AISStream maritime traffic,
   RainViewer radar, Open-Meteo Marine conditions and CelesTrak SAT support.
 - Assistant presence layer with Angie/Gustav/Ares/Aphrodite profiles,

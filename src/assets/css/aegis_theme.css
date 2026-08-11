@@ -253,6 +253,36 @@ html[data-aegis-appearance="light"] .engineering-mode .osint-tool-card.selected 
     background: var(--aegis-surface-selected) !important;
 }
 
+/* STUD academic records are ordinary cockpit data surfaces, so the local
+ * SQLite harness resolves through semantic Light tokens instead of inheriting
+ * fixed dark form fills from the compact workspace stylesheet. */
+html[data-aegis-appearance="light"] .engineering-mode .stud-form,
+html[data-aegis-appearance="light"] .engineering-mode .stud-list-row,
+html[data-aegis-appearance="light"] .engineering-mode .stud-search-results button,
+html[data-aegis-appearance="light"] .engineering-mode .stud-provenance li,
+html[data-aegis-appearance="light"] .engineering-mode .stud-reference-grid section {
+    color: var(--aegis-text) !important;
+    border-color: var(--aegis-border-subtle) !important;
+    background: var(--aegis-surface-raised) !important;
+}
+
+html[data-aegis-appearance="light"] .engineering-mode .stud-form .aegis-input,
+html[data-aegis-appearance="light"] .engineering-mode .stud-form .aegis-select,
+html[data-aegis-appearance="light"] .engineering-mode .stud-search-form .aegis-input,
+html[data-aegis-appearance="light"] .engineering-mode .stud-search-form .aegis-select {
+    color: var(--aegis-text) !important;
+    border-color: var(--aegis-border) !important;
+    background: var(--aegis-surface-input) !important;
+}
+
+html[data-aegis-appearance="light"] .engineering-mode .stud-form button,
+html[data-aegis-appearance="light"] .engineering-mode .stud-search-form button,
+html[data-aegis-appearance="light"] .engineering-mode .stud-provenance button {
+    color: var(--aegis-accent) !important;
+    border-color: var(--aegis-accent) !important;
+    background: var(--aegis-surface-selected) !important;
+}
+
 /* HUB legacy controls use opaque dark fills in the inherited eDEX rules.
    These are ordinary data/control surfaces, unlike the map canvas and
    terminal, so they resolve through the same semantic palette as the rest of

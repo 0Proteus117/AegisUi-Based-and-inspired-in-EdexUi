@@ -246,6 +246,7 @@ class WorkspaceManager {
         this.renderQuickActions(view, definition.quickActions || []);
         if (definition.id === "engineer") this.renderEngineer(view, definition);
         else if (definition.id === "osint") this.renderOSINT(view, definition);
+        else if (definition.id === "student") this.renderStudent(view, definition);
         else if (definition.id === "launch-bay") this.renderLaunchBay(view, definition);
         else if (definition.id === "developer") this.renderDeveloper(view, definition);
         else if (definition.id === "agent-command") this.renderAgentCommand(view, definition);
@@ -3644,6 +3645,209 @@ class WorkspaceManager {
         await this.refreshOSINTCases({readActive: true});
         this.showToast(this.osintView, response.warning === "INTEGRITY_INVALID" ? `EVIDENCE EXPORTED AS DAMAGED METADATA · ${response.fileName}` : `EVIDENCE EXPORTED · ${response.fileName}`);
         return response;
+    }
+
+    renderStudent(view, definition) {
+        const grid = view.querySelector(".workspace-grid");
+        view.classList.add("stud-academic-deck");
+        grid.classList.add("stud-academic-grid");
+        this.studentView = view;
+        this.studentState = {
+            courses: [], assignments: [], notes: [], resources: [], searchResults: [],
+            selectedCourseId: "", selectedAssignmentId: "", selectedEntityType: "",
+            selectedEntity: null, provenance: [], relationships: [], schema: null, error: null
+        };
+        grid.innerHTML = `
+            <section class="stud-core-header workspace-panel">
+                <div><small>STUD / CANONICAL ACADEMIC CONTEXT</small><h2>STUDENT COMMAND CENTER</h2><p>Local-first academic records with explicit provenance, relationships and offline search. Moodle, Calendar and Email remain separate sources.</p></div>
+                <div class="stud-core-status"><small>STORE</small><strong data-stud-status>INITIALIZING</strong><span data-stud-schema>SCHEMA —</span></div>
+            </section>
+            <section class="stud-course-panel workspace-panel"><header><h2>COURSES</h2><span data-stud-course-count>0 LOCAL</span></header><div class="workspace-panel-content" data-stud-panel="courses"></div></section>
+            <section class="stud-assignment-panel workspace-panel"><header><h2>ASSIGNMENTS</h2><span data-stud-assignment-count>0 LOCAL</span></header><div class="workspace-panel-content" data-stud-panel="assignments"></div></section>
+            <section class="stud-detail-panel workspace-panel"><header><h2>ACADEMIC DETAIL</h2><span>PROVENANCE AWARE</span></header><div class="workspace-panel-content" data-stud-panel="detail"></div></section>
+            <section class="stud-search-panel workspace-panel"><header><h2>ACADEMIC SEARCH</h2><span>SQLITE FTS5</span></header><div class="workspace-panel-content" data-stud-panel="search"></div></section>
+            <section class="stud-reference-panel workspace-panel"><header><h2>INTEGRATION BOUNDARIES</h2><span>EXPLICIT / LOCAL</span></header><div class="workspace-panel-content" data-stud-panel="references"></div></section>`;
+        this.refreshStudentCore();
+    }
+
+    studentEntityLabel(entity) {
+        if (!entity) return "NO SELECTION";
+        return entity.title || entity.prompt || "ACADEMIC OBJECT";
+    }
+
+    async refreshStudentCore(options = {}) {
+        const view = this.studentView;
+        const state = this.studentState;
+        if (!view || !state) return;
+        try {
+            const [status, courses, assignments, notes, resources] = await Promise.all([
+                this.ipc.invoke("stud-core-status"),
+                this.ipc.invoke("stud-entity-list", {entityType: "COURSE", limit: 100}),
+                this.ipc.invoke("stud-entity-list", {entityType: "ASSIGNMENT", courseId: state.selectedCourseId || undefined, limit: 200}),
+                this.ipc.invoke("stud-entity-list", {entityType: "NOTE", courseId: state.selectedCourseId || undefined, limit: 50}),
+                this.ipc.invoke("stud-entity-list", {entityType: "RESOURCE", limit: 50})
+            ]);
+            if (![status, courses, assignments, notes, resources].every(response => response && response.ok)) {
+                throw new Error([status, courses, assignments, notes, resources].find(response => !response || !response.ok)?.message || "Academic store unavailable.");
+            }
+            state.schema = status.data;
+            state.courses = courses.data;
+            state.assignments = assignments.data;
+            state.notes = notes.data;
+            state.resources = resources.data;
+            if (state.selectedCourseId && !state.courses.some(course => course.id === state.selectedCourseId)) state.selectedCourseId = "";
+            if (state.selectedAssignmentId && !state.assignments.some(item => item.id === state.selectedAssignmentId)) state.selectedAssignmentId = "";
+            if (options.selectCourseId) state.selectedCourseId = options.selectCourseId;
+            if (options.selectAssignmentId) state.selectedAssignmentId = options.selectAssignmentId;
+            state.error = null;
+            await this.refreshStudentSelection();
+        } catch (error) {
+            state.error = error.message || "Academic store unavailable.";
+            this.renderStudentState();
+        }
+    }
+
+    async refreshStudentSelection() {
+        const state = this.studentState;
+        if (!state) return;
+        const selected = state.selectedAssignmentId
+            ? {entityType: "ASSIGNMENT", entityId: state.selectedAssignmentId}
+            : state.selectedCourseId ? {entityType: "COURSE", entityId: state.selectedCourseId} : null;
+        if (!selected) {
+            state.selectedEntity = null;
+            state.selectedEntityType = "";
+            state.provenance = [];
+            state.relationships = [];
+            this.renderStudentState();
+            return;
+        }
+        const [entity, provenance, relationships] = await Promise.all([
+            this.ipc.invoke("stud-entity-read", selected),
+            this.ipc.invoke("stud-provenance-list", selected),
+            this.ipc.invoke("stud-relationship-list", selected)
+        ]);
+        state.selectedEntity = entity && entity.ok ? entity.data : null;
+        state.selectedEntityType = state.selectedEntity ? selected.entityType : "";
+        state.provenance = provenance && provenance.ok ? provenance.data : [];
+        state.relationships = relationships && relationships.ok ? relationships.data : [];
+        this.renderStudentState();
+    }
+
+    renderStudentState() {
+        const view = this.studentView;
+        const state = this.studentState;
+        if (!view || !state) return;
+        const setText = (selector, value) => { const node = view.querySelector(selector); if (node) node.innerText = value; };
+        setText("[data-stud-status]", state.error ? "STORE ERROR" : "LOCAL / READY");
+        setText("[data-stud-schema]", state.schema ? `SCHEMA V${state.schema.version} · WAL` : "SCHEMA —");
+        setText("[data-stud-course-count]", `${state.courses.length} LOCAL`);
+        setText("[data-stud-assignment-count]", `${state.assignments.length} LOCAL`);
+        const courseOptions = [`<option value="">NO COURSE / UNFILTERED</option>`, ...state.courses.map(course => `<option value="${this.escape(course.id)}"${course.id === state.selectedCourseId ? " selected" : ""}>${this.escape(course.code ? `${course.code} · ${course.title}` : course.title)}</option>`)].join("");
+        const courses = view.querySelector('[data-stud-panel="courses"]');
+        const assignments = view.querySelector('[data-stud-panel="assignments"]');
+        const detail = view.querySelector('[data-stud-panel="detail"]');
+        const search = view.querySelector('[data-stud-panel="search"]');
+        const references = view.querySelector('[data-stud-panel="references"]');
+        if (courses) courses.innerHTML = `
+            <form class="stud-form" data-stud-form="course-create"><label>TITLE<input class="aegis-input" name="title" maxlength="240" required placeholder="Course or module title"></label><div class="stud-field-row"><label>CODE<input class="aegis-input" name="code" maxlength="80" placeholder="Optional"></label><label>STATUS<select class="aegis-select" name="status"><option>ACTIVE</option><option>COMPLETED</option></select></label></div><label>DESCRIPTION<textarea class="aegis-input" name="description" maxlength="12000" placeholder="Optional local context"></textarea></label><button type="submit">CREATE COURSE</button></form>
+            <div class="stud-list">${state.courses.length ? state.courses.map(course => `<button type="button" class="stud-list-row${course.id === state.selectedCourseId ? " selected" : ""}" data-stud-select-course="${this.escape(course.id)}"><strong>${this.escape(course.title)}</strong><small>${this.escape(course.code || "NO CODE")} · ${this.escape(course.status)}</small></button>`).join("") : `<div class="workspace-empty">NO LOCAL COURSES YET</div>`}</div>`;
+        if (assignments) assignments.innerHTML = `
+            <form class="stud-form" data-stud-form="assignment-create"><label>COURSE<select class="aegis-select" name="courseId">${courseOptions}</select></label><label>TITLE<input class="aegis-input" name="title" maxlength="240" required placeholder="Assignment title"></label><div class="stud-field-row"><label>DUE DATE<input class="aegis-input" name="dueDate" type="datetime-local"></label><label>STATUS<select class="aegis-select" name="status"><option>NOT_STARTED</option><option>IN_PROGRESS</option><option>SUBMITTED</option></select></label></div><label>DESCRIPTION<textarea class="aegis-input" name="description" maxlength="12000" placeholder="Optional brief"></textarea></label><button type="submit">CREATE ASSIGNMENT</button></form>
+            <div class="stud-list">${state.assignments.length ? state.assignments.map(item => `<button type="button" class="stud-list-row${item.id === state.selectedAssignmentId ? " selected" : ""}" data-stud-select-assignment="${this.escape(item.id)}"><strong>${this.escape(item.title)}</strong><small>${this.escape(item.dueDate ? new Date(item.dueDate).toLocaleString() : "NO DEADLINE")} · ${this.escape(item.status)}</small></button>`).join("") : `<div class="workspace-empty">${state.selectedCourseId ? "NO ASSIGNMENTS FOR SELECTED COURSE" : "NO LOCAL ASSIGNMENTS YET"}</div>`}</div>`;
+        const entity = state.selectedEntity;
+        const provenanceMarkup = state.provenance.length ? state.provenance.slice(0, 8).map(record => `<li><strong>${this.escape(record.field)}</strong><span>${this.escape(record.sourceType)} / ${this.escape(record.sourceAuthority)}</span><small>${this.escape(record.observedValue || "VALUE NOT CAPTURED")}</small></li>`).join("") : "<li><span>NO FIELD OBSERVATIONS YET</span></li>";
+        const attachmentMarkup = entity ? `<section class="stud-attach"><small>ATTACH LOCAL CONTEXT</small><form class="stud-form compact" data-stud-form="note-create" data-stud-entity-type="${this.escape(state.selectedEntityType)}" data-stud-entity-id="${this.escape(entity.id)}"><label>NOTE TITLE<input class="aegis-input" name="title" maxlength="240" required></label><label>NOTE CONTENT<textarea class="aegis-input" name="content" maxlength="40000"></textarea></label><button type="submit">CREATE + LINK NOTE</button></form><form class="stud-form compact" data-stud-form="resource-create" data-stud-entity-type="${this.escape(state.selectedEntityType)}" data-stud-entity-id="${this.escape(entity.id)}"><div class="stud-field-row"><label>RESOURCE TITLE<input class="aegis-input" name="title" maxlength="240" required></label><label>TYPE<select class="aegis-select" name="type"><option>REFERENCE</option><option>LINK</option><option>DOCUMENT</option></select></label></div><label>URL / SAFE REFERENCE<input class="aegis-input" name="url" maxlength="2048" placeholder="Optional; no automatic opening"></label><button type="submit">CREATE + LINK RESOURCE</button></form></section>` : "";
+        if (detail) detail.innerHTML = entity ? `
+            <div class="stud-detail-title"><small>${this.escape(state.selectedEntityType)}</small><strong>${this.escape(this.studentEntityLabel(entity))}</strong><span>${this.escape(entity.status || entity.submissionStatus || "LOCAL RECORD")}</span></div>
+            <form class="stud-form compact" data-stud-form="entity-update" data-stud-entity-type="${this.escape(state.selectedEntityType)}" data-stud-entity-id="${this.escape(entity.id)}"><label>TITLE<input class="aegis-input" name="title" value="${this.escape(entity.title || "")}" maxlength="240" required></label>${state.selectedEntityType === "ASSIGNMENT" ? `<label>DUE DATE<input class="aegis-input" name="dueDate" type="datetime-local" value="${entity.dueDate ? this.escape(entity.dueDate.slice(0, 16)) : ""}"></label><label>STATUS<select class="aegis-select" name="status">${["NOT_STARTED","IN_PROGRESS","SUBMITTED","GRADED"].map(status => `<option${entity.status === status ? " selected" : ""}>${status}</option>`).join("")}</select></label>` : `<label>DESCRIPTION<textarea class="aegis-input" name="description" maxlength="12000">${this.escape(entity.description || "")}</textarea></label>`}<button type="submit">SAVE LOCAL EDIT</button></form>
+            <section class="stud-provenance"><header><small>FIELD-LEVEL PROVENANCE</small></header><ul>${provenanceMarkup}</ul><form class="stud-form compact" data-stud-form="provenance-create" data-stud-entity-type="${this.escape(state.selectedEntityType)}" data-stud-entity-id="${this.escape(entity.id)}"><div class="stud-field-row"><label>FIELD<input class="aegis-input" name="field" maxlength="100" value="${state.selectedEntityType === "ASSIGNMENT" ? "dueDate" : "title"}" required></label><label>OBSERVED VALUE<input class="aegis-input" name="observedValue" maxlength="40000"></label></div><button type="submit">ADD USER OBSERVATION</button></form></section>
+            <section class="stud-relations"><small>RELATIONSHIPS · ${state.relationships.length}</small><p>${state.relationships.length ? state.relationships.slice(0, 4).map(relation => `${relation.relationType} → ${relation.fromId === entity.id ? relation.toType : relation.fromType}`).join(" · ") : "Calendar and Email remain external references: linking is explicit and does not copy event or message content."}</p></section>${attachmentMarkup}` : `<div class="workspace-empty">SELECT A COURSE OR ASSIGNMENT TO INSPECT FIELD-LEVEL PROVENANCE.</div>`;
+        if (search) search.innerHTML = `
+            <form class="stud-search-form" data-stud-form="search"><input class="aegis-input" name="query" maxlength="240" placeholder="Search courses, assignments, resources, papers and notes"><select class="aegis-select" name="courseId">${courseOptions}</select><button type="submit">SEARCH</button></form>
+            <div class="stud-search-results">${state.searchResults.length ? state.searchResults.map(item => `<button type="button" data-stud-search-select="${this.escape(item.entityId)}" data-stud-search-type="${this.escape(item.entityType)}"><strong>${this.escape(item.title)}</strong><small>${this.escape(item.entityType.replace(/_/g, " "))} · ${this.escape(item.snippet || "MATCH")}</small></button>`).join("") : `<small>FTS5 indexes local course, assignment, resource, paper and note text only.</small>`}</div>`;
+        if (references) references.innerHTML = `<div class="stud-reference-grid"><section><small>CALENDAR</small><strong>REFERENCE ONLY</strong><p>Relationships can retain a bounded event identifier. STUD does not copy calendars or create deadlines.</p></section><section><small>EMAIL</small><strong>REFERENCE ONLY</strong><p>Relationships can retain a message reference. STUD never copies mailbox bodies, credentials or OAuth data.</p></section><section><small>ECONOMICS</small><strong>LOCAL CORE</strong><p>Canonical academic work remains free and offline. Future services declare cost model explicitly.</p></section></div>`;
+        this.bindStudentCore(view);
+    }
+
+    bindStudentCore(view) {
+        if (!view || view.dataset.studCoreBound) return;
+        view.dataset.studCoreBound = "true";
+        view.addEventListener("click", event => {
+            const course = event.target.closest("[data-stud-select-course]");
+            const assignment = event.target.closest("[data-stud-select-assignment]");
+            const result = event.target.closest("[data-stud-search-select]");
+            if (course) { this.studentState.selectedCourseId = course.dataset.studSelectCourse; this.studentState.selectedAssignmentId = ""; this.refreshStudentCore(); }
+            if (assignment) { this.studentState.selectedAssignmentId = assignment.dataset.studSelectAssignment; this.refreshStudentSelection(); }
+            if (result) { this.openStudentSearchEntity(result.dataset.studSearchType, result.dataset.studSearchSelect); }
+        });
+        view.addEventListener("submit", event => this.handleStudentForm(event));
+    }
+
+    async openStudentSearchEntity(entityType, entityId) {
+        if (entityType === "COURSE") { this.studentState.selectedCourseId = entityId; this.studentState.selectedAssignmentId = ""; await this.refreshStudentCore(); return; }
+        if (entityType === "ASSIGNMENT") { this.studentState.selectedAssignmentId = entityId; await this.refreshStudentSelection(); return; }
+        this.showToast(this.studentView, "RESULT AVAILABLE IN CANONICAL STORE");
+    }
+
+    async handleStudentForm(event) {
+        const form = event.target.closest("form[data-stud-form]");
+        if (!form) return;
+        event.preventDefault();
+        const kind = form.dataset.studForm;
+        const value = Object.fromEntries(new FormData(form).entries());
+        if (value.dueDate) value.dueDate = new Date(value.dueDate).toISOString();
+        try {
+            if (kind === "course-create") {
+                const response = await this.ipc.invoke("stud-entity-create", {entityType: "COURSE", value, provenance: {field: "title", observedValue: value.title, sourceType: "USER", sourceAuthority: "AUTHORITATIVE"}});
+                if (!response || !response.ok) throw new Error(response && response.message || "Course creation failed.");
+                this.studentState.selectedCourseId = response.data.id;
+                this.studentState.selectedAssignmentId = "";
+                await this.refreshStudentCore();
+                this.showToast(this.studentView, "COURSE CREATED LOCALLY");
+            } else if (kind === "assignment-create") {
+                const response = await this.ipc.invoke("stud-entity-create", {entityType: "ASSIGNMENT", value, provenance: {field: "title", observedValue: value.title, sourceType: "USER", sourceAuthority: "AUTHORITATIVE"}});
+                if (!response || !response.ok) throw new Error(response && response.message || "Assignment creation failed.");
+                this.studentState.selectedAssignmentId = response.data.id;
+                if (response.data.courseId) this.studentState.selectedCourseId = response.data.courseId;
+                await this.refreshStudentCore();
+                this.showToast(this.studentView, "ASSIGNMENT CREATED LOCALLY");
+            } else if (kind === "entity-update") {
+                const response = await this.ipc.invoke("stud-entity-update", {entityType: form.dataset.studEntityType, entityId: form.dataset.studEntityId, value});
+                if (!response || !response.ok) throw new Error(response && response.message || "Academic update failed.");
+                await this.refreshStudentCore();
+                this.showToast(this.studentView, "LOCAL EDIT SAVED");
+            } else if (kind === "provenance-create") {
+                const response = await this.ipc.invoke("stud-provenance-create", {entityType: form.dataset.studEntityType, entityId: form.dataset.studEntityId, field: value.field, observedValue: value.observedValue || null, sourceType: "USER", sourceAuthority: "AUTHORITATIVE"});
+                if (!response || !response.ok) throw new Error(response && response.message || "Provenance save failed.");
+                await this.refreshStudentSelection();
+                this.showToast(this.studentView, "FIELD OBSERVATION SAVED");
+            } else if (kind === "note-create") {
+                const selected = this.studentState.selectedEntity;
+                const courseId = form.dataset.studEntityType === "COURSE" ? form.dataset.studEntityId : selected && selected.courseId || "";
+                const response = await this.ipc.invoke("stud-entity-create", {entityType: "NOTE", value: {...value, courseId: courseId || undefined}});
+                if (!response || !response.ok) throw new Error(response && response.message || "Note creation failed.");
+                const linked = await this.ipc.invoke("stud-relationship-create", {fromType: form.dataset.studEntityType, fromId: form.dataset.studEntityId, relationType: "HAS_NOTE", toType: "NOTE", toId: response.data.id, source: "USER"});
+                if (!linked || !linked.ok) throw new Error(linked && linked.message || "Note link failed.");
+                await this.refreshStudentCore();
+                this.showToast(this.studentView, "NOTE CREATED AND LINKED");
+            } else if (kind === "resource-create") {
+                const selected = this.studentState.selectedEntity;
+                const resourceValue = {...value};
+                if (form.dataset.studEntityType === "COURSE") resourceValue.courseId = form.dataset.studEntityId;
+                if (form.dataset.studEntityType === "ASSIGNMENT") { resourceValue.assignmentId = form.dataset.studEntityId; resourceValue.courseId = selected && selected.courseId || undefined; }
+                const response = await this.ipc.invoke("stud-entity-create", {entityType: "RESOURCE", value: resourceValue});
+                if (!response || !response.ok) throw new Error(response && response.message || "Resource creation failed.");
+                const linked = await this.ipc.invoke("stud-relationship-create", {fromType: form.dataset.studEntityType, fromId: form.dataset.studEntityId, relationType: "HAS_RESOURCE", toType: "RESOURCE", toId: response.data.id, source: "USER"});
+                if (!linked || !linked.ok) throw new Error(linked && linked.message || "Resource link failed.");
+                await this.refreshStudentCore();
+                this.showToast(this.studentView, "RESOURCE CREATED AND LINKED");
+            } else if (kind === "search") {
+                const response = await this.ipc.invoke("stud-search", {query: value.query, options: {courseId: value.courseId || undefined, limit: 30}});
+                if (!response || !response.ok) throw new Error(response && response.message || "Search unavailable.");
+                this.studentState.searchResults = response.data;
+                this.renderStudentState();
+            }
+        } catch (error) { this.showToast(this.studentView, error.message || "STUD OPERATION FAILED"); }
     }
 
     renderFoundation(view, definition) {

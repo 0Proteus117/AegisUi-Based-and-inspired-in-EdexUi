@@ -5,6 +5,7 @@ if (cluster.isMaster) {
     const ipc = electron.ipcMain;
     const signale = require("signale");
     const {registerOsintCaseIpc} = require("./classes/workspaces/osintCaseIpc.class.js");
+    const {registerStudAcademicIpc} = require("./classes/workspaces/studAcademicIpc.class.js");
     // Also, leave a core available for the renderer process
     const osCPUs = require("os").cpus().length - 1;
     // See #904
@@ -16,6 +17,9 @@ if (cluster.isMaster) {
     // validated case/evidence operations. It never grants a generic file API
     // to the renderer and is independent from the legacy OSINT source IPC.
     registerOsintCaseIpc({ipc, app: electron.app, dialog: electron.dialog});
+    // STUD persistence is a bounded main-process service. The renderer only
+    // receives validated academic-domain responses; it never opens SQLite.
+    registerStudAcademicIpc({ipc, app: electron.app});
 
     cluster.setupMaster({
         exec: require("path").join(__dirname, "_multithread.js")
