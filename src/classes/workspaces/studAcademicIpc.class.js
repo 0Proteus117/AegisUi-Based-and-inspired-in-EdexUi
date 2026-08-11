@@ -29,6 +29,14 @@ const CHANNELS = Object.freeze([
     "stud-orchestration-propose-reference",
     "stud-orchestration-confirm-reference",
     "stud-orchestration-user-override",
+    "stud-revision-overview",
+    "stud-revision-list",
+    "stud-revision-context",
+    "stud-revision-plan",
+    "stud-revision-schedule",
+    "stud-study-session-start",
+    "stud-study-session-transition",
+    "stud-study-session-history",
     "stud-research-status",
     "stud-research-search",
     "stud-research-resolve-crossref",
@@ -134,6 +142,16 @@ function registerStudAcademicIpc(options = {}) {
     add("stud-orchestration-propose-reference", ["assignmentId", "kind", "externalId", "title", "courseCode", "dueDate", "startDate", "endDate"], payload => store.proposeReferenceCandidate(payload));
     add("stud-orchestration-confirm-reference", ["assignmentId", "kind", "externalId", "title", "courseCode", "dueDate", "startDate", "endDate", "confirmation"], payload => store.confirmReferenceCandidate(payload));
     add("stud-orchestration-user-override", ["entityType", "entityId", "field", "value", "note"], payload => store.applyUserOverride(payload));
+    // Revision planning is local-only. These typed calls cannot invoke Moodle,
+    // Calendar, Email, providers, shell commands or arbitrary filesystem access.
+    add("stud-revision-overview", ["now", "limit"], payload => store.revisionOverview(payload));
+    add("stud-revision-list", ["courseId", "assignmentId", "status", "priority", "scheduled", "overdue", "query", "sort", "limit", "includeArchived"], payload => store.listRevisionItems(payload));
+    add("stud-revision-context", ["revisionItemId", "historyLimit"], payload => store.revisionItemContext(payload.revisionItemId, payload));
+    add("stud-revision-plan", ["now", "limit"], payload => store.studyPlan(payload));
+    add("stud-revision-schedule", ["revisionItemId", "scheduledRevisionAt", "pinned", "planPosition", "dismissSuggestionUntil", "note"], payload => store.scheduleRevision(payload));
+    add("stud-study-session-start", ["revisionItemId"], payload => store.startStudySession(payload));
+    add("stud-study-session-transition", ["sessionId", "action", "difficulty", "confidence", "note", "scheduleNext"], payload => store.transitionStudySession(payload));
+    add("stud-study-session-history", ["revisionItemId", "limit", "includeCancelled"], payload => store.listStudySessions(payload.revisionItemId, payload));
     add("stud-research-status", [], () => runtime.status());
     add("stud-research-search", ["query", "year", "limit", "requestId"], payload => runtime.searchOpenAlex(payload));
     add("stud-research-resolve-crossref", ["doi", "requestId"], payload => runtime.resolveCrossref(payload));

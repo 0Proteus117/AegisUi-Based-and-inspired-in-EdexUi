@@ -68,7 +68,10 @@ the ephemeral session by default or sends case data to a provider.
   original-byte SHA-256. It does not upload the media, infer authenticity or
   silently persist the original. Image GPS can only hand off to Geospatial
   Verification after an explicit analyst action.
-- STUD v2.6.5 adds deterministic academic orchestration: Moodle observations,
+- STUD v2.6.6 adds deterministic local revision and study planning: canonical
+  RevisionItems, explicit academic links, bounded study sessions, offline
+  history and explainable schedules. It preserves v2.6.5 academic orchestration:
+  Moodle observations,
   explicitly selected Calendar/Email references, local resources, notes and
   research can be reviewed around canonical Courses and Assignments without
   automatic external actions. Phase 4's Moodle connection surface remains

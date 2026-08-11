@@ -2,7 +2,7 @@
 
 const crypto = require("crypto");
 
-const SCHEMA_VERSION = 5;
+const SCHEMA_VERSION = 7;
 const ENTITY_TYPES = Object.freeze(["COURSE", "ASSIGNMENT", "RESOURCE", "RESEARCH_PAPER", "NOTE", "REVISION_ITEM"]);
 const RELATIONSHIP_ENTITY_TYPES = Object.freeze([...ENTITY_TYPES, "EXTERNAL_IDENTIFIER"]);
 const RELATIONSHIP_TYPES = Object.freeze(["BELONGS_TO", "RELATES_TO", "SUPPORTS", "USES", "REFERENCES", "HAS_RESOURCE", "HAS_NOTE", "HAS_PAPER", "CITES", "RELATED_EMAIL", "RELATED_CALENDAR_EVENT"]);
@@ -13,6 +13,9 @@ const COURSE_STATUSES = Object.freeze(["ACTIVE", "COMPLETED", "ARCHIVED"]);
 const ASSIGNMENT_STATUSES = Object.freeze(["NOT_STARTED", "IN_PROGRESS", "SUBMITTED", "GRADED", "ARCHIVED"]);
 const SUBMISSION_STATUSES = Object.freeze(["UNKNOWN", "NOT_SUBMITTED", "SUBMITTED"]);
 const PRIORITY_LEVELS = Object.freeze(["URGENT", "HIGH", "NORMAL", "LOW"]);
+const REVISION_STATUSES = Object.freeze(["ACTIVE", "PAUSED", "COMPLETED", "ARCHIVED"]);
+const REVISION_DIFFICULTIES = Object.freeze(["UNKNOWN", "LOW", "MEDIUM", "HIGH"]);
+const REVISION_CONFIDENCE = Object.freeze(["UNKNOWN", "LOW", "MEDIUM", "HIGH"]);
 const LIMITS = Object.freeze({
     title: 240,
     code: 80,
@@ -79,6 +82,13 @@ function optionalProgress(value) {
     if (progress === null) return null;
     if (progress < 0 || progress > 100) throw new StudError("INVALID_INPUT", "Local progress must be between 0 and 100.");
     return progress;
+}
+
+function optionalNonNegativeInteger(value, label, max = 1000000) {
+    const number = optionalNumber(value, label);
+    if (number === null) return null;
+    if (!Number.isInteger(number) || number < 0 || number > max) throw new StudError("INVALID_INPUT", `${label} must be a whole number between 0 and ${max}.`);
+    return number;
 }
 
 function optionalDate(value, label) {
@@ -194,11 +204,34 @@ function normalizeNote(input = {}, existing = {}) {
 }
 
 function normalizeRevisionItem(input = {}, existing = {}) {
-    assertAllowedKeys(input, ["courseId", "prompt", "answer", "sourceType", "sourceId"], "Revision item");
+    assertAllowedKeys(input, ["courseId", "prompt", "answer", "title", "description", "status", "priority", "difficulty", "confidence", "estimatedDurationMinutes", "accumulatedStudyMinutes", "lastStudiedAt", "nextPlannedRevisionAt", "scheduledRevisionAt", "targetMastery", "currentMastery", "spacedRevisionEnabled", "successfulRevisionCount", "pinned", "planPosition", "suggestionDismissedUntil", "sourceType", "sourceId"], "Revision item");
+    const incomingTitle = input.title === undefined ? undefined : requiredText(input.title, "Revision title");
+    const incomingPrompt = input.prompt === undefined ? undefined : requiredText(input.prompt, "Revision prompt", LIMITS.content);
+    const title = incomingTitle === undefined ? (existing.title || incomingPrompt || existing.prompt) : incomingTitle;
+    if (!title) throw new StudError("INVALID_INPUT", "Revision title is required.");
+    const prompt = incomingPrompt === undefined ? (existing.prompt || title) : incomingPrompt;
     return {
         courseId: input.courseId === undefined ? existing.courseId || null : (input.courseId ? safeId(input.courseId, "Course ID") : null),
-        prompt: input.prompt === undefined ? existing.prompt : requiredText(input.prompt, "Revision prompt", LIMITS.content),
-        answer: input.answer === undefined ? existing.answer : requiredText(input.answer, "Revision answer", LIMITS.content),
+        prompt,
+        answer: input.answer === undefined ? existing.answer || "" : optionalText(input.answer, "Revision answer", LIMITS.content) || "",
+        title,
+        description: input.description === undefined ? existing.description || null : optionalText(input.description, "Revision description"),
+        status: input.status === undefined ? existing.status || "ACTIVE" : enumValue(input.status, REVISION_STATUSES, "Revision status", "ACTIVE"),
+        priority: input.priority === undefined ? existing.priority || "NORMAL" : enumValue(input.priority, PRIORITY_LEVELS, "Revision priority", "NORMAL"),
+        difficulty: input.difficulty === undefined ? existing.difficulty || "UNKNOWN" : enumValue(input.difficulty, REVISION_DIFFICULTIES, "Revision difficulty", "UNKNOWN"),
+        confidence: input.confidence === undefined ? existing.confidence || "UNKNOWN" : enumValue(input.confidence, REVISION_CONFIDENCE, "Revision confidence", "UNKNOWN"),
+        estimatedDurationMinutes: input.estimatedDurationMinutes === undefined ? existing.estimatedDurationMinutes ?? null : optionalNonNegativeInteger(input.estimatedDurationMinutes, "Estimated duration", 1440),
+        accumulatedStudyMinutes: input.accumulatedStudyMinutes === undefined ? existing.accumulatedStudyMinutes ?? 0 : optionalNonNegativeInteger(input.accumulatedStudyMinutes, "Accumulated study duration") ?? 0,
+        lastStudiedAt: input.lastStudiedAt === undefined ? existing.lastStudiedAt || null : optionalDate(input.lastStudiedAt, "Last studied"),
+        nextPlannedRevisionAt: input.nextPlannedRevisionAt === undefined ? existing.nextPlannedRevisionAt || null : optionalDate(input.nextPlannedRevisionAt, "Suggested revision date"),
+        scheduledRevisionAt: input.scheduledRevisionAt === undefined ? existing.scheduledRevisionAt || null : optionalDate(input.scheduledRevisionAt, "Scheduled revision date"),
+        targetMastery: input.targetMastery === undefined ? existing.targetMastery ?? null : optionalProgress(input.targetMastery),
+        currentMastery: input.currentMastery === undefined ? existing.currentMastery ?? null : optionalProgress(input.currentMastery),
+        spacedRevisionEnabled: input.spacedRevisionEnabled === undefined ? Boolean(existing.spacedRevisionEnabled) : input.spacedRevisionEnabled === true || input.spacedRevisionEnabled === "true" || input.spacedRevisionEnabled === 1 || input.spacedRevisionEnabled === "1",
+        successfulRevisionCount: input.successfulRevisionCount === undefined ? existing.successfulRevisionCount ?? 0 : optionalNonNegativeInteger(input.successfulRevisionCount, "Successful revisions", 10000) ?? 0,
+        pinned: input.pinned === undefined ? Boolean(existing.pinned) : input.pinned === true || input.pinned === "true" || input.pinned === 1 || input.pinned === "1",
+        planPosition: input.planPosition === undefined ? existing.planPosition ?? null : optionalNonNegativeInteger(input.planPosition, "Plan position", 100000),
+        suggestionDismissedUntil: input.suggestionDismissedUntil === undefined ? existing.suggestionDismissedUntil || null : optionalDate(input.suggestionDismissedUntil, "Suggestion dismissal date"),
         sourceType: input.sourceType === undefined ? existing.sourceType || null : optionalText(input.sourceType, "Revision source type", 80),
         sourceId: input.sourceId === undefined ? existing.sourceId || null : (input.sourceId ? safeId(input.sourceId, "Revision source ID") : null)
     };
@@ -256,8 +289,8 @@ function normalizedSearchTerms(query) {
 module.exports = Object.freeze({
     SCHEMA_VERSION, ENTITY_TYPES, RELATIONSHIP_ENTITY_TYPES, RELATIONSHIP_TYPES, PROVENANCE_SOURCE_TYPES,
     PROVENANCE_AUTHORITIES, COST_MODELS, COURSE_STATUSES, ASSIGNMENT_STATUSES,
-    SUBMISSION_STATUSES, PRIORITY_LEVELS, LIMITS, StudError, now, bytesOf, assertPlainObject,
-    assertAllowedKeys, requiredText, optionalText, optionalNumber, optionalProgress, optionalDate, enumValue,
+    SUBMISSION_STATUSES, PRIORITY_LEVELS, REVISION_STATUSES, REVISION_DIFFICULTIES, REVISION_CONFIDENCE, LIMITS, StudError, now, bytesOf, assertPlainObject,
+    assertAllowedKeys, requiredText, optionalText, optionalNumber, optionalProgress, optionalNonNegativeInteger, optionalDate, enumValue,
     safeId, createId, validateEntityType, validateRelationshipEntityType, normalizeByEntityType,
     normalizeProvenance, normalizeRelationship, normalizedSearchTerms
 });
