@@ -303,6 +303,8 @@ html[data-aegis-appearance="light"] .engineering-mode .stud-module-status-list b
 html[data-aegis-appearance="light"] .engineering-mode .stud-object-section button,
 html[data-aegis-appearance="light"] .engineering-mode .stud-references article,
 html[data-aegis-appearance="light"] .engineering-mode .stud-provenance-summary article,
+html[data-aegis-appearance="light"] .engineering-mode .stud-orchestration-context,
+html[data-aegis-appearance="light"] .engineering-mode .stud-orchestration-trace article,
 html[data-aegis-appearance="light"] .engineering-mode .stud-dialog,
 html[data-aegis-appearance="light"] .engineering-mode .stud-provenance-dialog section {
     color: var(--aegis-text) !important;
@@ -358,6 +360,13 @@ html[data-aegis-appearance="light"] .engineering-mode .stud-provenance-summary a
 html[data-aegis-appearance="light"] .engineering-mode .stud-provenance-summary article small {
     color: var(--aegis-text-muted) !important;
 }
+
+html[data-aegis-appearance="light"] .engineering-mode .stud-conflict-banner {
+    color: var(--aegis-text) !important;
+    border-color: #a77916 !important;
+    background: rgba(239, 196, 96, .18) !important;
+}
+html[data-aegis-appearance="light"] .engineering-mode .stud-conflict-banner strong { color: #6b4b07 !important; }
 
 /* HUB legacy controls use opaque dark fills in the inherited eDEX rules.
    These are ordinary data/control surfaces, unlike the map canvas and
