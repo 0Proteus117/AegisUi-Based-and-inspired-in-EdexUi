@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.6.6 - 2026-08-11
+
+### STUD Phase 6 — Revision & Study Planning
+
+- Activated the local-first Revision desk with canonical RevisionItems, explicit academic relationships, bounded planning and transparent queue reasons.
+- Added explicit local study sessions, history, safe interrupted-session recovery and optional deterministic spaced-revision suggestions.
+- Added Assignment and Course revision context, FTS coverage, responsive Dark/Light/System styling and synthetic scale validation.
+- Preserved offline operation and strict boundaries: no Calendar, Email or Moodle mutation; no provider invocation, telemetry or hidden study tracking.
+
 ## 2.6.5 - 2026-08-11
 
 ### STUD Phase 5 — Academic Orchestration

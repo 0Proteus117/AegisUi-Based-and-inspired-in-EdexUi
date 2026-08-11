@@ -72,6 +72,30 @@ function rewriteTemplateSymlinks(root, sourceRoot, targetRoot) {
     });
 }
 
+function removeNodeBinShims(root) {
+    if (!fs.existsSync(root)) return;
+    fs.readdirSync(root, {withFileTypes: true}).forEach(entry => {
+        const item = path.join(root, entry.name);
+        if (!entry.isDirectory()) return;
+        if (entry.name === ".bin") {
+            // npm creates executable symlinks for development CLIs. AegisUi
+            // never invokes them from its packaged runtime, while their
+            // relative destinations can invalidate a macOS bundle signature.
+            fs.rmSync(item, {recursive: true, force: true});
+            return;
+        }
+        removeNodeBinShims(item);
+    });
+}
+
+function removePackagedElectronModule(nodeModules) {
+    // Electron exposes its API from the host runtime. The npm `electron`
+    // package is a development launcher containing another Electron.app and
+    // its internal symlinks, so including it in Resources/app is redundant
+    // and invalidates the outer bundle signature.
+    fs.rmSync(path.join(nodeModules, "electron"), {recursive: true, force: true});
+}
+
 function sha256(file) {
     return crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex");
 }
@@ -107,6 +131,12 @@ copy(path.join(ROOT, "src"), stagedApp, {
     filter: source => path.basename(source) !== "node_modules"
 });
 copy(path.join(ROOT, "src", "node_modules"), path.join(stagedApp, "node_modules"));
+// Keep runtime libraries, but not npm's development command shims. This is
+// equivalent to electron-builder's production staging and avoids shipping
+// bundle-invalid symlinks from node_modules/.bin.
+const stagedNodeModules = path.join(stagedApp, "node_modules");
+removeNodeBinShims(stagedNodeModules);
+removePackagedElectronModule(stagedNodeModules);
 copy(calendarHelperSource, calendarHelperDestination);
 
 const executable = path.join(app, "Contents", "MacOS", "Electron");

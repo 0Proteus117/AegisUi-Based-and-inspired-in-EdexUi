@@ -15,6 +15,7 @@ const manager = fs.readFileSync(path.join(ROOT, "src/classes/workspaceManager.cl
 const ipc = fs.readFileSync(path.join(ROOT, "src/classes/workspaces/studAcademicIpc.class.js"), "utf8");
 const css = fs.readFileSync(path.join(ROOT, "src/assets/css/workspaces.css"), "utf8");
 const theme = fs.readFileSync(path.join(ROOT, "src/assets/css/aegis_theme.css"), "utf8");
+const revision = fs.readFileSync(path.join(ROOT, "src/classes/workspaces/studRevisionWorkspace.class.js"), "utf8");
 const root = fs.mkdtempSync(path.join(os.tmpdir(), "aegis-stud-phase2-"));
 const store = new StudAcademicStore({root, applicationVersion: "test"});
 const checks = [];
@@ -68,6 +69,9 @@ try {
         assert.ok(commandCenter.includes("STUD DOES NOT SCAN, OPEN OR COPY EXTERNAL CONTENT"));
         assert.ok(!commandCenter.includes("fetch("));
         assert.ok(!commandCenter.includes("localStorage"));
+        assert.ok(commandCenter.includes('"REVISION"'));
+        assert.ok(revision.includes("START STUDY SESSION"));
+        assert.ok(!revision.includes("fetch("));
     });
     check("IPC_IS_NARROW_AND_EXPLICIT", () => {
         assert.ok(ipc.includes('"stud-command-center"'));
@@ -85,6 +89,7 @@ try {
         assert.ok(css.includes("stud-command-center-grid"));
         assert.ok(css.includes("stud-overview-grid"));
         assert.ok(css.includes("stud-dialog"));
+        assert.ok(css.includes("stud-revision-overview-grid"));
         assert.ok(css.includes("@media (max-width: 1230px)"));
         assert.ok(theme.includes("STUD Phase 2 keeps the Command Center semantic"));
     });

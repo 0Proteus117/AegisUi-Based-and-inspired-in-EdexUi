@@ -7,6 +7,7 @@ const Model = require("./studAcademicModel.class.js");
 const Research = require("./studResearchModel.class.js");
 const Citations = require("./studCitationService.class.js");
 const Orchestration = require("./studAcademicOrchestration.class.js");
+const RevisionPlanner = require("./studRevisionPlanner.class.js");
 
 const TABLES = Object.freeze({
     COURSE: "stud_courses",
@@ -28,9 +29,9 @@ function rowToCamel(row) {
     Object.entries(row).forEach(([key, value]) => {
         const camel = key.replace(/_([a-z])/g, (_match, letter) => letter.toUpperCase());
         const progress = key === "local_progress" && value !== null ? Number(value) : null;
-        result[camel] = key === "local_progress" && value !== null
-            ? (Number.isFinite(progress) && progress >= 0 && progress <= 100 ? progress : null)
-            : value;
+        if (["spaced_revision_enabled", "pinned", "schedule_requested"].includes(key)) result[camel] = Boolean(value);
+        else if (key === "local_progress" && value !== null) result[camel] = Number.isFinite(progress) && progress >= 0 && progress <= 100 ? progress : null;
+        else result[camel] = value;
     });
     return result;
 }
@@ -74,6 +75,9 @@ class StudAcademicStore {
             this.db = new DatabaseSync(this.dbPath);
             this.db.exec("PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL; PRAGMA busy_timeout = 5000;");
             this.runMigrations();
+            // A live timer is intentionally not reconstructed after restart.
+            // Only elapsed time already checkpointed by PAUSE is retained.
+            this.recoverInterruptedStudySessions();
             return this;
         } catch (error) {
             this.close();
@@ -179,6 +183,39 @@ class StudAcademicStore {
                 UNIQUE(entity_type, entity_id, reference_kind, external_id)
             );
             CREATE INDEX stud_orchestration_links_entity_index ON stud_orchestration_links(entity_type, entity_id, updated_at DESC);
+        `}, {version: 6, sql: `
+            ALTER TABLE stud_revision_items ADD COLUMN title TEXT;
+            ALTER TABLE stud_revision_items ADD COLUMN description TEXT;
+            ALTER TABLE stud_revision_items ADD COLUMN status TEXT NOT NULL DEFAULT 'ACTIVE';
+            ALTER TABLE stud_revision_items ADD COLUMN priority TEXT NOT NULL DEFAULT 'NORMAL';
+            ALTER TABLE stud_revision_items ADD COLUMN difficulty TEXT NOT NULL DEFAULT 'UNKNOWN';
+            ALTER TABLE stud_revision_items ADD COLUMN confidence TEXT NOT NULL DEFAULT 'UNKNOWN';
+            ALTER TABLE stud_revision_items ADD COLUMN estimated_duration_minutes INTEGER;
+            ALTER TABLE stud_revision_items ADD COLUMN accumulated_study_minutes INTEGER NOT NULL DEFAULT 0;
+            ALTER TABLE stud_revision_items ADD COLUMN last_studied_at TEXT;
+            ALTER TABLE stud_revision_items ADD COLUMN next_planned_revision_at TEXT;
+            ALTER TABLE stud_revision_items ADD COLUMN scheduled_revision_at TEXT;
+            ALTER TABLE stud_revision_items ADD COLUMN target_mastery REAL;
+            ALTER TABLE stud_revision_items ADD COLUMN current_mastery REAL;
+            ALTER TABLE stud_revision_items ADD COLUMN spaced_revision_enabled INTEGER NOT NULL DEFAULT 0;
+            ALTER TABLE stud_revision_items ADD COLUMN successful_revision_count INTEGER NOT NULL DEFAULT 0;
+            ALTER TABLE stud_revision_items ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0;
+            ALTER TABLE stud_revision_items ADD COLUMN plan_position INTEGER;
+            ALTER TABLE stud_revision_items ADD COLUMN suggestion_dismissed_until TEXT;
+            UPDATE stud_revision_items SET title = prompt WHERE title IS NULL OR title = '';
+            CREATE INDEX stud_revision_items_course_schedule_index ON stud_revision_items(course_id, scheduled_revision_at, status);
+            CREATE INDEX stud_revision_items_plan_index ON stud_revision_items(status, pinned, plan_position, updated_at);
+        `}, {version: 7, sql: `
+            CREATE TABLE stud_study_sessions (
+                id TEXT PRIMARY KEY, revision_item_id TEXT NOT NULL, status TEXT NOT NULL,
+                started_at TEXT NOT NULL, last_resumed_at TEXT, paused_at TEXT, ended_at TEXT,
+                elapsed_seconds INTEGER NOT NULL DEFAULT 0, difficulty TEXT, confidence TEXT,
+                note TEXT, schedule_requested INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY(revision_item_id) REFERENCES stud_revision_items(id)
+            );
+            CREATE INDEX stud_study_sessions_item_index ON stud_study_sessions(revision_item_id, started_at DESC);
+            CREATE INDEX stud_study_sessions_status_index ON stud_study_sessions(status, updated_at DESC);
         `}];
         for (const migration of migrations) {
             if (applied.has(migration.version)) continue;
@@ -420,7 +457,8 @@ class StudAcademicStore {
         case "RESOURCE": this.db.prepare("INSERT INTO stud_resources (id,course_id,assignment_id,type,title,url,local_reference,mime_type,checksum,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)").run(id,value.courseId,value.assignmentId,value.type,value.title,value.url,value.localReference,value.mimeType,value.checksum,timestamp,timestamp); break;
         case "RESEARCH_PAPER": this.db.prepare("INSERT INTO stud_research_papers (id,title,object_type,year,published_date,abstract,venue,publisher,authors,doi,source_url,citation_json,oa_json,local_document_reference,document_metadata_json,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)").run(id,value.title,value.objectType,value.year,value.publishedDate,value.abstract,value.venue,value.publisher,value.authors,value.doi,value.sourceUrl,value.citationJson,value.oaJson,value.localDocumentReference,value.documentMetadataJson,timestamp,timestamp); break;
         case "NOTE": this.db.prepare("INSERT INTO stud_notes (id,title,content,course_id,assignment_id,document_version,document_json,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?)").run(id,value.title,value.content,value.courseId,value.assignmentId,value.documentVersion,value.documentJson,timestamp,timestamp); break;
-        case "REVISION_ITEM": this.db.prepare("INSERT INTO stud_revision_items (id,course_id,prompt,answer,source_type,source_id,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?)").run(id,value.courseId,value.prompt,value.answer,value.sourceType,value.sourceId,timestamp,timestamp); break;
+        case "REVISION_ITEM": this.db.prepare(`INSERT INTO stud_revision_items (id,course_id,prompt,answer,source_type,source_id,title,description,status,priority,difficulty,confidence,estimated_duration_minutes,accumulated_study_minutes,last_studied_at,next_planned_revision_at,scheduled_revision_at,target_mastery,current_mastery,spaced_revision_enabled,successful_revision_count,pinned,plan_position,suggestion_dismissed_until,created_at,updated_at)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(id,value.courseId,value.prompt,value.answer,value.sourceType,value.sourceId,value.title,value.description,value.status,value.priority,value.difficulty,value.confidence,value.estimatedDurationMinutes,value.accumulatedStudyMinutes,value.lastStudiedAt,value.nextPlannedRevisionAt,value.scheduledRevisionAt,value.targetMastery,value.currentMastery,value.spacedRevisionEnabled ? 1 : 0,value.successfulRevisionCount,value.pinned ? 1 : 0,value.planPosition,value.suggestionDismissedUntil,timestamp,timestamp); break;
         }
     }
 
@@ -431,16 +469,16 @@ class StudAcademicStore {
         case "RESOURCE": this.db.prepare("UPDATE stud_resources SET course_id=?,assignment_id=?,type=?,title=?,url=?,local_reference=?,mime_type=?,checksum=?,updated_at=? WHERE id=?").run(value.courseId,value.assignmentId,value.type,value.title,value.url,value.localReference,value.mimeType,value.checksum,timestamp,id); break;
         case "RESEARCH_PAPER": this.db.prepare("UPDATE stud_research_papers SET title=?,object_type=?,year=?,published_date=?,abstract=?,venue=?,publisher=?,authors=?,doi=?,source_url=?,citation_json=?,oa_json=?,local_document_reference=?,document_metadata_json=?,updated_at=? WHERE id=?").run(value.title,value.objectType,value.year,value.publishedDate,value.abstract,value.venue,value.publisher,value.authors,value.doi,value.sourceUrl,value.citationJson,value.oaJson,value.localDocumentReference,value.documentMetadataJson,timestamp,id); break;
         case "NOTE": this.db.prepare("UPDATE stud_notes SET title=?,content=?,course_id=?,assignment_id=?,document_version=?,document_json=?,updated_at=? WHERE id=?").run(value.title,value.content,value.courseId,value.assignmentId,value.documentVersion,value.documentJson,timestamp,id); break;
-        case "REVISION_ITEM": this.db.prepare("UPDATE stud_revision_items SET course_id=?,prompt=?,answer=?,source_type=?,source_id=?,updated_at=? WHERE id=?").run(value.courseId,value.prompt,value.answer,value.sourceType,value.sourceId,timestamp,id); break;
+        case "REVISION_ITEM": this.db.prepare(`UPDATE stud_revision_items SET course_id=?,prompt=?,answer=?,source_type=?,source_id=?,title=?,description=?,status=?,priority=?,difficulty=?,confidence=?,estimated_duration_minutes=?,accumulated_study_minutes=?,last_studied_at=?,next_planned_revision_at=?,scheduled_revision_at=?,target_mastery=?,current_mastery=?,spaced_revision_enabled=?,successful_revision_count=?,pinned=?,plan_position=?,suggestion_dismissed_until=?,updated_at=? WHERE id=?`).run(value.courseId,value.prompt,value.answer,value.sourceType,value.sourceId,value.title,value.description,value.status,value.priority,value.difficulty,value.confidence,value.estimatedDurationMinutes,value.accumulatedStudyMinutes,value.lastStudiedAt,value.nextPlannedRevisionAt,value.scheduledRevisionAt,value.targetMastery,value.currentMastery,value.spacedRevisionEnabled ? 1 : 0,value.successfulRevisionCount,value.pinned ? 1 : 0,value.planPosition,value.suggestionDismissedUntil,timestamp,id); break;
         }
     }
 
     syncSearch(type, id) {
         const entity = this.getEntity(type, id);
         this.db.prepare("DELETE FROM stud_search WHERE entity_type = ? AND entity_id = ?").run(type, id);
-        if (!entity || !["COURSE", "ASSIGNMENT", "RESOURCE", "RESEARCH_PAPER", "NOTE"].includes(type)) return;
-        const content = cleanText([entity.description, entity.abstract, entity.content, entity.code, entity.authors, entity.venue, entity.doi, entity.publisher].filter(Boolean).join(" "));
-        this.db.prepare("INSERT INTO stud_search (entity_type,entity_id,course_id,title,content) VALUES (?,?,?,?,?)").run(type, id, entity.courseId || "", entity.title || "", content);
+        if (!entity || !["COURSE", "ASSIGNMENT", "RESOURCE", "RESEARCH_PAPER", "NOTE", "REVISION_ITEM"].includes(type)) return;
+        const content = cleanText([entity.description, entity.abstract, entity.content, entity.prompt, entity.answer, entity.code, entity.authors, entity.venue, entity.doi, entity.publisher].filter(Boolean).join(" "));
+        this.db.prepare("INSERT INTO stud_search (entity_type,entity_id,course_id,title,content) VALUES (?,?,?,?,?)").run(type, id, entity.courseId || "", entity.title || entity.prompt || "", content);
     }
 
     createExternalIdentifier(input = {}) {
@@ -668,8 +706,183 @@ class StudAcademicStore {
         const notes = relationships.filter(item => item.fromType === "ASSIGNMENT" && item.toType === "NOTE").map(item => this.getEntity("NOTE", item.toId)).filter(Boolean);
         const papers = relationships.filter(item => item.fromType === "ASSIGNMENT" && item.toType === "RESEARCH_PAPER").map(item => this.getEntity("RESEARCH_PAPER", item.toId)).filter(Boolean);
         const resources = this.listEntities("RESOURCE", {assignmentId: assignment.id, limit: 100});
+        const revisions = this.listRevisionItems({assignmentId: assignment.id, limit: 100});
         const status = Orchestration.orchestrationStatus({references, conflicts});
-        return Object.freeze({assignment, course, provenance, references, links, conflicts, relationships, notes: Object.freeze(notes), papers: Object.freeze(papers), resources, status});
+        return Object.freeze({assignment, course, provenance, references, links, conflicts, relationships, notes: Object.freeze(notes), papers: Object.freeze(papers), resources, revisions, status});
+    }
+
+    recoverInterruptedStudySessions() {
+        if (!this.db) return 0;
+        const timestamp = Model.now();
+        const result = this.db.prepare("UPDATE stud_study_sessions SET status='INTERRUPTED', last_resumed_at=NULL, ended_at=?, updated_at=? WHERE status IN ('STARTED','PAUSED')").run(timestamp, timestamp);
+        return Number(result && result.changes || 0);
+    }
+
+    revisionRelationships(revisionItemId) {
+        return this.listRelationships("REVISION_ITEM", revisionItemId);
+    }
+
+    relatedAssignmentsForRevision(revision) {
+        const ids = new Set();
+        if (revision.sourceType === "ASSIGNMENT" && revision.sourceId) ids.add(revision.sourceId);
+        this.revisionRelationships(revision.id).forEach(link => {
+            if (link.fromType === "ASSIGNMENT") ids.add(link.fromId);
+            if (link.toType === "ASSIGNMENT") ids.add(link.toId);
+        });
+        return [...ids].map(id => this.getEntity("ASSIGNMENT", id)).filter(Boolean);
+    }
+
+    listRevisionItems(options = {}) {
+        this.initialize();
+        Model.assertAllowedKeys(options, ["courseId", "assignmentId", "status", "priority", "scheduled", "overdue", "query", "sort", "limit", "includeArchived"], "Revision list options");
+        const limit = Math.max(1, Math.min(Number(options.limit) || 100, 250));
+        const clauses = [options.includeArchived ? "1=1" : "archived_at IS NULL"];
+        const params = [];
+        if (options.courseId) { clauses.push("course_id=?"); params.push(Model.safeId(options.courseId, "Course ID")); }
+        if (options.status && options.status !== "ALL") { clauses.push("status=?"); params.push(Model.enumValue(options.status, Model.REVISION_STATUSES, "Revision status")); }
+        if (options.priority && options.priority !== "ALL") { clauses.push("priority=?"); params.push(Model.enumValue(options.priority, Model.PRIORITY_LEVELS, "Revision priority")); }
+        if (options.scheduled === "SCHEDULED") clauses.push("scheduled_revision_at IS NOT NULL");
+        if (options.scheduled === "UNSCHEDULED") clauses.push("scheduled_revision_at IS NULL");
+        if (options.query) { clauses.push("(title LIKE ? OR description LIKE ? OR prompt LIKE ?)"); const text = `%${Model.optionalText(options.query, "Revision query", Model.LIMITS.searchQuery)}%`; params.push(text, text, text); }
+        if (options.overdue === true) { clauses.push("COALESCE(scheduled_revision_at,next_planned_revision_at) < ?"); params.push(new Date(localDayStart()).toISOString()); }
+        let order = "pinned DESC, CASE priority WHEN 'URGENT' THEN 0 WHEN 'HIGH' THEN 1 WHEN 'NORMAL' THEN 2 ELSE 3 END, COALESCE(scheduled_revision_at,next_planned_revision_at,'9999-12-31') ASC, updated_at DESC";
+        if (options.sort === "LAST_STUDIED") order = "last_studied_at DESC, updated_at DESC";
+        else if (options.sort === "CREATED") order = "created_at DESC";
+        else if (options.sort === "MODIFIED") order = "updated_at DESC";
+        else if (options.sort === "TITLE") order = "title COLLATE NOCASE ASC";
+        const rows = this.db.prepare(`SELECT * FROM stud_revision_items WHERE ${clauses.join(" AND ")} ORDER BY ${order} LIMIT ?`).all(...params, limit);
+        let items = rows.map(row => Object.freeze({...rowToCamel(row), entityType: "REVISION_ITEM"}));
+        if (options.assignmentId) {
+            const assignmentId = Model.safeId(options.assignmentId, "Assignment ID");
+            items = items.filter(item => this.relatedAssignmentsForRevision(item).some(assignment => assignment.id === assignmentId));
+        }
+        return Object.freeze(items);
+    }
+
+    revisionItemContext(revisionItemId, options = {}) {
+        this.initialize();
+        Model.assertAllowedKeys(options, ["historyLimit"], "Revision context options");
+        const revision = this.getEntity("REVISION_ITEM", revisionItemId);
+        if (!revision) throw new Model.StudError("NOT_FOUND", "Revision item does not exist.");
+        const relationships = this.revisionRelationships(revision.id);
+        const linked = type => relationships.map(link => {
+            const id = link.fromType === type ? link.fromId : link.toType === type ? link.toId : null;
+            return id ? this.getEntity(type, id) : null;
+        }).filter(Boolean);
+        const assignments = this.relatedAssignmentsForRevision(revision);
+        const course = revision.courseId ? this.getEntity("COURSE", revision.courseId) : null;
+        const history = this.listStudySessions(revision.id, {limit: options.historyLimit || 30, includeCancelled: true});
+        const planner = RevisionPlanner.queueReason(revision, new Date(), assignments);
+        return Object.freeze({revision, course, assignments: Object.freeze(assignments), notes: Object.freeze(linked("NOTE")), resources: Object.freeze(linked("RESOURCE")), papers: Object.freeze(linked("RESEARCH_PAPER")), relatedRevisionItems: Object.freeze(linked("REVISION_ITEM")), relationships, provenance: this.listProvenance("REVISION_ITEM", revision.id), history, planning: planner});
+    }
+
+    revisionOverview(options = {}) {
+        this.initialize();
+        Model.assertAllowedKeys(options, ["now", "limit"], "Revision overview options");
+        const now = options.now ? new Date(Model.optionalDate(options.now, "Revision overview time")) : new Date();
+        const limit = Math.max(1, Math.min(Number(options.limit) || 12, 50));
+        const rows = this.db.prepare("SELECT * FROM stud_revision_items WHERE archived_at IS NULL ORDER BY updated_at DESC LIMIT 2500").all();
+        const items = rows.map(row => Object.freeze({...rowToCamel(row), entityType: "REVISION_ITEM"}));
+        const assignmentsByItem = new Map(items.map(item => [item.id, this.relatedAssignmentsForRevision(item)]));
+        return RevisionPlanner.overview(items, assignmentsByItem, now, limit);
+    }
+
+    studyPlan(options = {}) {
+        this.initialize();
+        Model.assertAllowedKeys(options, ["now", "limit"], "Study plan options");
+        const now = options.now ? new Date(Model.optionalDate(options.now, "Study plan time")) : new Date();
+        const rows = this.db.prepare("SELECT * FROM stud_revision_items WHERE archived_at IS NULL ORDER BY updated_at DESC LIMIT 2500").all();
+        const items = rows.map(row => Object.freeze({...rowToCamel(row), entityType: "REVISION_ITEM"}));
+        const assignmentsByItem = new Map(items.map(item => [item.id, this.relatedAssignmentsForRevision(item)]));
+        return RevisionPlanner.buildPlan(items, assignmentsByItem, now, options.limit || 24);
+    }
+
+    scheduleRevision(input = {}) {
+        this.initialize();
+        Model.assertAllowedKeys(input, ["revisionItemId", "scheduledRevisionAt", "pinned", "planPosition", "dismissSuggestionUntil", "note"], "Revision schedule");
+        const item = this.getEntity("REVISION_ITEM", input.revisionItemId);
+        if (!item) throw new Model.StudError("NOT_FOUND", "Revision item does not exist.");
+        const updates = {};
+        if (Object.prototype.hasOwnProperty.call(input, "scheduledRevisionAt")) updates.scheduledRevisionAt = input.scheduledRevisionAt || null;
+        if (Object.prototype.hasOwnProperty.call(input, "pinned")) updates.pinned = input.pinned;
+        if (Object.prototype.hasOwnProperty.call(input, "planPosition")) updates.planPosition = input.planPosition;
+        if (Object.prototype.hasOwnProperty.call(input, "dismissSuggestionUntil")) updates.suggestionDismissedUntil = input.dismissSuggestionUntil || null;
+        const updated = this.updateEntity("REVISION_ITEM", item.id, updates);
+        const provenance = this.createProvenance({entityType: "REVISION_ITEM", entityId: item.id, field: Object.prototype.hasOwnProperty.call(updates, "scheduledRevisionAt") ? "scheduledRevisionAt" : "planning", observedValue: Object.prototype.hasOwnProperty.call(updates, "scheduledRevisionAt") ? updates.scheduledRevisionAt : JSON.stringify(updates), sourceType: "USER", sourceId: "STUD_REVISION_PLAN", sourceAuthority: "USER_OVERRIDE", observedAt: Model.now(), metadata: {note: Model.optionalText(input.note, "Planning note", 1000), explicit: true}});
+        return Object.freeze({revision: updated, provenance});
+    }
+
+    listStudySessions(revisionItemId, options = {}) {
+        this.initialize();
+        Model.assertAllowedKeys(options, ["limit", "includeCancelled"], "Study history options");
+        const id = Model.safeId(revisionItemId, "Revision item ID");
+        const limit = Math.max(1, Math.min(Number(options.limit) || 50, 250));
+        const condition = options.includeCancelled ? "1=1" : "status='FINISHED'";
+        return Object.freeze(this.db.prepare(`SELECT * FROM stud_study_sessions WHERE revision_item_id=? AND ${condition} ORDER BY started_at DESC LIMIT ?`).all(id, limit).map(row => Object.freeze(rowToCamel(row))));
+    }
+
+    activeStudySession(revisionItemId) {
+        const id = Model.safeId(revisionItemId, "Revision item ID");
+        const row = this.db.prepare("SELECT * FROM stud_study_sessions WHERE revision_item_id=? AND status IN ('STARTED','PAUSED') ORDER BY updated_at DESC LIMIT 1").get(id);
+        return row ? Object.freeze(rowToCamel(row)) : null;
+    }
+
+    startStudySession(input = {}) {
+        this.initialize();
+        Model.assertAllowedKeys(input, ["revisionItemId"], "Study session start");
+        const revision = this.getEntity("REVISION_ITEM", input.revisionItemId);
+        if (!revision) throw new Model.StudError("NOT_FOUND", "Revision item does not exist.");
+        if (["COMPLETED", "ARCHIVED"].includes(revision.status)) throw new Model.StudError("POLICY_BLOCKED", "Completed or archived revision items cannot start a study session.");
+        if (this.activeStudySession(revision.id)) throw new Model.StudError("SESSION_ACTIVE", "This revision item already has an active local study session.");
+        const timestamp = Model.now();
+        const id = Model.createId("study_session");
+        this.db.prepare("INSERT INTO stud_study_sessions (id,revision_item_id,status,started_at,last_resumed_at,elapsed_seconds,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?)").run(id, revision.id, "STARTED", timestamp, timestamp, 0, timestamp, timestamp);
+        return Object.freeze(rowToCamel(this.db.prepare("SELECT * FROM stud_study_sessions WHERE id=?").get(id)));
+    }
+
+    sessionWithElapsed(session, timestamp = new Date()) {
+        let elapsed = Number(session.elapsedSeconds) || 0;
+        if (session.status === "STARTED" && session.lastResumedAt) {
+            const started = new Date(session.lastResumedAt).getTime();
+            if (Number.isFinite(started)) elapsed += Math.max(0, Math.min(8 * 60 * 60, Math.floor((timestamp.getTime() - started) / 1000)));
+        }
+        return elapsed;
+    }
+
+    transitionStudySession(input = {}) {
+        this.initialize();
+        Model.assertAllowedKeys(input, ["sessionId", "action", "difficulty", "confidence", "note", "scheduleNext"], "Study session transition");
+        const id = Model.safeId(input.sessionId, "Study session ID");
+        const session = rowToCamel(this.db.prepare("SELECT * FROM stud_study_sessions WHERE id=?").get(id));
+        if (!session) throw new Model.StudError("NOT_FOUND", "Study session does not exist.");
+        const action = Model.enumValue(input.action, ["PAUSE", "RESUME", "FINISH", "CANCEL"], "Study session action");
+        const timestamp = new Date();
+        if (action === "PAUSE" && session.status !== "STARTED") throw new Model.StudError("INVALID_TRANSITION", "Only a running study session can be paused.");
+        if (action === "RESUME" && session.status !== "PAUSED") throw new Model.StudError("INVALID_TRANSITION", "Only a paused study session can resume.");
+        if (["FINISH", "CANCEL"].includes(action) && !["STARTED", "PAUSED"].includes(session.status)) throw new Model.StudError("INVALID_TRANSITION", "This study session is no longer active.");
+        const elapsed = this.sessionWithElapsed(session, timestamp);
+        const at = timestamp.toISOString();
+        if (action === "PAUSE") this.db.prepare("UPDATE stud_study_sessions SET status='PAUSED', elapsed_seconds=?, paused_at=?, last_resumed_at=NULL, updated_at=? WHERE id=?").run(elapsed, at, at, id);
+        if (action === "RESUME") this.db.prepare("UPDATE stud_study_sessions SET status='STARTED', last_resumed_at=?, paused_at=NULL, updated_at=? WHERE id=?").run(at, at, id);
+        if (action === "CANCEL") this.db.prepare("UPDATE stud_study_sessions SET status='CANCELLED', elapsed_seconds=?, last_resumed_at=NULL, ended_at=?, updated_at=? WHERE id=?").run(elapsed, at, at, id);
+        let suggestion = null;
+        if (action === "FINISH") {
+            const confidence = Model.enumValue(input.confidence || "UNKNOWN", Model.REVISION_CONFIDENCE, "Study confidence", "UNKNOWN");
+            const difficulty = Model.enumValue(input.difficulty || "UNKNOWN", Model.REVISION_DIFFICULTIES, "Study difficulty", "UNKNOWN");
+            const note = Model.optionalText(input.note, "Study note", 1000);
+            const revision = this.getEntity("REVISION_ITEM", session.revisionItemId);
+            suggestion = input.scheduleNext === true ? RevisionPlanner.spacedRevisionSuggestion(revision, timestamp, confidence) : null;
+            this.transaction(() => {
+                this.db.prepare("UPDATE stud_study_sessions SET status='FINISHED', elapsed_seconds=?, difficulty=?, confidence=?, note=?, schedule_requested=?, last_resumed_at=NULL, ended_at=?, updated_at=? WHERE id=?").run(elapsed, difficulty, confidence, note, input.scheduleNext === true ? 1 : 0, at, at, id);
+                const current = this.getEntity("REVISION_ITEM", revision.id);
+                const updates = {accumulatedStudyMinutes: current.accumulatedStudyMinutes + Math.max(0, Math.round(elapsed / 60)), lastStudiedAt: at, difficulty, confidence};
+                if (suggestion && !current.scheduledRevisionAt) { updates.nextPlannedRevisionAt = suggestion.nextPlannedRevisionAt; updates.successfulRevisionCount = suggestion.successfulRevisionCount; }
+                this.updateEntityRow("REVISION_ITEM", revision.id, Model.normalizeByEntityType("REVISION_ITEM", updates, current), at);
+                this.syncSearch("REVISION_ITEM", revision.id);
+                this.createProvenance({entityType: "REVISION_ITEM", entityId: revision.id, field: "studySession", observedValue: `${Math.round(elapsed / 60)} minutes`, sourceType: "USER", sourceId: id, sourceAuthority: "AUTHORITATIVE", observedAt: at, metadata: {difficulty, confidence, suggested: suggestion && suggestion.reason || null}});
+            });
+        }
+        return Object.freeze({session: Object.freeze(rowToCamel(this.db.prepare("SELECT * FROM stud_study_sessions WHERE id=?").get(id))), revision: this.getEntity("REVISION_ITEM", session.revisionItemId), suggestion: action === "FINISH" ? suggestion : null});
     }
 
     proposeReferenceCandidate(input = {}) {
@@ -799,7 +1012,8 @@ class StudAcademicStore {
             ...this.listEntities("ASSIGNMENT", {limit: limit * 2}),
             ...this.listEntities("NOTE", {limit: limit * 2}),
             ...this.listEntities("RESOURCE", {limit: limit * 2}),
-            ...this.listEntities("RESEARCH_PAPER", {limit: limit * 2})
+            ...this.listEntities("RESEARCH_PAPER", {limit: limit * 2}),
+            ...this.listRevisionItems({limit: limit * 2})
         ].sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt))).slice(0, limit);
         const moduleStatus = courses.map(course => {
             const related = assignments.filter(item => item.courseId === course.id && !isCompletedAssignment(item));
@@ -824,10 +1038,11 @@ class StudAcademicStore {
         const assignments = this.listEntities("ASSIGNMENT", {courseId: course.id, limit});
         const resources = this.listEntities("RESOURCE", {courseId: course.id, limit});
         const notes = this.listEntities("NOTE", {courseId: course.id, limit});
+        const revisions = this.listRevisionItems({courseId: course.id, limit});
         const relationships = this.listRelationships("COURSE", course.id);
         const papers = relationships.filter(item => item.fromId === course.id ? item.toType === "RESEARCH_PAPER" : item.fromType === "RESEARCH_PAPER")
             .map(item => this.getEntity("RESEARCH_PAPER", item.fromId === course.id ? item.toId : item.fromId)).filter(Boolean).slice(0, limit);
-        return Object.freeze({course, assignments, resources, notes, papers: Object.freeze(papers), references: this.listReferences("COURSE", course.id), provenance: this.listProvenance("COURSE", course.id)});
+        return Object.freeze({course, assignments, resources, notes, revisions, papers: Object.freeze(papers), references: this.listReferences("COURSE", course.id), provenance: this.listProvenance("COURSE", course.id)});
     }
 
     search(query, options = {}) {
@@ -835,8 +1050,8 @@ class StudAcademicStore {
         Model.assertAllowedKeys(options, ["entityTypes", "courseId", "limit"], "Search options");
         const match = Model.normalizedSearchTerms(query);
         const types = Array.isArray(options.entityTypes) && options.entityTypes.length
-            ? options.entityTypes.map(Model.validateEntityType).filter(type => ["COURSE", "ASSIGNMENT", "RESOURCE", "RESEARCH_PAPER", "NOTE"].includes(type))
-            : ["COURSE", "ASSIGNMENT", "RESOURCE", "RESEARCH_PAPER", "NOTE"];
+            ? options.entityTypes.map(Model.validateEntityType).filter(type => ["COURSE", "ASSIGNMENT", "RESOURCE", "RESEARCH_PAPER", "NOTE", "REVISION_ITEM"].includes(type))
+            : ["COURSE", "ASSIGNMENT", "RESOURCE", "RESEARCH_PAPER", "NOTE", "REVISION_ITEM"];
         if (!types.length) return Object.freeze([]);
         const limit = Math.max(1, Math.min(Number(options.limit) || 30, Model.LIMITS.searchLimit));
         const params = [match];

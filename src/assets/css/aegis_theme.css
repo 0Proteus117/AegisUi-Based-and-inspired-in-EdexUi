@@ -312,6 +312,21 @@ html[data-aegis-appearance="light"] .engineering-mode .stud-provenance-dialog se
     background: var(--aegis-surface-raised) !important;
 }
 
+html[data-aegis-appearance="light"] .engineering-mode .stud-revision-row,
+html[data-aegis-appearance="light"] .engineering-mode .stud-revision-facts article,
+html[data-aegis-appearance="light"] .engineering-mode .stud-history-row,
+html[data-aegis-appearance="light"] .engineering-mode .stud-study-session {
+    color: var(--aegis-text) !important;
+    border-color: var(--aegis-border-subtle) !important;
+    background: var(--aegis-surface-muted) !important;
+}
+
+html[data-aegis-appearance="light"] .engineering-mode .stud-revision-row strong,
+html[data-aegis-appearance="light"] .engineering-mode .stud-revision-facts strong,
+html[data-aegis-appearance="light"] .engineering-mode .stud-history-row strong {
+    color: var(--aegis-text) !important;
+}
+
 html[data-aegis-appearance="light"] .engineering-mode .stud-command-center-deck .aegis-input,
 html[data-aegis-appearance="light"] .engineering-mode .stud-command-center-deck .aegis-select {
     color: var(--aegis-text) !important;
