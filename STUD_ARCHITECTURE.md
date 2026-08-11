@@ -80,3 +80,12 @@ boundary, Moodle adapter, secure credential policy and REST/ICS/Web fallback
 are documented in [STUD_LMS_ARCHITECTURE.md](STUD_LMS_ARCHITECTURE.md),
 [STUD_MOODLE_ADAPTER.md](STUD_MOODLE_ADAPTER.md) and
 [STUD_MOODLE_FALLBACKS.md](STUD_MOODLE_FALLBACKS.md).
+# Document Intelligence (Phase 8)
+
+STUD core is discipline-neutral. `AcademicDocument` represents explicit local
+academic documents without assuming that every source is a research paper or an
+engineering calculation. Engineering Compute remains a specialised optional
+local capability beside the core model, not an architectural assumption.
+
+See [STUD_DOCUMENT_INTELLIGENCE.md](STUD_DOCUMENT_INTELLIGENCE.md) for the
+offline PDF.js boundary, model, provenance and optional-engine policy.

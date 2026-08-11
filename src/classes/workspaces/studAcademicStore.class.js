@@ -16,7 +16,8 @@ const TABLES = Object.freeze({
     RESEARCH_PAPER: "stud_research_papers",
     NOTE: "stud_notes",
     REVISION_ITEM: "stud_revision_items",
-    COMPUTE_RESULT: "stud_compute_results"
+    COMPUTE_RESULT: "stud_compute_results",
+    ACADEMIC_DOCUMENT: "stud_academic_documents"
 });
 
 function parseJson(value, fallback = null) {
@@ -229,6 +230,52 @@ class StudAcademicStore {
                 FOREIGN KEY(note_id) REFERENCES stud_notes(id)
             );
             CREATE INDEX stud_compute_results_context_index ON stud_compute_results(course_id, assignment_id, updated_at DESC);
+        `}, {version: 9, sql: `
+            CREATE TABLE stud_academic_documents (
+                id TEXT PRIMARY KEY, title TEXT NOT NULL, document_type TEXT NOT NULL, display_name TEXT,
+                managed_reference TEXT, mime_type TEXT, byte_size INTEGER, checksum TEXT, page_count INTEGER,
+                extraction_status TEXT NOT NULL, extraction_engine TEXT, extraction_version TEXT,
+                course_id TEXT, assignment_id TEXT, source_paper_id TEXT,
+                created_at TEXT NOT NULL, updated_at TEXT NOT NULL, archived_at TEXT,
+                FOREIGN KEY(course_id) REFERENCES stud_courses(id),
+                FOREIGN KEY(assignment_id) REFERENCES stud_assignments(id),
+                FOREIGN KEY(source_paper_id) REFERENCES stud_research_papers(id)
+            );
+            CREATE INDEX stud_academic_documents_context_index ON stud_academic_documents(course_id, assignment_id, updated_at DESC);
+            CREATE INDEX stud_academic_documents_checksum_index ON stud_academic_documents(checksum);
+            CREATE TABLE stud_document_extractions (
+                id TEXT PRIMARY KEY, document_id TEXT NOT NULL, engine TEXT NOT NULL, engine_version TEXT,
+                status TEXT NOT NULL, page_count INTEGER, warning_json TEXT, created_at TEXT NOT NULL,
+                FOREIGN KEY(document_id) REFERENCES stud_academic_documents(id)
+            );
+            CREATE INDEX stud_document_extractions_document_index ON stud_document_extractions(document_id, created_at DESC);
+            CREATE TABLE stud_document_pages (
+                id TEXT PRIMARY KEY, extraction_id TEXT NOT NULL, page_number INTEGER NOT NULL, text_content TEXT,
+                text_hash TEXT, created_at TEXT NOT NULL,
+                FOREIGN KEY(extraction_id) REFERENCES stud_document_extractions(id),
+                UNIQUE(extraction_id, page_number)
+            );
+            CREATE TABLE stud_document_sections (
+                id TEXT PRIMARY KEY, extraction_id TEXT NOT NULL, page_start INTEGER, page_end INTEGER, ordinal INTEGER NOT NULL,
+                heading TEXT, section_type TEXT NOT NULL, confidence TEXT NOT NULL, created_at TEXT NOT NULL,
+                FOREIGN KEY(extraction_id) REFERENCES stud_document_extractions(id)
+            );
+            CREATE TABLE stud_document_chunks (
+                id TEXT PRIMARY KEY, extraction_id TEXT NOT NULL, section_id TEXT, page_start INTEGER, page_end INTEGER,
+                ordinal INTEGER NOT NULL, chunk_type TEXT NOT NULL, content TEXT NOT NULL, content_hash TEXT NOT NULL,
+                provenance_json TEXT, created_at TEXT NOT NULL,
+                FOREIGN KEY(extraction_id) REFERENCES stud_document_extractions(id),
+                FOREIGN KEY(section_id) REFERENCES stud_document_sections(id),
+                UNIQUE(extraction_id, ordinal)
+            );
+            CREATE TABLE stud_document_references (
+                id TEXT PRIMARY KEY, extraction_id TEXT NOT NULL, page_number INTEGER, ordinal INTEGER NOT NULL,
+                reference_type TEXT NOT NULL, value TEXT NOT NULL, source_text TEXT, confidence TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY(extraction_id) REFERENCES stud_document_extractions(id),
+                UNIQUE(extraction_id, ordinal)
+            );
+            CREATE VIRTUAL TABLE stud_document_search USING fts5(document_id UNINDEXED, extraction_id UNINDEXED, chunk_id UNINDEXED, page_start UNINDEXED, section_id UNINDEXED, title, content, tokenize='unicode61 remove_diacritics 2');
         `}];
         for (const migration of migrations) {
             if (applied.has(migration.version)) continue;
@@ -412,8 +459,8 @@ class StudAcademicStore {
         const limit = Math.max(1, Math.min(Number(options.limit) || 100, 500));
         const params = [];
         let where = options.includeArchived ? "1=1" : "archived_at IS NULL";
-        if (["ASSIGNMENT", "RESOURCE", "NOTE", "REVISION_ITEM", "COMPUTE_RESULT"].includes(entityType) && options.courseId) { where += " AND course_id = ?"; params.push(Model.safeId(options.courseId, "Course ID")); }
-        if (["RESOURCE", "NOTE", "COMPUTE_RESULT"].includes(entityType) && options.assignmentId) { where += " AND assignment_id = ?"; params.push(Model.safeId(options.assignmentId, "Assignment ID")); }
+        if (["ASSIGNMENT", "RESOURCE", "NOTE", "REVISION_ITEM", "COMPUTE_RESULT", "ACADEMIC_DOCUMENT"].includes(entityType) && options.courseId) { where += " AND course_id = ?"; params.push(Model.safeId(options.courseId, "Course ID")); }
+        if (["RESOURCE", "NOTE", "COMPUTE_RESULT", "ACADEMIC_DOCUMENT"].includes(entityType) && options.assignmentId) { where += " AND assignment_id = ?"; params.push(Model.safeId(options.assignmentId, "Assignment ID")); }
         const rows = this.db.prepare(`SELECT * FROM ${table} WHERE ${where} ORDER BY updated_at DESC, created_at DESC LIMIT ?`).all(...params, limit);
         return Object.freeze(rows.map(row => Object.freeze({...rowToCamel(row), entityType})));
     }
@@ -465,6 +512,7 @@ class StudAcademicStore {
         if (value.courseId) this.requireEntity("COURSE", value.courseId);
         if (value.assignmentId) this.requireEntity("ASSIGNMENT", value.assignmentId);
         if (value.noteId) this.requireEntity("NOTE", value.noteId);
+        if (value.sourcePaperId) this.requireEntity("RESEARCH_PAPER", value.sourcePaperId);
         if (entityType === "REVISION_ITEM" && value.sourceType && value.sourceId) this.requireEntity(value.sourceType, value.sourceId);
     }
 
@@ -478,6 +526,7 @@ class StudAcademicStore {
         case "REVISION_ITEM": this.db.prepare(`INSERT INTO stud_revision_items (id,course_id,prompt,answer,source_type,source_id,title,description,status,priority,difficulty,confidence,estimated_duration_minutes,accumulated_study_minutes,last_studied_at,next_planned_revision_at,scheduled_revision_at,target_mastery,current_mastery,spaced_revision_enabled,successful_revision_count,pinned,plan_position,suggestion_dismissed_until,created_at,updated_at)
             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(id,value.courseId,value.prompt,value.answer,value.sourceType,value.sourceId,value.title,value.description,value.status,value.priority,value.difficulty,value.confidence,value.estimatedDurationMinutes,value.accumulatedStudyMinutes,value.lastStudiedAt,value.nextPlannedRevisionAt,value.scheduledRevisionAt,value.targetMastery,value.currentMastery,value.spacedRevisionEnabled ? 1 : 0,value.successfulRevisionCount,value.pinned ? 1 : 0,value.planPosition,value.suggestionDismissedUntil,timestamp,timestamp); break;
         case "COMPUTE_RESULT": this.db.prepare("INSERT INTO stud_compute_results (id,title,capability,tool,operation,input_json,normalized_input_json,output_json,units_json,plot_json,runtime_json,course_id,assignment_id,note_id,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)").run(id,value.title,value.capability,value.tool,value.operation,value.inputJson,value.normalizedInputJson,value.outputJson,value.unitsJson,value.plotJson,value.runtimeJson,value.courseId,value.assignmentId,value.noteId,timestamp,timestamp); break;
+        case "ACADEMIC_DOCUMENT": this.db.prepare("INSERT INTO stud_academic_documents (id,title,document_type,display_name,managed_reference,mime_type,byte_size,checksum,page_count,extraction_status,extraction_engine,extraction_version,course_id,assignment_id,source_paper_id,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)").run(id,value.title,value.documentType,value.displayName,value.managedReference,value.mimeType,value.byteSize,value.checksum,value.pageCount,value.extractionStatus,value.extractionEngine,value.extractionVersion,value.courseId,value.assignmentId,value.sourcePaperId,timestamp,timestamp); break;
         }
     }
 
@@ -490,14 +539,15 @@ class StudAcademicStore {
         case "NOTE": this.db.prepare("UPDATE stud_notes SET title=?,content=?,course_id=?,assignment_id=?,document_version=?,document_json=?,updated_at=? WHERE id=?").run(value.title,value.content,value.courseId,value.assignmentId,value.documentVersion,value.documentJson,timestamp,id); break;
         case "REVISION_ITEM": this.db.prepare(`UPDATE stud_revision_items SET course_id=?,prompt=?,answer=?,source_type=?,source_id=?,title=?,description=?,status=?,priority=?,difficulty=?,confidence=?,estimated_duration_minutes=?,accumulated_study_minutes=?,last_studied_at=?,next_planned_revision_at=?,scheduled_revision_at=?,target_mastery=?,current_mastery=?,spaced_revision_enabled=?,successful_revision_count=?,pinned=?,plan_position=?,suggestion_dismissed_until=?,updated_at=? WHERE id=?`).run(value.courseId,value.prompt,value.answer,value.sourceType,value.sourceId,value.title,value.description,value.status,value.priority,value.difficulty,value.confidence,value.estimatedDurationMinutes,value.accumulatedStudyMinutes,value.lastStudiedAt,value.nextPlannedRevisionAt,value.scheduledRevisionAt,value.targetMastery,value.currentMastery,value.spacedRevisionEnabled ? 1 : 0,value.successfulRevisionCount,value.pinned ? 1 : 0,value.planPosition,value.suggestionDismissedUntil,timestamp,id); break;
         case "COMPUTE_RESULT": this.db.prepare("UPDATE stud_compute_results SET title=?,capability=?,tool=?,operation=?,input_json=?,normalized_input_json=?,output_json=?,units_json=?,plot_json=?,runtime_json=?,course_id=?,assignment_id=?,note_id=?,updated_at=? WHERE id=?").run(value.title,value.capability,value.tool,value.operation,value.inputJson,value.normalizedInputJson,value.outputJson,value.unitsJson,value.plotJson,value.runtimeJson,value.courseId,value.assignmentId,value.noteId,timestamp,id); break;
+        case "ACADEMIC_DOCUMENT": this.db.prepare("UPDATE stud_academic_documents SET title=?,document_type=?,display_name=?,managed_reference=?,mime_type=?,byte_size=?,checksum=?,page_count=?,extraction_status=?,extraction_engine=?,extraction_version=?,course_id=?,assignment_id=?,source_paper_id=?,updated_at=? WHERE id=?").run(value.title,value.documentType,value.displayName,value.managedReference,value.mimeType,value.byteSize,value.checksum,value.pageCount,value.extractionStatus,value.extractionEngine,value.extractionVersion,value.courseId,value.assignmentId,value.sourcePaperId,timestamp,id); break;
         }
     }
 
     syncSearch(type, id) {
         const entity = this.getEntity(type, id);
         this.db.prepare("DELETE FROM stud_search WHERE entity_type = ? AND entity_id = ?").run(type, id);
-        if (!entity || !["COURSE", "ASSIGNMENT", "RESOURCE", "RESEARCH_PAPER", "NOTE", "REVISION_ITEM", "COMPUTE_RESULT"].includes(type)) return;
-        const content = cleanText([entity.description, entity.abstract, entity.content, entity.prompt, entity.answer, entity.code, entity.authors, entity.venue, entity.doi, entity.publisher, entity.capability, entity.tool, entity.operation].filter(Boolean).join(" "));
+        if (!entity || !["COURSE", "ASSIGNMENT", "RESOURCE", "RESEARCH_PAPER", "NOTE", "REVISION_ITEM", "COMPUTE_RESULT", "ACADEMIC_DOCUMENT"].includes(type)) return;
+        const content = cleanText([entity.description, entity.abstract, entity.content, entity.prompt, entity.answer, entity.code, entity.authors, entity.venue, entity.doi, entity.publisher, entity.capability, entity.tool, entity.operation, entity.documentType, entity.displayName].filter(Boolean).join(" "));
         this.db.prepare("INSERT INTO stud_search (entity_type,entity_id,course_id,title,content) VALUES (?,?,?,?,?)").run(type, id, entity.courseId || "", entity.title || entity.prompt || "", content);
     }
 
@@ -688,6 +738,152 @@ class StudAcademicStore {
 
     listComputeResults(options = {}) { return this.listEntities("COMPUTE_RESULT", options); }
 
+    listAcademicDocuments(options = {}) { return this.listEntities("ACADEMIC_DOCUMENT", options); }
+
+    saveAcademicDocument(managedDocument, context = {}) {
+        this.initialize();
+        Model.assertAllowedKeys(managedDocument, ["reference", "displayName", "mimeType", "size", "sha256"], "Managed academic document");
+        Model.assertAllowedKeys(context, ["title", "documentType", "courseId", "assignmentId", "sourcePaperId", "sourceResourceId"], "Academic document context");
+        const assignmentId = context.assignmentId ? Model.safeId(context.assignmentId, "Assignment ID") : null;
+        let courseId = context.courseId ? Model.safeId(context.courseId, "Course ID") : null;
+        if (assignmentId) {
+            const assignment = this.getEntity("ASSIGNMENT", assignmentId);
+            if (!assignment) throw new Model.StudError("NOT_FOUND", "Assignment does not exist.");
+            if (courseId && assignment.courseId && courseId !== assignment.courseId) throw new Model.StudError("INVALID_INPUT", "Selected course does not match the selected assignment.");
+            courseId ||= assignment.courseId || null;
+        }
+        if (courseId) this.requireEntity("COURSE", courseId);
+        if (context.sourcePaperId) this.requireEntity("RESEARCH_PAPER", context.sourcePaperId);
+        if (context.sourceResourceId) this.requireEntity("RESOURCE", context.sourceResourceId);
+        const checksum = Model.requiredText(managedDocument.sha256, "Document checksum", 64).toLowerCase();
+        if (!/^[a-f0-9]{64}$/.test(checksum)) throw new Model.StudError("INVALID_INPUT", "Document checksum must be SHA-256.");
+        const existing = this.db.prepare("SELECT id FROM stud_academic_documents WHERE checksum = ? AND archived_at IS NULL LIMIT 1").get(checksum);
+        if (existing) return Object.freeze({document: this.getEntity("ACADEMIC_DOCUMENT", existing.id), deduplicated: true});
+        const document = this.createEntity("ACADEMIC_DOCUMENT", {
+            title: context.title || String(managedDocument.displayName || "Untitled document").replace(/\.pdf$/i, ""),
+            documentType: context.documentType || "UNKNOWN", displayName: managedDocument.displayName || null,
+            managedReference: Model.requiredText(managedDocument.reference, "Managed document reference", 260),
+            mimeType: managedDocument.mimeType || "application/pdf", byteSize: Number(managedDocument.size) || 0,
+            checksum, pageCount: null, extractionStatus: "NOT_ANALYZED", extractionEngine: null, extractionVersion: null,
+            courseId, assignmentId, sourcePaperId: context.sourcePaperId || null
+        }, {provenance: {field: "managedReference", observedValue: checksum, sourceType: "LOCAL_EXTRACTION", sourceId: "MANAGED_DOCUMENT", sourceAuthority: "AUTHORITATIVE", metadata: {reference: managedDocument.reference, originalPathPersisted: false}}});
+        const relate = (fromType, fromId, relationType = "HAS_DOCUMENT") => {
+            if (!fromId) return;
+            try { this.createRelationship({fromType, fromId, relationType, toType: "ACADEMIC_DOCUMENT", toId: document.id, source: "USER"}); }
+            catch (error) { if (error.code !== "DUPLICATE_RELATIONSHIP") throw error; }
+        };
+        relate("COURSE", courseId); relate("ASSIGNMENT", assignmentId); relate("RESEARCH_PAPER", context.sourcePaperId || null, "REFERENCES"); relate("RESOURCE", context.sourceResourceId || null, "REFERENCES");
+        return Object.freeze({document, deduplicated: false});
+    }
+
+    persistDocumentExtraction(documentId, extraction) {
+        this.initialize();
+        Model.assertPlainObject(extraction, "Document extraction");
+        const document = this.getEntity("ACADEMIC_DOCUMENT", documentId);
+        if (!document) throw new Model.StudError("NOT_FOUND", "Academic document does not exist.");
+        const allowedStatuses = Model.DOCUMENT_EXTRACTION_STATUSES;
+        const status = Model.enumValue(extraction.status, allowedStatuses, "Document extraction status");
+        const pages = Array.isArray(extraction.pages) ? extraction.pages.slice(0, 10000) : [];
+        const chunks = Array.isArray(extraction.chunks) ? extraction.chunks.slice(0, 50000) : [];
+        const sections = Array.isArray(extraction.sections) ? extraction.sections.slice(0, 10000) : [];
+        const references = Array.isArray(extraction.references) ? extraction.references.slice(0, 10000) : [];
+        const warnings = Array.isArray(extraction.warnings) ? extraction.warnings.slice(0, 100) : [];
+        return this.transaction(() => {
+            const extractionId = Model.createId("document_extraction");
+            const timestamp = Model.now();
+            this.db.prepare("INSERT INTO stud_document_extractions (id,document_id,engine,engine_version,status,page_count,warning_json,created_at) VALUES (?,?,?,?,?,?,?,?)")
+                .run(extractionId, document.id, Model.requiredText(extraction.engine || "PDFJS_BUILT_IN", "Document extraction engine", 120), Model.optionalText(extraction.engineVersion, "Document extraction version", 120), status, Math.max(0, Number(extraction.pageCount) || pages.length), JSON.stringify(warnings), timestamp);
+            const pageStatement = this.db.prepare("INSERT INTO stud_document_pages (id,extraction_id,page_number,text_content,text_hash,created_at) VALUES (?,?,?,?,?,?)");
+            pages.forEach((page, index) => {
+                const pageNumber = Math.max(1, Math.min(10000, Number(page.pageNumber) || index + 1));
+                const text = Model.optionalText(page.text, "Document page text", 40000) || "";
+                const hash = String(page.textHash || "").toLowerCase();
+                if (!/^[a-f0-9]{64}$/.test(hash)) throw new Model.StudError("INVALID_INPUT", "Document page hash is invalid.");
+                pageStatement.run(Model.createId("document_page"), extractionId, pageNumber, text, hash, timestamp);
+            });
+            const sectionIds = new Map();
+            const sectionStatement = this.db.prepare("INSERT INTO stud_document_sections (id,extraction_id,page_start,page_end,ordinal,heading,section_type,confidence,created_at) VALUES (?,?,?,?,?,?,?,?,?)");
+            sections.forEach((section, index) => {
+                const id = Model.createId("document_section");
+                sectionIds.set(section.id || String(index), id);
+                sectionStatement.run(id, extractionId, section.pageStart || null, section.pageEnd || null, index, Model.optionalText(section.heading, "Document section heading", 500), Model.requiredText(section.sectionType || "UNSTRUCTURED", "Document section type", 80), Model.enumValue(section.confidence || "LOW", ["LOW", "MEDIUM", "HIGH"], "Document section confidence"), timestamp);
+            });
+            const chunkStatement = this.db.prepare("INSERT INTO stud_document_chunks (id,extraction_id,section_id,page_start,page_end,ordinal,chunk_type,content,content_hash,provenance_json,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)");
+            chunks.forEach((chunk, index) => {
+                const content = Model.requiredText(chunk.content, "Document chunk", 40000);
+                const hash = String(chunk.contentHash || "").toLowerCase();
+                if (!/^[a-f0-9]{64}$/.test(hash)) throw new Model.StudError("INVALID_INPUT", "Document chunk hash is invalid.");
+                const chunkId = Model.createId("document_chunk");
+                const sectionId = chunk.sectionId ? sectionIds.get(chunk.sectionId) || null : null;
+                chunkStatement.run(chunkId, extractionId, sectionId, chunk.pageStart || null, chunk.pageEnd || null, index, Model.requiredText(chunk.chunkType || "TEXT", "Document chunk type", 80), content, hash, JSON.stringify({source: "BUILTIN_PDF", pageStart: chunk.pageStart || null, pageEnd: chunk.pageEnd || null}), timestamp);
+                this.db.prepare("INSERT INTO stud_document_search (document_id,extraction_id,chunk_id,page_start,section_id,title,content) VALUES (?,?,?,?,?,?,?)").run(document.id, extractionId, chunkId, chunk.pageStart || null, sectionId, document.title, content);
+            });
+            const referenceStatement = this.db.prepare("INSERT INTO stud_document_references (id,extraction_id,page_number,ordinal,reference_type,value,source_text,confidence,created_at) VALUES (?,?,?,?,?,?,?,?,?)");
+            references.forEach((reference, index) => referenceStatement.run(Model.createId("document_reference"), extractionId, reference.pageNumber || null, index, Model.requiredText(reference.referenceType || "IDENTIFIER", "Document reference type", 80), Model.requiredText(reference.value, "Document reference value", 1000), Model.optionalText(reference.sourceText, "Document reference source text", 2000), Model.enumValue(reference.confidence || "LOW", ["LOW", "MEDIUM", "HIGH"], "Document reference confidence"), timestamp));
+            const updated = this.updateEntity("ACADEMIC_DOCUMENT", document.id, {pageCount: extraction.pageCount || pages.length, extractionStatus: status, extractionEngine: extraction.engine || "PDFJS_BUILT_IN", extractionVersion: extraction.engineVersion || null});
+            this.createProvenance({entityType: "ACADEMIC_DOCUMENT", entityId: document.id, field: "extraction", observedValue: status, sourceType: "LOCAL_EXTRACTION", sourceId: extraction.engine || "PDFJS_BUILT_IN", sourceAuthority: "AUTHORITATIVE", observedAt: timestamp, metadata: {extractionId, pageCount: extraction.pageCount || pages.length, rawParserPayloadPersisted: false}});
+            return Object.freeze({document: updated, extractionId, status, pages: pages.length, chunks: chunks.length, references: references.length, warnings: Object.freeze(warnings)});
+        });
+    }
+
+    documentContext(documentId, options = {}) {
+        this.initialize();
+        Model.assertAllowedKeys(options, ["page", "chunkLimit"], "Document context options");
+        const document = this.getEntity("ACADEMIC_DOCUMENT", documentId);
+        if (!document) throw new Model.StudError("NOT_FOUND", "Academic document does not exist.");
+        const extraction = this.db.prepare("SELECT * FROM stud_document_extractions WHERE document_id=? ORDER BY created_at DESC LIMIT 1").get(document.id);
+        if (!extraction) return Object.freeze({document, extraction: null, pages: Object.freeze([]), sections: Object.freeze([]), chunks: Object.freeze([]), references: Object.freeze([]), provenance: this.listProvenance("ACADEMIC_DOCUMENT", document.id), relationships: this.listRelationships("ACADEMIC_DOCUMENT", document.id)});
+        const extractionId = extraction.id;
+        const page = options.page ? Math.max(1, Math.min(10000, Number(options.page))) : null;
+        const chunkLimit = Math.max(1, Math.min(Number(options.chunkLimit) || 100, 500));
+        const pages = this.db.prepare(`SELECT * FROM stud_document_pages WHERE extraction_id=?${page ? " AND page_number=?" : ""} ORDER BY page_number LIMIT 500`).all(...(page ? [extractionId, page] : [extractionId])).map(rowToCamel);
+        const sections = this.db.prepare("SELECT * FROM stud_document_sections WHERE extraction_id=? ORDER BY ordinal LIMIT 500").all(extractionId).map(rowToCamel);
+        const chunks = this.db.prepare(`SELECT * FROM stud_document_chunks WHERE extraction_id=?${page ? " AND page_start<=? AND page_end>=?" : ""} ORDER BY ordinal LIMIT ?`).all(...(page ? [extractionId, page, page, chunkLimit] : [extractionId, chunkLimit])).map(row => ({...rowToCamel(row), provenance: parseJson(row.provenance_json, {})}));
+        const references = this.db.prepare(`SELECT * FROM stud_document_references WHERE extraction_id=?${page ? " AND page_number=?" : ""} ORDER BY ordinal LIMIT 500`).all(...(page ? [extractionId, page] : [extractionId])).map(rowToCamel);
+        return Object.freeze({document, extraction: Object.freeze({...rowToCamel(extraction), warnings: Object.freeze(parseJson(extraction.warning_json, []))}), pages: Object.freeze(pages), sections: Object.freeze(sections), chunks: Object.freeze(chunks), references: Object.freeze(references), provenance: this.listProvenance("ACADEMIC_DOCUMENT", document.id), relationships: this.listRelationships("ACADEMIC_DOCUMENT", document.id)});
+    }
+
+    searchDocumentChunks(query, options = {}) {
+        this.initialize();
+        Model.assertAllowedKeys(options, ["documentId", "limit"], "Document search options");
+        const match = Model.normalizedSearchTerms(query);
+        const limit = Math.max(1, Math.min(Number(options.limit) || 30, 100));
+        const params = [match];
+        let where = "stud_document_search MATCH ?";
+        if (options.documentId) { where += " AND document_id=?"; params.push(Model.safeId(options.documentId, "Document ID")); }
+        params.push(limit);
+        const rows = this.db.prepare(`SELECT document_id,chunk_id,page_start,section_id,title,snippet(stud_document_search, 6, '[', ']', '…', 16) AS snippet FROM stud_document_search WHERE ${where} ORDER BY rank LIMIT ?`).all(...params);
+        return Object.freeze(rows.map(row => Object.freeze({documentId: row.document_id, chunkId: row.chunk_id, pageStart: row.page_start, sectionId: row.section_id || null, title: row.title, snippet: row.snippet || ""})));
+    }
+
+    createDocumentNote(input = {}) {
+        this.initialize();
+        Model.assertAllowedKeys(input, ["documentId", "chunkId", "title", "courseId", "assignmentId"], "Document note");
+        const document = this.getEntity("ACADEMIC_DOCUMENT", input.documentId);
+        if (!document) throw new Model.StudError("NOT_FOUND", "Academic document does not exist.");
+        const chunk = this.db.prepare("SELECT c.*, e.document_id FROM stud_document_chunks c JOIN stud_document_extractions e ON e.id=c.extraction_id WHERE c.id=? AND e.document_id=?").get(Model.safeId(input.chunkId, "Document chunk ID"), document.id);
+        if (!chunk) throw new Model.StudError("NOT_FOUND", "Document chunk does not exist.");
+        const courseId = input.courseId || document.courseId || null;
+        const assignmentId = input.assignmentId || document.assignmentId || null;
+        const excerpt = String(chunk.content).slice(0, 4000);
+        const note = this.createEntity("NOTE", {title: input.title || `Document note · ${document.title}`, content: excerpt, courseId, assignmentId, documentVersion: 1, documentJson: JSON.stringify({type: "doc", content: [{type: "paragraph", content: [{type: "text", text: excerpt}]}]})});
+        this.createRelationship({fromType: "NOTE", fromId: note.id, relationType: "DERIVED_FROM_DOCUMENT", toType: "ACADEMIC_DOCUMENT", toId: document.id, source: "LOCAL_EXTRACTION"});
+        this.createProvenance({entityType: "NOTE", entityId: note.id, field: "document.quote", observedValue: excerpt, sourceType: "LOCAL_EXTRACTION", sourceId: document.id, sourceAuthority: "TRUSTED", observedAt: Model.now(), metadata: {chunkId: chunk.id, pageStart: chunk.page_start, pageEnd: chunk.page_end, contentHash: chunk.content_hash}});
+        return note;
+    }
+
+    createDocumentRevision(input = {}) {
+        this.initialize();
+        Model.assertAllowedKeys(input, ["documentId", "chunkId", "title", "courseId"], "Document revision item");
+        const document = this.getEntity("ACADEMIC_DOCUMENT", input.documentId);
+        if (!document) throw new Model.StudError("NOT_FOUND", "Academic document does not exist.");
+        const chunk = this.db.prepare("SELECT c.*, e.document_id FROM stud_document_chunks c JOIN stud_document_extractions e ON e.id=c.extraction_id WHERE c.id=? AND e.document_id=?").get(Model.safeId(input.chunkId, "Document chunk ID"), document.id);
+        if (!chunk) throw new Model.StudError("NOT_FOUND", "Document chunk does not exist.");
+        const revision = this.createEntity("REVISION_ITEM", {title: input.title || `Review · ${document.title}`, prompt: `Review this document excerpt (p. ${chunk.page_start || "?"}).`, answer: String(chunk.content).slice(0, 4000), courseId: input.courseId || document.courseId || null, sourceType: "ACADEMIC_DOCUMENT", sourceId: document.id});
+        this.createRelationship({fromType: "REVISION_ITEM", fromId: revision.id, relationType: "DERIVED_FROM_DOCUMENT", toType: "ACADEMIC_DOCUMENT", toId: document.id, source: "LOCAL_EXTRACTION"});
+        return revision;
+    }
+
     researchLibrary(options = {}) {
         const limit = Math.max(1, Math.min(Number(options.limit) || 100, 500));
         return this.listEntities("RESEARCH_PAPER", {limit});
@@ -782,9 +978,10 @@ class StudAcademicStore {
         const papers = relationships.filter(item => item.fromType === "ASSIGNMENT" && item.toType === "RESEARCH_PAPER").map(item => this.getEntity("RESEARCH_PAPER", item.toId)).filter(Boolean);
         const resources = this.listEntities("RESOURCE", {assignmentId: assignment.id, limit: 100});
         const computeResults = this.listComputeResults({assignmentId: assignment.id, limit: 100});
+        const documents = this.listAcademicDocuments({assignmentId: assignment.id, limit: 100});
         const revisions = this.listRevisionItems({assignmentId: assignment.id, limit: 100});
         const status = Orchestration.orchestrationStatus({references, conflicts});
-        return Object.freeze({assignment, course, provenance, references, links, conflicts, relationships, notes: Object.freeze(notes), papers: Object.freeze(papers), resources, computeResults, revisions, status});
+        return Object.freeze({assignment, course, provenance, references, links, conflicts, relationships, notes: Object.freeze(notes), papers: Object.freeze(papers), resources, computeResults, documents, revisions, status});
     }
 
     recoverInterruptedStudySessions() {
@@ -1089,6 +1286,7 @@ class StudAcademicStore {
             ...this.listEntities("NOTE", {limit: limit * 2}),
             ...this.listEntities("RESOURCE", {limit: limit * 2}),
             ...this.listEntities("RESEARCH_PAPER", {limit: limit * 2}),
+            ...this.listAcademicDocuments({limit: limit * 2}),
             ...this.listComputeResults({limit: limit * 2}),
             ...this.listRevisionItems({limit: limit * 2})
         ].sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt))).slice(0, limit);
@@ -1116,11 +1314,12 @@ class StudAcademicStore {
         const resources = this.listEntities("RESOURCE", {courseId: course.id, limit});
         const notes = this.listEntities("NOTE", {courseId: course.id, limit});
         const computeResults = this.listComputeResults({courseId: course.id, limit});
+        const documents = this.listAcademicDocuments({courseId: course.id, limit});
         const revisions = this.listRevisionItems({courseId: course.id, limit});
         const relationships = this.listRelationships("COURSE", course.id);
         const papers = relationships.filter(item => item.fromId === course.id ? item.toType === "RESEARCH_PAPER" : item.fromType === "RESEARCH_PAPER")
             .map(item => this.getEntity("RESEARCH_PAPER", item.fromId === course.id ? item.toId : item.fromId)).filter(Boolean).slice(0, limit);
-        return Object.freeze({course, assignments, resources, notes, computeResults, revisions, papers: Object.freeze(papers), references: this.listReferences("COURSE", course.id), provenance: this.listProvenance("COURSE", course.id)});
+        return Object.freeze({course, assignments, resources, notes, computeResults, documents, revisions, papers: Object.freeze(papers), references: this.listReferences("COURSE", course.id), provenance: this.listProvenance("COURSE", course.id)});
     }
 
     search(query, options = {}) {
@@ -1128,8 +1327,8 @@ class StudAcademicStore {
         Model.assertAllowedKeys(options, ["entityTypes", "courseId", "limit"], "Search options");
         const match = Model.normalizedSearchTerms(query);
         const types = Array.isArray(options.entityTypes) && options.entityTypes.length
-            ? options.entityTypes.map(Model.validateEntityType).filter(type => ["COURSE", "ASSIGNMENT", "RESOURCE", "RESEARCH_PAPER", "NOTE", "REVISION_ITEM", "COMPUTE_RESULT"].includes(type))
-            : ["COURSE", "ASSIGNMENT", "RESOURCE", "RESEARCH_PAPER", "NOTE", "REVISION_ITEM", "COMPUTE_RESULT"];
+            ? options.entityTypes.map(Model.validateEntityType).filter(type => ["COURSE", "ASSIGNMENT", "RESOURCE", "RESEARCH_PAPER", "NOTE", "REVISION_ITEM", "COMPUTE_RESULT", "ACADEMIC_DOCUMENT"].includes(type))
+            : ["COURSE", "ASSIGNMENT", "RESOURCE", "RESEARCH_PAPER", "NOTE", "REVISION_ITEM", "COMPUTE_RESULT", "ACADEMIC_DOCUMENT"];
         if (!types.length) return Object.freeze([]);
         const limit = Math.max(1, Math.min(Number(options.limit) || 30, Model.LIMITS.searchLimit));
         const params = [match];

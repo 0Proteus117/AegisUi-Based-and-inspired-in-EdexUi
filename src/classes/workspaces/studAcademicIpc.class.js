@@ -6,6 +6,7 @@ const {StudAcademicStore} = require("./studAcademicStore.class.js");
 const {StudResearchRuntime} = require("./studResearchRuntime.class.js");
 const {StudLmsRuntime} = require("./studLmsRuntime.class.js");
 const {StudComputeRuntime} = require("./studComputeRuntime.class.js");
+const {StudDocumentRuntime} = require("./studDocumentRuntime.class.js");
 
 const CHANNELS = Object.freeze([
     "stud-core-status",
@@ -42,6 +43,16 @@ const CHANNELS = Object.freeze([
     "stud-compute-run",
     "stud-compute-save-result",
     "stud-compute-list",
+    "stud-document-capabilities",
+    "stud-document-import-pdf",
+    "stud-document-analyze",
+    "stud-document-cancel",
+    "stud-document-list",
+    "stud-document-context",
+    "stud-document-search",
+    "stud-document-read-pdf",
+    "stud-document-create-note",
+    "stud-document-create-revision",
     "stud-research-status",
     "stud-research-search",
     "stud-research-resolve-crossref",
@@ -110,6 +121,10 @@ function registerStudAcademicIpc(options = {}) {
     // The compute runtime is pure local code. It has no process spawning,
     // filesystem, provider or network capability.
     const computeRuntime = options.computeRuntime || new StudComputeRuntime();
+    // Document Intelligence is local-only. It receives managed PDF bytes from
+    // the established explicit-selector runtime; it has no own filesystem,
+    // shell, environment or network authority.
+    const documentRuntime = options.documentRuntime || new StudDocumentRuntime({readManagedPdf: reference => runtime.readManagedPdf(reference)});
     const handlers = new Map();
     const add = (channel, keys, handler) => {
         if (handlers.has(channel)) throw new Error(`Duplicate STUD IPC channel: ${channel}`);
@@ -166,6 +181,35 @@ function registerStudAcademicIpc(options = {}) {
     // before persistence instead of accepting a renderer-provided result.
     add("stud-compute-save-result", ["request", "context"], payload => store.saveComputeResult(computeRuntime.run(payload.request), payload.context || {}));
     add("stud-compute-list", ["courseId", "assignmentId", "limit", "includeArchived"], payload => store.listComputeResults(payload));
+    add("stud-document-capabilities", [], () => documentRuntime.capabilities());
+    add("stud-document-import-pdf", ["title", "documentType", "courseId", "assignmentId", "sourcePaperId", "sourceResourceId"], async payload => {
+        const managed = await runtime.chooseAndImportPdf({paperId: "document"});
+        if (managed.cancelled) return managed;
+        const {cancelled, ...document} = managed;
+        return store.saveAcademicDocument(document, payload);
+    });
+    add("stud-document-analyze", ["documentId", "requestId"], async payload => {
+        const document = store.getEntity("ACADEMIC_DOCUMENT", payload.documentId);
+        if (!document) throw new Model.StudError("NOT_FOUND", "Academic document does not exist.");
+        if (!document.managedReference) throw new Model.StudError("DOCUMENT_MISSING", "This academic document has no managed local PDF.");
+        const extraction = await documentRuntime.analyze({document, requestId: payload.requestId});
+        if (extraction.status === "CANCELLED") return extraction;
+        return store.persistDocumentExtraction(document.id, extraction);
+    });
+    add("stud-document-cancel", ["requestId"], payload => documentRuntime.cancel(payload.requestId));
+    add("stud-document-list", ["courseId", "assignmentId", "limit", "includeArchived"], payload => store.listAcademicDocuments(payload));
+    add("stud-document-context", ["documentId", "page", "chunkLimit"], payload => {
+        const {documentId, ...options} = payload;
+        return store.documentContext(documentId, options);
+    });
+    add("stud-document-search", ["query", "documentId", "limit"], payload => store.searchDocumentChunks(payload.query, {documentId: payload.documentId || null, limit: payload.limit}));
+    add("stud-document-read-pdf", ["documentId"], payload => {
+        const document = store.getEntity("ACADEMIC_DOCUMENT", payload.documentId);
+        if (!document || !document.managedReference) throw new Model.StudError("DOCUMENT_MISSING", "This academic document has no managed local PDF.");
+        return runtime.readManagedPdf(document.managedReference);
+    });
+    add("stud-document-create-note", ["documentId", "chunkId", "title", "courseId", "assignmentId"], payload => store.createDocumentNote(payload));
+    add("stud-document-create-revision", ["documentId", "chunkId", "title", "courseId"], payload => store.createDocumentRevision(payload));
     add("stud-research-status", [], () => runtime.status());
     add("stud-research-search", ["query", "year", "limit", "requestId"], payload => runtime.searchOpenAlex(payload));
     add("stud-research-resolve-crossref", ["doi", "requestId"], payload => runtime.resolveCrossref(payload));
@@ -231,6 +275,7 @@ function registerStudAcademicIpc(options = {}) {
         handlers.clear();
         runtime.dispose();
         lmsRuntime.dispose();
+        documentRuntime.dispose();
         store.close();
     }});
 }
