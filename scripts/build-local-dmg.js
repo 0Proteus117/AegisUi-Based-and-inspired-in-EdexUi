@@ -22,7 +22,10 @@ const ROOT = path.resolve(__dirname, "..");
 const pkg = require(path.join(ROOT, "package.json"));
 const version = pkg.version;
 const dist = path.join(ROOT, "dist");
-const template = process.env.AEGISUI_ELECTRON_TEMPLATE || path.join(dist, "mac-arm64", "Electron.app");
+// Resolve before copying. fs.cpSync preserves framework links; comparing a
+// relative template path against an absolute link target used to leave links
+// pointing back into the worktree, invalidating the final bundle signature.
+const template = path.resolve(process.env.AEGISUI_ELECTRON_TEMPLATE || path.join(dist, "mac-arm64", "Electron.app"));
 const outputDir = path.join(dist, "mac-arm64");
 const app = path.join(outputDir, "AegisUi.app");
 const appResources = path.join(app, "Contents", "Resources");

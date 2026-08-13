@@ -1,5 +1,24 @@
 # Changelog
 
+## 2.6.14 - 2026-08-13
+
+### STUD Final Acceptance / Academic Workflow
+
+- Hardened clean-worktree reproducibility by completing the Electron optional
+  dependency lock entry required by `npm ci`; Citation.js now installs and
+  resolves from a genuinely clean STUD checkout.
+- Added schema v13 fresh-start and representative v9/v12 migration coverage,
+  plus a deterministic end-to-end academic workflow acceptance test.
+- Validated the canonical chain from research records and a managed document
+  through provenance-bearing chunks, Notes, Context Package, restricted Local
+  Academic AI, revision context and Harvard-style bibliography data.
+- Added public-safe final acceptance documentation and evidence/artifact
+  generation without adding cloud AI, automatic research, a second persistence
+  layer or a new execution boundary.
+- Hardened local DMG assembly so the Electron template is resolved before it is
+  copied, preserving framework links for ad-hoc signing and Apple Silicon
+  packaging.
+
 ## 2.6.13 - 2026-08-13
 
 - Added the versioned, validated STUD Tool Catalog with native Aegis,
