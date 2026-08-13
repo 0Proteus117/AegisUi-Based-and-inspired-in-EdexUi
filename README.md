@@ -68,7 +68,12 @@ the ephemeral session by default or sends case data to a provider.
   original-byte SHA-256. It does not upload the media, infer authenticity or
   silently persist the original. Image GPS can only hand off to Geospatial
   Verification after an explicit analyst action.
-- STUD v2.6.12 adds local, derived Progress Analytics for course work,
+- STUD v2.6.13 adds a local, versioned Student Tool Catalog: native Aegis
+  capabilities, optional local engines, external tools and discipline packs
+  disclose cost, account, offline, privacy, licence and integration status.
+  Preferences and discipline profiles are explicit local SQLite state; the
+  catalog has no installers, remote updates, telemetry or remote ranking.
+  STUD v2.6.12 adds local, derived Progress Analytics for course work,
   compatible assessment context, explicit deadlines, revision/study activity,
   data completeness and source-visible conflicts. It neither predicts outcomes
   nor contacts Moodle, Calendar, Email, AI or external providers. Text and

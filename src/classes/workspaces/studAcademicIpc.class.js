@@ -9,6 +9,7 @@ const {StudComputeRuntime} = require("./studComputeRuntime.class.js");
 const {StudDocumentRuntime} = require("./studDocumentRuntime.class.js");
 const {StudAcademicAssistantRuntime} = require("./studAcademicAssistantRuntime.class.js");
 const {StudNotebookRuntime, normalizeGitHub} = require("./studNotebookRuntime.class.js");
+const {StudToolCatalog} = require("./studToolCatalog.class.js");
 
 const CHANNELS = Object.freeze([
     "stud-core-status",
@@ -30,6 +31,14 @@ const CHANNELS = Object.freeze([
     "stud-progress-revision",
     "stud-progress-activity",
     "stud-progress-metric-sources",
+    "stud-tool-catalog",
+    "stud-tool-packs",
+    "stud-tool-detail",
+    "stud-tool-preference-update",
+    "stud-tool-preferences-reset",
+    "stud-tool-profile",
+    "stud-tool-profile-update",
+    "stud-tool-launch",
     "stud-course-context",
     "stud-reference-list",
     "stud-reference-link",
@@ -170,6 +179,9 @@ function registerStudAcademicIpc(options = {}) {
     // filesystem, provider, shell or tool bridge and may contact only a
     // configured loopback Ollama endpoint after an explicit user request.
     const academicAiRuntime = options.academicAiRuntime || new StudAcademicAssistantRuntime({store, userDataRoot: options.app && options.app.getPath ? options.app.getPath("userData") : ""});
+    const toolCatalog = options.toolCatalog || new StudToolCatalog(store);
+    let shell = options.shell || null;
+    if (!shell) { try { shell = require("electron").shell; } catch (error) {} }
     const handlers = new Map();
     const add = (channel, keys, handler) => {
         if (handlers.has(channel)) throw new Error(`Duplicate STUD IPC channel: ${channel}`);
@@ -208,6 +220,19 @@ function registerStudAcademicIpc(options = {}) {
     add("stud-progress-revision", ["courseId", "limit"], payload => store.progress.revision(payload));
     add("stud-progress-activity", ["courseId", "limit"], payload => store.progress.activity(payload));
     add("stud-progress-metric-sources", ["scope", "courseId", "assignmentId"], payload => store.progress.metricSources(payload));
+    // Catalog metadata is built into Aegis. The only mutable state is the
+    // explicit local preference/profile store; no registry update or network
+    // discovery route exists.
+    add("stud-tool-catalog", ["filters"], payload => toolCatalog.catalog(payload));
+    add("stud-tool-packs", [], () => toolCatalog.packs());
+    add("stud-tool-detail", ["toolId"], payload => toolCatalog.detail(payload.toolId));
+    add("stud-tool-preference-update", ["toolId", "favorite", "hidden", "pinned", "markUsed"], payload => store.updateToolPreference(payload));
+    add("stud-tool-preferences-reset", [], () => store.resetToolPreferences());
+    add("stud-tool-profile", [], () => store.listDisciplineProfile());
+    add("stud-tool-profile-update", ["disciplines"], payload => store.replaceDisciplineProfile(payload));
+    // The renderer supplies an ID, never a URL. The catalog service resolves
+    // only its own HTTPS registry URL before opening the system browser.
+    add("stud-tool-launch", ["toolId"], payload => toolCatalog.launch(payload.toolId, shell));
     add("stud-course-context", ["courseId", "limit"], payload => store.getCourseContext(payload.courseId, {limit: payload.limit}));
     add("stud-reference-list", ["entityType", "entityId"], payload => store.listReferences(payload.entityType, payload.entityId));
     add("stud-reference-link", ["entityType", "entityId", "kind", "externalId"], payload => store.linkReference(payload));

@@ -15,11 +15,22 @@
 | Notebook | Explicit local Markdown/code/raw academic record; base execution is editing-only. |
 | Dataset | Explicit managed CSV/TSV metadata, checksum, bounded schema and summary. |
 | RepositoryReference | Explicit public GitHub reference and optional normalized metadata. |
+| ToolPreference | Explicit local favorite/hide/pin/used state for one shipped catalog entry. |
+| DisciplineProfile | Explicit local ordering preference for catalog disciplines only. |
 | ExternalIdentifier | Normalized namespace/value reference such as `ICS_UID`, `DOI` or future Moodle IDs. |
 
 All canonical records have stable `stud_<type>_...` IDs, timestamps and an
 archive state. Archiving removes the record from normal lists and FTS5 instead
 of casually deleting related academic history.
+
+## Tool catalog metadata and preferences
+
+Catalog entries and discipline packs are application-owned versioned metadata,
+not mutable academic records. Their stable IDs are validated before use. Schema
+v13 keeps only user-owned `stud_tool_preferences` and
+`stud_discipline_profile` rows. A hidden catalog entry is still present in the
+registry, and reset deletes preferences rather than metadata. Neither table is
+indexed by academic FTS5 or sent to a provider.
 
 ## Field-level provenance
 

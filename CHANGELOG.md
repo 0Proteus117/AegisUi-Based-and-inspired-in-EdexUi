@@ -1,5 +1,19 @@
 # Changelog
 
+## 2.6.13 - 2026-08-13
+
+- Added the versioned, validated STUD Tool Catalog with native Aegis,
+  optional-local, external, learning and reference entries.
+- Added explicit cost, offline, privacy, account, open-source, licence,
+  availability and integration classifications; freemium limitations are not
+  treated as free access.
+- Added ten discipline-neutral curated capability packs and explicit local
+  discipline profile, favorite, hide and pin preferences through SQLite schema
+  v13.
+- Preserved a narrow ID-only HTTPS external-launch boundary. No installer,
+  download, remote registry update, telemetry, sponsored ranking or provider
+  request was introduced.
+
 ## 2.6.12 - 2026-08-13
 
 - Activated STUD Progress Analytics as a bounded, derived local reporting

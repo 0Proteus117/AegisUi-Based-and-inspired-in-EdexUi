@@ -27,6 +27,7 @@ const CHECKS = [
     "scripts/test-stud-academic-core.js",
     "scripts/test-stud-workspace.js",
     "scripts/test-stud-command-center.js",
+    "scripts/test-stud-tool-catalog.js",
     "scripts/test-stud-academic-ai.js",
     "scripts/test-osint-workspace.js",
     "scripts/test-osint-provider-registry.js",

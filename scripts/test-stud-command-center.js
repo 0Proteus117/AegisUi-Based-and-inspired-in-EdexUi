@@ -70,6 +70,7 @@ try {
         assert.ok(commandCenter.includes("StudKnowledgeWorkspace"));
         assert.ok(commandCenter.includes("StudAcademicAssistantWorkspace"));
         assert.ok(commandCenter.includes("StudNotebookWorkspace"));
+        assert.ok(commandCenter.includes("StudToolCatalogWorkspace"));
         assert.ok(commandCenter.includes("FTS5 searches only local canonical academic records"));
         assert.ok(commandCenter.includes("STUD DOES NOT SCAN, OPEN OR COPY EXTERNAL CONTENT"));
         assert.ok(!commandCenter.includes("fetch("));
@@ -89,12 +90,16 @@ try {
         assert.ok(!ipc.includes("stud-moodle-request"));
         assert.ok(!ipc.includes("stud-calendar-open"));
         assert.ok(!ipc.includes("stud-email-open"));
+        assert.ok(ipc.includes('"stud-tool-catalog"'));
+        assert.ok(ipc.includes('"stud-tool-launch"'));
+        assert.ok(!ipc.includes("stud-tool-download"));
     });
     check("COMMAND_CENTER_LAYOUT_THEME_CONTRACT", () => {
         assert.ok(css.includes("stud-command-center-grid"));
         assert.ok(css.includes("stud-overview-grid"));
         assert.ok(css.includes("stud-dialog"));
         assert.ok(css.includes("stud-revision-overview-grid"));
+        assert.ok(css.includes("stud-tool-catalog-grid"));
         assert.ok(css.includes("@media (max-width: 1230px)"));
         assert.ok(theme.includes("STUD Phase 2 keeps the Command Center semantic"));
     });
