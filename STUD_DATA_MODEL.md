@@ -61,6 +61,17 @@ the student for one root/candidate pair. They do not alter the linked object or
 external system. A Context Package is a bounded local snapshot with omitted
 items recorded; it does not invoke an assistant, model or provider.
 
+## Local Academic AI package consumption
+
+Phase 10 does not add a second database table or change the canonical schema.
+It upgrades the inspectable package snapshot to include bounded selected text
+fragments alongside document chunks. Those fragments are generated only from
+the package's already selected canonical records, never from a free database
+scan. The Local Academic AI runtime reads one selected package and keeps its
+retrieval trace, model response and revision suggestions in process memory.
+Only an explicit Save as Note or Accept as Revision Item action reuses the
+existing canonical persistence and records `AI_SUGGESTION` provenance.
+
 ## Moodle normalization
 
 Schema v4 adds a non-secret `stud_provider_instances` record for configured

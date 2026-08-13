@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.6.10 - 2026-08-13
+
+- Added STUD Local Academic AI with explicit Context Package selection and
+  package-restricted local retrieval.
+- Added local Ollama availability, cancellation and grounded response states.
+- Added source trace, validated source mappings and prompt-injection handling.
+- Added explicit-only Note saving and Revision candidate acceptance with STUD
+  provenance; no automatic persistence or external action is introduced.
+
 ## 2.6.9 - 2026-08-13
 
 ### STUD Academic Intelligence & Knowledge Layer

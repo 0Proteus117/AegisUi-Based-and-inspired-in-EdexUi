@@ -7,6 +7,7 @@ const {StudResearchRuntime} = require("./studResearchRuntime.class.js");
 const {StudLmsRuntime} = require("./studLmsRuntime.class.js");
 const {StudComputeRuntime} = require("./studComputeRuntime.class.js");
 const {StudDocumentRuntime} = require("./studDocumentRuntime.class.js");
+const {StudAcademicAssistantRuntime} = require("./studAcademicAssistantRuntime.class.js");
 
 const CHANNELS = Object.freeze([
     "stud-core-status",
@@ -58,6 +59,13 @@ const CHANNELS = Object.freeze([
     "stud-academic-context-decide",
     "stud-academic-context-package-create",
     "stud-academic-context-package-list",
+    "stud-academic-context-package-read",
+    "stud-academic-ai-status",
+    "stud-academic-ai-generate",
+    "stud-academic-ai-cancel",
+    "stud-academic-ai-save-note",
+    "stud-academic-ai-revision-candidates",
+    "stud-academic-ai-revision-accept",
     "stud-research-status",
     "stud-research-search",
     "stud-research-resolve-crossref",
@@ -130,6 +138,10 @@ function registerStudAcademicIpc(options = {}) {
     // the established explicit-selector runtime; it has no own filesystem,
     // shell, environment or network authority.
     const documentRuntime = options.documentRuntime || new StudDocumentRuntime({readManagedPdf: reference => runtime.readManagedPdf(reference)});
+    // This runtime receives Context Package snapshots only. It has no generic
+    // filesystem, provider, shell or tool bridge and may contact only a
+    // configured loopback Ollama endpoint after an explicit user request.
+    const academicAiRuntime = options.academicAiRuntime || new StudAcademicAssistantRuntime({store, userDataRoot: options.app && options.app.getPath ? options.app.getPath("userData") : ""});
     const handlers = new Map();
     const add = (channel, keys, handler) => {
         if (handlers.has(channel)) throw new Error(`Duplicate STUD IPC channel: ${channel}`);
@@ -222,6 +234,13 @@ function registerStudAcademicIpc(options = {}) {
     add("stud-academic-context-decide", ["rootType", "rootId", "candidateType", "candidateId", "decision", "reason"], payload => store.decideAcademicContext(payload.rootType, payload.rootId, payload.candidateType, payload.candidateId, payload.decision, payload.reason || null));
     add("stud-academic-context-package-create", ["rootType", "rootId", "options"], payload => store.createAcademicContextPackage(payload.rootType, payload.rootId, payload.options || {}));
     add("stud-academic-context-package-list", ["rootType", "rootId", "limit"], payload => store.listAcademicContextPackages(payload.rootType, payload.rootId, payload.limit));
+    add("stud-academic-context-package-read", ["packageId"], payload => store.getAcademicContextPackage(payload.packageId));
+    add("stud-academic-ai-status", [], () => academicAiRuntime.status());
+    add("stud-academic-ai-generate", ["packageId", "question", "mode", "requestId"], payload => academicAiRuntime.generate(payload));
+    add("stud-academic-ai-cancel", ["requestId"], payload => academicAiRuntime.cancel(payload.requestId));
+    add("stud-academic-ai-save-note", ["responseId", "title"], payload => academicAiRuntime.saveNote(payload));
+    add("stud-academic-ai-revision-candidates", ["responseId"], payload => academicAiRuntime.revisionCandidates(payload));
+    add("stud-academic-ai-revision-accept", ["responseId", "candidateIndex"], payload => academicAiRuntime.acceptRevision(payload));
     add("stud-research-status", [], () => runtime.status());
     add("stud-research-search", ["query", "year", "limit", "requestId"], payload => runtime.searchOpenAlex(payload));
     add("stud-research-resolve-crossref", ["doi", "requestId"], payload => runtime.resolveCrossref(payload));
@@ -288,6 +307,7 @@ function registerStudAcademicIpc(options = {}) {
         runtime.dispose();
         lmsRuntime.dispose();
         documentRuntime.dispose();
+        academicAiRuntime.dispose();
         store.close();
     }});
 }

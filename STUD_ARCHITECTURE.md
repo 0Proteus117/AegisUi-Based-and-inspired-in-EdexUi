@@ -99,3 +99,17 @@ coverage, source support, user decisions and Context Packages remain in the
 same SQLite database and retain provenance. No LLM, cloud inference, provider,
 filesystem scan or automatic action is connected. See
 [STUD_ACADEMIC_INTELLIGENCE.md](STUD_ACADEMIC_INTELLIGENCE.md).
+
+## Local Academic AI (Phase 10)
+
+Phase 10 adds an opt-in local Ollama consumer of a reviewed Context Package;
+it is not a second academic store and it never bypasses the Context Builder.
+FTS5 ranking is restricted to the selected package candidates, while source
+chunks and bounded canonical fragments from that snapshot form the only model
+context. The assistant exposes a source trace, limitations and only verified
+package source identifiers. It has no tools, cloud fallback, automatic action
+or automatic persistence. Generated text is ephemeral until the user
+explicitly saves it as a canonical Note or accepts an individual Revision
+candidate, each with `AI_SUGGESTION` provenance. See
+[STUD_LOCAL_ACADEMIC_AI.md](STUD_LOCAL_ACADEMIC_AI.md) and
+[STUD_PHASE10_VALIDATION.md](STUD_PHASE10_VALIDATION.md).

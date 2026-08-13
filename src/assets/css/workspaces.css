@@ -6444,6 +6444,39 @@ button.eng-thread-row.active {
 .engineering-mode .stud-knowledge-edges { display: flex; flex-wrap: wrap; gap: .3vh; margin-top: .45vh; }.engineering-mode .stud-knowledge-edges span { border: .08vh dashed var(--aegis-border); padding: .16vh .35vh; color: var(--aegis-text-faint); font: .45vh var(--font_mono); overflow-wrap: anywhere; }
 .engineering-mode .stud-knowledge-search form { display: flex; gap: .4vh; align-items: end; flex-wrap: wrap; }.engineering-mode .stud-knowledge-search form label { flex: 1 1 28vh; }
 
+/* STUD Phase 10 Academic AI. The model surface is deliberately a normal-flow
+ * document workspace: variable source traces and long locally grounded text
+ * cannot overlap controls, policy copy or adjacent panels. */
+.engineering-mode .stud-ai-shell { display: grid; gap: .7vh; min-width: 0; }
+.engineering-mode .stud-ai-intro,.engineering-mode .stud-ai-engine { display: grid; gap: .45vh; min-width: 0; }
+.engineering-mode .stud-ai-intro p,.engineering-mode .stud-ai-limit,.engineering-mode .stud-ai-response-status p,.engineering-mode .stud-ai-policy p { margin: 0; color: var(--aegis-text-muted); font: .59vh/1.45 var(--font_main_light); overflow-wrap: anywhere; }
+.engineering-mode .stud-ai-engine { grid-template-columns: minmax(0, 1fr) max-content; align-items: center; padding: .48vh; border-left: .16vh solid var(--aegis-accent); background: var(--aegis-surface-muted); }
+.engineering-mode .stud-ai-engine strong { color: var(--aegis-accent-soft); font: .58vh var(--font_mono); overflow-wrap: anywhere; }
+.engineering-mode .stud-ai-context-form { display: grid; grid-template-columns: minmax(16vh, .55fr) minmax(25vh, 1.45fr) auto; gap: .45vh; align-items: end; min-width: 0; }
+.engineering-mode .stud-ai-context-form + .stud-ai-context-form { margin-top: .5vh; grid-template-columns: minmax(0, 1fr) auto; }
+.engineering-mode .stud-ai-context-form label,.engineering-mode .stud-ai-query-form label,.engineering-mode .stud-ai-save-form label { display: grid; gap: .18vh; min-width: 0; color: var(--aegis-text-faint); font: .5vh var(--font_mono); letter-spacing: .07vh; }
+.engineering-mode .stud-ai-package-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .4vh; margin-top: .6vh; }
+.engineering-mode .stud-ai-package-summary article { display: grid; gap: .18vh; min-width: 0; padding: .48vh; border-left: .15vh solid var(--aegis-accent); background: var(--aegis-surface-muted); }
+.engineering-mode .stud-ai-package-summary small { color: var(--aegis-text-faint); font: .48vh var(--font_mono); letter-spacing: .07vh; }
+.engineering-mode .stud-ai-package-summary strong { color: var(--aegis-text); font: .55vh/1.35 var(--font_mono); overflow-wrap: anywhere; }
+.engineering-mode .stud-ai-limit { margin-top: .5vh; padding: .45vh; border-left: .15vh solid var(--aegis-warning); }
+.engineering-mode .stud-ai-query-form { display: grid; gap: .48vh; min-width: 0; }
+.engineering-mode .stud-ai-query-form textarea { min-height: 6.2vh; resize: vertical; line-height: 1.4; }
+.engineering-mode .stud-ai-error { margin: 0 0 .5vh; padding: .52vh; border-left: .18vh solid var(--aegis-warning); color: var(--aegis-warning); background: color-mix(in srgb, var(--aegis-warning) 8%, var(--aegis-surface)); font: .58vh/1.4 var(--font_mono); overflow-wrap: anywhere; }
+.engineering-mode .stud-ai-response-status { display: grid; gap: .18vh; padding-bottom: .52vh; border-bottom: .08vh solid var(--aegis-border-subtle); }
+.engineering-mode .stud-ai-response-status strong { color: var(--aegis-accent-soft); font: .62vh var(--font_mono); }.engineering-mode .stud-ai-response-status small { color: var(--aegis-text-faint); font: .48vh var(--font_mono); }
+.engineering-mode .stud-ai-answer,.engineering-mode .stud-ai-claims,.engineering-mode .stud-ai-trace,.engineering-mode .stud-ai-limitations,.engineering-mode .stud-ai-candidates { display: grid; gap: .42vh; min-width: 0; margin-top: .65vh; padding-top: .58vh; border-top: .08vh solid var(--aegis-border-subtle); }
+.engineering-mode .stud-ai-answer header,.engineering-mode .stud-ai-claims header,.engineering-mode .stud-ai-trace header,.engineering-mode .stud-ai-limitations header,.engineering-mode .stud-ai-candidates header { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .4vh; }
+.engineering-mode .stud-ai-answer h3,.engineering-mode .stud-ai-claims h3,.engineering-mode .stud-ai-trace h3,.engineering-mode .stud-ai-limitations h3,.engineering-mode .stud-ai-candidates h3 { margin: 0; color: var(--aegis-accent-soft); font: .62vh var(--font_mono); letter-spacing: .07vh; }
+.engineering-mode .stud-ai-answer header span,.engineering-mode .stud-ai-claims header span,.engineering-mode .stud-ai-trace header span,.engineering-mode .stud-ai-limitations header span,.engineering-mode .stud-ai-candidates header span { color: var(--aegis-text-faint); font: .48vh var(--font_mono); letter-spacing: .07vh; }
+.engineering-mode .stud-ai-answer pre { max-height: 32vh; margin: 0; padding: .58vh; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; border: .08vh solid var(--aegis-border-subtle); background: var(--aegis-code-surface, var(--aegis-surface-muted)); color: var(--aegis-text-primary); font: .6vh/1.45 var(--font_mono); }
+.engineering-mode .stud-ai-claims article,.engineering-mode .stud-ai-trace button,.engineering-mode .stud-ai-candidates article { display: grid; gap: .18vh; min-width: 0; padding: .48vh; text-align: left; border-left: .15vh solid var(--aegis-accent); background: var(--aegis-surface-muted); }
+.engineering-mode .stud-ai-trace button { width: 100%; border-top: .08vh solid var(--aegis-border-subtle); border-right: .08vh solid var(--aegis-border-subtle); border-bottom: .08vh solid var(--aegis-border-subtle); }
+.engineering-mode .stud-ai-claims strong,.engineering-mode .stud-ai-trace strong,.engineering-mode .stud-ai-candidates strong { color: var(--aegis-text); font: .57vh/1.4 var(--font_mono); overflow-wrap: anywhere; }
+.engineering-mode .stud-ai-claims small,.engineering-mode .stud-ai-trace small,.engineering-mode .stud-ai-candidates small,.engineering-mode .stud-ai-limitations li { color: var(--aegis-text-muted); font: .52vh/1.35 var(--font_mono); overflow-wrap: anywhere; }
+.engineering-mode .stud-ai-limitations ul { display: grid; gap: .25vh; margin: 0; padding-left: 1.6vh; }.engineering-mode .stud-ai-candidates article button { justify-self: start; }
+.engineering-mode .stud-ai-save-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .42vh; align-items: end; margin-top: .55vh; padding-top: .55vh; border-top: .08vh dashed var(--aegis-border); }
+
 @media (max-width: 1450px) {
     .engineering-mode .stud-moodle-control-grid,.engineering-mode .stud-moodle-data-grid { grid-template-columns: minmax(0, 1fr); }
     .engineering-mode .stud-moodle-list { max-height: 28vh; }
@@ -6457,6 +6490,7 @@ button.eng-thread-row.active {
     .engineering-mode .stud-compute-intro,.engineering-mode .stud-compute-save form { grid-template-columns: minmax(0, 1fr); }.engineering-mode .stud-compute-status { justify-items: start; text-align: left; }
     .engineering-mode .stud-document-intro,.engineering-mode .stud-document-metadata { grid-template-columns: minmax(0, 1fr); }.engineering-mode .stud-document-state { justify-items: start; text-align: left; }
     .engineering-mode .stud-knowledge-form,.engineering-mode .stud-knowledge-candidates > .workspace-panel-content > div { grid-template-columns: minmax(0, 1fr); }
+    .engineering-mode .stud-ai-engine,.engineering-mode .stud-ai-context-form,.engineering-mode .stud-ai-context-form + .stud-ai-context-form,.engineering-mode .stud-ai-package-summary,.engineering-mode .stud-ai-save-form { grid-template-columns: minmax(0, 1fr); }
 }
 
 @media (max-width: 1450px) {

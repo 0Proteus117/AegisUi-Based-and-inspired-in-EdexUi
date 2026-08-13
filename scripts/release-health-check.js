@@ -101,6 +101,11 @@ function main() {
         && exists("STUD_PHASE1_VALIDATION.md")
         && exists("STUD_COMMAND_CENTER.md")
         && exists("STUD_PHASE2_VALIDATION.md");
+    const studAcademicAi = exists("src/classes/workspaces/studAcademicAssistantRuntime.class.js")
+        && exists("src/classes/workspaces/studAcademicAssistantWorkspace.class.js")
+        && exists("scripts/test-stud-academic-ai.js")
+        && exists("STUD_LOCAL_ACADEMIC_AI.md")
+        && exists("STUD_PHASE10_VALIDATION.md");
     const osintFoundation = exists("src/classes/workspaces/osintTools.registry.js")
         && exists("src/classes/workspaces/osintProviderSchema.class.js")
         && exists("src/classes/workspaces/osintProviderPolicy.class.js")
@@ -168,6 +173,7 @@ function main() {
     if (!mapProviders) failures.push("map provider files missing");
     if (!engWorkspace) failures.push("ENG workspace files missing");
     if (!studAcademicCore) failures.push("STUD academic core files missing");
+    if (!studAcademicAi) failures.push("STUD local academic AI files missing");
     if (!osintFoundation) failures.push("OSINT native access foundation files missing");
     if (!osintCaseWorkspace) failures.push("OSINT investigation case workspace files missing");
     if (!osintGeospatialVerification) failures.push("OSINT geospatial verification files missing");
@@ -195,6 +201,7 @@ function main() {
     print("MAP_PROVIDERS", mapProviders ? "PRESENT" : "MISSING");
     print("ENG_WORKSPACE", engWorkspace ? "PRESENT" : "MISSING");
     print("STUD_ACADEMIC_CORE", studAcademicCore ? "PRESENT" : "MISSING");
+    print("STUD_LOCAL_ACADEMIC_AI", studAcademicAi ? "PRESENT" : "MISSING");
     print("OSINT_NATIVE_ACCESS", osintFoundation ? "PRESENT" : "MISSING");
     print("OSINT_PROVIDER_REGISTRY", exists("src/classes/workspaces/osintProviderSchema.class.js") && exists("src/classes/workspaces/osintProviderPolicy.class.js") && exists("src/classes/workspaces/osintToolAccessPanel.class.js") ? "PRESENT" : "MISSING");
     print("OSINT_CASE_WORKSPACE", osintCaseWorkspace ? "PRESENT" : "MISSING");

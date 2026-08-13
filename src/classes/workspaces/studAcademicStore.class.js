@@ -1394,6 +1394,11 @@ class StudAcademicStore {
         this.initialize();
         return this.intelligence.listPackages(rootType, rootId, limit);
     }
+
+    getAcademicContextPackage(packageId) {
+        this.initialize();
+        return this.intelligence.getPackage(packageId);
+    }
 }
 
 module.exports = {StudAcademicStore, TABLES};

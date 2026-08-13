@@ -287,7 +287,25 @@ class StudAcademicIntelligence {
         const candidates = context.candidates.filter(item => !requested || requested.has(item.entityId)).slice(0, LIMITS.candidates);
         const documents = candidates.filter(item => item.entityType === "ACADEMIC_DOCUMENT").slice(0, LIMITS.documents);
         const chunks = [];
+        const fragments = [];
         let totalText = 0;
+        // Packages deliberately carry bounded, already-selected local text.
+        // A later local assistant can use this snapshot without re-reading
+        // unrelated academic records or filesystem material.
+        const addFragment = (item, text, kind = "CANONICAL_TEXT") => {
+            const bounded = String(text || "").trim().slice(0, 4000);
+            if (!bounded || fragments.length >= 48 || totalText + bounded.length > LIMITS.packageText) return;
+            totalText += bounded.length;
+            fragments.push({entityType: item.entityType, entityId: item.entityId, title: item.title, kind, content: bounded});
+        };
+        candidates.forEach(item => {
+            const entity = item.entity;
+            if (!entity || entity.entityType === "ACADEMIC_DOCUMENT") return;
+            // entityText intentionally excludes URLs, managed references and
+            // other filesystem/provider metadata. Only canonical academic text
+            // selected into this package may cross this boundary.
+            addFragment(item, entityText(entity), entity.entityType === "NOTE" ? "NOTE_TEXT" : "CANONICAL_METADATA");
+        });
         documents.forEach(item => {
             const rows = this.store.db.prepare("SELECT id,page_start,page_end,content,content_hash FROM stud_document_chunks WHERE extraction_id=(SELECT id FROM stud_document_extractions WHERE document_id=? ORDER BY created_at DESC LIMIT 1) ORDER BY ordinal LIMIT ?").all(item.entityId, LIMITS.chunks);
             rows.forEach(row => {
@@ -296,9 +314,9 @@ class StudAcademicIntelligence {
                 chunks.push({documentId: item.entityId, chunkId: row.id, pageStart: row.page_start, pageEnd: row.page_end, content: row.content, contentHash: row.content_hash});
             });
         });
-        const omitted = [...context.omitted, ...(context.candidates.length > candidates.length ? context.candidates.slice(candidates.length).map(item => ({entityType: item.entityType, entityId: item.entityId, reason: "PACKAGE_CANDIDATE_LIMIT"})) : []), ...(chunks.length >= LIMITS.chunks || totalText >= LIMITS.packageText ? [{reason: "PACKAGE_TEXT_LIMIT"}] : [])];
+        const omitted = [...context.omitted, ...(context.candidates.length > candidates.length ? context.candidates.slice(candidates.length).map(item => ({entityType: item.entityType, entityId: item.entityId, reason: "PACKAGE_CANDIDATE_LIMIT"})) : []), ...(chunks.length >= LIMITS.chunks || fragments.length >= 48 || totalText >= LIMITS.packageText ? [{reason: "PACKAGE_TEXT_LIMIT"}] : [])];
         const status = omitted.length ? "TRUNCATED" : candidates.length > 1 ? "READY" : "INSUFFICIENT_CONTEXT";
-        const snapshot = {version: 1, title: Model.optionalText(options.title, "Context package title", 240) || `${root.entity.title || "Academic context"} package`, root: {entityType: root.type, entityId: root.id}, candidates: candidates.map(item => ({entityType: item.entityType, entityId: item.entityId, title: item.title, relationship: item.relationStatus, reasons: item.reasons, decision: item.decision || null})), concepts: context.concepts.slice(0, LIMITS.concepts), coverage: context.coverage, chunks, policy: {llmInvoked: false, providersInvoked: false, offline: true}};
+        const snapshot = {version: 2, title: Model.optionalText(options.title, "Context package title", 240) || `${root.entity.title || "Academic context"} package`, root: {entityType: root.type, entityId: root.id}, candidates: candidates.map(item => ({entityType: item.entityType, entityId: item.entityId, title: item.title, relationship: item.relationStatus, reasons: item.reasons, decision: item.decision || null})), concepts: context.concepts.slice(0, LIMITS.concepts), coverage: context.coverage, chunks, fragments, policy: {llmInvoked: false, providersInvoked: false, offline: true, selectedTextOnly: true}};
         const timestamp = Model.now(); const id = Model.createId("context_package");
         this.store.db.prepare("INSERT INTO stud_context_packages (id,root_type,root_id,title,status,snapshot_json,omitted_json,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?)").run(id, root.type, root.id, snapshot.title, status, JSON.stringify(snapshot), JSON.stringify(omitted), timestamp, timestamp);
         this.store.createProvenance({entityType: root.type, entityId: root.id, field: "contextPackage", observedValue: id, sourceType: "LOCAL_EXTRACTION", sourceId: "ACADEMIC_CONTEXT", sourceAuthority: "AUTHORITATIVE", metadata: {status, candidateCount: candidates.length, chunkCount: chunks.length, omitted: omitted.length}});
@@ -309,6 +327,15 @@ class StudAcademicIntelligence {
         const root = this.assertRoot(rootType, rootId);
         const max = Math.max(1, Math.min(Number(limit) || 20, 100));
         return Object.freeze(this.store.db.prepare("SELECT id,root_type,root_id,title,status,omitted_json,created_at,updated_at FROM stud_context_packages WHERE root_type=? AND root_id=? ORDER BY updated_at DESC LIMIT ?").all(root.type, root.id, max).map(row => Object.freeze({...row, omitted: Object.freeze(parseMetadata(row.omitted_json, []))})));
+    }
+
+    getPackage(packageId) {
+        const id = Model.safeId(packageId, "Academic context package ID");
+        const row = this.store.db.prepare("SELECT * FROM stud_context_packages WHERE id=?").get(id);
+        if (!row) throw new Model.StudError("NOT_FOUND", "Academic context package does not exist.");
+        const snapshot = parseMetadata(row.snapshot_json, null);
+        if (!snapshot || !snapshot.root || !Array.isArray(snapshot.candidates)) throw new Model.StudError("INVALID_CONTEXT_PACKAGE", "Academic context package snapshot is invalid.");
+        return Object.freeze({id: row.id, title: row.title, rootType: row.root_type, rootId: row.root_id, status: row.status, snapshot: Object.freeze(snapshot), omitted: Object.freeze(parseMetadata(row.omitted_json, [])), createdAt: row.created_at, updatedAt: row.updated_at});
     }
 }
 
