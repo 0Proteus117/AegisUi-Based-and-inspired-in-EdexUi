@@ -17,7 +17,7 @@ function expect(code, work) { try { work(); } catch (error) { check(`REJECTS_${c
 const root = fs.mkdtempSync(path.join(os.tmpdir(), "aegis-stud-phase6-"));
 try {
     const store = new StudAcademicStore({root, applicationVersion: "phase6-test"});
-    check("SCHEMA_MIGRATION_VERSIONED", store.schemaInfo().version === 10 && Model.SCHEMA_VERSION === 10);
+    check("SCHEMA_MIGRATION_VERSIONED", store.schemaInfo().version === 11 && Model.SCHEMA_VERSION === 11);
     const course = store.createEntity("COURSE", {title: "Synthetic Thermodynamics", code: "THERM-101"});
     const assignment = store.createEntity("ASSIGNMENT", {courseId: course.id, title: "Synthetic Assignment 03", dueDate: "2026-11-18T14:00:00.000Z", status: "IN_PROGRESS"});
     const note = store.createEntity("NOTE", {courseId: course.id, title: "Synthetic entropy note", content: "Local-only source."});

@@ -18,7 +18,10 @@ const TABLES = Object.freeze({
     NOTE: "stud_notes",
     REVISION_ITEM: "stud_revision_items",
     COMPUTE_RESULT: "stud_compute_results",
-    ACADEMIC_DOCUMENT: "stud_academic_documents"
+    ACADEMIC_DOCUMENT: "stud_academic_documents",
+    NOTEBOOK: "stud_notebooks",
+    DATASET: "stud_datasets",
+    REPOSITORY_REFERENCE: "stud_repository_references"
 });
 
 function parseJson(value, fallback = null) {
@@ -306,6 +309,44 @@ class StudAcademicStore {
                 created_at TEXT NOT NULL, updated_at TEXT NOT NULL
             );
             CREATE INDEX stud_context_packages_root_index ON stud_context_packages(root_type, root_id, updated_at DESC);
+        `}, {version: 11, sql: `
+            CREATE TABLE stud_notebooks (
+                id TEXT PRIMARY KEY, title TEXT NOT NULL, description TEXT, notebook_type TEXT NOT NULL,
+                language TEXT NOT NULL, execution_status TEXT NOT NULL, course_id TEXT, assignment_id TEXT, note_id TEXT,
+                created_at TEXT NOT NULL, updated_at TEXT NOT NULL, archived_at TEXT,
+                FOREIGN KEY(course_id) REFERENCES stud_courses(id),
+                FOREIGN KEY(assignment_id) REFERENCES stud_assignments(id), FOREIGN KEY(note_id) REFERENCES stud_notes(id)
+            );
+            CREATE INDEX stud_notebooks_context_index ON stud_notebooks(course_id, assignment_id, updated_at DESC);
+            CREATE TABLE stud_notebook_cells (
+                id TEXT PRIMARY KEY, notebook_id TEXT NOT NULL, cell_order INTEGER NOT NULL, cell_type TEXT NOT NULL,
+                source TEXT NOT NULL, execution_state TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+                FOREIGN KEY(notebook_id) REFERENCES stud_notebooks(id), UNIQUE(notebook_id, cell_order)
+            );
+            CREATE INDEX stud_notebook_cells_notebook_index ON stud_notebook_cells(notebook_id, cell_order);
+            CREATE TABLE stud_notebook_outputs (
+                id TEXT PRIMARY KEY, cell_id TEXT NOT NULL, output_type TEXT NOT NULL, text_content TEXT,
+                artifact_reference TEXT, metadata_json TEXT, truncated INTEGER NOT NULL DEFAULT 0,
+                created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+                FOREIGN KEY(cell_id) REFERENCES stud_notebook_cells(id)
+            );
+            CREATE INDEX stud_notebook_outputs_cell_index ON stud_notebook_outputs(cell_id, created_at DESC);
+            CREATE TABLE stud_datasets (
+                id TEXT PRIMARY KEY, title TEXT NOT NULL, description TEXT, format TEXT NOT NULL, managed_reference TEXT,
+                mime_type TEXT, byte_size INTEGER, checksum TEXT, row_count INTEGER, columns_json TEXT, summary_json TEXT,
+                course_id TEXT, assignment_id TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, archived_at TEXT,
+                FOREIGN KEY(course_id) REFERENCES stud_courses(id), FOREIGN KEY(assignment_id) REFERENCES stud_assignments(id)
+            );
+            CREATE INDEX stud_datasets_context_index ON stud_datasets(course_id, assignment_id, updated_at DESC);
+            CREATE UNIQUE INDEX stud_datasets_checksum_index ON stud_datasets(checksum) WHERE checksum IS NOT NULL;
+            CREATE TABLE stud_repository_references (
+                id TEXT PRIMARY KEY, title TEXT NOT NULL, provider TEXT NOT NULL, owner TEXT NOT NULL, repository TEXT NOT NULL,
+                canonical_url TEXT NOT NULL, selected_ref TEXT, commit_sha TEXT, metadata_json TEXT,
+                course_id TEXT, assignment_id TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, archived_at TEXT,
+                FOREIGN KEY(course_id) REFERENCES stud_courses(id), FOREIGN KEY(assignment_id) REFERENCES stud_assignments(id),
+                UNIQUE(provider, owner, repository, selected_ref)
+            );
+            CREATE INDEX stud_repository_references_context_index ON stud_repository_references(course_id, assignment_id, updated_at DESC);
         `}];
         for (const migration of migrations) {
             if (applied.has(migration.version)) continue;
@@ -489,8 +530,8 @@ class StudAcademicStore {
         const limit = Math.max(1, Math.min(Number(options.limit) || 100, 500));
         const params = [];
         let where = options.includeArchived ? "1=1" : "archived_at IS NULL";
-        if (["ASSIGNMENT", "RESOURCE", "NOTE", "REVISION_ITEM", "COMPUTE_RESULT", "ACADEMIC_DOCUMENT"].includes(entityType) && options.courseId) { where += " AND course_id = ?"; params.push(Model.safeId(options.courseId, "Course ID")); }
-        if (["RESOURCE", "NOTE", "COMPUTE_RESULT", "ACADEMIC_DOCUMENT"].includes(entityType) && options.assignmentId) { where += " AND assignment_id = ?"; params.push(Model.safeId(options.assignmentId, "Assignment ID")); }
+        if (["ASSIGNMENT", "RESOURCE", "NOTE", "REVISION_ITEM", "COMPUTE_RESULT", "ACADEMIC_DOCUMENT", "NOTEBOOK", "DATASET", "REPOSITORY_REFERENCE"].includes(entityType) && options.courseId) { where += " AND course_id = ?"; params.push(Model.safeId(options.courseId, "Course ID")); }
+        if (["RESOURCE", "NOTE", "COMPUTE_RESULT", "ACADEMIC_DOCUMENT", "NOTEBOOK", "DATASET", "REPOSITORY_REFERENCE"].includes(entityType) && options.assignmentId) { where += " AND assignment_id = ?"; params.push(Model.safeId(options.assignmentId, "Assignment ID")); }
         const rows = this.db.prepare(`SELECT * FROM ${table} WHERE ${where} ORDER BY updated_at DESC, created_at DESC LIMIT ?`).all(...params, limit);
         return Object.freeze(rows.map(row => Object.freeze({...rowToCamel(row), entityType})));
     }
@@ -557,6 +598,9 @@ class StudAcademicStore {
             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(id,value.courseId,value.prompt,value.answer,value.sourceType,value.sourceId,value.title,value.description,value.status,value.priority,value.difficulty,value.confidence,value.estimatedDurationMinutes,value.accumulatedStudyMinutes,value.lastStudiedAt,value.nextPlannedRevisionAt,value.scheduledRevisionAt,value.targetMastery,value.currentMastery,value.spacedRevisionEnabled ? 1 : 0,value.successfulRevisionCount,value.pinned ? 1 : 0,value.planPosition,value.suggestionDismissedUntil,timestamp,timestamp); break;
         case "COMPUTE_RESULT": this.db.prepare("INSERT INTO stud_compute_results (id,title,capability,tool,operation,input_json,normalized_input_json,output_json,units_json,plot_json,runtime_json,course_id,assignment_id,note_id,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)").run(id,value.title,value.capability,value.tool,value.operation,value.inputJson,value.normalizedInputJson,value.outputJson,value.unitsJson,value.plotJson,value.runtimeJson,value.courseId,value.assignmentId,value.noteId,timestamp,timestamp); break;
         case "ACADEMIC_DOCUMENT": this.db.prepare("INSERT INTO stud_academic_documents (id,title,document_type,display_name,managed_reference,mime_type,byte_size,checksum,page_count,extraction_status,extraction_engine,extraction_version,course_id,assignment_id,source_paper_id,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)").run(id,value.title,value.documentType,value.displayName,value.managedReference,value.mimeType,value.byteSize,value.checksum,value.pageCount,value.extractionStatus,value.extractionEngine,value.extractionVersion,value.courseId,value.assignmentId,value.sourcePaperId,timestamp,timestamp); break;
+        case "NOTEBOOK": this.db.prepare("INSERT INTO stud_notebooks (id,title,description,notebook_type,language,execution_status,course_id,assignment_id,note_id,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)").run(id,value.title,value.description,value.notebookType,value.language,value.executionStatus,value.courseId,value.assignmentId,value.noteId,timestamp,timestamp); break;
+        case "DATASET": this.db.prepare("INSERT INTO stud_datasets (id,title,description,format,managed_reference,mime_type,byte_size,checksum,row_count,columns_json,summary_json,course_id,assignment_id,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)").run(id,value.title,value.description,value.format,value.managedReference,value.mimeType,value.byteSize,value.checksum,value.rowCount,value.columnsJson,value.summaryJson,value.courseId,value.assignmentId,timestamp,timestamp); break;
+        case "REPOSITORY_REFERENCE": this.db.prepare("INSERT INTO stud_repository_references (id,title,provider,owner,repository,canonical_url,selected_ref,commit_sha,metadata_json,course_id,assignment_id,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)").run(id,value.title,value.provider,value.owner,value.repository,value.canonicalUrl,value.selectedRef,value.commitSha,value.metadataJson,value.courseId,value.assignmentId,timestamp,timestamp); break;
         }
     }
 
@@ -570,16 +614,144 @@ class StudAcademicStore {
         case "REVISION_ITEM": this.db.prepare(`UPDATE stud_revision_items SET course_id=?,prompt=?,answer=?,source_type=?,source_id=?,title=?,description=?,status=?,priority=?,difficulty=?,confidence=?,estimated_duration_minutes=?,accumulated_study_minutes=?,last_studied_at=?,next_planned_revision_at=?,scheduled_revision_at=?,target_mastery=?,current_mastery=?,spaced_revision_enabled=?,successful_revision_count=?,pinned=?,plan_position=?,suggestion_dismissed_until=?,updated_at=? WHERE id=?`).run(value.courseId,value.prompt,value.answer,value.sourceType,value.sourceId,value.title,value.description,value.status,value.priority,value.difficulty,value.confidence,value.estimatedDurationMinutes,value.accumulatedStudyMinutes,value.lastStudiedAt,value.nextPlannedRevisionAt,value.scheduledRevisionAt,value.targetMastery,value.currentMastery,value.spacedRevisionEnabled ? 1 : 0,value.successfulRevisionCount,value.pinned ? 1 : 0,value.planPosition,value.suggestionDismissedUntil,timestamp,id); break;
         case "COMPUTE_RESULT": this.db.prepare("UPDATE stud_compute_results SET title=?,capability=?,tool=?,operation=?,input_json=?,normalized_input_json=?,output_json=?,units_json=?,plot_json=?,runtime_json=?,course_id=?,assignment_id=?,note_id=?,updated_at=? WHERE id=?").run(value.title,value.capability,value.tool,value.operation,value.inputJson,value.normalizedInputJson,value.outputJson,value.unitsJson,value.plotJson,value.runtimeJson,value.courseId,value.assignmentId,value.noteId,timestamp,id); break;
         case "ACADEMIC_DOCUMENT": this.db.prepare("UPDATE stud_academic_documents SET title=?,document_type=?,display_name=?,managed_reference=?,mime_type=?,byte_size=?,checksum=?,page_count=?,extraction_status=?,extraction_engine=?,extraction_version=?,course_id=?,assignment_id=?,source_paper_id=?,updated_at=? WHERE id=?").run(value.title,value.documentType,value.displayName,value.managedReference,value.mimeType,value.byteSize,value.checksum,value.pageCount,value.extractionStatus,value.extractionEngine,value.extractionVersion,value.courseId,value.assignmentId,value.sourcePaperId,timestamp,id); break;
+        case "NOTEBOOK": this.db.prepare("UPDATE stud_notebooks SET title=?,description=?,notebook_type=?,language=?,execution_status=?,course_id=?,assignment_id=?,note_id=?,updated_at=? WHERE id=?").run(value.title,value.description,value.notebookType,value.language,value.executionStatus,value.courseId,value.assignmentId,value.noteId,timestamp,id); break;
+        case "DATASET": this.db.prepare("UPDATE stud_datasets SET title=?,description=?,format=?,managed_reference=?,mime_type=?,byte_size=?,checksum=?,row_count=?,columns_json=?,summary_json=?,course_id=?,assignment_id=?,updated_at=? WHERE id=?").run(value.title,value.description,value.format,value.managedReference,value.mimeType,value.byteSize,value.checksum,value.rowCount,value.columnsJson,value.summaryJson,value.courseId,value.assignmentId,timestamp,id); break;
+        case "REPOSITORY_REFERENCE": this.db.prepare("UPDATE stud_repository_references SET title=?,provider=?,owner=?,repository=?,canonical_url=?,selected_ref=?,commit_sha=?,metadata_json=?,course_id=?,assignment_id=?,updated_at=? WHERE id=?").run(value.title,value.provider,value.owner,value.repository,value.canonicalUrl,value.selectedRef,value.commitSha,value.metadataJson,value.courseId,value.assignmentId,timestamp,id); break;
         }
     }
 
     syncSearch(type, id) {
         const entity = this.getEntity(type, id);
         this.db.prepare("DELETE FROM stud_search WHERE entity_type = ? AND entity_id = ?").run(type, id);
-        if (!entity || !["COURSE", "ASSIGNMENT", "RESOURCE", "RESEARCH_PAPER", "NOTE", "REVISION_ITEM", "COMPUTE_RESULT", "ACADEMIC_DOCUMENT"].includes(type)) return;
-        const content = cleanText([entity.description, entity.abstract, entity.content, entity.prompt, entity.answer, entity.code, entity.authors, entity.venue, entity.doi, entity.publisher, entity.capability, entity.tool, entity.operation, entity.documentType, entity.displayName].filter(Boolean).join(" "));
+        if (!entity || !["COURSE", "ASSIGNMENT", "RESOURCE", "RESEARCH_PAPER", "NOTE", "REVISION_ITEM", "COMPUTE_RESULT", "ACADEMIC_DOCUMENT", "NOTEBOOK", "DATASET", "REPOSITORY_REFERENCE"].includes(type)) return;
+        const content = cleanText([entity.description, entity.abstract, entity.content, entity.prompt, entity.answer, entity.code, entity.authors, entity.venue, entity.doi, entity.publisher, entity.capability, entity.tool, entity.operation, entity.documentType, entity.displayName, entity.notebookType, entity.language, entity.format, entity.owner, entity.repository, entity.selectedRef].filter(Boolean).join(" "));
         this.db.prepare("INSERT INTO stud_search (entity_type,entity_id,course_id,title,content) VALUES (?,?,?,?,?)").run(type, id, entity.courseId || "", entity.title || entity.prompt || "", content);
     }
+
+    linkAcademicContext(entity, context = {}, source = "USER") {
+        const links = [
+            ["COURSE", context.courseId, "USES"], ["ASSIGNMENT", context.assignmentId, "USES"],
+            ["NOTE", context.noteId, "REFERENCES"], ["RESOURCE", context.resourceId, "USES"],
+            ["ACADEMIC_DOCUMENT", context.documentId, "REFERENCES"], ["DATASET", context.datasetId, "USES"],
+            ["REPOSITORY_REFERENCE", context.repositoryId, "REFERENCES"], ["NOTEBOOK", context.notebookId, "REFERENCES"]
+        ];
+        links.forEach(([fromType, fromId, relationType]) => {
+            if (!fromId) return;
+            try { this.createRelationship({fromType, fromId, relationType, toType: entity.entityType, toId: entity.id, source}); }
+            catch (error) { if (error.code !== "DUPLICATE_RELATIONSHIP") throw error; }
+        });
+    }
+
+    createNotebook(input = {}, context = {}) {
+        Model.assertAllowedKeys(context, ["courseId", "assignmentId", "noteId", "resourceId", "documentId", "datasetId", "repositoryId"], "Notebook context");
+        const {resourceId, documentId, datasetId, repositoryId, ...notebookInput} = input;
+        const notebook = this.createEntity("NOTEBOOK", notebookInput, {provenance: {field: "created", observedValue: "EXPLICIT_NOTEBOOK", sourceType: "USER", sourceId: "STUD_NOTEBOOK", sourceAuthority: "AUTHORITATIVE", observedAt: Model.now(), metadata: {execution: "EDITING_ONLY"}}});
+        this.transaction(() => this.linkAcademicContext(notebook, {...context, resourceId: resourceId || context.resourceId, documentId: documentId || context.documentId, datasetId: datasetId || context.datasetId, repositoryId: repositoryId || context.repositoryId, courseId: notebookInput.courseId || context.courseId, assignmentId: notebookInput.assignmentId || context.assignmentId, noteId: notebookInput.noteId || context.noteId}, "USER"));
+        return notebook;
+    }
+
+    listNotebooks(options = {}) { return this.listEntities("NOTEBOOK", options); }
+
+    listNotebookCells(notebookId, limit = 200) {
+        this.initialize();
+        const id = Model.safeId(notebookId, "Notebook ID"); this.requireEntity("NOTEBOOK", id);
+        const max = Math.max(1, Math.min(Number(limit) || 200, 500));
+        const rows = this.db.prepare("SELECT * FROM stud_notebook_cells WHERE notebook_id=? ORDER BY cell_order ASC LIMIT ?").all(id, max);
+        return Object.freeze(rows.map(row => {
+            const outputs = this.db.prepare("SELECT * FROM stud_notebook_outputs WHERE cell_id=? ORDER BY created_at DESC LIMIT 20").all(row.id)
+                .map(output => Object.freeze({...rowToCamel(output), truncated: Boolean(output.truncated), metadata: parseJson(output.metadata_json, {})}));
+            return Object.freeze({...rowToCamel(row), outputs: Object.freeze(outputs)});
+        }));
+    }
+
+    createNotebookCell(input = {}) {
+        Model.assertAllowedKeys(input, ["notebookId", "cellType", "source", "afterCellId"], "Notebook cell");
+        const notebookId = Model.safeId(input.notebookId, "Notebook ID"); this.requireEntity("NOTEBOOK", notebookId);
+        const cellType = Model.enumValue(input.cellType, ["MARKDOWN", "CODE", "RAW"], "Notebook cell type", "MARKDOWN");
+        const source = Model.optionalText(input.source, "Notebook cell source", 20000) || "";
+        const after = input.afterCellId ? Model.safeId(input.afterCellId, "Notebook cell ID") : null;
+        const timestamp = Model.now(); const id = Model.createId("notebook_cell");
+        return this.transaction(() => {
+            const cells = this.db.prepare("SELECT id,cell_order FROM stud_notebook_cells WHERE notebook_id=? ORDER BY cell_order").all(notebookId);
+            const anchor = after && cells.find(cell => cell.id === after);
+            if (after && !anchor) throw new Model.StudError("NOT_FOUND", "Notebook cell does not belong to this notebook.");
+            const order = anchor ? anchor.cell_order + 1 : cells.length;
+            this.db.prepare("UPDATE stud_notebook_cells SET cell_order=cell_order+1,updated_at=? WHERE notebook_id=? AND cell_order>=?").run(timestamp, notebookId, order);
+            this.db.prepare("INSERT INTO stud_notebook_cells (id,notebook_id,cell_order,cell_type,source,execution_state,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?)").run(id, notebookId, order, cellType, source, "NOT_EXECUTED", timestamp, timestamp);
+            this.updateEntity("NOTEBOOK", notebookId, {});
+            return this.listNotebookCells(notebookId).find(cell => cell.id === id);
+        });
+    }
+
+    updateNotebookCell(input = {}) {
+        Model.assertAllowedKeys(input, ["notebookId", "cellId", "cellType", "source"], "Notebook cell update");
+        const notebookId = Model.safeId(input.notebookId, "Notebook ID"); const cellId = Model.safeId(input.cellId, "Notebook cell ID");
+        const current = this.db.prepare("SELECT * FROM stud_notebook_cells WHERE id=? AND notebook_id=?").get(cellId, notebookId);
+        if (!current) throw new Model.StudError("NOT_FOUND", "Notebook cell does not exist.");
+        const cellType = input.cellType === undefined ? current.cell_type : Model.enumValue(input.cellType, ["MARKDOWN", "CODE", "RAW"], "Notebook cell type");
+        const source = input.source === undefined ? current.source : (Model.optionalText(input.source, "Notebook cell source", 20000) || "");
+        return this.transaction(() => {
+            this.db.prepare("UPDATE stud_notebook_cells SET cell_type=?,source=?,updated_at=? WHERE id=?").run(cellType, source, Model.now(), cellId);
+            this.updateEntity("NOTEBOOK", notebookId, {});
+            return this.listNotebookCells(notebookId).find(cell => cell.id === cellId);
+        });
+    }
+
+    reorderNotebookCells(input = {}) {
+        Model.assertAllowedKeys(input, ["notebookId", "cellIds"], "Notebook cell order");
+        const notebookId = Model.safeId(input.notebookId, "Notebook ID"); const ids = Array.isArray(input.cellIds) ? input.cellIds.map(item => Model.safeId(item, "Notebook cell ID")) : [];
+        const existing = this.listNotebookCells(notebookId, 500).map(item => item.id);
+        if (ids.length !== existing.length || new Set(ids).size !== ids.length || ids.some(id => !existing.includes(id))) throw new Model.StudError("INVALID_INPUT", "Notebook order must contain every notebook cell exactly once.");
+        return this.transaction(() => {
+            const timestamp = Model.now();
+            // Move all current positions out of the unique range first. Updating
+            // rows one-by-one would otherwise collide with a sibling's order.
+            this.db.prepare("UPDATE stud_notebook_cells SET cell_order=cell_order+1000,updated_at=? WHERE notebook_id=?").run(timestamp, notebookId);
+            ids.forEach((id, index) => this.db.prepare("UPDATE stud_notebook_cells SET cell_order=?,updated_at=? WHERE id=?").run(index, timestamp, id));
+            this.updateEntity("NOTEBOOK", notebookId, {}); return this.listNotebookCells(notebookId);
+        });
+    }
+
+    deleteNotebookCell(input = {}) {
+        Model.assertAllowedKeys(input, ["notebookId", "cellId", "confirmation"], "Notebook cell deletion");
+        if (input.confirmation !== true) throw new Model.StudError("POLICY_BLOCKED", "Deleting a notebook cell requires explicit confirmation.");
+        const notebookId = Model.safeId(input.notebookId, "Notebook ID"); const cellId = Model.safeId(input.cellId, "Notebook cell ID");
+        return this.transaction(() => { const row = this.db.prepare("SELECT cell_order FROM stud_notebook_cells WHERE id=? AND notebook_id=?").get(cellId, notebookId); if (!row) throw new Model.StudError("NOT_FOUND", "Notebook cell does not exist."); this.db.prepare("DELETE FROM stud_notebook_outputs WHERE cell_id=?").run(cellId); this.db.prepare("DELETE FROM stud_notebook_cells WHERE id=?").run(cellId); this.db.prepare("UPDATE stud_notebook_cells SET cell_order=cell_order-1,updated_at=? WHERE notebook_id=? AND cell_order>?").run(Model.now(), notebookId, row.cell_order); this.updateEntity("NOTEBOOK", notebookId, {}); return Object.freeze({deleted: true, cellId}); });
+    }
+
+    clearNotebookOutputs(input = {}) {
+        Model.assertAllowedKeys(input, ["notebookId", "cellId", "confirmation"], "Notebook output clear");
+        if (input.confirmation !== true) throw new Model.StudError("POLICY_BLOCKED", "Clearing notebook output requires explicit confirmation.");
+        const notebookId = Model.safeId(input.notebookId, "Notebook ID"); const cellId = Model.safeId(input.cellId, "Notebook cell ID");
+        const cell = this.db.prepare("SELECT id FROM stud_notebook_cells WHERE id=? AND notebook_id=?").get(cellId, notebookId); if (!cell) throw new Model.StudError("NOT_FOUND", "Notebook cell does not exist.");
+        this.db.prepare("DELETE FROM stud_notebook_outputs WHERE cell_id=?").run(cellId); return Object.freeze({cleared: true, cellId});
+    }
+
+    notebookContext(notebookId) {
+        const notebook = this.getEntity("NOTEBOOK", notebookId); if (!notebook) throw new Model.StudError("NOT_FOUND", "Notebook does not exist.");
+        return Object.freeze({notebook, cells: this.listNotebookCells(notebook.id), relationships: this.listRelationships("NOTEBOOK", notebook.id), provenance: this.listProvenance("NOTEBOOK", notebook.id), execution: Object.freeze({status: "NOT_INSTALLED", detail: "Notebook execution is intentionally not bundled in Phase 11."})});
+    }
+
+    saveDataset(managed, context = {}) {
+        Model.assertAllowedKeys(managed, ["cancelled", "title", "format", "reference", "mimeType", "size", "sha256", "rowCount", "columns", "summary", "preview"], "Managed dataset");
+        if (managed.cancelled === true) throw new Model.StudError("POLICY_BLOCKED", "A cancelled dataset selection cannot be persisted.");
+        Model.assertAllowedKeys(context, ["description", "courseId", "assignmentId", "resourceId", "notebookId"], "Dataset context");
+        const dataset = this.createEntity("DATASET", {title: managed.title, description: context.description || null, format: managed.format, managedReference: managed.reference, mimeType: managed.mimeType, byteSize: managed.size, checksum: managed.sha256, rowCount: managed.rowCount, columnsJson: JSON.stringify(managed.columns), summaryJson: JSON.stringify(managed.summary), courseId: context.courseId || null, assignmentId: context.assignmentId || null}, {provenance: {field: "import", observedValue: managed.sha256, sourceType: "IMPORT", sourceId: "STUD_DATASET", sourceAuthority: "AUTHORITATIVE", observedAt: Model.now(), metadata: {format: managed.format, explicit: true}}});
+        this.transaction(() => this.linkAcademicContext(dataset, context, "IMPORT"));
+        return dataset;
+    }
+
+    listDatasets(options = {}) { return this.listEntities("DATASET", options); }
+
+    saveRepositoryReference(input = {}, context = {}) {
+        Model.assertAllowedKeys(context, ["courseId", "assignmentId", "resourceId", "notebookId", "documentId", "datasetId"], "Repository context");
+        const reference = this.createEntity("REPOSITORY_REFERENCE", input, {provenance: {field: "reference", observedValue: input.canonicalUrl, sourceType: "USER", sourceId: "GITHUB_REFERENCE", sourceAuthority: "AUTHORITATIVE", observedAt: Model.now(), metadata: {explicit: true, network: "NONE"}}});
+        this.transaction(() => this.linkAcademicContext(reference, context, "USER"));
+        if (context.notebookId) { try { this.createRelationship({fromType: "NOTEBOOK", fromId: context.notebookId, relationType: "REFERENCES", toType: "REPOSITORY_REFERENCE", toId: reference.id, source: "USER"}); } catch (error) { if (error.code !== "DUPLICATE_RELATIONSHIP") throw error; } }
+        return reference;
+    }
+
+    listRepositoryReferences(options = {}) { return this.listEntities("REPOSITORY_REFERENCE", options); }
 
     createExternalIdentifier(input = {}) {
         this.initialize();
@@ -1009,9 +1181,12 @@ class StudAcademicStore {
         const resources = this.listEntities("RESOURCE", {assignmentId: assignment.id, limit: 100});
         const computeResults = this.listComputeResults({assignmentId: assignment.id, limit: 100});
         const documents = this.listAcademicDocuments({assignmentId: assignment.id, limit: 100});
+        const notebooks = this.listNotebooks({assignmentId: assignment.id, limit: 100});
+        const datasets = this.listDatasets({assignmentId: assignment.id, limit: 100});
+        const repositories = this.listRepositoryReferences({assignmentId: assignment.id, limit: 100});
         const revisions = this.listRevisionItems({assignmentId: assignment.id, limit: 100});
         const status = Orchestration.orchestrationStatus({references, conflicts});
-        return Object.freeze({assignment, course, provenance, references, links, conflicts, relationships, notes: Object.freeze(notes), papers: Object.freeze(papers), resources, computeResults, documents, revisions, status});
+        return Object.freeze({assignment, course, provenance, references, links, conflicts, relationships, notes: Object.freeze(notes), papers: Object.freeze(papers), resources, computeResults, documents, notebooks, datasets, repositories, revisions, status});
     }
 
     recoverInterruptedStudySessions() {
@@ -1318,6 +1493,9 @@ class StudAcademicStore {
             ...this.listEntities("RESEARCH_PAPER", {limit: limit * 2}),
             ...this.listAcademicDocuments({limit: limit * 2}),
             ...this.listComputeResults({limit: limit * 2}),
+            ...this.listNotebooks({limit: limit * 2}),
+            ...this.listDatasets({limit: limit * 2}),
+            ...this.listRepositoryReferences({limit: limit * 2}),
             ...this.listRevisionItems({limit: limit * 2})
         ].sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt))).slice(0, limit);
         const moduleStatus = courses.map(course => {
@@ -1345,11 +1523,14 @@ class StudAcademicStore {
         const notes = this.listEntities("NOTE", {courseId: course.id, limit});
         const computeResults = this.listComputeResults({courseId: course.id, limit});
         const documents = this.listAcademicDocuments({courseId: course.id, limit});
+        const notebooks = this.listNotebooks({courseId: course.id, limit});
+        const datasets = this.listDatasets({courseId: course.id, limit});
+        const repositories = this.listRepositoryReferences({courseId: course.id, limit});
         const revisions = this.listRevisionItems({courseId: course.id, limit});
         const relationships = this.listRelationships("COURSE", course.id);
         const papers = relationships.filter(item => item.fromId === course.id ? item.toType === "RESEARCH_PAPER" : item.fromType === "RESEARCH_PAPER")
             .map(item => this.getEntity("RESEARCH_PAPER", item.fromId === course.id ? item.toId : item.fromId)).filter(Boolean).slice(0, limit);
-        return Object.freeze({course, assignments, resources, notes, computeResults, documents, revisions, papers: Object.freeze(papers), references: this.listReferences("COURSE", course.id), provenance: this.listProvenance("COURSE", course.id)});
+        return Object.freeze({course, assignments, resources, notes, computeResults, documents, notebooks, datasets, repositories, revisions, papers: Object.freeze(papers), references: this.listReferences("COURSE", course.id), provenance: this.listProvenance("COURSE", course.id)});
     }
 
     search(query, options = {}) {
@@ -1357,8 +1538,8 @@ class StudAcademicStore {
         Model.assertAllowedKeys(options, ["entityTypes", "courseId", "limit"], "Search options");
         const match = Model.normalizedSearchTerms(query);
         const types = Array.isArray(options.entityTypes) && options.entityTypes.length
-            ? options.entityTypes.map(Model.validateEntityType).filter(type => ["COURSE", "ASSIGNMENT", "RESOURCE", "RESEARCH_PAPER", "NOTE", "REVISION_ITEM", "COMPUTE_RESULT", "ACADEMIC_DOCUMENT"].includes(type))
-            : ["COURSE", "ASSIGNMENT", "RESOURCE", "RESEARCH_PAPER", "NOTE", "REVISION_ITEM", "COMPUTE_RESULT", "ACADEMIC_DOCUMENT"];
+            ? options.entityTypes.map(Model.validateEntityType).filter(type => ["COURSE", "ASSIGNMENT", "RESOURCE", "RESEARCH_PAPER", "NOTE", "REVISION_ITEM", "COMPUTE_RESULT", "ACADEMIC_DOCUMENT", "NOTEBOOK", "DATASET", "REPOSITORY_REFERENCE"].includes(type))
+            : ["COURSE", "ASSIGNMENT", "RESOURCE", "RESEARCH_PAPER", "NOTE", "REVISION_ITEM", "COMPUTE_RESULT", "ACADEMIC_DOCUMENT", "NOTEBOOK", "DATASET", "REPOSITORY_REFERENCE"];
         if (!types.length) return Object.freeze([]);
         const limit = Math.max(1, Math.min(Number(options.limit) || 30, Model.LIMITS.searchLimit));
         const params = [match];

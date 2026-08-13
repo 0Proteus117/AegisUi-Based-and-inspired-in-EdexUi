@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.6.11 - 2026-08-13
+
+- Added the discipline-neutral STUD Notebook / Data / GitHub academic workbench.
+- Added canonical Notebook, NotebookCell, NotebookOutput, Dataset and
+  RepositoryReference records through SQLite schema v11 with explicit provenance
+  and academic relationships.
+- Added safe editing-only notebooks, managed local CSV/TSV import, bounded local
+  data inspection/plots and explicit public GitHub repository metadata references.
+- Kept execution honestly `NOT_INSTALLED`: no Python, Jupyter, shell, arbitrary
+  code execution, token, clone, background request or cloud fallback was added.
+- Added bounded Academic Context Package inclusion for notebook cells and workbench
+  metadata, plus focused scale/security/regression coverage.
+
 ## 2.6.10 - 2026-08-13
 
 - Added STUD Local Academic AI with explicit Context Package selection and

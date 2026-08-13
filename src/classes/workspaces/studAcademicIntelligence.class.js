@@ -5,8 +5,8 @@
 // provider client, a filesystem scanner or another persistence database.
 const Model = require("./studAcademicModel.class.js");
 
-const ROOT_TYPES = Object.freeze(["COURSE", "ASSIGNMENT", "RESEARCH_PAPER", "ACADEMIC_DOCUMENT", "NOTE", "REVISION_ITEM"]);
-const CANDIDATE_TYPES = Object.freeze(["COURSE", "ASSIGNMENT", "RESOURCE", "RESEARCH_PAPER", "NOTE", "REVISION_ITEM", "COMPUTE_RESULT", "ACADEMIC_DOCUMENT"]);
+const ROOT_TYPES = Object.freeze(["COURSE", "ASSIGNMENT", "RESEARCH_PAPER", "ACADEMIC_DOCUMENT", "NOTE", "REVISION_ITEM", "NOTEBOOK", "DATASET", "REPOSITORY_REFERENCE"]);
+const CANDIDATE_TYPES = Object.freeze(["COURSE", "ASSIGNMENT", "RESOURCE", "RESEARCH_PAPER", "NOTE", "REVISION_ITEM", "COMPUTE_RESULT", "ACADEMIC_DOCUMENT", "NOTEBOOK", "DATASET", "REPOSITORY_REFERENCE"]);
 const STOP_WORDS = new Set([
     "about", "after", "again", "also", "and", "are", "assignment", "been", "between", "but", "course", "con", "del", "desde", "document", "each", "el", "en", "for", "from", "have", "into", "las", "los", "more", "not", "notes", "para", "por", "que", "research", "source", "that", "the", "their", "this", "through", "under", "with", "your"
 ]);
@@ -38,7 +38,7 @@ function termsFromText(value, limit = LIMITS.conceptsPerSource) {
 }
 
 function entityText(entity) {
-    return [entity.title, entity.description, entity.abstract, entity.content, entity.prompt, entity.answer, entity.authors, entity.venue, entity.publisher, entity.documentType, entity.capability, entity.tool, entity.operation].filter(Boolean).join(" ");
+    return [entity.title, entity.description, entity.abstract, entity.content, entity.prompt, entity.answer, entity.authors, entity.venue, entity.publisher, entity.documentType, entity.capability, entity.tool, entity.operation, entity.notebookType, entity.language, entity.format, entity.owner, entity.repository, entity.selectedRef].filter(Boolean).join(" ");
 }
 
 function uniqueById(items) {
@@ -91,12 +91,12 @@ class StudAcademicIntelligence {
             const assignment = root.entity;
             if (assignment.courseId) {
                 add(this.store.getEntity("COURSE", assignment.courseId), "Assignment belongs to selected Course");
-                ["RESOURCE", "NOTE", "ACADEMIC_DOCUMENT", "COMPUTE_RESULT"].forEach(type => this.store.listEntities(type, {courseId: assignment.courseId, limit: 100}).forEach(entity => add(entity, "Shares selected Assignment Course")));
+                ["RESOURCE", "NOTE", "ACADEMIC_DOCUMENT", "COMPUTE_RESULT", "NOTEBOOK", "DATASET", "REPOSITORY_REFERENCE"].forEach(type => this.store.listEntities(type, {courseId: assignment.courseId, limit: 100}).forEach(entity => add(entity, "Shares selected Assignment Course")));
             }
-            ["RESOURCE", "NOTE", "ACADEMIC_DOCUMENT", "COMPUTE_RESULT"].forEach(type => this.store.listEntities(type, {assignmentId: assignment.id, limit: 100}).forEach(entity => add(entity, "Assigned to selected Assignment")));
+            ["RESOURCE", "NOTE", "ACADEMIC_DOCUMENT", "COMPUTE_RESULT", "NOTEBOOK", "DATASET", "REPOSITORY_REFERENCE"].forEach(type => this.store.listEntities(type, {assignmentId: assignment.id, limit: 100}).forEach(entity => add(entity, "Assigned to selected Assignment")));
             this.store.listRevisionItems({courseId: assignment.courseId || undefined, limit: 100}).filter(item => item.sourceId === assignment.id).forEach(item => add(item, "Revision item sourced from selected Assignment"));
         } else if (root.type === "COURSE") {
-            ["ASSIGNMENT", "RESOURCE", "NOTE", "ACADEMIC_DOCUMENT", "COMPUTE_RESULT"].forEach(type => this.store.listEntities(type, {courseId: root.id, limit: 100}).forEach(entity => add(entity, "Belongs to selected Course")));
+            ["ASSIGNMENT", "RESOURCE", "NOTE", "ACADEMIC_DOCUMENT", "COMPUTE_RESULT", "NOTEBOOK", "DATASET", "REPOSITORY_REFERENCE"].forEach(type => this.store.listEntities(type, {courseId: root.id, limit: 100}).forEach(entity => add(entity, "Belongs to selected Course")));
             this.store.listRevisionItems({courseId: root.id, limit: 100}).forEach(entity => add(entity, "Belongs to selected Course"));
         } else {
             const entity = root.entity;
@@ -305,6 +305,12 @@ class StudAcademicIntelligence {
             // other filesystem/provider metadata. Only canonical academic text
             // selected into this package may cross this boundary.
             addFragment(item, entityText(entity), entity.entityType === "NOTE" ? "NOTE_TEXT" : "CANONICAL_METADATA");
+            if (entity.entityType === "NOTEBOOK") {
+                this.store.listNotebookCells(entity.id, 60).forEach(cell => {
+                    if (!["MARKDOWN", "CODE"].includes(cell.cellType)) return;
+                    addFragment(item, cell.source, `NOTEBOOK_${cell.cellType}_CELL`);
+                });
+            }
         });
         documents.forEach(item => {
             const rows = this.store.db.prepare("SELECT id,page_start,page_end,content,content_hash FROM stud_document_chunks WHERE extraction_id=(SELECT id FROM stud_document_extractions WHERE document_id=? ORDER BY created_at DESC LIMIT 1) ORDER BY ordinal LIMIT ?").all(item.entityId, LIMITS.chunks);

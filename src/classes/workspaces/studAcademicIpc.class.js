@@ -8,6 +8,7 @@ const {StudLmsRuntime} = require("./studLmsRuntime.class.js");
 const {StudComputeRuntime} = require("./studComputeRuntime.class.js");
 const {StudDocumentRuntime} = require("./studDocumentRuntime.class.js");
 const {StudAcademicAssistantRuntime} = require("./studAcademicAssistantRuntime.class.js");
+const {StudNotebookRuntime, normalizeGitHub} = require("./studNotebookRuntime.class.js");
 
 const CHANNELS = Object.freeze([
     "stud-core-status",
@@ -44,6 +45,25 @@ const CHANNELS = Object.freeze([
     "stud-compute-run",
     "stud-compute-save-result",
     "stud-compute-list",
+    "stud-notebook-capabilities",
+    "stud-notebook-list",
+    "stud-notebook-create",
+    "stud-notebook-read",
+    "stud-notebook-update",
+    "stud-notebook-cell-create",
+    "stud-notebook-cell-update",
+    "stud-notebook-cell-reorder",
+    "stud-notebook-cell-delete",
+    "stud-notebook-output-clear",
+    "stud-dataset-import",
+    "stud-dataset-list",
+    "stud-dataset-read",
+    "stud-dataset-analyze",
+    "stud-github-normalize",
+    "stud-github-create",
+    "stud-github-list",
+    "stud-github-metadata",
+    "stud-github-cancel",
     "stud-document-capabilities",
     "stud-document-import-pdf",
     "stud-document-analyze",
@@ -134,6 +154,9 @@ function registerStudAcademicIpc(options = {}) {
     // The compute runtime is pure local code. It has no process spawning,
     // filesystem, provider or network capability.
     const computeRuntime = options.computeRuntime || new StudComputeRuntime();
+    // Notebook/Data/GitHub is deliberately narrow: no interpreter, shell,
+    // generic file bridge, generic HTTP client or renderer-controlled request.
+    const notebookRuntime = options.notebookRuntime || new StudNotebookRuntime({root: resolveStorageRoot(options.app, options), dialog, fetch: options.fetch});
     // Document Intelligence is local-only. It receives managed PDF bytes from
     // the established explicit-selector runtime; it has no own filesystem,
     // shell, environment or network authority.
@@ -198,6 +221,59 @@ function registerStudAcademicIpc(options = {}) {
     // before persistence instead of accepting a renderer-provided result.
     add("stud-compute-save-result", ["request", "context"], payload => store.saveComputeResult(computeRuntime.run(payload.request), payload.context || {}));
     add("stud-compute-list", ["courseId", "assignmentId", "limit", "includeArchived"], payload => store.listComputeResults(payload));
+    add("stud-notebook-capabilities", [], () => notebookRuntime.capabilities());
+    add("stud-notebook-list", ["courseId", "assignmentId", "limit", "includeArchived"], payload => store.listNotebooks(payload));
+    add("stud-notebook-create", ["title", "description", "notebookType", "language", "courseId", "assignmentId", "noteId", "resourceId", "documentId", "datasetId", "repositoryId"], payload => {
+        const {courseId, assignmentId, noteId, resourceId, documentId, datasetId, repositoryId} = payload;
+        return store.createNotebook(payload, {courseId, assignmentId, noteId, resourceId, documentId, datasetId, repositoryId});
+    });
+    add("stud-notebook-read", ["notebookId"], payload => store.notebookContext(payload.notebookId));
+    add("stud-notebook-update", ["notebookId", "value"], payload => store.updateEntity("NOTEBOOK", payload.notebookId, payload.value));
+    add("stud-notebook-cell-create", ["notebookId", "cellType", "source", "afterCellId"], payload => store.createNotebookCell(payload));
+    add("stud-notebook-cell-update", ["notebookId", "cellId", "cellType", "source"], payload => store.updateNotebookCell(payload));
+    add("stud-notebook-cell-reorder", ["notebookId", "cellIds"], payload => store.reorderNotebookCells(payload.notebookId, payload.cellIds));
+    add("stud-notebook-cell-delete", ["notebookId", "cellId", "confirmation"], payload => {
+        if (payload.confirmation !== true) throw new Model.StudError("POLICY_BLOCKED", "Deleting a notebook cell requires explicit confirmation.");
+        return store.deleteNotebookCell(payload.notebookId, payload.cellId);
+    });
+    add("stud-notebook-output-clear", ["notebookId", "cellId", "confirmation"], payload => {
+        if (payload.confirmation !== true) throw new Model.StudError("POLICY_BLOCKED", "Clearing notebook outputs requires explicit confirmation.");
+        return store.clearNotebookOutputs(payload);
+    });
+    add("stud-dataset-import", ["title", "description", "courseId", "assignmentId", "resourceId", "notebookId"], async payload => {
+        const managed = await notebookRuntime.chooseAndImportDataset();
+        if (managed.cancelled) return managed;
+        const {title, description, ...context} = payload;
+        return store.saveDataset({...managed, title: title || managed.title}, {...context, description: description || null});
+    });
+    add("stud-dataset-list", ["courseId", "assignmentId", "limit", "includeArchived"], payload => store.listDatasets(payload));
+    add("stud-dataset-read", ["datasetId"], payload => {
+        const dataset = store.getEntity("DATASET", payload.datasetId);
+        if (!dataset) throw new Model.StudError("NOT_FOUND", "Dataset does not exist.");
+        const inspected = notebookRuntime.readManagedDataset(dataset.managedReference);
+        return {dataset, preview: inspected.preview, columns: inspected.columns, summary: inspected.summary};
+    });
+    add("stud-dataset-analyze", ["datasetId", "operation", "input"], payload => {
+        const dataset = store.getEntity("DATASET", payload.datasetId);
+        if (!dataset) throw new Model.StudError("NOT_FOUND", "Dataset does not exist.");
+        return notebookRuntime.analyzeDataset(dataset, payload.operation, payload.input || {});
+    });
+    add("stud-github-normalize", ["repository"], payload => normalizeGitHub(payload.repository));
+    add("stud-github-create", ["repository", "selectedRef", "courseId", "assignmentId", "resourceId", "notebookId", "documentId", "datasetId"], payload => {
+        const normalized = normalizeGitHub(payload.repository);
+        const {repository, selectedRef, ...context} = payload;
+        return store.saveRepositoryReference({...normalized, selectedRef: selectedRef || null}, context);
+    });
+    add("stud-github-list", ["courseId", "assignmentId", "limit", "includeArchived"], payload => store.listRepositoryReferences(payload));
+    add("stud-github-metadata", ["repositoryId", "requestId"], async payload => {
+        const reference = store.getEntity("REPOSITORY_REFERENCE", payload.repositoryId);
+        if (!reference) throw new Model.StudError("NOT_FOUND", "Repository reference does not exist.");
+        const observed = await notebookRuntime.githubMetadata({repository: reference.canonicalUrl, requestId: payload.requestId});
+        const updated = store.updateEntity("REPOSITORY_REFERENCE", reference.id, {selectedRef: observed.selectedRef, commitSha: observed.commitSha, metadataJson: JSON.stringify(observed.metadata)});
+        store.createProvenance({entityType: "REPOSITORY_REFERENCE", entityId: reference.id, field: "publicMetadata", observedValue: observed.title, sourceType: "GITHUB", sourceId: observed.canonicalUrl, sourceAuthority: "CORROBORATING", metadata: {provider: "GITHUB_PUBLIC_API", explicit: true}});
+        return updated;
+    });
+    add("stud-github-cancel", ["requestId"], payload => notebookRuntime.cancel(payload.requestId));
     add("stud-document-capabilities", [], () => documentRuntime.capabilities());
     add("stud-document-import-pdf", ["title", "documentType", "courseId", "assignmentId", "sourcePaperId", "sourceResourceId"], async payload => {
         const managed = await runtime.chooseAndImportPdf({paperId: "document"});
@@ -308,6 +384,7 @@ function registerStudAcademicIpc(options = {}) {
         lmsRuntime.dispose();
         documentRuntime.dispose();
         academicAiRuntime.dispose();
+        notebookRuntime.dispose();
         store.close();
     }});
 }

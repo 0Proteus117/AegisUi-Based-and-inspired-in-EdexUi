@@ -68,7 +68,12 @@ the ephemeral session by default or sends case data to a provider.
   original-byte SHA-256. It does not upload the media, infer authenticity or
   silently persist the original. Image GPS can only hand off to Geospatial
   Verification after an explicit analyst action.
-- STUD v2.6.10 adds an explicit local Academic AI surface that consumes only
+- STUD v2.6.11 adds a discipline-neutral Notebook / Data / GitHub workbench:
+  editable local Markdown/code notebooks with an honest `NOT_INSTALLED` execution
+  state, managed CSV/TSV data inspection and explicit public GitHub repository
+  references. It never exposes a shell, Python runtime, generic network proxy,
+  token or hidden import; Notebook/Data/GitHub material reaches Local Academic AI
+  only through a reviewed, bounded Academic Context Package. STUD v2.6.10 adds an explicit local Academic AI surface that consumes only
   reviewed Context Packages, uses bounded local retrieval and Ollama without
   tools, cloud fallback or automatic persistence. It builds on the
   explainable, provenance-aware Academic Intelligence layer: bounded local
