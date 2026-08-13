@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.6.12 - 2026-08-13
+
+- Activated STUD Progress Analytics as a bounded, derived local reporting
+  surface for course position, compatible assessment context, deadlines,
+  revision/study activity, completeness and provenance-aware conflicts.
+- Added Assignment grade schemes (`PERCENTAGE`, `POINTS`, `TEXT`, `PASS_FAIL`,
+  `UNKNOWN`) through SQLite schema v12; text/pass-fail results remain visible
+  and are never invented into a numerical average.
+- Added explicit metric-source inspection and a compact Dark/Light/System
+  Progress workspace without provider calls, prediction, gamification,
+  telemetry, hidden history or new persistence.
+
 ## 2.6.11 - 2026-08-13
 
 - Added the discipline-neutral STUD Notebook / Data / GitHub academic workbench.

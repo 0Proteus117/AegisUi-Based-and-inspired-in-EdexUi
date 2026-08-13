@@ -1,9 +1,7 @@
 "use strict";
 
-const ACTIVE_VIEWS = Object.freeze(["OVERVIEW", "MODULES", "ASSIGNMENTS", "REVISION", "RESEARCH", "DOCUMENTS", "KNOWLEDGE", "AI", "NOTES", "TOOLS", "WORKBENCH", "SERVICES", "MOODLE"]);
-const FUTURE_VIEWS = Object.freeze([
-    ["PROGRESS", "Derived local work reporting", "FUTURE"]
-]);
+const ACTIVE_VIEWS = Object.freeze(["OVERVIEW", "MODULES", "ASSIGNMENTS", "PROGRESS", "REVISION", "RESEARCH", "DOCUMENTS", "KNOWLEDGE", "AI", "NOTES", "TOOLS", "WORKBENCH", "SERVICES", "MOODLE"]);
+const FUTURE_VIEWS = Object.freeze([]);
 const ACTIVE_ASSIGNMENT_STATUSES = Object.freeze(["NOT_STARTED", "IN_PROGRESS"]);
 const COMPLETED_ASSIGNMENT_STATUSES = Object.freeze(["SUBMITTED", "GRADED"]);
 
@@ -43,6 +41,7 @@ class StudCommandCenter {
         this.knowledge = null;
         this.academicAssistant = null;
         this.notebook = null;
+        this.progress = null;
     }
 
     mount(view) {
@@ -65,6 +64,7 @@ class StudCommandCenter {
         this.knowledge = new StudKnowledgeWorkspace({request: (channel, payload) => this.request(channel, payload), escape: value => this.escape(value), showToast: (target, message) => this.showToast(target, message), parent: this});
         this.academicAssistant = new StudAcademicAssistantWorkspace({request: (channel, payload) => this.request(channel, payload), escape: value => this.escape(value), showToast: (target, message) => this.showToast(target, message), parent: this});
         this.notebook = new StudNotebookWorkspace({request: (channel, payload) => this.request(channel, payload), escape: value => this.escape(value), showToast: (target, message) => this.showToast(target, message), parent: this});
+        this.progress = new StudProgressWorkspace({request: (channel, payload) => this.request(channel, payload), escape: value => this.escape(value), parent: this});
         grid.innerHTML = `
             <section class="stud-command-header workspace-panel">
                 <div><small>STUD / LOCAL ACADEMIC CONTEXT</small><h2>STUDENT COMMAND CENTER</h2><p>Courses, assignments and local work context remain explicit, offline and provenance-aware.</p></div>
@@ -77,7 +77,7 @@ class StudCommandCenter {
         this.bind();
         // refresh() owns the revision read, so initializing it here too would
         // duplicate the initial local query and briefly risk stale UI state.
-        return Promise.all([this.research.initialize(), this.moodle.initialize(), this.compute.initialize(), this.documents.initialize(), this.knowledge.initialize(), this.academicAssistant.initialize(), this.notebook.initialize(), this.refresh()]).then(() => this.render());
+        return Promise.all([this.research.initialize(), this.moodle.initialize(), this.compute.initialize(), this.documents.initialize(), this.knowledge.initialize(), this.academicAssistant.initialize(), this.notebook.initialize(), this.progress.initialize(), this.refresh()]).then(() => this.render());
     }
 
     async request(channel, payload = {}) {
@@ -168,6 +168,7 @@ class StudCommandCenter {
         else if (this.state.activeView === "NOTES") main.innerHTML = this.research.renderNotes();
         else if (this.state.activeView === "TOOLS") main.innerHTML = this.compute.render();
         else if (this.state.activeView === "WORKBENCH") main.innerHTML = this.notebook.render();
+        else if (this.state.activeView === "PROGRESS") main.innerHTML = this.progress.render();
         else if (this.state.activeView === "MOODLE") main.innerHTML = this.moodle.render();
         else main.innerHTML = this.renderServices();
         this.research.afterRender(this.state.activeView).catch(() => {});
@@ -270,8 +271,8 @@ class StudCommandCenter {
         return `<div class="stud-detail-heading"><small>ASSIGNMENT</small><h3>${this.escape(assignment.title)}</h3><span>${this.escape(course ? this.courseLabel(course.id) : "NO MODULE")} · ${this.escape(assignment.status)}</span></div>
             <div class="stud-deadline-grid">${deadlines.map(([label, value]) => `<section><small>${label}</small><strong>${value ? dateText(value) : "UNKNOWN"}</strong></section>`).join("")}</div>
             <section class="stud-orchestration-context"><header><h3>ACADEMIC CONTEXT</h3><span>${this.escape(status)}</span></header><div class="stud-orchestration-trace"><article><strong>MOODLE / CANONICAL</strong><small>${provenance.some(item => item.sourceType === "MOODLE") ? "AUTHORITATIVE OBSERVATION AVAILABLE" : "NO MOODLE OBSERVATION"}</small></article><article><strong>CALENDAR</strong><small>${links.filter(item => item.referenceKind === "CALENDAR").length || references.filter(item => item.kind === "CALENDAR").length} EXPLICIT LINKS</small></article><article><strong>EMAIL</strong><small>${links.filter(item => item.referenceKind === "EMAIL").length || references.filter(item => item.kind === "EMAIL").length} EXPLICIT LINKS</small></article><article><strong>LOCAL CONTEXT</strong><small>${resources.length} RESOURCES · ${notes.length} NOTES · ${papers.length} PAPERS</small></article></div>${conflicts.length ? `<div class="stud-conflict-banner" role="status"><strong>⚠ DEADLINE / ACADEMIC CONFLICT</strong><span>${conflicts.map(item => `${this.escape(item.field)} · ${item.values.length} OBSERVATIONS`).join(" · ")}</span><button type="button" data-stud-provenance="ASSIGNMENT:${this.escape(assignment.id)}">REVIEW SOURCES</button></div>` : `<p class="stud-orchestration-note">No material field conflict detected. External systems remain read-only and no action runs automatically.</p>`}</section>
-            <form class="stud-edit-grid" data-stud-form="EDIT_ASSIGNMENT" data-stud-entity-id="${this.escape(assignment.id)}"><label>TITLE<input class="aegis-input" name="title" required maxlength="240" value="${this.escape(assignment.title)}"></label><label>STATUS<select class="aegis-select" name="status">${["NOT_STARTED", "IN_PROGRESS", "SUBMITTED", "GRADED"].map(status => `<option${assignment.status === status ? " selected" : ""}>${status}</option>`).join("")}</select></label><label>DUE DATE<input class="aegis-input" name="dueDate" type="datetime-local" value="${inputDate(assignment.dueDate)}"></label><label>LOCAL PROGRESS<input class="aegis-input" name="localProgress" type="number" min="0" max="100" step="1" value="${assignment.localProgress ?? ""}" placeholder="0–100"></label><label>PRIORITY<select class="aegis-select" name="priority"><option value="">AUTO / DETERMINISTIC</option>${["URGENT", "HIGH", "NORMAL", "LOW"].map(priority => `<option${assignment.priority === priority ? " selected" : ""}>${priority}</option>`).join("")}</select></label><label class="stud-wide-label">DESCRIPTION<textarea class="aegis-input" name="description" maxlength="12000">${this.escape(assignment.description || "")}</textarea></label><button type="submit">SAVE LOCAL WORK</button></form>
-            <section class="stud-academic-data"><small>ACADEMIC DATA · ONLY WHEN KNOWN</small><p>SUBMISSION ${this.escape(assignment.submissionStatus || "UNKNOWN")} · GRADE ${assignment.grade ?? "UNKNOWN"}${assignment.gradeMaximum !== null ? ` / ${assignment.gradeMaximum}` : ""} · WEIGHT ${assignment.weight ?? "UNKNOWN"}</p>${assignment.feedback ? `<p>${this.escape(assignment.feedback)}</p>` : ""}</section>
+            <form class="stud-edit-grid" data-stud-form="EDIT_ASSIGNMENT" data-stud-entity-id="${this.escape(assignment.id)}"><label>TITLE<input class="aegis-input" name="title" required maxlength="240" value="${this.escape(assignment.title)}"></label><label>STATUS<select class="aegis-select" name="status">${["NOT_STARTED", "IN_PROGRESS", "SUBMITTED", "GRADED"].map(status => `<option${assignment.status === status ? " selected" : ""}>${status}</option>`).join("")}</select></label><label>DUE DATE<input class="aegis-input" name="dueDate" type="datetime-local" value="${inputDate(assignment.dueDate)}"></label><label>LOCAL PROGRESS<input class="aegis-input" name="localProgress" type="number" min="0" max="100" step="1" value="${assignment.localProgress ?? ""}" placeholder="0–100"></label><label>GRADE SCHEME<select class="aegis-select" name="gradeScheme">${["UNKNOWN", "PERCENTAGE", "POINTS", "TEXT", "PASS_FAIL"].map(scheme => `<option${(assignment.gradeScheme || "UNKNOWN") === scheme ? " selected" : ""}>${scheme}</option>`).join("")}</select></label><label>NUMERIC GRADE<input class="aegis-input" name="grade" type="number" step="0.01" value="${assignment.grade ?? ""}"></label><label>MAXIMUM<input class="aegis-input" name="gradeMaximum" type="number" min="0.01" step="0.01" value="${assignment.gradeMaximum ?? ""}"></label><label>TEXT / PASS-FAIL<input class="aegis-input" name="gradeText" maxlength="240" value="${this.escape(assignment.gradeText || "")}"></label><label>WEIGHT %<input class="aegis-input" name="weight" type="number" min="0" max="100" step="0.01" value="${assignment.weight ?? ""}"></label><label>PRIORITY<select class="aegis-select" name="priority"><option value="">AUTO / DETERMINISTIC</option>${["URGENT", "HIGH", "NORMAL", "LOW"].map(priority => `<option${assignment.priority === priority ? " selected" : ""}>${priority}</option>`).join("")}</select></label><label class="stud-wide-label">DESCRIPTION<textarea class="aegis-input" name="description" maxlength="12000">${this.escape(assignment.description || "")}</textarea></label><button type="submit">SAVE LOCAL WORK</button></form>
+            <section class="stud-academic-data"><small>ACADEMIC DATA · ONLY WHEN KNOWN</small><p>SUBMISSION ${this.escape(assignment.submissionStatus || "UNKNOWN")} · GRADE ${assignment.gradeText || (assignment.grade ?? "UNKNOWN")}${assignment.gradeMaximum !== null ? ` / ${assignment.gradeMaximum}` : ""} · ${this.escape(assignment.gradeScheme || "UNKNOWN")} · WEIGHT ${assignment.weight ?? "UNKNOWN"}</p>${assignment.feedback ? `<p>${this.escape(assignment.feedback)}</p>` : ""}</section>
             ${resources.length ? `<section class="stud-object-section"><header><h3>RELATED RESOURCES</h3><span>${resources.length}</span></header><div>${resources.map(item => `<button type="button" data-stud-search-result="${this.escape(item.id)}" data-stud-search-type="RESOURCE"><strong>${this.escape(item.title)}</strong><small>${this.escape(item.type)}</small></button>`).join("")}</div></section>` : `<div class="stud-empty-inline">NO RELATED RESOURCES.</div>`}
             <section class="stud-object-section stud-assignment-research"><header><h3>RESEARCH</h3><span>${papers.length} PAPERS</span></header>${papers.length ? `<div>${papers.map(item => `<button type="button" data-stud-paper-id="${this.escape(item.id)}"><strong>${this.escape(item.title)}</strong><small>${this.escape(item.year || "YEAR UNKNOWN")} · ${this.escape(item.doi || "DOI UNAVAILABLE")} · ${item.localDocumentReference ? "LOCAL PDF" : "NO LOCAL PDF"}</small></button>`).join("")}</div>` : `<p>NO PAPERS LINKED TO THIS ASSIGNMENT.</p>`}<div class="stud-detail-actions"><button type="button" data-stud-assignment-research="${this.escape(assignment.id)}">RESEARCH FOR ASSIGNMENT</button><button type="button" data-stud-assignment-knowledge="${this.escape(assignment.id)}">BUILD ACADEMIC CONTEXT</button></div></section>
             <section class="stud-object-section"><header><h3>REVISION PREPARATION</h3><span>${revisions.length}</span></header>${revisions.length ? `<div>${revisions.slice(0, 12).map(item => `<button type="button" data-stud-search-result="${this.escape(item.id)}" data-stud-search-type="REVISION_ITEM"><strong>${this.escape(item.title || item.prompt)}</strong><small>${this.escape(item.status)} · ${item.scheduledRevisionAt || item.nextPlannedRevisionAt ? "SCHEDULED" : "UNSCHEDULED"}</small></button>`).join("")}</div>` : `<p>NO LOCAL REVISION PREPARATION ITEM IS LINKED.</p>`}</section>
@@ -346,6 +347,7 @@ class StudCommandCenter {
             if (await this.knowledge.handleClick(event)) return;
             if (await this.academicAssistant.handleClick(event)) return;
             if (await this.notebook.handleClick(event)) return;
+            if (await this.progress.handleClick(event)) return;
             const nav = event.target.closest("[data-stud-nav-view]");
             const course = event.target.closest("[data-stud-open-course]");
             const assignment = event.target.closest("[data-stud-open-assignment]");
@@ -366,7 +368,7 @@ class StudCommandCenter {
             else if (assignmentKnowledge) { this.knowledge.state.rootType = "ASSIGNMENT"; this.knowledge.state.rootId = assignmentKnowledge.dataset.studAssignmentKnowledge; this.setActiveView("KNOWLEDGE"); this.knowledge.build().catch(error => { this.knowledge.state.error = error.message || "ACADEMIC CONTEXT FAILED"; this.render(); }); }
             else if (event.target.closest("[data-stud-close-dialog]")) this.closeDialog();
         });
-        this.view.addEventListener("submit", async event => { if (await this.research.handleSubmit(event)) return; if (await this.moodle.handleSubmit(event)) return; if (await this.revision.handleSubmit(event)) return; if (await this.compute.handleSubmit(event)) return; if (await this.documents.handleSubmit(event)) return; if (await this.knowledge.handleSubmit(event)) return; if (await this.academicAssistant.handleSubmit(event)) return; if (await this.notebook.handleSubmit(event)) return; this.handleForm(event); });
+        this.view.addEventListener("submit", async event => { if (await this.research.handleSubmit(event)) return; if (await this.moodle.handleSubmit(event)) return; if (await this.revision.handleSubmit(event)) return; if (await this.compute.handleSubmit(event)) return; if (await this.documents.handleSubmit(event)) return; if (await this.knowledge.handleSubmit(event)) return; if (await this.academicAssistant.handleSubmit(event)) return; if (await this.notebook.handleSubmit(event)) return; if (await this.progress.handleSubmit(event)) return; this.handleForm(event); });
         this.view.addEventListener("change", event => { this.compute.handleChange(event).catch(() => {}); this.documents.handleChange(event).catch(() => {}); this.knowledge.handleChange(event).catch(() => {}); this.academicAssistant.handleChange(event).catch(() => {}); });
         const dialog = this.view.querySelector("[data-stud-dialog-element]");
         dialog.addEventListener("close", () => { const target = this.state.dialogReturnFocus; this.state.dialogReturnFocus = null; if (target && document.contains(target)) target.focus(); });
@@ -401,6 +403,7 @@ class StudCommandCenter {
         ["dueDate", "releaseDate", "cutoffDate"].forEach(field => { if (value[field]) value[field] = new Date(value[field]).toISOString(); });
         if (value.localProgress === "") delete value.localProgress;
         else if (value.localProgress !== undefined) value.localProgress = Number(value.localProgress);
+        ["grade", "gradeMaximum", "weight"].forEach(field => { if (value[field] === "") delete value[field]; else if (value[field] !== undefined) value[field] = Number(value[field]); });
         try {
             if (kind === "search") {
                 this.state.searchQuery = value.query || "";

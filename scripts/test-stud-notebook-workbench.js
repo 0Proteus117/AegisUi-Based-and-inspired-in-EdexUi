@@ -31,7 +31,7 @@ function ipcMock() { const handlers = new Map(); return {handlers, handle: (name
         const generic = store.createEntity("COURSE", {title: "Synthetic interdisciplinary coursework", code: "GEN-101"});
         const assignment = store.createEntity("ASSIGNMENT", {courseId: engineering.id, title: "Synthetic force analysis"});
 
-        check("SCHEMA_V11_NOTEBOOK_DATA_REPOSITORY", () => assert.strictEqual(store.schemaInfo().version, 11) && ["NOTEBOOK", "DATASET", "REPOSITORY_REFERENCE"].every(type => Model.ENTITY_TYPES.includes(type)));
+        check("SCHEMA_V12_NOTEBOOK_DATA_REPOSITORY", () => assert.strictEqual(store.schemaInfo().version, 12) && ["NOTEBOOK", "DATASET", "REPOSITORY_REFERENCE"].every(type => Model.ENTITY_TYPES.includes(type)));
         const notebook = store.createNotebook({title: "Synthetic force notebook", description: "<script>never execute</script>", notebookType: "DATA_ANALYSIS", language: "PYTHON", courseId: engineering.id, assignmentId: assignment.id});
         const markdown = store.createNotebookCell({notebookId: notebook.id, cellType: "MARKDOWN", source: "# Safe local note\nNo execution."});
         const code = store.createNotebookCell({notebookId: notebook.id, cellType: "CODE", source: "import os\nprint(os.environ)", afterCellId: markdown.id});

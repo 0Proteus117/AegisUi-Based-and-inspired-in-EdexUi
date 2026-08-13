@@ -9,6 +9,7 @@ const Citations = require("./studCitationService.class.js");
 const Orchestration = require("./studAcademicOrchestration.class.js");
 const RevisionPlanner = require("./studRevisionPlanner.class.js");
 const {StudAcademicIntelligence} = require("./studAcademicIntelligence.class.js");
+const {StudAcademicProgress} = require("./studAcademicProgress.class.js");
 
 const TABLES = Object.freeze({
     COURSE: "stud_courses",
@@ -74,6 +75,7 @@ class StudAcademicStore {
         this.db = null;
         this.transactionDepth = 0;
         this.intelligence = null;
+        this.progress = null;
     }
 
     initialize() {
@@ -84,6 +86,7 @@ class StudAcademicStore {
             this.db.exec("PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL; PRAGMA busy_timeout = 5000;");
             this.runMigrations();
             this.intelligence = new StudAcademicIntelligence(this);
+            this.progress = new StudAcademicProgress(this);
             // A live timer is intentionally not reconstructed after restart.
             // Only elapsed time already checkpointed by PAUSE is retained.
             this.recoverInterruptedStudySessions();
@@ -347,6 +350,10 @@ class StudAcademicStore {
                 UNIQUE(provider, owner, repository, selected_ref)
             );
             CREATE INDEX stud_repository_references_context_index ON stud_repository_references(course_id, assignment_id, updated_at DESC);
+        `}, {version: 12, sql: `
+            ALTER TABLE stud_assignments ADD COLUMN grade_scheme TEXT NOT NULL DEFAULT 'UNKNOWN';
+            ALTER TABLE stud_assignments ADD COLUMN grade_text TEXT;
+            CREATE INDEX stud_assignments_grade_context_index ON stud_assignments(course_id, grade_scheme, updated_at DESC);
         `}];
         for (const migration of migrations) {
             if (applied.has(migration.version)) continue;
@@ -590,7 +597,7 @@ class StudAcademicStore {
     insertEntity(type, id, value, timestamp) {
         switch (type) {
         case "COURSE": this.db.prepare("INSERT INTO stud_courses (id,title,short_name,code,description,start_date,end_date,status,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)").run(id,value.title,value.shortName,value.code,value.description,value.startDate,value.endDate,value.status,timestamp,timestamp); break;
-        case "ASSIGNMENT": this.db.prepare("INSERT INTO stud_assignments (id,course_id,title,description,release_date,due_date,cutoff_date,status,submission_status,submitted_at,grade,grade_maximum,weight,feedback,local_progress,priority,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)").run(id,value.courseId,value.title,value.description,value.releaseDate,value.dueDate,value.cutoffDate,value.status,value.submissionStatus,value.submittedAt,value.grade,value.gradeMaximum,value.weight,value.feedback,value.localProgress,value.priority,timestamp,timestamp); break;
+        case "ASSIGNMENT": this.db.prepare("INSERT INTO stud_assignments (id,course_id,title,description,release_date,due_date,cutoff_date,status,submission_status,submitted_at,grade,grade_maximum,grade_scheme,grade_text,weight,feedback,local_progress,priority,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)").run(id,value.courseId,value.title,value.description,value.releaseDate,value.dueDate,value.cutoffDate,value.status,value.submissionStatus,value.submittedAt,value.grade,value.gradeMaximum,value.gradeScheme,value.gradeText,value.weight,value.feedback,value.localProgress,value.priority,timestamp,timestamp); break;
         case "RESOURCE": this.db.prepare("INSERT INTO stud_resources (id,course_id,assignment_id,type,title,url,local_reference,mime_type,checksum,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)").run(id,value.courseId,value.assignmentId,value.type,value.title,value.url,value.localReference,value.mimeType,value.checksum,timestamp,timestamp); break;
         case "RESEARCH_PAPER": this.db.prepare("INSERT INTO stud_research_papers (id,title,object_type,year,published_date,abstract,venue,publisher,authors,doi,source_url,citation_json,oa_json,local_document_reference,document_metadata_json,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)").run(id,value.title,value.objectType,value.year,value.publishedDate,value.abstract,value.venue,value.publisher,value.authors,value.doi,value.sourceUrl,value.citationJson,value.oaJson,value.localDocumentReference,value.documentMetadataJson,timestamp,timestamp); break;
         case "NOTE": this.db.prepare("INSERT INTO stud_notes (id,title,content,course_id,assignment_id,document_version,document_json,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?)").run(id,value.title,value.content,value.courseId,value.assignmentId,value.documentVersion,value.documentJson,timestamp,timestamp); break;
@@ -607,7 +614,7 @@ class StudAcademicStore {
     updateEntityRow(type, id, value, timestamp) {
         switch (type) {
         case "COURSE": this.db.prepare("UPDATE stud_courses SET title=?,short_name=?,code=?,description=?,start_date=?,end_date=?,status=?,updated_at=? WHERE id=?").run(value.title,value.shortName,value.code,value.description,value.startDate,value.endDate,value.status,timestamp,id); break;
-        case "ASSIGNMENT": this.db.prepare("UPDATE stud_assignments SET course_id=?,title=?,description=?,release_date=?,due_date=?,cutoff_date=?,status=?,submission_status=?,submitted_at=?,grade=?,grade_maximum=?,weight=?,feedback=?,local_progress=?,priority=?,updated_at=? WHERE id=?").run(value.courseId,value.title,value.description,value.releaseDate,value.dueDate,value.cutoffDate,value.status,value.submissionStatus,value.submittedAt,value.grade,value.gradeMaximum,value.weight,value.feedback,value.localProgress,value.priority,timestamp,id); break;
+        case "ASSIGNMENT": this.db.prepare("UPDATE stud_assignments SET course_id=?,title=?,description=?,release_date=?,due_date=?,cutoff_date=?,status=?,submission_status=?,submitted_at=?,grade=?,grade_maximum=?,grade_scheme=?,grade_text=?,weight=?,feedback=?,local_progress=?,priority=?,updated_at=? WHERE id=?").run(value.courseId,value.title,value.description,value.releaseDate,value.dueDate,value.cutoffDate,value.status,value.submissionStatus,value.submittedAt,value.grade,value.gradeMaximum,value.gradeScheme,value.gradeText,value.weight,value.feedback,value.localProgress,value.priority,timestamp,id); break;
         case "RESOURCE": this.db.prepare("UPDATE stud_resources SET course_id=?,assignment_id=?,type=?,title=?,url=?,local_reference=?,mime_type=?,checksum=?,updated_at=? WHERE id=?").run(value.courseId,value.assignmentId,value.type,value.title,value.url,value.localReference,value.mimeType,value.checksum,timestamp,id); break;
         case "RESEARCH_PAPER": this.db.prepare("UPDATE stud_research_papers SET title=?,object_type=?,year=?,published_date=?,abstract=?,venue=?,publisher=?,authors=?,doi=?,source_url=?,citation_json=?,oa_json=?,local_document_reference=?,document_metadata_json=?,updated_at=? WHERE id=?").run(value.title,value.objectType,value.year,value.publishedDate,value.abstract,value.venue,value.publisher,value.authors,value.doi,value.sourceUrl,value.citationJson,value.oaJson,value.localDocumentReference,value.documentMetadataJson,timestamp,id); break;
         case "NOTE": this.db.prepare("UPDATE stud_notes SET title=?,content=?,course_id=?,assignment_id=?,document_version=?,document_json=?,updated_at=? WHERE id=?").run(value.title,value.content,value.courseId,value.assignmentId,value.documentVersion,value.documentJson,timestamp,id); break;
