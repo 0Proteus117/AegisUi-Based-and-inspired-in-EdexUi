@@ -5,6 +5,7 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 const Lms = require("../src/classes/workspaces/studLmsModel.class.js");
+const Model = require("../src/classes/workspaces/studAcademicModel.class.js");
 const {StudAcademicStore} = require("../src/classes/workspaces/studAcademicStore.class.js");
 const {StudCredentialVault} = require("../src/classes/workspaces/studCredentialVault.class.js");
 const {StudLmsRuntime, parseIcs} = require("../src/classes/workspaces/studLmsRuntime.class.js");
@@ -36,7 +37,7 @@ function fullFetch(url, options = {}) {
     const vault = new StudCredentialVault({root, safeStorage: fakeSafeStorage()});
     const runtime = new StudLmsRuntime({store, root, vault, fetch: fullFetch, safeStorage: fakeSafeStorage()});
     try {
-        check("MOODLE_SCHEMA_CURRENT", store.schemaInfo().version === 12);
+        check("MOODLE_SCHEMA_CURRENT", store.schemaInfo().version === Model.SCHEMA_VERSION);
         check("MOODLE_CAPABILITY_MODEL", Lms.MOODLE_CAPABILITIES.includes("COURSES") && Lms.MOODLE_CAPABILITIES.includes("ASSIGNMENT_WRITE"));
         check("MOODLE_WRITE_POLICY_ENUM", Lms.emptyCapabilities().ASSIGNMENT_WRITE === "POLICY_DISABLED");
         assert.throws(() => Lms.normalizeBaseUrl("http://moodle.example.test"), error => error.code === "INVALID_INPUT");

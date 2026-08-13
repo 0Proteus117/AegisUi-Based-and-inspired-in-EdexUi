@@ -10,6 +10,7 @@ const Orchestration = require("./studAcademicOrchestration.class.js");
 const RevisionPlanner = require("./studRevisionPlanner.class.js");
 const {StudAcademicIntelligence} = require("./studAcademicIntelligence.class.js");
 const {StudAcademicProgress} = require("./studAcademicProgress.class.js");
+const ToolCatalog = require("./studToolCatalog.registry.js");
 
 const TABLES = Object.freeze({
     COURSE: "stud_courses",
@@ -354,6 +355,16 @@ class StudAcademicStore {
             ALTER TABLE stud_assignments ADD COLUMN grade_scheme TEXT NOT NULL DEFAULT 'UNKNOWN';
             ALTER TABLE stud_assignments ADD COLUMN grade_text TEXT;
             CREATE INDEX stud_assignments_grade_context_index ON stud_assignments(course_id, grade_scheme, updated_at DESC);
+        `}, {version: 13, sql: `
+            CREATE TABLE stud_tool_preferences (
+                tool_id TEXT PRIMARY KEY, favorite INTEGER NOT NULL DEFAULT 0, hidden INTEGER NOT NULL DEFAULT 0,
+                pinned INTEGER NOT NULL DEFAULT 0, used_at TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+            );
+            CREATE INDEX stud_tool_preferences_rank_index ON stud_tool_preferences(pinned, favorite, used_at DESC);
+            CREATE TABLE stud_discipline_profile (
+                discipline TEXT PRIMARY KEY, profile_rank INTEGER NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+            );
+            CREATE INDEX stud_discipline_profile_rank_index ON stud_discipline_profile(profile_rank);
         `}];
         for (const migration of migrations) {
             if (applied.has(migration.version)) continue;
@@ -374,6 +385,70 @@ class StudAcademicStore {
         this.initialize();
         const row = this.db.prepare("SELECT MAX(version) AS version FROM stud_schema_migrations").get();
         return Object.freeze({version: row && row.version || 0, dbPathPolicy: "userData/stud/academic.sqlite", journalMode: "WAL"});
+    }
+
+    listToolPreferences() {
+        this.initialize();
+        return Object.freeze(this.db.prepare("SELECT * FROM stud_tool_preferences ORDER BY pinned DESC, favorite DESC, updated_at DESC LIMIT 1000").all().map(row => Object.freeze(rowToCamel(row))));
+    }
+
+    updateToolPreference(input = {}) {
+        this.initialize();
+        Model.assertAllowedKeys(input, ["toolId", "favorite", "hidden", "pinned", "markUsed"], "Tool preference");
+        const toolId = Model.safeId(input.toolId, "Tool ID");
+        if (!ToolCatalog.getEntry(toolId)) throw new Model.StudError("INVALID_INPUT", "Tool preference references an unknown catalog entry.");
+        const bool = (value, label) => {
+            if (value === undefined) return undefined;
+            if (typeof value !== "boolean") throw new Model.StudError("INVALID_INPUT", `${label} must be boolean.`);
+            return value;
+        };
+        const current = this.db.prepare("SELECT * FROM stud_tool_preferences WHERE tool_id=?").get(toolId) || {};
+        const favorite = bool(input.favorite, "Favorite");
+        const hidden = bool(input.hidden, "Hidden");
+        const pinned = bool(input.pinned, "Pinned");
+        const markUsed = bool(input.markUsed, "Mark used");
+        const timestamp = Model.now();
+        const next = {
+            favorite: favorite === undefined ? Number(current.favorite || 0) : Number(favorite),
+            hidden: hidden === undefined ? Number(current.hidden || 0) : Number(hidden),
+            pinned: pinned === undefined ? Number(current.pinned || 0) : Number(pinned),
+            usedAt: markUsed === true ? timestamp : current.used_at || null
+        };
+        this.db.prepare(`INSERT INTO stud_tool_preferences (tool_id,favorite,hidden,pinned,used_at,created_at,updated_at)
+            VALUES (?,?,?,?,?,?,?) ON CONFLICT(tool_id) DO UPDATE SET favorite=excluded.favorite,hidden=excluded.hidden,pinned=excluded.pinned,used_at=excluded.used_at,updated_at=excluded.updated_at`)
+            .run(toolId, next.favorite, next.hidden, next.pinned, next.usedAt, current.created_at || timestamp, timestamp);
+        return Object.freeze(rowToCamel(this.db.prepare("SELECT * FROM stud_tool_preferences WHERE tool_id=?").get(toolId)));
+    }
+
+    resetToolPreferences() {
+        this.initialize();
+        const result = this.db.prepare("DELETE FROM stud_tool_preferences").run();
+        return Object.freeze({reset: true, removed: Number(result.changes || 0)});
+    }
+
+    listDisciplineProfile() {
+        this.initialize();
+        return Object.freeze(this.db.prepare("SELECT discipline,profile_rank FROM stud_discipline_profile ORDER BY profile_rank ASC LIMIT 100").all().map(row => Object.freeze({discipline: row.discipline, rank: Number(row.profile_rank)})));
+    }
+
+    replaceDisciplineProfile(input = {}) {
+        this.initialize();
+        Model.assertAllowedKeys(input, ["disciplines"], "Discipline profile");
+        if (!Array.isArray(input.disciplines) || input.disciplines.length > 20) throw new Model.StudError("INVALID_INPUT", "Discipline profile must contain up to twenty explicit disciplines.");
+        const disciplines = [...new Set(input.disciplines.map(value => String(value || "").trim().toUpperCase()))];
+        if (disciplines.some(value => !ToolCatalog.DISCIPLINES.includes(value))) throw new Model.StudError("INVALID_INPUT", "Discipline profile contains an unknown discipline.");
+        const timestamp = Model.now();
+        this.db.exec("BEGIN IMMEDIATE;");
+        try {
+            this.db.prepare("DELETE FROM stud_discipline_profile").run();
+            const insert = this.db.prepare("INSERT INTO stud_discipline_profile (discipline,profile_rank,created_at,updated_at) VALUES (?,?,?,?)");
+            disciplines.forEach((discipline, index) => insert.run(discipline, index + 1, timestamp, timestamp));
+            this.db.exec("COMMIT;");
+        } catch (error) {
+            try { this.db.exec("ROLLBACK;"); } catch (rollbackError) {}
+            throw error;
+        }
+        return this.listDisciplineProfile();
     }
 
     listProviderInstances(providerType = null) {

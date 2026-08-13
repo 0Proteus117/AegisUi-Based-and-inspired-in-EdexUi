@@ -6553,3 +6553,61 @@ button.eng-thread-row.active {
 .engineering-mode .stud-progress-policy small { color: var(--aegis-accent-soft); letter-spacing: .07vh; }
 @media (max-width: 1450px) { .engineering-mode .stud-progress-grid { grid-template-columns: minmax(0, 1fr); }.engineering-mode .stud-progress-wide { grid-column: auto; }.engineering-mode .stud-progress-course-row { grid-template-columns: minmax(0, 1fr) repeat(3, minmax(11vh, .5fr)) max-content; } }
 @media (max-width: 1230px) { .engineering-mode .stud-progress-header { display: grid; }.engineering-mode .stud-progress-course-row { grid-template-columns: minmax(0, 1fr); align-items: start; }.engineering-mode .stud-progress-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* STUD Phase 13: registry, packs and tool metadata use document-flow grids so
+ * long descriptions, commercial notices and discipline tags remain readable. */
+.engineering-mode .stud-tool-catalog-shell { display: grid; gap: .7vh; min-width: 0; }
+.engineering-mode .stud-tool-catalog-header { display: flex; align-items: start; justify-content: space-between; gap: 1vh; min-width: 0; }
+.engineering-mode .stud-tool-catalog-header h2 { margin: .18vh 0; color: var(--aegis-text-primary); font: 1.15vh var(--font_mono); letter-spacing: .08vh; }
+.engineering-mode .stud-tool-catalog-header p { max-width: 95vh; margin: 0; color: var(--aegis-text-muted); font: .57vh/1.45 var(--font_main_light); overflow-wrap: anywhere; }
+.engineering-mode .stud-tool-catalog-status { display: grid; gap: .15vh; min-width: 0; text-align: right; white-space: nowrap; }
+.engineering-mode .stud-tool-catalog-status strong { color: var(--aegis-accent-soft); font: .58vh var(--font_mono); }
+.engineering-mode .stud-tool-catalog-status small { color: var(--aegis-text-faint); font: .44vh var(--font_mono); letter-spacing: .06vh; }
+.engineering-mode .stud-tool-catalog-tabs { display: flex; flex-wrap: wrap; gap: .35vh; }
+.engineering-mode .stud-tool-catalog-tabs button.active { border-color: var(--aegis-accent); color: var(--aegis-accent-soft); }
+.engineering-mode .stud-tool-catalog-grid { display: grid; grid-template-columns: minmax(26vh, .68fr) minmax(36vh, 1.15fr) minmax(34vh, .95fr); gap: .7vh; min-width: 0; align-items: start; }
+.engineering-mode .stud-tool-filter-form { display: grid; gap: .45vh; }
+.engineering-mode .stud-tool-filter-form label { display: grid; min-width: 0; gap: .16vh; color: var(--aegis-text-faint); font: .46vh var(--font_mono); letter-spacing: .06vh; }
+.engineering-mode .stud-tool-filter-checks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .32vh; }
+.engineering-mode .stud-tool-filter-checks label { display: flex; align-items: center; gap: .26vh; min-width: 0; color: var(--aegis-text-muted); font: .45vh var(--font_mono); }
+.engineering-mode .stud-tool-filter-checks input { accent-color: var(--aegis-accent); }
+.engineering-mode .stud-tool-profile { display: grid; gap: .42vh; margin-top: .72vh; padding-top: .65vh; border-top: .08vh dashed var(--aegis-border); }
+.engineering-mode .stud-tool-profile header { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .3vh; }
+.engineering-mode .stud-tool-profile header strong { color: var(--aegis-accent-soft); font: .54vh var(--font_mono); }
+.engineering-mode .stud-tool-profile header span,.engineering-mode .stud-tool-profile p { color: var(--aegis-text-faint); font: .45vh/1.4 var(--font_mono); overflow-wrap: anywhere; }
+.engineering-mode .stud-tool-profile p { margin: 0; }
+.engineering-mode .stud-tool-profile form { display: grid; gap: .42vh; }
+.engineering-mode .stud-tool-profile form > div { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .26vh; max-height: 22vh; overflow: auto; padding-right: .18vh; }
+.engineering-mode .stud-tool-profile label { display: flex; align-items: start; gap: .25vh; color: var(--aegis-text-muted); font: .43vh/1.3 var(--font_mono); overflow-wrap: anywhere; }
+.engineering-mode .stud-tool-profile input { margin: .08vh 0 0; accent-color: var(--aegis-accent); }
+.engineering-mode .stud-tool-recommendation { margin: 0 0 .5vh; padding: .48vh; border-left: .15vh solid var(--aegis-accent); color: var(--aegis-text-muted); background: var(--aegis-surface-muted); font: .48vh/1.4 var(--font_mono); overflow-wrap: anywhere; }
+.engineering-mode .stud-tool-list { display: grid; gap: .35vh; min-width: 0; max-height: 58vh; overflow: auto; padding-right: .2vh; }
+.engineering-mode .stud-tool-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .2vh .45vh; min-width: 0; padding: .52vh; text-align: left; border: .08vh solid var(--aegis-border-subtle); background: var(--aegis-surface-muted); }
+.engineering-mode .stud-tool-row.selected { border-color: var(--aegis-accent); box-shadow: inset .16vh 0 0 var(--aegis-accent); }
+.engineering-mode .stud-tool-row strong { color: var(--aegis-text-primary); font: .56vh/1.32 var(--font_mono); overflow-wrap: anywhere; }
+.engineering-mode .stud-tool-row > span { grid-column: 1 / -1; color: var(--aegis-text-muted); font: .47vh/1.38 var(--font_main_light); overflow-wrap: anywhere; }
+.engineering-mode .stud-tool-row > small { display: flex; flex-wrap: wrap; gap: .25vh; min-width: 0; }
+.engineering-mode .stud-tool-row > em { color: var(--aegis-text-faint); font: .42vh/1.35 var(--font_mono); font-style: normal; letter-spacing: .04vh; overflow-wrap: anywhere; }
+.engineering-mode .stud-tool-row > i { align-self: start; padding: .1vh .24vh; border: .08vh solid var(--aegis-accent); color: var(--aegis-accent-soft); font: .4vh var(--font_mono); font-style: normal; }
+.engineering-mode .stud-tool-badge { display: inline-block; width: fit-content; max-width: 100%; padding: .1vh .27vh; border: .08vh solid var(--aegis-border); color: var(--aegis-text-faint); font: .4vh/1.35 var(--font_mono); letter-spacing: .045vh; overflow-wrap: anywhere; }
+.engineering-mode .stud-tool-badge.is-free,.engineering-mode .stud-tool-badge.is-local { border-color: var(--aegis-accent); color: var(--aegis-accent-soft); }
+.engineering-mode .stud-tool-badge.is-paid { border-color: var(--aegis-warning); color: var(--aegis-warning); background: color-mix(in srgb, var(--aegis-warning) 8%, transparent); }
+.engineering-mode .stud-tool-detail { display: grid; gap: .5vh; min-width: 0; }
+.engineering-mode .stud-tool-detail h3 { margin: 0; color: var(--aegis-text-primary); font: .8vh/1.3 var(--font_mono); overflow-wrap: anywhere; }
+.engineering-mode .stud-tool-detail > p { margin: 0; color: var(--aegis-text-muted); font: .53vh/1.45 var(--font_main_light); overflow-wrap: anywhere; }
+.engineering-mode .stud-tool-detail > div { display: flex; flex-wrap: wrap; gap: .28vh; }
+.engineering-mode .stud-tool-detail dl { display: grid; grid-template-columns: minmax(13vh, .45fr) minmax(0, 1fr); gap: .3vh .55vh; margin: 0; padding-top: .45vh; border-top: .08vh dashed var(--aegis-border-subtle); }
+.engineering-mode .stud-tool-detail dt { color: var(--aegis-text-faint); font: .42vh var(--font_mono); letter-spacing: .05vh; }
+.engineering-mode .stud-tool-detail dd { min-width: 0; margin: 0; color: var(--aegis-text-primary); font: .47vh/1.4 var(--font_mono); overflow-wrap: anywhere; }
+.engineering-mode .stud-tool-alternatives { display: grid; gap: .3vh; padding-top: .45vh; border-top: .08vh dashed var(--aegis-border-subtle); }
+.engineering-mode .stud-tool-alternatives strong { color: var(--aegis-accent-soft); font: .48vh var(--font_mono); }
+.engineering-mode .stud-tool-alternatives button { width: 100%; text-align: left; overflow-wrap: anywhere; }
+.engineering-mode .stud-tool-packs-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .7vh; min-width: 0; }
+.engineering-mode .stud-tool-pack-entries { display: grid; gap: .28vh; max-height: 30vh; overflow: auto; padding-right: .18vh; }
+.engineering-mode .stud-tool-pack-entries button { display: grid; gap: .1vh; width: 100%; min-width: 0; text-align: left; padding: .42vh; border-left: .15vh solid var(--aegis-accent); background: var(--aegis-surface-muted); }
+.engineering-mode .stud-tool-pack-entries strong { color: var(--aegis-text-primary); font: .51vh var(--font_mono); overflow-wrap: anywhere; }
+.engineering-mode .stud-tool-pack-entries small { color: var(--aegis-text-faint); font: .43vh/1.35 var(--font_mono); overflow-wrap: anywhere; }
+.engineering-mode .stud-tool-catalog-policy { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .4vh; padding: .52vh; color: var(--aegis-text-faint); font: .45vh/1.4 var(--font_mono); }
+.engineering-mode .stud-tool-catalog-policy small { color: var(--aegis-accent-soft); letter-spacing: .07vh; }
+@media (max-width: 1500px) { .engineering-mode .stud-tool-catalog-grid { grid-template-columns: minmax(25vh, .72fr) minmax(0, 1.2fr); }.engineering-mode .stud-tool-detail-panel { grid-column: 1 / -1; }.engineering-mode .stud-tool-detail-panel .workspace-panel-content { max-width: 95vh; }.engineering-mode .stud-tool-list { max-height: 43vh; } }
+@media (max-width: 1230px) { .engineering-mode .stud-tool-catalog-header { display: grid; }.engineering-mode .stud-tool-catalog-status { text-align: left; white-space: normal; }.engineering-mode .stud-tool-catalog-grid,.engineering-mode .stud-tool-packs-grid { grid-template-columns: minmax(0, 1fr); }.engineering-mode .stud-tool-detail-panel { grid-column: auto; }.engineering-mode .stud-tool-profile form > div,.engineering-mode .stud-tool-filter-checks { grid-template-columns: minmax(0, 1fr); }.engineering-mode .stud-tool-detail dl { grid-template-columns: minmax(0, 1fr); }.engineering-mode .stud-tool-detail dt { padding-top: .28vh; border-top: .08vh solid var(--aegis-border-subtle); } }

@@ -32,6 +32,9 @@ const files = [
     "src/classes/workspaces/studNotebookWorkspace.class.js",
     "src/classes/workspaces/studAcademicProgress.class.js",
     "src/classes/workspaces/studProgressWorkspace.class.js",
+    "src/classes/workspaces/studToolCatalog.registry.js",
+    "src/classes/workspaces/studToolCatalog.class.js",
+    "src/classes/workspaces/studToolCatalogWorkspace.class.js",
     "src/classes/workspaces/studResearchModel.class.js",
     "src/classes/workspaces/studResearchRuntime.class.js",
     "src/classes/workspaces/studResearchWorkspace.class.js",
@@ -54,7 +57,8 @@ const files = [
     "scripts/test-stud-academic-ai.js"
     ,"scripts/test-stud-notebook-workbench.js",
     "scripts/test-stud-progress-analytics.js",
-    "scripts/test-stud-progress-scale.js"
+    "scripts/test-stud-progress-scale.js",
+    "scripts/test-stud-tool-catalog.js"
 ];
 
 const checks = {
@@ -76,6 +80,8 @@ const checks = {
     STUD_AI_IS_TYPED_CONTEXT_PACKAGE_ONLY: commandCenter.includes("StudAcademicAssistantWorkspace") && fs.readFileSync(path.join(ROOT, "src/classes/workspaces/studAcademicAssistantRuntime.class.js"), "utf8").includes("CONTEXT_PACKAGE") && !fs.readFileSync(path.join(ROOT, "src/classes/workspaces/studAcademicAssistantRuntime.class.js"), "utf8").includes("child_process"),
     STUD_NOTEBOOK_DATA_GITHUB_BOUNDARY: commandCenter.includes("StudNotebookWorkspace") && fs.readFileSync(path.join(ROOT, "src/classes/workspaces/studNotebookRuntime.class.js"), "utf8").includes("EDITING_ONLY") && !fs.readFileSync(path.join(ROOT, "src/classes/workspaces/studNotebookRuntime.class.js"), "utf8").includes("child_process"),
     STUD_PROGRESS_DERIVED_LOCAL_ONLY: commandCenter.includes("StudProgressWorkspace") && fs.readFileSync(path.join(ROOT, "src/classes/workspaces/studAcademicProgress.class.js"), "utf8").includes("noExternalQueries") && !fs.readFileSync(path.join(ROOT, "src/classes/workspaces/studAcademicProgress.class.js"), "utf8").includes("fetch("),
+    STUD_TOOL_CATALOG_LOCAL_REGISTRY: commandCenter.includes("StudToolCatalogWorkspace") && fs.readFileSync(path.join(ROOT, "src/classes/workspaces/studToolCatalog.registry.js"), "utf8").includes("REGISTRY_VERSION") && !fs.readFileSync(path.join(ROOT, "src/classes/workspaces/studToolCatalog.registry.js"), "utf8").includes("fetch("),
+    STUD_TOOL_CATALOG_NO_INSTALLER: fs.readFileSync(path.join(ROOT, "src/classes/workspaces/studToolCatalog.class.js"), "utf8").includes("launch(toolId, shell)") && !fs.readFileSync(path.join(ROOT, "src/classes/workspaces/studToolCatalog.class.js"), "utf8").match(/child_process|exec\(|spawn\(|download/i),
     STUD_FILES_PRESENT: files.every(file => fs.existsSync(path.join(ROOT, file)))
 };
 

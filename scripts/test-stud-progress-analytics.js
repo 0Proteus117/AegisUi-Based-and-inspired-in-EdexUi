@@ -21,7 +21,7 @@ const revision = store.createEntity("REVISION_ITEM", {courseId: course.id, title
 const session = store.startStudySession({revisionItemId: revision.id});
 store.db.prepare("UPDATE stud_study_sessions SET elapsed_seconds=1500,status='FINISHED',ended_at=?,updated_at=? WHERE id=?").run("2026-01-03T12:00:00.000Z", "2026-01-03T12:00:00.000Z", session.id);
 
-assert.equal(store.schemaInfo().version, 12, "schema v12 migration should apply");
+assert.equal(store.schemaInfo().version, Model.SCHEMA_VERSION, "current schema migration should apply");
 assert.equal(numericGrade(numeric).percent, 90);
 assert.equal(numericGrade(text).kind, "NON_NUMERIC");
 const overview = store.progress.overview({now: "2026-06-01T00:00:00.000Z"});

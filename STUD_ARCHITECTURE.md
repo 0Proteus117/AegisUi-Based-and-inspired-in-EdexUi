@@ -20,6 +20,25 @@ The renderer uses only narrowly allowlisted `stud-*` IPC methods. SQLite is
 opened in the main process; the renderer has no direct SQL, filesystem path or
 network capability.
 
+## Tool Catalog (Phase 13)
+
+`TOOLS` is a local, versioned capability registry, not a package manager. Its
+definitions ship as validated application metadata and cover native STUD
+surfaces, optional local engines, external tools, learning resources and
+reference material. An entry distinguishes cost, offline operation, privacy,
+account requirements, open-source/licence status, availability and integration
+depth. `UNKNOWN` remains a valid disclosure when current evidence is missing.
+
+Only catalog preferences and an explicitly selected discipline profile are
+stored in the canonical SQLite database (schema v13). These choices never
+change Courses, Assignments, Notes or other academic data, and STUD does not
+infer a discipline from private material. Native items navigate to existing
+surfaces. External launch receives a registry ID only; the main process resolves
+that ID to its prevalidated HTTPS website. No custom URL, download, installation,
+remote registry update, telemetry or provider action is available. See
+[STUD_TOOL_CATALOG.md](STUD_TOOL_CATALOG.md) and
+[STUD_PHASE13_VALIDATION.md](STUD_PHASE13_VALIDATION.md).
+
 ## Engineering Compute (Phase 7)
 
 The STUD Tools view includes a deliberately bounded, offline-first Engineering
