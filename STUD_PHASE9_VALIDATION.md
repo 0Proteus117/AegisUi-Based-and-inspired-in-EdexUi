@@ -35,9 +35,9 @@ layout invariants at 1680x1050 @2x (Dark), 1440x900 @2x (Light), 1440x900
 asserted that the Knowledge workspace, graph and coverage regions existed,
 that no interactive control escaped its containing panel, that no panel
 overlapped another panel and that the workspace had no horizontal overflow.
-The corresponding sanitized screenshots are attached to the v2.6.9 GitHub
-Release and embedded inline in its release body; they are not canonical source
-assets and are therefore not stored in the repository.
+The corresponding sanitized screenshots are tracked as release evidence under
+docs/releases/v2.6.9/screenshots/ and embedded inline in the v2.6.9 GitHub
+Release. They use only synthetic public-safe content.
 
 ## Intentional limitations
 
