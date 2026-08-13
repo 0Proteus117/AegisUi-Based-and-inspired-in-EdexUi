@@ -89,3 +89,13 @@ local capability beside the core model, not an architectural assumption.
 
 See [STUD_DOCUMENT_INTELLIGENCE.md](STUD_DOCUMENT_INTELLIGENCE.md) for the
 offline PDF.js boundary, model, provenance and optional-engine policy.
+
+## Academic Intelligence (Phase 9)
+
+Phase 9 adds a local, explainable Context Builder above existing canonical
+records. It derives direct and deterministic Course/Assignment relationships,
+then presents bounded FTS terminology matches only as suggestions. Concepts,
+coverage, source support, user decisions and Context Packages remain in the
+same SQLite database and retain provenance. No LLM, cloud inference, provider,
+filesystem scan or automatic action is connected. See
+[STUD_ACADEMIC_INTELLIGENCE.md](STUD_ACADEMIC_INTELLIGENCE.md).

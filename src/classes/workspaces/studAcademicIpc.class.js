@@ -53,6 +53,11 @@ const CHANNELS = Object.freeze([
     "stud-document-read-pdf",
     "stud-document-create-note",
     "stud-document-create-revision",
+    "stud-academic-context-build",
+    "stud-academic-context-search",
+    "stud-academic-context-decide",
+    "stud-academic-context-package-create",
+    "stud-academic-context-package-list",
     "stud-research-status",
     "stud-research-search",
     "stud-research-resolve-crossref",
@@ -210,6 +215,13 @@ function registerStudAcademicIpc(options = {}) {
     });
     add("stud-document-create-note", ["documentId", "chunkId", "title", "courseId", "assignmentId"], payload => store.createDocumentNote(payload));
     add("stud-document-create-revision", ["documentId", "chunkId", "title", "courseId"], payload => store.createDocumentRevision(payload));
+    // Academic Intelligence only traverses canonical local STUD data. These
+    // handlers neither call providers nor grant file/network/process access.
+    add("stud-academic-context-build", ["rootType", "rootId", "options"], payload => store.buildAcademicContext(payload.rootType, payload.rootId, payload.options || {}));
+    add("stud-academic-context-search", ["rootType", "rootId", "query", "options"], payload => store.searchAcademicContext(payload.rootType, payload.rootId, payload.query, payload.options || {}));
+    add("stud-academic-context-decide", ["rootType", "rootId", "candidateType", "candidateId", "decision", "reason"], payload => store.decideAcademicContext(payload.rootType, payload.rootId, payload.candidateType, payload.candidateId, payload.decision, payload.reason || null));
+    add("stud-academic-context-package-create", ["rootType", "rootId", "options"], payload => store.createAcademicContextPackage(payload.rootType, payload.rootId, payload.options || {}));
+    add("stud-academic-context-package-list", ["rootType", "rootId", "limit"], payload => store.listAcademicContextPackages(payload.rootType, payload.rootId, payload.limit));
     add("stud-research-status", [], () => runtime.status());
     add("stud-research-search", ["query", "year", "limit", "requestId"], payload => runtime.searchOpenAlex(payload));
     add("stud-research-resolve-crossref", ["doi", "requestId"], payload => runtime.resolveCrossref(payload));

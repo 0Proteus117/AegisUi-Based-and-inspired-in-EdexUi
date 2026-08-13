@@ -6417,17 +6417,46 @@ button.eng-thread-row.active {
 .engineering-mode .stud-document-capabilities article:first-child { border-left-color: var(--aegis-accent); }.engineering-mode .stud-document-capabilities strong { color: var(--aegis-text); font: .57vh var(--font_mono); }.engineering-mode .stud-document-capabilities span { color: var(--aegis-warning); font: .53vh var(--font_mono); }.engineering-mode .stud-document-capabilities small,.engineering-mode .stud-document-policy p { color: var(--aegis-text-faint); font: .5vh/1.35 var(--font_mono); overflow-wrap: anywhere; }.engineering-mode .stud-document-policy p { margin: .55vh 0 0; }
 .engineering-mode .stud-document-error { padding: .55vh; border-left: .16vh solid var(--aegis-warning); color: var(--aegis-warning); background: color-mix(in srgb, var(--aegis-warning) 8%, var(--aegis-surface)); font: .58vh/1.4 var(--font_mono); overflow-wrap: anywhere; }
 
+/* STUD Phase 9 Academic Intelligence. Context candidates, graph and coverage
+ * use ordinary grid flow with bounded scroll surfaces; no dynamic content is
+ * absolutely positioned or allowed to overlap another academic panel. */
+.engineering-mode .stud-knowledge-workspace,.engineering-mode .stud-knowledge-results { display: grid; gap: .7vh; min-width: 0; }
+.engineering-mode .stud-knowledge-results { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.engineering-mode .stud-knowledge-builder,.engineering-mode .stud-knowledge-summary,.engineering-mode .stud-knowledge-candidates { grid-column: 1 / -1; }
+.engineering-mode .stud-knowledge-form { display: grid; grid-template-columns: minmax(18vh, .8fr) minmax(26vh, 1.4fr) auto; gap: .5vh; align-items: end; min-width: 0; }
+.engineering-mode .stud-knowledge-form label,.engineering-mode .stud-knowledge-search label { display: grid; gap: .16vh; min-width: 0; color: var(--aegis-text-faint); font: .49vh var(--font_mono); letter-spacing: .07vh; }
+.engineering-mode .stud-knowledge-builder p,.engineering-mode .stud-knowledge-summary p,.engineering-mode .stud-knowledge-coverage p,.engineering-mode .stud-knowledge-packages p { color: var(--aegis-text-muted); font: .57vh/1.4 var(--font_main_light); overflow-wrap: anywhere; }
+.engineering-mode .stud-knowledge-candidates > .workspace-panel-content > div { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .48vh; }
+.engineering-mode .stud-knowledge-candidate { display: grid; gap: .25vh; min-width: 0; padding: .52vh; border: .08vh solid var(--aegis-border-subtle); background: var(--aegis-surface-muted); }
+.engineering-mode .stud-knowledge-candidate header,.engineering-mode .stud-knowledge-candidate footer,.engineering-mode .stud-knowledge-coverage article { display: flex; gap: .35vh; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.engineering-mode .stud-knowledge-candidate strong,.engineering-mode .stud-knowledge-candidate li,.engineering-mode .stud-knowledge-candidate small,.engineering-mode .stud-knowledge-candidate span,.engineering-mode .stud-knowledge-candidate p { overflow-wrap: anywhere; }
+.engineering-mode .stud-knowledge-candidate strong { color: var(--aegis-text-primary); font: .62vh var(--font_mono); }.engineering-mode .stud-knowledge-candidate small,.engineering-mode .stud-knowledge-candidate li { color: var(--aegis-text-muted); font: .52vh/1.35 var(--font_mono); }
+.engineering-mode .stud-knowledge-candidate ul { margin: .1vh 0; padding-left: 1.7vh; }.engineering-mode .stud-knowledge-candidate footer { padding-top: .35vh; border-top: .08vh solid var(--aegis-border-subtle); }
+.engineering-mode .stud-knowledge-excluded { margin-top: .8vh; padding-top: .7vh; border-top: .08vh dashed var(--aegis-border); }.engineering-mode .stud-knowledge-excluded h3 { margin: 0 0 .5vh; color: var(--aegis-warning); font: .58vh var(--font_mono); }
+.engineering-mode .stud-knowledge-badge { display: inline-block; border: .08vh solid var(--aegis-border); padding: .12vh .35vh; color: var(--aegis-text-faint); font: .46vh var(--font_mono); letter-spacing: .06vh; white-space: nowrap; }
+.engineering-mode .stud-knowledge-badge.direct,.engineering-mode .stud-knowledge-badge.available,.engineering-mode .stud-knowledge-badge.source_linked { border-color: var(--aegis-accent); color: var(--aegis-accent-soft); }
+.engineering-mode .stud-knowledge-badge.derived,.engineering-mode .stud-knowledge-badge.partial,.engineering-mode .stud-knowledge-badge.user_authored { border-color: var(--aegis-border); color: var(--aegis-text-muted); }
+.engineering-mode .stud-knowledge-badge.suggested,.engineering-mode .stud-knowledge-badge.unresolved,.engineering-mode .stud-knowledge-badge.insufficient_context,.engineering-mode .stud-knowledge-badge.unsupported_local { border-color: var(--aegis-warning); color: var(--aegis-warning); }
+.engineering-mode .stud-knowledge-badge.conflicting,.engineering-mode .stud-knowledge-conflict { border-color: var(--aegis-warning); color: var(--aegis-warning); }
+.engineering-mode .stud-knowledge-concept-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(18vh, 1fr)); gap: .4vh; }.engineering-mode .stud-knowledge-concept-list article { display: grid; gap: .14vh; min-width: 0; padding: .45vh; border-left: .15vh solid var(--aegis-accent); background: var(--aegis-surface-muted); }
+.engineering-mode .stud-knowledge-concept-list strong,.engineering-mode .stud-knowledge-concept-list small { overflow-wrap: anywhere; }.engineering-mode .stud-knowledge-concept-list strong { color: var(--aegis-text); font: .57vh var(--font_mono); }.engineering-mode .stud-knowledge-concept-list small { color: var(--aegis-text-faint); font: .47vh/1.3 var(--font_mono); }
+.engineering-mode .stud-knowledge-graph-nodes { display: grid; grid-template-columns: repeat(auto-fit, minmax(15vh, 1fr)); gap: .35vh; max-height: 30vh; overflow: auto; padding-right: .2vh; }.engineering-mode .stud-knowledge-graph-nodes button { min-width: 0; text-align: left; }.engineering-mode .stud-knowledge-graph-nodes button strong,.engineering-mode .stud-knowledge-graph-nodes button small { display: block; overflow-wrap: anywhere; }
+.engineering-mode .stud-knowledge-edges { display: flex; flex-wrap: wrap; gap: .3vh; margin-top: .45vh; }.engineering-mode .stud-knowledge-edges span { border: .08vh dashed var(--aegis-border); padding: .16vh .35vh; color: var(--aegis-text-faint); font: .45vh var(--font_mono); overflow-wrap: anywhere; }
+.engineering-mode .stud-knowledge-search form { display: flex; gap: .4vh; align-items: end; flex-wrap: wrap; }.engineering-mode .stud-knowledge-search form label { flex: 1 1 28vh; }
+
 @media (max-width: 1450px) {
     .engineering-mode .stud-moodle-control-grid,.engineering-mode .stud-moodle-data-grid { grid-template-columns: minmax(0, 1fr); }
     .engineering-mode .stud-moodle-list { max-height: 28vh; }
     .engineering-mode .stud-compute-grid { grid-template-columns: minmax(0, 1fr); }
     .engineering-mode .stud-document-grid { grid-template-columns: minmax(0, 1fr); }.engineering-mode .stud-document-list { max-height: 28vh; }
+    .engineering-mode .stud-knowledge-results { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 1230px) {
     .engineering-mode .stud-moodle-config-form,.engineering-mode .stud-moodle-status-grid,.engineering-mode .stud-moodle-mini-status { grid-template-columns: minmax(0, 1fr); }
     .engineering-mode .stud-moodle-config-form label:first-child,.engineering-mode .stud-moodle-config-form label:nth-child(3),.engineering-mode .stud-moodle-config-form label:nth-child(4),.engineering-mode .stud-moodle-config-form .stud-moodle-security-note,.engineering-mode .stud-moodle-config-form footer { grid-column: auto; }
     .engineering-mode .stud-compute-intro,.engineering-mode .stud-compute-save form { grid-template-columns: minmax(0, 1fr); }.engineering-mode .stud-compute-status { justify-items: start; text-align: left; }
     .engineering-mode .stud-document-intro,.engineering-mode .stud-document-metadata { grid-template-columns: minmax(0, 1fr); }.engineering-mode .stud-document-state { justify-items: start; text-align: left; }
+    .engineering-mode .stud-knowledge-form,.engineering-mode .stud-knowledge-candidates > .workspace-panel-content > div { grid-template-columns: minmax(0, 1fr); }
 }
 
 @media (max-width: 1450px) {
