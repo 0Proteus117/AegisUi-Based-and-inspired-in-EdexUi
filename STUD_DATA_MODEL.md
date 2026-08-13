@@ -10,6 +10,8 @@
 | ResearchPaper | Local bibliographic shell; no research-provider request. |
 | Note | Lightweight title/content placeholder for a future rich editor. |
 | RevisionItem | Prompt/answer storage only; no fake scheduling behavior. |
+| AcademicDocument | Explicit managed local document metadata and bounded PDF.js extraction. |
+| ComputeResult | Explicit local deterministic calculation record. |
 | ExternalIdentifier | Normalized namespace/value reference such as `ICS_UID`, `DOI` or future Moodle IDs. |
 
 All canonical records have stable `stud_<type>_...` IDs, timestamps and an
@@ -44,6 +46,20 @@ title/description, Resource title, Paper title/abstract and Note title/content.
 Queries are tokenized locally, parameterized, bounded to 100 results and may
 filter by canonical entity types and Course ID. Credentials, hidden metadata,
 raw email content and filesystem paths are not indexed.
+
+## Academic Intelligence (schema v10)
+
+Schema v10 adds `stud_academic_concepts`, provenance-aware
+`stud_concept_observations`, explicit `stud_context_decisions` and inspectable
+`stud_context_packages`. They are an extension of the same local SQLite model,
+not a graph database or localStorage cache. Concept observations may originate
+from canonical metadata or already persisted document chunks; they record their
+source entity, extraction method and page/chunk when available.
+
+Context decisions are explicit `INCLUDE`, `EXCLUDE` or `PIN` choices made by
+the student for one root/candidate pair. They do not alter the linked object or
+external system. A Context Package is a bounded local snapshot with omitted
+items recorded; it does not invoke an assistant, model or provider.
 
 ## Moodle normalization
 

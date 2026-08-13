@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.6.9 - 2026-08-13
+
+### STUD Academic Intelligence & Knowledge Layer
+
+- Added a bounded local Academic Context Builder over canonical STUD records.
+- Added provenance-aware local concept observations, explainable relevance,
+  Assignment Coverage and source-support status without claiming academic truth.
+- Added explicit include/exclude/pin decisions and inspectable Context Packages.
+- Added a bounded relationship graph surface and context-aware FTS5 search.
+- Preserved offline-first operation: no provider, LLM, cloud inference, shell,
+  telemetry or automatic persistence is introduced by context construction.
+
 ## 2.6.8 - 2026-08-11
 
 ### STUD — Document Intelligence

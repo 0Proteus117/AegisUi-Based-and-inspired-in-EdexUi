@@ -8,6 +8,7 @@ const Research = require("./studResearchModel.class.js");
 const Citations = require("./studCitationService.class.js");
 const Orchestration = require("./studAcademicOrchestration.class.js");
 const RevisionPlanner = require("./studRevisionPlanner.class.js");
+const {StudAcademicIntelligence} = require("./studAcademicIntelligence.class.js");
 
 const TABLES = Object.freeze({
     COURSE: "stud_courses",
@@ -69,6 +70,7 @@ class StudAcademicStore {
         this.applicationVersion = options.applicationVersion || "unknown";
         this.db = null;
         this.transactionDepth = 0;
+        this.intelligence = null;
     }
 
     initialize() {
@@ -78,6 +80,7 @@ class StudAcademicStore {
             this.db = new DatabaseSync(this.dbPath);
             this.db.exec("PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL; PRAGMA busy_timeout = 5000;");
             this.runMigrations();
+            this.intelligence = new StudAcademicIntelligence(this);
             // A live timer is intentionally not reconstructed after restart.
             // Only elapsed time already checkpointed by PAUSE is retained.
             this.recoverInterruptedStudySessions();
@@ -276,6 +279,33 @@ class StudAcademicStore {
                 UNIQUE(extraction_id, ordinal)
             );
             CREATE VIRTUAL TABLE stud_document_search USING fts5(document_id UNINDEXED, extraction_id UNINDEXED, chunk_id UNINDEXED, page_start UNINDEXED, section_id UNINDEXED, title, content, tokenize='unicode61 remove_diacritics 2');
+        `}, {version: 10, sql: `
+            CREATE TABLE stud_academic_concepts (
+                id TEXT PRIMARY KEY, term TEXT NOT NULL, normalized_term TEXT NOT NULL UNIQUE,
+                created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+            );
+            CREATE TABLE stud_concept_observations (
+                id TEXT PRIMARY KEY, concept_id TEXT NOT NULL, entity_type TEXT NOT NULL, entity_id TEXT NOT NULL,
+                document_id TEXT, chunk_id TEXT, page_start INTEGER, extraction_method TEXT NOT NULL,
+                confidence TEXT NOT NULL, metadata_json TEXT, created_at TEXT NOT NULL,
+                FOREIGN KEY(concept_id) REFERENCES stud_academic_concepts(id),
+                UNIQUE(concept_id, entity_type, entity_id, chunk_id, extraction_method)
+            );
+            CREATE INDEX stud_concept_observations_entity_index ON stud_concept_observations(entity_type, entity_id, concept_id);
+            CREATE INDEX stud_concept_observations_document_index ON stud_concept_observations(document_id, page_start);
+            CREATE TABLE stud_context_decisions (
+                id TEXT PRIMARY KEY, root_type TEXT NOT NULL, root_id TEXT NOT NULL,
+                candidate_type TEXT NOT NULL, candidate_id TEXT NOT NULL, decision TEXT NOT NULL,
+                reason TEXT, metadata_json TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+                UNIQUE(root_type, root_id, candidate_type, candidate_id)
+            );
+            CREATE INDEX stud_context_decisions_root_index ON stud_context_decisions(root_type, root_id, updated_at DESC);
+            CREATE TABLE stud_context_packages (
+                id TEXT PRIMARY KEY, root_type TEXT NOT NULL, root_id TEXT NOT NULL, title TEXT NOT NULL,
+                status TEXT NOT NULL, snapshot_json TEXT NOT NULL, omitted_json TEXT NOT NULL,
+                created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+            );
+            CREATE INDEX stud_context_packages_root_index ON stud_context_packages(root_type, root_id, updated_at DESC);
         `}];
         for (const migration of migrations) {
             if (applied.has(migration.version)) continue;
@@ -1338,6 +1368,31 @@ class StudAcademicStore {
         params.push(limit);
         const rows = this.db.prepare(`SELECT entity_type, entity_id, course_id, title, snippet(stud_search, 4, '[', ']', '…', 12) AS snippet FROM stud_search WHERE ${conditions.join(" AND ")} ORDER BY rank LIMIT ?`).all(...params);
         return Object.freeze(rows.map(row => Object.freeze({entityType: row.entity_type, entityId: row.entity_id, courseId: row.course_id || null, title: row.title, snippet: row.snippet || ""})));
+    }
+
+    buildAcademicContext(rootType, rootId, options = {}) {
+        this.initialize();
+        return this.intelligence.build(rootType, rootId, options);
+    }
+
+    searchAcademicContext(rootType, rootId, query, options = {}) {
+        this.initialize();
+        return this.intelligence.contextSearch(rootType, rootId, query, options);
+    }
+
+    decideAcademicContext(rootType, rootId, candidateType, candidateId, decision, reason = null) {
+        this.initialize();
+        return this.intelligence.decide(rootType, rootId, candidateType, candidateId, decision, reason);
+    }
+
+    createAcademicContextPackage(rootType, rootId, options = {}) {
+        this.initialize();
+        return this.intelligence.createPackage(rootType, rootId, options);
+    }
+
+    listAcademicContextPackages(rootType, rootId, limit = 20) {
+        this.initialize();
+        return this.intelligence.listPackages(rootType, rootId, limit);
     }
 }
 
