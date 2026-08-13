@@ -39,7 +39,7 @@ class StudKnowledgeWorkspace {
         return `<section class="stud-knowledge-workspace">
             <article class="workspace-panel stud-knowledge-builder"><header><h2>ACADEMIC CONTEXT BUILDER</h2><span>LOCAL / EXPLAINABLE</span></header><div class="workspace-panel-content">
                 <form data-stud-knowledge-build-form class="stud-knowledge-form"><label>CONTEXT ROOT<select class="aegis-input" name="rootType">${ROOT_TYPES.map(type => `<option value="${type}"${this.state.rootType === type ? " selected" : ""}>${type.replace(/_/g, " ")}</option>`).join("")}</select></label><label>LOCAL RECORD<select class="aegis-input" name="rootId">${this.options(this.state.rootType)}</select></label><button type="submit"${this.state.busy ? " disabled" : ""}>${this.state.busy ? "BUILDING…" : "BUILD CONTEXT"}</button></form>
-                <p>Deterministic local relationships, FTS terminology and explicit user decisions only. No provider, LLM or hidden persistence is invoked.</p>
+                <p>Deterministic local relationships, FTS terminology and explicit user decisions only. Building refreshes the bounded local concept index; no provider, LLM or Context Package is invoked or persisted automatically.</p>
                 ${this.state.error ? `<div class="stud-document-error">${this.escape(this.state.error)}</div>` : ""}
             </div></article>
             ${context ? this.renderContext(context) : this.renderEmpty()}

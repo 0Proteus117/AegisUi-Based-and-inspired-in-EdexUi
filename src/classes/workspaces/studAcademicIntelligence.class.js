@@ -181,7 +181,7 @@ class StudAcademicIntelligence {
         const concepts = this.conceptsFor(root, visible);
         const coverage = root.type === "ASSIGNMENT" ? this.assignmentCoverage(root, visible, concepts) : {status: visible.length > 1 ? "AVAILABLE" : "INSUFFICIENT_CONTEXT", concepts: Object.freeze([]), sourceSupport: Object.freeze([]), message: visible.length > 1 ? "Context material is available locally." : "Selected context has insufficient linked local material."};
         const graph = this.graph(root, visible);
-        return Object.freeze({root: root.entity, rootType: root.type, candidates: Object.freeze(visible), excludedCandidates: Object.freeze(excludedCandidates), concepts: Object.freeze(concepts), coverage: Object.freeze(coverage), graph: Object.freeze(graph), omitted: Object.freeze(omitted), status: visible.length > 1 ? (omitted.length ? "TRUNCATED" : "READY") : "INSUFFICIENT_CONTEXT", generatedAt: Model.now(), policy: Object.freeze({offline: true, providersInvoked: false, llmInvoked: false, automaticPersistence: false})});
+        return Object.freeze({root: root.entity, rootType: root.type, candidates: Object.freeze(visible), excludedCandidates: Object.freeze(excludedCandidates), concepts: Object.freeze(concepts), coverage: Object.freeze(coverage), graph: Object.freeze(graph), omitted: Object.freeze(omitted), status: visible.length > 1 ? (omitted.length ? "TRUNCATED" : "READY") : "INSUFFICIENT_CONTEXT", generatedAt: Model.now(), policy: Object.freeze({offline: true, providersInvoked: false, llmInvoked: false, derivedIndexRefresh: options.refreshConcepts !== false, automaticContextPackagePersistence: false})});
     }
 
     indexConcepts(root, candidates) {
