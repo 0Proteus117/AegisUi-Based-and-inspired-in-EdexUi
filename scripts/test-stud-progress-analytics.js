@@ -1,0 +1,44 @@
+"use strict";
+
+const assert = require("assert");
+const fs = require("fs");
+const os = require("os");
+const path = require("path");
+const {StudAcademicStore} = require("../src/classes/workspaces/studAcademicStore.class.js");
+const Model = require("../src/classes/workspaces/studAcademicModel.class.js");
+const {numericGrade} = require("../src/classes/workspaces/studAcademicProgress.class.js");
+
+const root = fs.mkdtempSync(path.join(os.tmpdir(), "aegis-stud-progress-"));
+const store = new StudAcademicStore({root, applicationVersion: "test"}).initialize();
+const course = store.createEntity("COURSE", {title: "Synthetic social research", code: "SOC-101", status: "ACTIVE"});
+const numeric = store.createEntity("ASSIGNMENT", {courseId: course.id, title: "Methods brief", status: "GRADED", submissionStatus: "SUBMITTED", dueDate: "2026-11-18T14:00:00.000Z", gradeScheme: "POINTS", grade: 18, gradeMaximum: 20, weight: 40});
+const percent = store.createEntity("ASSIGNMENT", {courseId: course.id, title: "Field report", status: "GRADED", submissionStatus: "SUBMITTED", dueDate: "2026-12-18T14:00:00.000Z", gradeScheme: "PERCENTAGE", grade: 70, weight: 60});
+const text = store.createEntity("ASSIGNMENT", {courseId: course.id, title: "Seminar participation", status: "IN_PROGRESS", submissionStatus: "UNKNOWN", gradeScheme: "PASS_FAIL", gradeText: "PASS"});
+const overdue = store.createEntity("ASSIGNMENT", {courseId: course.id, title: "Overdue local draft", status: "NOT_STARTED", submissionStatus: "NOT_SUBMITTED", dueDate: "2026-01-01T00:00:00.000Z"});
+store.createProvenance({entityType: "ASSIGNMENT", entityId: numeric.id, field: "dueDate", observedValue: "2026-11-18T14:00:00.000Z", sourceType: "MOODLE", sourceId: "synthetic", sourceAuthority: "AUTHORITATIVE", observedAt: "2026-01-01T00:00:00.000Z"});
+store.createProvenance({entityType: "ASSIGNMENT", entityId: numeric.id, field: "dueDate", observedValue: "2026-11-19T14:00:00.000Z", sourceType: "EMAIL", sourceId: "synthetic_email", sourceAuthority: "TRUSTED", observedAt: "2026-01-02T00:00:00.000Z"});
+const revision = store.createEntity("REVISION_ITEM", {courseId: course.id, title: "Revision methods", prompt: "Recall methods", status: "ACTIVE"});
+const session = store.startStudySession({revisionItemId: revision.id});
+store.db.prepare("UPDATE stud_study_sessions SET elapsed_seconds=1500,status='FINISHED',ended_at=?,updated_at=? WHERE id=?").run("2026-01-03T12:00:00.000Z", "2026-01-03T12:00:00.000Z", session.id);
+
+assert.equal(store.schemaInfo().version, 12, "schema v12 migration should apply");
+assert.equal(numericGrade(numeric).percent, 90);
+assert.equal(numericGrade(text).kind, "NON_NUMERIC");
+const overview = store.progress.overview({now: "2026-06-01T00:00:00.000Z"});
+assert.equal(overview.policy.noExternalQueries, true);
+assert.equal(overview.policy.noHiddenPersistence, true);
+assert.equal(overview.summary.grades.weightedAverage, 78, "weighted numeric average should use declared weights only");
+assert.equal(overview.summary.grades.nonNumericCount, 1, "pass/fail must remain visible but excluded");
+assert.ok(overview.attention.some(item => item.kind === "OVERDUE"));
+assert.ok(overview.attention.some(item => item.kind === "CONFLICT"));
+assert.equal(overview.courses[0].revision.minutes, 25);
+assert.equal(overview.courses[0].completeness.state, "CONFLICTING");
+assert.equal(store.progress.assessments({courseId: course.id}).summary.weightedAverage, 78);
+assert.equal(store.progress.revision({courseId: course.id}).minutes, 25);
+assert.ok(store.progress.activity({courseId: course.id}).entries.length > 0);
+assert.throws(() => store.progress.metricSources({scope: "ASSIGNMENT", assignmentId: "missing"}), /invalid|does not exist/i);
+assert.throws(() => Model.normalizeByEntityType("ASSIGNMENT", {title: "Bad text grade", gradeScheme: "TEXT", grade: 1}), /cannot be stored/i);
+assert.throws(() => Model.normalizeByEntityType("ASSIGNMENT", {title: "Bad percent", gradeScheme: "PERCENTAGE", grade: 101}), /between 0 and 100/i);
+assert.equal(fs.readdirSync(root).filter(item => item !== "academic.sqlite" && !item.endsWith("-wal") && !item.endsWith("-shm")).length, 0, "analytics must not create a shadow persistence store");
+store.close(); fs.rmSync(root, {recursive: true, force: true});
+console.log("STUD Phase 12 progress analytics: PASS");

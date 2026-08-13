@@ -25,6 +25,11 @@ const CHANNELS = Object.freeze([
     "stud-relationship-list",
     "stud-search",
     "stud-command-center",
+    "stud-progress-overview",
+    "stud-progress-assessments",
+    "stud-progress-revision",
+    "stud-progress-activity",
+    "stud-progress-metric-sources",
     "stud-course-context",
     "stud-reference-list",
     "stud-reference-link",
@@ -195,6 +200,14 @@ function registerStudAcademicIpc(options = {}) {
     add("stud-relationship-list", ["entityType", "entityId"], payload => store.listRelationships(payload.entityType, payload.entityId));
     add("stud-search", ["query", "options"], payload => store.search(payload.query, payload.options || {}));
     add("stud-command-center", ["now", "limit"], payload => store.getCommandCenter(payload));
+    // Progress Analytics is a strictly derived local read surface. These
+    // handlers cannot write, invoke providers, inspect Calendar/Email, or
+    // create a background history.
+    add("stud-progress-overview", ["now", "courseId"], payload => store.progress.overview(payload));
+    add("stud-progress-assessments", ["courseId", "limit"], payload => store.progress.assessments(payload));
+    add("stud-progress-revision", ["courseId", "limit"], payload => store.progress.revision(payload));
+    add("stud-progress-activity", ["courseId", "limit"], payload => store.progress.activity(payload));
+    add("stud-progress-metric-sources", ["scope", "courseId", "assignmentId"], payload => store.progress.metricSources(payload));
     add("stud-course-context", ["courseId", "limit"], payload => store.getCourseContext(payload.courseId, {limit: payload.limit}));
     add("stud-reference-list", ["entityType", "entityId"], payload => store.listReferences(payload.entityType, payload.entityId));
     add("stud-reference-link", ["entityType", "entityId", "kind", "externalId"], payload => store.linkReference(payload));

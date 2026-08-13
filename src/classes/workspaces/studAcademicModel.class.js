@@ -2,7 +2,7 @@
 
 const crypto = require("crypto");
 
-const SCHEMA_VERSION = 11;
+const SCHEMA_VERSION = 12;
 const ENTITY_TYPES = Object.freeze(["COURSE", "ASSIGNMENT", "RESOURCE", "RESEARCH_PAPER", "NOTE", "REVISION_ITEM", "COMPUTE_RESULT", "ACADEMIC_DOCUMENT", "NOTEBOOK", "DATASET", "REPOSITORY_REFERENCE"]);
 const RELATIONSHIP_ENTITY_TYPES = Object.freeze([...ENTITY_TYPES, "EXTERNAL_IDENTIFIER"]);
 const RELATIONSHIP_TYPES = Object.freeze(["BELONGS_TO", "RELATES_TO", "SUPPORTS", "USES", "REFERENCES", "HAS_RESOURCE", "HAS_NOTE", "HAS_PAPER", "HAS_DOCUMENT", "CITES", "DERIVED_FROM_DOCUMENT", "RELATED_EMAIL", "RELATED_CALENDAR_EVENT"]);
@@ -12,6 +12,7 @@ const COST_MODELS = Object.freeze(["FREE_OPEN", "FREE_LOCAL", "FREE_SERVICE", "F
 const COURSE_STATUSES = Object.freeze(["ACTIVE", "COMPLETED", "ARCHIVED"]);
 const ASSIGNMENT_STATUSES = Object.freeze(["NOT_STARTED", "IN_PROGRESS", "SUBMITTED", "GRADED", "ARCHIVED"]);
 const SUBMISSION_STATUSES = Object.freeze(["UNKNOWN", "NOT_SUBMITTED", "SUBMITTED"]);
+const GRADE_SCHEMES = Object.freeze(["PERCENTAGE", "POINTS", "TEXT", "PASS_FAIL", "UNKNOWN"]);
 const PRIORITY_LEVELS = Object.freeze(["URGENT", "HIGH", "NORMAL", "LOW"]);
 const REVISION_STATUSES = Object.freeze(["ACTIVE", "PAUSED", "COMPLETED", "ARCHIVED"]);
 const REVISION_DIFFICULTIES = Object.freeze(["UNKNOWN", "LOW", "MEDIUM", "HIGH"]);
@@ -144,7 +145,7 @@ function normalizeCourse(input = {}, existing = {}) {
 }
 
 function normalizeAssignment(input = {}, existing = {}) {
-    assertAllowedKeys(input, ["courseId", "title", "description", "releaseDate", "dueDate", "cutoffDate", "status", "submissionStatus", "submittedAt", "grade", "gradeMaximum", "weight", "feedback", "localProgress", "priority"], "Assignment");
+    assertAllowedKeys(input, ["courseId", "title", "description", "releaseDate", "dueDate", "cutoffDate", "status", "submissionStatus", "submittedAt", "grade", "gradeMaximum", "gradeScheme", "gradeText", "weight", "feedback", "localProgress", "priority"], "Assignment");
     const result = {
         courseId: input.courseId === undefined ? existing.courseId || null : (input.courseId ? safeId(input.courseId, "Course ID") : null),
         title: input.title === undefined ? existing.title : requiredText(input.title, "Assignment title"),
@@ -157,12 +158,18 @@ function normalizeAssignment(input = {}, existing = {}) {
         submittedAt: input.submittedAt === undefined ? existing.submittedAt || null : optionalDate(input.submittedAt, "Assignment submitted at"),
         grade: input.grade === undefined ? existing.grade ?? null : optionalNumber(input.grade, "Grade"),
         gradeMaximum: input.gradeMaximum === undefined ? existing.gradeMaximum ?? null : optionalNumber(input.gradeMaximum, "Maximum grade"),
+        gradeScheme: input.gradeScheme === undefined ? existing.gradeScheme || "UNKNOWN" : enumValue(input.gradeScheme, GRADE_SCHEMES, "Grade scheme", "UNKNOWN"),
+        gradeText: input.gradeText === undefined ? existing.gradeText || null : optionalText(input.gradeText, "Grade text", 240),
         weight: input.weight === undefined ? existing.weight ?? null : optionalNumber(input.weight, "Assignment weight"),
         feedback: input.feedback === undefined ? existing.feedback || null : optionalText(input.feedback, "Assignment feedback"),
         localProgress: input.localProgress === undefined ? existing.localProgress ?? null : optionalProgress(input.localProgress),
         priority: input.priority === undefined ? existing.priority || null : enumValue(input.priority, PRIORITY_LEVELS, "Assignment priority")
     };
-    if (result.grade !== null && result.gradeMaximum !== null && result.grade > result.gradeMaximum) throw new StudError("INVALID_INPUT", "Grade cannot exceed maximum grade.");
+    if (result.gradeMaximum !== null && result.gradeMaximum <= 0) throw new StudError("INVALID_INPUT", "Maximum grade must be greater than zero.");
+    if (result.gradeScheme === "PERCENTAGE" && result.grade !== null && (result.grade < 0 || result.grade > 100)) throw new StudError("INVALID_INPUT", "Percentage grade must be between 0 and 100.");
+    if (result.gradeScheme === "POINTS" && result.grade !== null && result.gradeMaximum !== null && result.grade > result.gradeMaximum) throw new StudError("INVALID_INPUT", "Grade cannot exceed maximum grade.");
+    if (["TEXT", "PASS_FAIL"].includes(result.gradeScheme) && result.grade !== null) throw new StudError("INVALID_INPUT", "Text and pass/fail grades cannot be stored as a numeric grade.");
+    if (["TEXT", "PASS_FAIL"].includes(result.gradeScheme) && !result.gradeText) throw new StudError("INVALID_INPUT", "Text and pass/fail grades require a text value.");
     return result;
 }
 
@@ -408,7 +415,7 @@ module.exports = Object.freeze({
     SCHEMA_VERSION, ENTITY_TYPES, RELATIONSHIP_ENTITY_TYPES, RELATIONSHIP_TYPES, PROVENANCE_SOURCE_TYPES,
     PROVENANCE_AUTHORITIES, COST_MODELS, COURSE_STATUSES, ASSIGNMENT_STATUSES, DOCUMENT_TYPES, DOCUMENT_EXTRACTION_STATUSES,
     CONTEXT_RELATION_STATUSES, CONTEXT_DECISIONS, CONTEXT_PACKAGE_STATUSES, NOTEBOOK_TYPES, NOTEBOOK_LANGUAGES, NOTEBOOK_EXECUTION_STATUSES, DATASET_FORMATS,
-    SUBMISSION_STATUSES, PRIORITY_LEVELS, REVISION_STATUSES, REVISION_DIFFICULTIES, REVISION_CONFIDENCE, LIMITS, StudError, now, bytesOf, assertPlainObject,
+    SUBMISSION_STATUSES, GRADE_SCHEMES, PRIORITY_LEVELS, REVISION_STATUSES, REVISION_DIFFICULTIES, REVISION_CONFIDENCE, LIMITS, StudError, now, bytesOf, assertPlainObject,
     assertAllowedKeys, requiredText, optionalText, optionalNumber, optionalProgress, optionalNonNegativeInteger, optionalDate, enumValue,
     safeId, createId, validateEntityType, validateRelationshipEntityType, normalizeByEntityType, normalizeComputeResult, normalizeAcademicDocument, normalizeNotebook, normalizeDataset, normalizeRepositoryReference,
     normalizeProvenance, normalizeRelationship, normalizedSearchTerms

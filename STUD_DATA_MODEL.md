@@ -109,3 +109,9 @@ Schema v2 stores an optional Assignment priority (`URGENT`, `HIGH`, `NORMAL`,
 it does not write an inferred value back to the record. `localProgress` is
 validated as a number from 0 to 100 and is never derived from completion,
 grade or timeline activity.
+# Phase 12 — assignment grade representation
+
+Schema v12 extends the canonical Assignment with `gradeScheme` and `gradeText`.
+Supported schemes are `PERCENTAGE`, `POINTS`, `TEXT`, `PASS_FAIL` and `UNKNOWN`.
+They preserve the source representation; they do not infer a conversion for
+letters or pass/fail results. Progress calculations are derived at read time.

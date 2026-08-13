@@ -134,3 +134,10 @@ explicitly saves it as a canonical Note or accepts an individual Revision
 candidate, each with `AI_SUGGESTION` provenance. See
 [STUD_LOCAL_ACADEMIC_AI.md](STUD_LOCAL_ACADEMIC_AI.md) and
 [STUD_PHASE10_VALIDATION.md](STUD_PHASE10_VALIDATION.md).
+# Phase 12 — Progress Analytics
+
+`StudAcademicProgress` is a read-only derived layer over the canonical SQLite
+records. It is deliberately separate from providers and orchestration: its five
+typed IPC reads can inspect local Courses, Assignments, RevisionItems, finished
+StudySessions and provenance, but cannot mutate them, launch a provider, access
+Calendar/Email or persist a dashboard/history. See `STUD_PROGRESS_ANALYTICS.md`.

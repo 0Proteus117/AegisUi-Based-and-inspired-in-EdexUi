@@ -69,7 +69,7 @@ function ipcMock() { const handlers = new Map(); return {handlers, handle: (name
         const runtimeSource = fs.readFileSync(path.join(ROOT, "src/classes/workspaces/studComputeRuntime.class.js"), "utf8");
         const ipcSource = fs.readFileSync(path.join(ROOT, "src/classes/workspaces/studAcademicIpc.class.js"), "utf8");
         check("NO_SHELL_NETWORK_OR_EXTERNAL_INTERPRETER", () => !/child_process|spawn\(|exec\(|fetch\(|https?:\/\//.test(runtimeSource) && !ipcSource.includes("stud-compute-shell"));
-        check("MODEL_SCHEMA_V11", () => Model.SCHEMA_VERSION === 11 && Model.ENTITY_TYPES.includes("COMPUTE_RESULT") && Model.ENTITY_TYPES.includes("ACADEMIC_DOCUMENT"));
+        check("MODEL_SCHEMA_V12", () => Model.SCHEMA_VERSION === 12 && Model.ENTITY_TYPES.includes("COMPUTE_RESULT") && Model.ENTITY_TYPES.includes("ACADEMIC_DOCUMENT"));
         console.log(`STUD_ENGINEERING_COMPUTE: ${passed} checks passed`);
     } finally { fs.rmSync(root, {recursive: true, force: true}); }
 })().catch(error => { console.error(error && error.stack || error); process.exitCode = 1; });
