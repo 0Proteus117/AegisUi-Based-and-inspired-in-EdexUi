@@ -2,11 +2,11 @@
 
 const crypto = require("crypto");
 
-const SCHEMA_VERSION = 10;
-const ENTITY_TYPES = Object.freeze(["COURSE", "ASSIGNMENT", "RESOURCE", "RESEARCH_PAPER", "NOTE", "REVISION_ITEM", "COMPUTE_RESULT", "ACADEMIC_DOCUMENT"]);
+const SCHEMA_VERSION = 11;
+const ENTITY_TYPES = Object.freeze(["COURSE", "ASSIGNMENT", "RESOURCE", "RESEARCH_PAPER", "NOTE", "REVISION_ITEM", "COMPUTE_RESULT", "ACADEMIC_DOCUMENT", "NOTEBOOK", "DATASET", "REPOSITORY_REFERENCE"]);
 const RELATIONSHIP_ENTITY_TYPES = Object.freeze([...ENTITY_TYPES, "EXTERNAL_IDENTIFIER"]);
 const RELATIONSHIP_TYPES = Object.freeze(["BELONGS_TO", "RELATES_TO", "SUPPORTS", "USES", "REFERENCES", "HAS_RESOURCE", "HAS_NOTE", "HAS_PAPER", "HAS_DOCUMENT", "CITES", "DERIVED_FROM_DOCUMENT", "RELATED_EMAIL", "RELATED_CALENDAR_EVENT"]);
-const PROVENANCE_SOURCE_TYPES = Object.freeze(["USER", "MOODLE", "MOODLE_ICS", "CALENDAR", "EMAIL", "COURSE_DOCUMENT", "RESEARCH_PROVIDER", "LOCAL_EXTRACTION", "AEGIS_ENGINEERING_COMPUTE", "AI_SUGGESTION", "IMPORT", "UNKNOWN"]);
+const PROVENANCE_SOURCE_TYPES = Object.freeze(["USER", "MOODLE", "MOODLE_ICS", "CALENDAR", "EMAIL", "COURSE_DOCUMENT", "RESEARCH_PROVIDER", "GITHUB", "LOCAL_EXTRACTION", "AEGIS_ENGINEERING_COMPUTE", "AI_SUGGESTION", "IMPORT", "UNKNOWN"]);
 const PROVENANCE_AUTHORITIES = Object.freeze(["AUTHORITATIVE", "USER_OVERRIDE", "TRUSTED", "CORROBORATING", "INFERRED", "SUGGESTED", "UNKNOWN"]);
 const COST_MODELS = Object.freeze(["FREE_OPEN", "FREE_LOCAL", "FREE_SERVICE", "FREEMIUM", "PAID", "SUBSCRIPTION"]);
 const COURSE_STATUSES = Object.freeze(["ACTIVE", "COMPLETED", "ARCHIVED"]);
@@ -21,6 +21,10 @@ const DOCUMENT_EXTRACTION_STATUSES = Object.freeze(["NOT_ANALYZED", "READY", "PA
 const CONTEXT_RELATION_STATUSES = Object.freeze(["DIRECT", "DERIVED", "SUGGESTED", "CONFLICTING", "UNRESOLVED"]);
 const CONTEXT_DECISIONS = Object.freeze(["INCLUDE", "EXCLUDE", "PIN"]);
 const CONTEXT_PACKAGE_STATUSES = Object.freeze(["READY", "TRUNCATED", "INSUFFICIENT_CONTEXT"]);
+const NOTEBOOK_TYPES = Object.freeze(["GENERAL", "COMPUTATIONAL", "DATA_ANALYSIS", "CODE_EXERCISE", "REPRODUCIBLE_APPENDIX", "TEXT_ANALYSIS", "OTHER"]);
+const NOTEBOOK_LANGUAGES = Object.freeze(["TEXT", "PYTHON", "JAVASCRIPT", "R", "SQL", "PSEUDOCODE", "OTHER"]);
+const NOTEBOOK_EXECUTION_STATUSES = Object.freeze(["EDITING_ONLY", "NOT_INSTALLED", "UNAVAILABLE"]);
+const DATASET_FORMATS = Object.freeze(["CSV", "TSV"]);
 const LIMITS = Object.freeze({
     title: 240,
     code: 80,
@@ -296,6 +300,56 @@ function normalizeAcademicDocument(input = {}, existing = {}) {
     };
 }
 
+function normalizeNotebook(input = {}, existing = {}) {
+    assertAllowedKeys(input, ["title", "description", "notebookType", "language", "executionStatus", "courseId", "assignmentId", "noteId"], "Notebook");
+    return {
+        title: input.title === undefined ? existing.title : requiredText(input.title, "Notebook title"),
+        description: input.description === undefined ? existing.description || null : optionalText(input.description, "Notebook description"),
+        notebookType: input.notebookType === undefined ? existing.notebookType || "GENERAL" : enumValue(input.notebookType, NOTEBOOK_TYPES, "Notebook type", "GENERAL"),
+        language: input.language === undefined ? existing.language || "TEXT" : enumValue(input.language, NOTEBOOK_LANGUAGES, "Notebook language", "TEXT"),
+        executionStatus: input.executionStatus === undefined ? existing.executionStatus || "EDITING_ONLY" : enumValue(input.executionStatus, NOTEBOOK_EXECUTION_STATUSES, "Notebook execution status", "EDITING_ONLY"),
+        courseId: input.courseId === undefined ? existing.courseId || null : (input.courseId ? safeId(input.courseId, "Course ID") : null),
+        assignmentId: input.assignmentId === undefined ? existing.assignmentId || null : (input.assignmentId ? safeId(input.assignmentId, "Assignment ID") : null),
+        noteId: input.noteId === undefined ? existing.noteId || null : (input.noteId ? safeId(input.noteId, "Note ID") : null)
+    };
+}
+
+function normalizeDataset(input = {}, existing = {}) {
+    assertAllowedKeys(input, ["title", "description", "format", "managedReference", "mimeType", "byteSize", "checksum", "rowCount", "columnsJson", "summaryJson", "courseId", "assignmentId"], "Dataset");
+    const checksum = input.checksum === undefined ? existing.checksum || null : optionalText(input.checksum, "Dataset checksum", 128);
+    if (checksum && !/^[a-f0-9]{64}$/i.test(checksum)) throw new StudError("INVALID_INPUT", "Dataset checksum must be a SHA-256 value.");
+    return {
+        title: input.title === undefined ? existing.title : requiredText(input.title, "Dataset title"),
+        description: input.description === undefined ? existing.description || null : optionalText(input.description, "Dataset description"),
+        format: input.format === undefined ? existing.format || "CSV" : enumValue(input.format, DATASET_FORMATS, "Dataset format", "CSV"),
+        managedReference: input.managedReference === undefined ? existing.managedReference || null : optionalText(input.managedReference, "Managed dataset reference", 260),
+        mimeType: input.mimeType === undefined ? existing.mimeType || null : optionalText(input.mimeType, "Dataset MIME type", 120),
+        byteSize: input.byteSize === undefined ? existing.byteSize ?? null : optionalNonNegativeInteger(input.byteSize, "Dataset byte size", 12 * 1024 * 1024),
+        checksum: checksum ? checksum.toLowerCase() : null,
+        rowCount: input.rowCount === undefined ? existing.rowCount ?? null : optionalNonNegativeInteger(input.rowCount, "Dataset row count", 25000),
+        columnsJson: input.columnsJson === undefined ? existing.columnsJson || null : normalizedJson(input.columnsJson, "Dataset columns", 24000),
+        summaryJson: input.summaryJson === undefined ? existing.summaryJson || null : normalizedJson(input.summaryJson, "Dataset summary", 40000),
+        courseId: input.courseId === undefined ? existing.courseId || null : (input.courseId ? safeId(input.courseId, "Course ID") : null),
+        assignmentId: input.assignmentId === undefined ? existing.assignmentId || null : (input.assignmentId ? safeId(input.assignmentId, "Assignment ID") : null)
+    };
+}
+
+function normalizeRepositoryReference(input = {}, existing = {}) {
+    assertAllowedKeys(input, ["title", "provider", "owner", "repository", "canonicalUrl", "selectedRef", "commitSha", "metadataJson", "courseId", "assignmentId"], "Repository reference");
+    return {
+        title: input.title === undefined ? existing.title : requiredText(input.title, "Repository title"),
+        provider: input.provider === undefined ? existing.provider || "GITHUB" : enumValue(input.provider, ["GITHUB"], "Repository provider", "GITHUB"),
+        owner: input.owner === undefined ? existing.owner : requiredText(input.owner, "Repository owner", 100),
+        repository: input.repository === undefined ? existing.repository : requiredText(input.repository, "Repository name", 100),
+        canonicalUrl: input.canonicalUrl === undefined ? existing.canonicalUrl : requiredText(input.canonicalUrl, "Repository canonical URL", 2048),
+        selectedRef: input.selectedRef === undefined ? existing.selectedRef || null : optionalText(input.selectedRef, "Repository ref", 160),
+        commitSha: input.commitSha === undefined ? existing.commitSha || null : optionalText(input.commitSha, "Repository commit SHA", 80),
+        metadataJson: input.metadataJson === undefined ? existing.metadataJson || null : normalizedJson(input.metadataJson, "Repository metadata", 24000),
+        courseId: input.courseId === undefined ? existing.courseId || null : (input.courseId ? safeId(input.courseId, "Course ID") : null),
+        assignmentId: input.assignmentId === undefined ? existing.assignmentId || null : (input.assignmentId ? safeId(input.assignmentId, "Assignment ID") : null)
+    };
+}
+
 function normalizeByEntityType(type, input, existing) {
     switch (validateEntityType(type)) {
     case "COURSE": return normalizeCourse(input, existing);
@@ -306,6 +360,9 @@ function normalizeByEntityType(type, input, existing) {
     case "REVISION_ITEM": return normalizeRevisionItem(input, existing);
     case "COMPUTE_RESULT": return normalizeComputeResult(input, existing);
     case "ACADEMIC_DOCUMENT": return normalizeAcademicDocument(input, existing);
+    case "NOTEBOOK": return normalizeNotebook(input, existing);
+    case "DATASET": return normalizeDataset(input, existing);
+    case "REPOSITORY_REFERENCE": return normalizeRepositoryReference(input, existing);
     default: throw new StudError("INVALID_INPUT", "Unsupported academic entity type.");
     }
 }
@@ -350,9 +407,9 @@ function normalizedSearchTerms(query) {
 module.exports = Object.freeze({
     SCHEMA_VERSION, ENTITY_TYPES, RELATIONSHIP_ENTITY_TYPES, RELATIONSHIP_TYPES, PROVENANCE_SOURCE_TYPES,
     PROVENANCE_AUTHORITIES, COST_MODELS, COURSE_STATUSES, ASSIGNMENT_STATUSES, DOCUMENT_TYPES, DOCUMENT_EXTRACTION_STATUSES,
-    CONTEXT_RELATION_STATUSES, CONTEXT_DECISIONS, CONTEXT_PACKAGE_STATUSES,
+    CONTEXT_RELATION_STATUSES, CONTEXT_DECISIONS, CONTEXT_PACKAGE_STATUSES, NOTEBOOK_TYPES, NOTEBOOK_LANGUAGES, NOTEBOOK_EXECUTION_STATUSES, DATASET_FORMATS,
     SUBMISSION_STATUSES, PRIORITY_LEVELS, REVISION_STATUSES, REVISION_DIFFICULTIES, REVISION_CONFIDENCE, LIMITS, StudError, now, bytesOf, assertPlainObject,
     assertAllowedKeys, requiredText, optionalText, optionalNumber, optionalProgress, optionalNonNegativeInteger, optionalDate, enumValue,
-    safeId, createId, validateEntityType, validateRelationshipEntityType, normalizeByEntityType, normalizeComputeResult, normalizeAcademicDocument,
+    safeId, createId, validateEntityType, validateRelationshipEntityType, normalizeByEntityType, normalizeComputeResult, normalizeAcademicDocument, normalizeNotebook, normalizeDataset, normalizeRepositoryReference,
     normalizeProvenance, normalizeRelationship, normalizedSearchTerms
 });

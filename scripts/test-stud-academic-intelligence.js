@@ -33,7 +33,7 @@ function ipcMock() { const handlers = new Map(); return {handlers, handle: (name
         const extraction = {status: "READY", engine: "PDFJS_BUILT_IN", pageCount: 2, warnings: [], pages: [{pageNumber: 1, text: "Control systems stability and transfer function analysis.", textHash: "a".repeat(64)}, {pageNumber: 2, text: "Thermal response validates engineering evidence.", textHash: "b".repeat(64)}], chunks: [{pageStart: 1, pageEnd: 1, chunkType: "TEXT", content: "Control systems stability transfer function", contentHash: "c".repeat(64)}, {pageStart: 2, pageEnd: 2, chunkType: "TEXT", content: "Thermal response evidence", contentHash: "d".repeat(64)}], references: []};
         store.persistDocumentExtraction(document.id, extraction);
 
-        check("SCHEMA_V10_MIGRATES_CONTEXT_TABLES", () => { assert.strictEqual(store.schemaInfo().version, 10); assert.ok(Model.CONTEXT_RELATION_STATUSES.includes("SUGGESTED")); });
+        check("SCHEMA_V11_MIGRATES_CONTEXT_TABLES", () => { assert.strictEqual(store.schemaInfo().version, 11); assert.ok(Model.CONTEXT_RELATION_STATUSES.includes("SUGGESTED")); });
         const context = store.buildAcademicContext("ASSIGNMENT", assignment.id, {limit: 80});
         check("ASSIGNMENT_CONTEXT_DERIVES_DIRECT_AND_DERIVED", () => { assert.ok(context.candidates.some(item => item.entityId === document.id && item.relationStatus === "DIRECT")); assert.ok(context.candidates.some(item => item.entityId === engineering.id && item.relationStatus === "DERIVED")); });
         check("EXPLAINABLE_RELEVANCE_HAS_REASONS", () => assert.ok(context.candidates.every(item => item.reasons.length && !item.reasons.some(reason => /AI understands/i.test(reason)))));

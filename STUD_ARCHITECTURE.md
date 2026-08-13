@@ -51,6 +51,27 @@ limits and validation evidence are in
 [STUD_COMPUTE_DATA_PLOTS.md](STUD_COMPUTE_DATA_PLOTS.md) and
 [STUD_PHASE7_VALIDATION.md](STUD_PHASE7_VALIDATION.md).
 
+## Notebook / Data / GitHub Workbench (Phase 11)
+
+Phase 11 adds a separate discipline-neutral workbench. Notebook is not
+Engineering Compute: notebook source is editable canonical academic material but
+is not evaluated by Electron. The base capability is honestly
+`EDITING_ONLY / NOT_INSTALLED`, because the audited project contained no safe
+existing Python/Jupyter/Pyodide runtime and no packaged execution boundary was
+added.
+
+CSV/TSV arrives only through the existing explicit native-picker pattern, then
+is copied into bounded managed STUD storage. The renderer receives preview and
+normalized statistics rather than a local path. A repository reference is
+local-first; its only optional network action is a user-initiated fixed GitHub
+public metadata adapter. It has no token, clone, generic URL/method/header,
+polling or write capability. Notebook cells and workbench metadata enter
+Academic Context Packages only through the existing bounded review path, so
+Local Academic AI remains a reader and has no notebook/data/GitHub tool use.
+
+See [STUD_NOTEBOOK_DATA_GITHUB.md](STUD_NOTEBOOK_DATA_GITHUB.md) and
+[STUD_PHASE11_VALIDATION.md](STUD_PHASE11_VALIDATION.md).
+
 ## Phase 1 model
 
 Canonical IDs are generated locally and remain independent of external

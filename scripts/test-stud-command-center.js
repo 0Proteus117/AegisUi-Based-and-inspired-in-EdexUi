@@ -64,11 +64,12 @@ try {
     check("COMMAND_CENTER_RENDERER_BOUNDARY", () => {
         assert.ok(manager.includes("new StudCommandCenter"));
         assert.ok(commandCenter.includes("STUDENT COMMAND CENTER"));
-        assert.ok(commandCenter.includes('"RESEARCH", "DOCUMENTS", "KNOWLEDGE", "AI", "NOTES", "TOOLS", "SERVICES", "MOODLE"'));
+        assert.ok(commandCenter.includes('"RESEARCH", "DOCUMENTS", "KNOWLEDGE", "AI", "NOTES", "TOOLS", "WORKBENCH", "SERVICES", "MOODLE"'));
         assert.ok(commandCenter.includes("StudComputeWorkspace"));
         assert.ok(commandCenter.includes("StudDocumentWorkspace"));
         assert.ok(commandCenter.includes("StudKnowledgeWorkspace"));
         assert.ok(commandCenter.includes("StudAcademicAssistantWorkspace"));
+        assert.ok(commandCenter.includes("StudNotebookWorkspace"));
         assert.ok(commandCenter.includes("FTS5 searches only local canonical academic records"));
         assert.ok(commandCenter.includes("STUD DOES NOT SCAN, OPEN OR COPY EXTERNAL CONTENT"));
         assert.ok(!commandCenter.includes("fetch("));

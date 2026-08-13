@@ -12,6 +12,9 @@
 | RevisionItem | Prompt/answer storage only; no fake scheduling behavior. |
 | AcademicDocument | Explicit managed local document metadata and bounded PDF.js extraction. |
 | ComputeResult | Explicit local deterministic calculation record. |
+| Notebook | Explicit local Markdown/code/raw academic record; base execution is editing-only. |
+| Dataset | Explicit managed CSV/TSV metadata, checksum, bounded schema and summary. |
+| RepositoryReference | Explicit public GitHub reference and optional normalized metadata. |
 | ExternalIdentifier | Normalized namespace/value reference such as `ICS_UID`, `DOI` or future Moodle IDs. |
 
 All canonical records have stable `stud_<type>_...` IDs, timestamps and an
@@ -27,7 +30,7 @@ valid: corroborating and conflicting observations stay visible; STUD never
 resolves them automatically.
 
 Source types: `USER`, `MOODLE`, `MOODLE_ICS`, `CALENDAR`, `EMAIL`, `COURSE_DOCUMENT`,
-`RESEARCH_PROVIDER`, `LOCAL_EXTRACTION`, `AI_SUGGESTION`, `IMPORT`, `UNKNOWN`.
+`RESEARCH_PROVIDER`, `GITHUB`, `LOCAL_EXTRACTION`, `AI_SUGGESTION`, `IMPORT`, `UNKNOWN`.
 Authority is explicit: `AUTHORITATIVE`, `TRUSTED`, `CORROBORATING`, `INFERRED`,
 `SUGGESTED` or `UNKNOWN`.
 
@@ -47,7 +50,7 @@ Queries are tokenized locally, parameterized, bounded to 100 results and may
 filter by canonical entity types and Course ID. Credentials, hidden metadata,
 raw email content and filesystem paths are not indexed.
 
-## Academic Intelligence (schema v10)
+## Academic Intelligence and Workbench (schema v10–v11)
 
 Schema v10 adds `stud_academic_concepts`, provenance-aware
 `stud_concept_observations`, explicit `stud_context_decisions` and inspectable
@@ -71,6 +74,15 @@ scan. The Local Academic AI runtime reads one selected package and keeps its
 retrieval trace, model response and revision suggestions in process memory.
 Only an explicit Save as Note or Accept as Revision Item action reuses the
 existing canonical persistence and records `AI_SUGGESTION` provenance.
+
+Schema v11 adds `stud_notebooks`, `stud_notebook_cells`,
+`stud_notebook_outputs`, `stud_datasets` and `stud_repository_references` with
+foreign-key context fields and normal explicit relationships. Notebook outputs
+are bounded normalized records reserved for a future approved engine; Phase 11
+does not create fabricated execution output. Dataset managed references are
+relative to `userData/stud` and validated before read. Repository metadata is
+stored only after an explicit fixed-adapter request and never contains tokens
+or raw provider payloads.
 
 ## Moodle normalization
 
