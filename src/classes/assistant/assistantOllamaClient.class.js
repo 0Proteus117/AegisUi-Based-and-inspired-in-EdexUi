@@ -33,7 +33,8 @@
         const message = String((error && (error.code || error.message)) || error || fallback);
         if (/INVALID_ENDPOINT/i.test(message)) return "INVALID_ENDPOINT";
         if (/ECONNREFUSED|ENOTFOUND|EHOSTUNREACH|fetch failed|Failed to fetch|network/i.test(message)) return "OLLAMA_OFFLINE";
-        if (/aborted|timeout|ETIMEDOUT/i.test(message)) return "TIMEOUT";
+        if (/aborted/i.test(message)) return "CANCELLED";
+        if (/timeout|ETIMEDOUT/i.test(message)) return "TIMEOUT";
         return fallback;
     }
 
@@ -67,11 +68,16 @@
             const url = `${this.endpoint}${path}`;
 
             if (this.http && this.https && this.URL) {
-                return this.nodeRequest(url, {method, body, timeoutMs});
+                return this.nodeRequest(url, {method, body, timeoutMs, signal: options.signal});
             }
 
             if (typeof fetch === "function") {
                 const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+                const abort = () => controller && controller.abort();
+                if (options.signal) {
+                    if (options.signal.aborted) abort();
+                    else options.signal.addEventListener("abort", abort, {once: true});
+                }
                 const timer = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
                 return fetch(url, {
                     method,
@@ -80,6 +86,7 @@
                     signal: controller ? controller.signal : undefined
                 }).then(async response => {
                     if (timer) clearTimeout(timer);
+                    if (options.signal) options.signal.removeEventListener("abort", abort);
                     const text = await response.text();
                     if (!response.ok) {
                         const error = new Error(`HTTP_${response.status}: ${text.slice(0, 240)}`);
@@ -89,6 +96,7 @@
                     return text ? JSON.parse(text) : {};
                 }).catch(error => {
                     if (timer) clearTimeout(timer);
+                    if (options.signal) options.signal.removeEventListener("abort", abort);
                     throw error;
                 });
             }
@@ -124,19 +132,35 @@
                         if (response.statusCode < 200 || response.statusCode >= 300) {
                             const error = new Error(`HTTP_${response.statusCode}: ${data.slice(0, 240)}`);
                             error.statusCode = response.statusCode;
-                            reject(error);
+                            finish(reject)(error);
                             return;
                         }
                         try {
-                            resolve(data ? JSON.parse(data) : {});
+                            finish(resolve)(data ? JSON.parse(data) : {});
                         } catch (error) {
                             error.code = "INVALID_JSON";
-                            reject(error);
+                            finish(reject)(error);
                         }
                     });
                 });
 
-                request.on("error", reject);
+                let settled = false;
+                const finish = callback => value => {
+                    if (settled) return;
+                    settled = true;
+                    if (options.signal) options.signal.removeEventListener("abort", onAbort);
+                    callback(value);
+                };
+                const onAbort = () => {
+                    const error = new Error("ABORTED");
+                    error.code = "ABORTED";
+                    request.destroy(error);
+                };
+                request.on("error", finish(reject));
+                if (options.signal) {
+                    if (options.signal.aborted) onAbort();
+                    else options.signal.addEventListener("abort", onAbort, {once: true});
+                }
                 request.setTimeout(options.timeoutMs || this.timeoutMs || 60000, () => {
                     request.destroy(new Error("TIMEOUT"));
                 });

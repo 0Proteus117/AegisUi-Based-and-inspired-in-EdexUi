@@ -68,10 +68,14 @@ the ephemeral session by default or sends case data to a provider.
   original-byte SHA-256. It does not upload the media, infer authenticity or
   silently persist the original. Image GPS can only hand off to Geospatial
   Verification after an explicit analyst action.
-- STUD v2.6.9 adds an explainable, provenance-aware Academic Intelligence
-  layer: bounded local context, concepts, coverage, source support, manual
-  decisions and inspectable Context Packages. It invokes no LLM, cloud model
-  or provider. STUD v2.6.8 adds a discipline-neutral local Document Intelligence workbench
+- STUD v2.6.10 adds an explicit local Academic AI surface that consumes only
+  reviewed Context Packages, uses bounded local retrieval and Ollama without
+  tools, cloud fallback or automatic persistence. It builds on the
+  explainable, provenance-aware Academic Intelligence layer: bounded local
+  context, concepts, coverage, source support, manual decisions and
+  inspectable Context Packages. The Academic Intelligence layer itself invokes
+  no model, cloud provider or external service.
+- STUD v2.6.8 adds a discipline-neutral local Document Intelligence workbench
   for explicit PDF ingestion, page/chunk provenance and academic context. It
   remains offline-first and does not upload or automatically classify documents.
 - STUD v2.6.7 adds an explicit local Engineering Compute workbench for bounded
