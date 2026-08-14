@@ -17,6 +17,7 @@
 ## Structural response
 
 - Moodle is now a persistent integration: base configuration, stable remote identifiers, minimal sync metadata and user preferences persist locally; the sanctioned Web Service token remains encrypted only in the existing macOS safe-storage vault.
+- UEL advertises external/system-browser SSO. The failed embedded Electron login path was removed and replaced with Moodle's official mobile launch callback. The callback is short-lived, replay-protected, signature-validated and registered as the packaged `aegisui` macOS URL scheme.
 - A user-initiated sync is bounded but no longer limited to twenty courses. It reconciles accessible courses, assignments, statuses, grades, feedback, course resources, calendar observations and public forum/announcement containers only when the service exposes them.
 - Explicit Moodle file downloads are held in managed STUD storage with a SHA-256, MIME type and provider provenance. Temporary token-bearing file URLs are constructed only in memory and never enter SQLite, logs, screenshots or canonical records.
 - Download and interpretation are separate: PDFs are `READY FOR INDEX` until the analyst selects **INDEX ALL COURSE MATERIAL** or analyzes a document individually.
@@ -25,7 +26,7 @@
 
 ## Privacy and security invariants
 
-- No university password, copied browser cookie, browser session or temporary signed URL is stored.
+- No university password, copied browser cookie, browser session or temporary signed URL is stored. Moodle's returned Web Service credentials are encrypted in the existing `safeStorage` vault and never enter SQLite, logs or renderer state.
 - `FORGET MOODLE ACCOUNT` deletes secure Moodle credentials and disables future automatic sync; it does not remove already imported academic data.
 - Automatic sync is opt-in, OFF by default, bounded to 15 minutes through 24 hours and uses only stored authorized credentials while they are valid.
 - Moodle remains read-only: no submissions, messages, forum posts, grading, enrolment, file upload or account mutation is implemented.

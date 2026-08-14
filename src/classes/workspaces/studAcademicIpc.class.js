@@ -167,7 +167,7 @@ function registerStudAcademicIpc(options = {}) {
     let dialog = options.dialog || null;
     if (!dialog) { try { dialog = require("electron").dialog; } catch (error) {} }
     const runtime = options.researchRuntime || new StudResearchRuntime({root: resolveStorageRoot(options.app, options), dialog, env: options.env || process.env, fetch: options.fetch});
-    const lmsRuntime = options.lmsRuntime || new StudLmsRuntime({store, root: resolveStorageRoot(options.app, options), fetch: options.fetch, safeStorage: options.safeStorage, shell: options.shell, allowLocalDevelopment: options.allowLocalDevelopment === true});
+    const lmsRuntime = options.lmsRuntime || new StudLmsRuntime({store, root: resolveStorageRoot(options.app, options), fetch: options.fetch, safeStorage: options.safeStorage, shell: options.shell, app: options.app, allowLocalDevelopment: options.allowLocalDevelopment === true});
     // The compute runtime is pure local code. It has no process spawning,
     // filesystem, provider or network capability.
     const computeRuntime = options.computeRuntime || new StudComputeRuntime();

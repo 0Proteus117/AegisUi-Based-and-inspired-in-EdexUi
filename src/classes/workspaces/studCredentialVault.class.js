@@ -35,7 +35,7 @@ class StudCredentialVault {
         const id = safeId(providerId);
         const current = this.read();
         const next = {...(current[id] || {})};
-        ["token", "icsUrl"].forEach(key => {
+        ["token", "privateToken", "icsUrl"].forEach(key => {
             if (secrets[key] === undefined) return;
             if (secrets[key] === null || secrets[key] === "") delete next[key];
             else next[key] = this.safeStorage.encryptString(String(secrets[key])).toString("base64");
@@ -58,10 +58,10 @@ class StudCredentialVault {
 
     get(providerId) {
         const id = safeId(providerId);
-        if (!this.available()) return {token: null, icsUrl: null};
+        if (!this.available()) return {token: null, privateToken: null, icsUrl: null};
         const encrypted = this.read()[id] || {};
         const decrypt = value => value ? this.safeStorage.decryptString(Buffer.from(value, "base64")) : null;
-        try { return Object.freeze({token: decrypt(encrypted.token), icsUrl: decrypt(encrypted.icsUrl)}); }
+        try { return Object.freeze({token: decrypt(encrypted.token), privateToken: decrypt(encrypted.privateToken), icsUrl: decrypt(encrypted.icsUrl)}); }
         catch (error) { throw new LmsError("SECURE_STORAGE_UNAVAILABLE", "Secure Moodle credentials cannot be decrypted safely."); }
     }
 

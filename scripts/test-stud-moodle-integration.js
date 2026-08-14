@@ -8,7 +8,7 @@ const Lms = require("../src/classes/workspaces/studLmsModel.class.js");
 const Model = require("../src/classes/workspaces/studAcademicModel.class.js");
 const {StudAcademicStore} = require("../src/classes/workspaces/studAcademicStore.class.js");
 const {StudCredentialVault} = require("../src/classes/workspaces/studCredentialVault.class.js");
-const {StudLmsRuntime, parseIcs} = require("../src/classes/workspaces/studLmsRuntime.class.js");
+const {StudLmsRuntime, parseIcs, moodleSsoSignature, parseMoodleSsoCallback} = require("../src/classes/workspaces/studLmsRuntime.class.js");
 const {MoodleAdapter, READ_FUNCTIONS} = require("../src/classes/workspaces/studMoodleAdapter.class.js");
 const {MoodleSessionAdapter} = require("../src/classes/workspaces/studMoodleSessionAdapter.class.js");
 
@@ -18,6 +18,7 @@ function response(payload, status = 200, headers = {}) { return new Response(typ
 function fakeSafeStorage() { return {isEncryptionAvailable: () => true, encryptString: value => Buffer.from(`vault:${value}`, "utf8"), decryptString: value => { const text = Buffer.from(value).toString("utf8"); if (!text.startsWith("vault:")) throw new Error("bad vault"); return text.slice(6); }}; }
 
 function fullFetch(url, options = {}) {
+    if (String(url).includes("/lib/ajax/service-nologin.php")) return Promise.resolve(response([{index: 0, data: {wwwroot: "https://moodle.uel.ac.uk", httpswwwroot: "https://moodle.uel.ac.uk", enablewebservices: 1, enablemobilewebservice: 1, typeoflogin: 2, launchurl: "https://moodle.uel.ac.uk/admin/tool/mobile/launch.php"}}]));
     if (String(url).includes("calendar/export")) return Promise.resolve(response("BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nUID:ics-1\r\nSUMMARY:Synthetic ICS deadline\r\nDTSTART:20261118T140000Z\r\nDTEND:20261118T160000Z\r\nEND:VEVENT\r\nEND:VCALENDAR"));
     if (String(url).includes("/webservice/pluginfile.php/")) {
         const parsed = new URL(String(url));
@@ -54,19 +55,29 @@ function fullFetch(url, options = {}) {
 
         const initial = runtime.status();
         check("MOODLE_CONFIG_REQUIRED_INITIAL", initial.status === "CONFIG_REQUIRED" && initial.tokenConfigured === false);
-        const authEvents = {}; let permissionCheck = null; let permissionRequest = null; let openedAuthUrl = null; let authWindowOptions = null; let authWindowOpenHandler = null;
-        const fakeAuthSession = {setPermissionCheckHandler: handler => { permissionCheck = handler; }, setPermissionRequestHandler: handler => { permissionRequest = handler; }};
-        const fakeContents = {setWindowOpenHandler: handler => { authWindowOpenHandler = handler; }, on: (name, handler) => { authEvents[name] = handler; }, loadURL: async url => { openedAuthUrl = url; }};
-        const fakeWindow = {webContents: fakeContents, isDestroyed: () => false, show: () => {}, focus: () => {}, close: () => {}, on: () => {}};
-        const sessionRuntime = new StudLmsRuntime({store, root, vault, fetch: fullFetch, safeStorage: fakeSafeStorage(), session: {fromPartition: value => { check("MOODLE_AUTH_PARTITION_ISOLATED", value === "persist:aegis-stud-moodle-auth"); return fakeAuthSession; }}, BrowserWindow: function FakeBrowserWindow(options) { authWindowOptions = options; return fakeWindow; }});
+        let openedAuthUrl = null; let protocol = null; let openUrlHandler = null; let prevented = false;
+        const fakeApp = {on: (name, handler) => { if (name === "open-url") openUrlHandler = handler; }, removeListener: () => {}, setAsDefaultProtocolClient: value => { protocol = value; return true; }};
+        const sessionRuntime = new StudLmsRuntime({store, root, vault, fetch: fullFetch, safeStorage: fakeSafeStorage(), app: fakeApp, shell: {openExternal: async value => { openedAuthUrl = value; }}});
+        let bootstrapped = 0;
+        sessionRuntime.probe = async () => { bootstrapped += 1; return {}; };
+        sessionRuntime.sync = async () => { bootstrapped += 1; return {}; };
         const opened = await sessionRuntime.openWeb();
-        check("MOODLE_OFFICIAL_LOGIN_WINDOW", opened.opened && openedAuthUrl === "https://moodle.uel.ac.uk/auth/oidc/");
-        check("MOODLE_LOGIN_WINDOW_DENIES_PERMISSIONS", permissionCheck() === false && (() => { let denied = null; permissionRequest(null, "camera", value => { denied = value; }); return denied === false; })());
-        check("MOODLE_LOGIN_WINDOW_CAN_CLOSE", typeof authEvents["before-input-event"] === "function" && authWindowOptions.frame === true && authWindowOptions.closable === true && authWindowOptions.maximizable === false && authWindowOptions.fullscreenable === false && authWindowOptions.width === 980 && authWindowOptions.height === 720);
-        check("MOODLE_LOGIN_SSO_CHAIN_ALLOWLIST", sessionRuntime.isAllowedAuthUrl("https://aadcdn.msauth.net/shared/1.0/content.js", "https://moodle.uel.ac.uk") && sessionRuntime.isAllowedAuthUrl("https://login.windows.net/common/oauth2/authorize", "https://moodle.uel.ac.uk") && !sessionRuntime.isAllowedAuthUrl("https://untrusted.example.test/redirect", "https://moodle.uel.ac.uk"));
-        check("MOODLE_LOGIN_TRUSTED_CONTINUATION_POPUP", authWindowOpenHandler({url: "https://login.microsoftonline.com/common/oauth2/authorize"}).action === "allow" && authWindowOpenHandler({url: "https://untrusted.example.test/redirect"}).action === "deny");
-        check("MOODLE_LOGIN_WAITS_FOR_REAL_SESSION", sessionRuntime.isAuthenticatedMoodleNavigation("https://moodle.uel.ac.uk/auth/oidc/", "https://moodle.uel.ac.uk") === false && sessionRuntime.isAuthenticatedMoodleNavigation("https://moodle.uel.ac.uk/my/", "https://moodle.uel.ac.uk") === true);
-        check("MOODLE_LOGIN_DOES_NOT_COPY_BROWSER_COOKIES", !Object.keys(sessionRuntime.status()).some(key => /cookie|password/i.test(key)) && !fs.readFileSync(path.join(root, "academic.sqlite")).includes(Buffer.from("aegis-stud-moodle-auth")));
+        const launch = new URL(openedAuthUrl);
+        check("MOODLE_SYSTEM_BROWSER_SSO", opened.opened && opened.systemBrowser && launch.origin === "https://moodle.uel.ac.uk" && launch.pathname === "/admin/tool/mobile/launch.php");
+        check("MOODLE_OFFICIAL_MOBILE_SERVICE", launch.searchParams.get("service") === "moodle_mobile_app" && launch.searchParams.get("urlscheme") === "aegisui" && /^\d+$/.test(launch.searchParams.get("passport")));
+        check("MOODLE_PROTOCOL_REGISTERED", protocol === "aegisui" && typeof openUrlHandler === "function");
+        const signature = moodleSsoSignature("https://moodle.uel.ac.uk", launch.searchParams.get("passport"));
+        const callbackUrl = `aegisui://token=${signature}:::callbacktoken:::privatecallbacktoken`;
+        openUrlHandler({preventDefault: () => { prevented = true; }}, callbackUrl);
+        await new Promise(resolve => setTimeout(resolve, 20));
+        check("MOODLE_SSO_CALLBACK_ACCEPTED", prevented && vault.status("stud_moodle_default").tokenConfigured && bootstrapped === 2 && !sessionRuntime.status().authenticationPending);
+        const callbackVaultText = fs.readFileSync(path.join(root, "secure-provider-credentials.json"), "utf8");
+        check("MOODLE_SSO_SECRETS_ENCRYPTED", !callbackVaultText.includes("callbacktoken") && !callbackVaultText.includes("privatecallbacktoken") && !fs.readFileSync(path.join(root, "academic.sqlite")).includes(Buffer.from("callbacktoken")));
+        await assert.rejects(() => sessionRuntime.acceptSsoCallback(callbackUrl), error => error.code === "AUTH_REQUIRED");
+        check("MOODLE_SSO_REPLAY_BLOCKED", true);
+        assert.throws(() => parseMoodleSsoCallback("aegisui://token=bad:::token:::private"), error => error.code === "AUTH_REQUIRED");
+        check("MOODLE_SSO_MALFORMED_CALLBACK_BLOCKED", true);
+        check("MOODLE_LOGIN_DOES_NOT_COPY_BROWSER_COOKIES", !Object.keys(sessionRuntime.status()).some(key => /cookie|password/i.test(key)));
         sessionRuntime.dispose();
         const configured = runtime.configure({baseUrl: "https://moodle.synthetic.test", displayName: "Synthetic Moodle", token: "synthetic-token", icsUrl: "https://moodle.synthetic.test/calendar/export"});
         check("MOODLE_SECURE_TOKEN_STATUS", configured.tokenConfigured && configured.icsConfigured && !Object.prototype.hasOwnProperty.call(configured, "token"));

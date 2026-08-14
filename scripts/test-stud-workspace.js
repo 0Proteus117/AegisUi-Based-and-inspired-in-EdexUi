@@ -12,6 +12,7 @@ const manager = fs.readFileSync(path.join(ROOT, "src/classes/workspaceManager.cl
 const commandCenter = fs.readFileSync(path.join(ROOT, "src/classes/workspaces/studCommandCenter.class.js"), "utf8");
 const research = fs.readFileSync(path.join(ROOT, "src/classes/workspaces/studResearchWorkspace.class.js"), "utf8");
 const moodle = fs.readFileSync(path.join(ROOT, "src/classes/workspaces/studMoodleWorkspace.class.js"), "utf8");
+const moodleRuntime = fs.readFileSync(path.join(ROOT, "src/classes/workspaces/studLmsRuntime.class.js"), "utf8");
 const revision = fs.readFileSync(path.join(ROOT, "src/classes/workspaces/studRevisionWorkspace.class.js"), "utf8");
 const documents = fs.readFileSync(path.join(ROOT, "src/classes/workspaces/studDocumentWorkspace.class.js"), "utf8");
 const css = fs.readFileSync(path.join(ROOT, "src/assets/css/workspaces.css"), "utf8");
@@ -71,7 +72,7 @@ const checks = {
     STUD_ORCHESTRATION_EXPLICIT: commandCenter.includes("ACADEMIC CONTEXT") && commandCenter.includes("FIND RELATED CALENDAR") && commandCenter.includes("FIND RELATED EMAIL") && commandCenter.includes("USER OVERRIDE") && !commandCenter.includes("calendar-events"),
     STUD_DARK_LIGHT_SAFE_TOKENS: css.includes("stud-command-center-grid") && css.includes(".stud-command-center-deck .aegis-input:focus") && css.includes("@media (max-width: 1230px)") && theme.includes("STUD Phase 2 keeps the Command Center semantic"),
     STUD_PROVIDER_RUNTIME_EXPLICIT: research.includes("stud-research-search") && research.includes("EPHEMERAL SEARCH") && !manager.includes("stud-fetch") && !multithread.includes("stud-network"),
-    STUD_MOODLE_IS_EXPLICIT_READ_ONLY: moodle.includes("CAPABILITY PROBE") && moodle.includes("SYNC NOW · ALL ACADEMIC DATA") && moodle.includes("READ-ONLY POLICY") && moodle.includes("POLICY_DISABLED") && moodle.includes("FORGET MOODLE ACCOUNT") && !moodle.includes("SUBMIT ASSIGNMENT"),
+    STUD_MOODLE_IS_EXPLICIT_READ_ONLY: moodle.includes("SYNC NOW") && moodle.includes("READ ONLY") && moodle.includes("POLICY_DISABLED") && moodle.includes("FORGET ACCOUNT") && moodleRuntime.includes("SYSTEM_BROWSER_SSO") && moodleRuntime.includes("moodle_mobile_app") && !moodle.includes("SUBMIT ASSIGNMENT"),
     STUD_MOODLE_LAYOUT_IS_RESPONSIVE: css.includes("stud-moodle-control-grid") && css.includes("stud-moodle-capability-grid") && css.includes("stud-moodle-data-grid"),
     STUD_REVISION_LOCAL_FIRST: revision.includes("TODAY / STUDY PLAN") && revision.includes("START STUDY SESSION") && revision.includes("LOCAL / EXPLICIT") && !revision.includes("fetch(") && !revision.includes("localStorage"),
     STUD_COMPUTE_TYPED_LOCAL_BOUNDARY: commandCenter.includes("StudComputeWorkspace") && fs.readFileSync(path.join(ROOT, "src/classes/workspaces/studComputeRuntime.class.js"), "utf8").includes("AEGIS_BOUNDED_LOCAL_COMPUTE"),

@@ -50,6 +50,14 @@
   "build": {
     "appId": "com.edex.ui.eng",
     "productName": "AegisUi",
+    "protocols": [
+      {
+        "name": "AegisUi Moodle SSO",
+        "schemes": [
+          "aegisui"
+        ]
+      }
+    ],
     "publish": "github",
     "asar": true,
     "asarUnpack": [

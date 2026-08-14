@@ -3,15 +3,33 @@
 const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
-const {safeStorage, shell, BrowserWindow, session} = require("electron");
+const {safeStorage, shell, app: electronApp} = require("electron");
 const Model = require("./studAcademicModel.class.js");
 const Lms = require("./studLmsModel.class.js");
 const {StudCredentialVault} = require("./studCredentialVault.class.js");
 const {MoodleAdapter} = require("./studMoodleAdapter.class.js");
-const {MoodleSessionAdapter} = require("./studMoodleSessionAdapter.class.js");
 
 const DEFAULT_UEL_MOODLE_URL = "https://moodle.uel.ac.uk";
 const MOODLE_AUTH_PARTITION = "persist:aegis-stud-moodle-auth";
+const MOODLE_APP_SCHEME = "aegisui";
+const MOODLE_MOBILE_SERVICE = "moodle_mobile_app";
+const MOODLE_SSO_TTL_MS = 10 * 60 * 1000;
+
+function moodleSsoSignature(siteUrl, passport) {
+    return crypto.createHash("md5").update(`${siteUrl}${passport}`, "utf8").digest("hex");
+}
+
+function parseMoodleSsoCallback(value) {
+    const prefix = `${MOODLE_APP_SCHEME}://token=`;
+    const raw = String(value || "");
+    if (!raw.startsWith(prefix) || raw.length > 10000 || /[?#]/.test(raw)) throw new Lms.LmsError("AUTH_REQUIRED", "Moodle returned an invalid sign-in response.");
+    const parts = raw.slice(prefix.length).split(":::");
+    if (parts.length !== 3 || !/^[a-f0-9]{32}$/i.test(parts[0])) throw new Lms.LmsError("AUTH_REQUIRED", "Moodle returned an invalid sign-in response.");
+    const token = Lms.text(parts[1], "Moodle token", Lms.LIMITS.token, true);
+    const privateToken = parts[2] ? Lms.text(parts[2], "Moodle private token", Lms.LIMITS.token, true) : null;
+    if (!/^[a-z0-9]+$/i.test(token) || privateToken && !/^[a-z0-9]+$/i.test(privateToken)) throw new Lms.LmsError("AUTH_REQUIRED", "Moodle returned an invalid sign-in response.");
+    return Object.freeze({signature: parts[0].toLowerCase(), token, privateToken});
+}
 
 function parseIcsDate(value) {
     const raw = String(value || "").trim();
@@ -57,17 +75,23 @@ class StudLmsRuntime {
         this.root = options.root;
         this.fetch = options.fetch || globalThis.fetch;
         this.shell = options.shell || shell;
-        this.BrowserWindow = options.BrowserWindow || BrowserWindow;
-        this.electronSession = options.session || session;
+        this.app = options.app || electronApp || null;
         this.vault = options.vault || new StudCredentialVault({root: this.root, safeStorage: options.safeStorage || safeStorage});
         this.controllers = new Map();
         this.documentRuntime = options.documentRuntime || null;
         this.allowLocalDevelopment = options.allowLocalDevelopment === true;
         this.syncTimer = null;
-        this.authWindow = null;
         this.browserSessionConfigured = false;
-        this.authVerificationRunning = false;
         this.authBootstrapRunning = false;
+        this.pendingSso = null;
+        this.onOpenUrl = (event, value) => {
+            if (event && typeof event.preventDefault === "function") event.preventDefault();
+            this.acceptSsoCallback(value).catch(error => {
+                const instance = this.store.getProviderInstance("stud_moodle_default");
+                if (instance) this.persistState(instance, {status: "ERROR", lastAttempt: Model.now(), lastErrorCode: error.code || "AUTH_REQUIRED"});
+            });
+        };
+        if (this.app && typeof this.app.on === "function") this.app.on("open-url", this.onOpenUrl);
         this.scheduleAutomaticSync();
     }
 
@@ -76,8 +100,9 @@ class StudLmsRuntime {
     safeStatus(instance = this.store.getProviderInstance("stud_moodle_default")) {
         const credential = this.vault.status("stud_moodle_default");
         const sync = instance ? this.store.getProviderSyncPreference(instance.id) : Object.freeze({providerId: "stud_moodle_default", automaticSync: false, intervalMinutes: 360, nextSyncAt: null, lastResult: Object.freeze({}), updatedAt: null});
-        if (!instance) return Object.freeze({id: "stud_moodle_default", providerType: "MOODLE", displayName: "UEL Moodle", baseUrl: DEFAULT_UEL_MOODLE_URL, status: "CONFIG_REQUIRED", capabilities: Lms.emptyCapabilities(), lastSuccessfulSync: null, lastAttempt: null, lastErrorCode: null, sync, browserSessionConfigured: this.browserSessionConfigured, ...credential});
-        return Object.freeze({...instance, sync, browserSessionConfigured: this.browserSessionConfigured, ...credential});
+        const authenticationPending = Boolean(this.pendingSso && this.pendingSso.expiresAt > Date.now());
+        if (!instance) return Object.freeze({id: "stud_moodle_default", providerType: "MOODLE", displayName: "UEL Moodle", baseUrl: DEFAULT_UEL_MOODLE_URL, status: "CONFIG_REQUIRED", capabilities: Lms.emptyCapabilities(), lastSuccessfulSync: null, lastAttempt: null, lastErrorCode: null, sync, browserSessionConfigured: false, authenticationPending, authenticationMode: "SYSTEM_BROWSER_SSO", ...credential});
+        return Object.freeze({...instance, sync, browserSessionConfigured: false, authenticationPending, authenticationMode: "SYSTEM_BROWSER_SSO", ...credential});
     }
 
     status() { return this.safeStatus(); }
@@ -102,10 +127,7 @@ class StudLmsRuntime {
         Lms.allowedKeys(input, ["automaticSync", "intervalMinutes"], "Moodle sync preference");
         const instance = this.store.getProviderInstance("stud_moodle_default");
         if (!instance) throw new Lms.LmsError("CONFIG_REQUIRED", "Configure Moodle before enabling automatic synchronization.");
-        if (input.automaticSync === true && !this.vault.status(instance.id).tokenConfigured) {
-            this.browserSessionConfigured = this.browserSessionConfigured || await this.hasBrowserSession(instance);
-            if (!this.browserSessionConfigured) throw new Lms.LmsError("AUTH_REQUIRED", "Connect through the official Moodle sign-in window before enabling automatic synchronization.");
-        }
+        if (input.automaticSync === true && !this.vault.status(instance.id).tokenConfigured) throw new Lms.LmsError("AUTH_REQUIRED", "Connect Moodle in your browser before enabling automatic synchronization.");
         const minutes = input.intervalMinutes === undefined ? undefined : Math.max(15, Math.min(Number(input.intervalMinutes) || 360, 24 * 60));
         const preference = this.store.saveProviderSyncPreference({providerId: instance.id, automaticSync: input.automaticSync, intervalMinutes: minutes, nextSyncAt: input.automaticSync ? new Date(Date.now() + (minutes || this.store.getProviderSyncPreference(instance.id).intervalMinutes) * 60000).toISOString() : null});
         this.scheduleAutomaticSync();
@@ -117,7 +139,7 @@ class StudLmsRuntime {
         if (this.syncTimer) { clearTimeout(this.syncTimer); this.syncTimer = null; }
         this.vault.forget("stud_moodle_default");
         this.browserSessionConfigured = false;
-        try { await this.authSession().clearStorageData({storages: ["cookies", "localstorage", "indexdb", "serviceworkers"]}); } catch (error) {}
+        this.pendingSso = null;
         if (instance) {
             this.store.saveProviderSyncPreference({providerId: instance.id, automaticSync: false, nextSyncAt: null, lastResult: {status: "ACCOUNT_FORGOTTEN", at: Model.now()}});
             this.persistState(instance, {status: "CONFIG_REQUIRED", capabilities: instance.capabilities, lastAttempt: instance.lastAttempt, lastSuccessfulSync: instance.lastSuccessfulSync, lastErrorCode: null});
@@ -148,8 +170,7 @@ class StudLmsRuntime {
             this.syncTimer = setTimeout(() => { this.syncTimer = null; this.performSync(Lms.createRequestId("stud_moodle_auto"), true).catch(() => {}); }, delay);
             if (!preference.nextSyncAt) this.store.saveProviderSyncPreference({providerId: instance.id, automaticSync: true, intervalMinutes: preference.intervalMinutes, nextSyncAt: new Date(Date.now() + preference.intervalMinutes * 60000).toISOString()});
         };
-        if (this.vault.status(instance.id).tokenConfigured) { schedule(true); return; }
-        this.hasBrowserSession(instance).then(available => { this.browserSessionConfigured = available; schedule(available); }).catch(() => {});
+        if (this.vault.status(instance.id).tokenConfigured) schedule(true);
     }
 
     requireInstance() {
@@ -159,25 +180,10 @@ class StudLmsRuntime {
         return {instance, secret};
     }
 
-    async hasBrowserSession(instance) {
-        if (!instance || !instance.baseUrl) return false;
-        try {
-            const authSession = this.authSession();
-            const cookies = await authSession.cookies.get({url: instance.baseUrl});
-            // Cookie values are deliberately never read, returned, logged or
-            // copied. This merely asks Chromium's protected profile whether
-            // its own authorized session is still present.
-            return Array.isArray(cookies) && cookies.some(cookie => /^MoodleSession|^MOODLEID_/i.test(String(cookie.name || "")));
-        } catch (error) { return false; }
-    }
-
     async requireConfigured() {
         const {instance, secret} = this.requireInstance();
         if (secret.token) return {instance, secret, authentication: "WEB_SERVICE_TOKEN"};
-        const sessionAvailable = this.browserSessionConfigured || await this.hasBrowserSession(instance);
-        if (!sessionAvailable) throw new Lms.LmsError("AUTH_REQUIRED", "Connect through the official Moodle sign-in window before synchronizing.");
-        this.browserSessionConfigured = true;
-        return {instance, secret, authentication: "BROWSER_SESSION"};
+        throw new Lms.LmsError("AUTH_REQUIRED", "Connect Moodle in your browser before synchronizing.");
     }
 
     ensureDefaultInstance() {
@@ -189,63 +195,7 @@ class StudLmsRuntime {
         });
     }
 
-    authSession() {
-        if (!this.electronSession || typeof this.electronSession.fromPartition !== "function") throw new Lms.LmsError("OFFLINE", "The secure Moodle sign-in window is unavailable.");
-        const authSession = this.electronSession.fromPartition(MOODLE_AUTH_PARTITION);
-        // The partition belongs only to Aegis' Moodle sign-in window.  It never
-        // imports browser cookies and cannot request device permissions.
-        authSession.setPermissionCheckHandler(() => false);
-        authSession.setPermissionRequestHandler((_webContents, _permission, callback) => callback(false));
-        return authSession;
-    }
-
-    isAllowedAuthUrl(value, baseUrl) {
-        try {
-            const target = new URL(value); const base = new URL(baseUrl);
-            if (target.protocol !== "https:" || target.username || target.password) return false;
-            // The documented UEL OIDC route redirects to Microsoft identity.
-            // Keep the sign-in window purpose-bound instead of making it a
-            // general browser just because the identity flow crosses origins.
-            const host = target.hostname.toLowerCase();
-            return host === base.hostname || host.endsWith(".uel.ac.uk") ||
-                host === "login.microsoftonline.com" || host.endsWith(".microsoftonline.com") ||
-                host.endsWith(".microsoft.com") || host === "login.live.com" ||
-                host === "login.windows.net" || host.endsWith(".windows.net") ||
-                host.endsWith(".windowsazure.com") || host.endsWith(".microsoftonline-p.com") ||
-                host.endsWith(".msauth.net") || host.endsWith(".msftauth.net");
-        } catch (error) { return false; }
-    }
-
-    isAuthenticatedMoodleNavigation(value, baseUrl) {
-        try {
-            const target = new URL(value); const base = new URL(baseUrl);
-            if (target.protocol !== "https:" || target.hostname !== base.hostname) return false;
-            // /auth/oidc is the hand-off route into SSO, not evidence of an
-            // authenticated Moodle session.  Treating it as completion was
-            // starting read operations while the user was still signing in.
-            return !/^\/(?:login|auth\/oidc)(?:\/|$)/i.test(target.pathname);
-        } catch (error) { return false; }
-    }
-
-    async verifyBrowserSession(instance) {
-        if (this.authVerificationRunning) return false;
-        this.authVerificationRunning = true;
-        try {
-            // dashboard() makes one fixed same-instance request and requires
-            // Moodle's own session key.  It never reads, returns or persists
-            // cookie values.  This is the sole completion gate after SSO.
-            const adapter = this.adapter(instance, {}, Lms.createRequestId("stud_moodle_login_verify"), "BROWSER_SESSION");
-            await adapter.dashboard();
-            this.browserSessionConfigured = true;
-            this.persistState(instance, {status: "PARTIAL", lastAttempt: Model.now(), lastErrorCode: null});
-            return true;
-        } catch (error) {
-            return false;
-        } finally { this.authVerificationRunning = false; }
-    }
-
     adapter(instance, secret, requestId, authentication = "WEB_SERVICE_TOKEN") {
-        if (authentication === "BROWSER_SESSION") return new MoodleSessionAdapter({baseUrl: instance.baseUrl, session: this.authSession(), requestId, controllers: this.controllers, allowLocalDevelopment: this.allowLocalDevelopment});
         return new MoodleAdapter({baseUrl: instance.baseUrl, token: secret.token, fetch: this.fetch, requestId, controllers: this.controllers, allowLocalDevelopment: this.allowLocalDevelopment});
     }
 
@@ -387,77 +337,91 @@ class StudLmsRuntime {
         } finally { clearTimeout(timeout); if (this.controllers.get(requestId) === controller) this.controllers.delete(requestId); }
     }
 
+    async publicConfig(instance) {
+        const endpoint = new URL("/lib/ajax/service-nologin.php?info=tool_mobile_get_public_config&lang=en", instance.baseUrl);
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 12000);
+        try {
+            const response = await this.fetch(endpoint.toString(), {
+                method: "POST", credentials: "omit", redirect: "error", cache: "no-store",
+                headers: {"content-type": "application/json", accept: "application/json"},
+                body: JSON.stringify([{index: 0, methodname: "tool_mobile_get_public_config", args: {}}]), signal: controller.signal
+            });
+            if (!response.ok) throw new Lms.LmsError("SERVER_ERROR", `Moodle configuration returned HTTP ${response.status}.`);
+            const bytes = Buffer.from(await response.arrayBuffer());
+            if (!bytes.length || bytes.length > 256 * 1024) throw new Lms.LmsError("MALFORMED_RESPONSE", "Moodle configuration exceeded the permitted size.");
+            let payload;
+            try { payload = JSON.parse(bytes.toString("utf8")); } catch (error) { throw new Lms.LmsError("MALFORMED_RESPONSE", "Moodle returned invalid public configuration."); }
+            const envelope = Array.isArray(payload) ? payload[0] : null;
+            const data = envelope && envelope.data;
+            if (!data || envelope.error === true) throw new Lms.LmsError("MALFORMED_RESPONSE", "Moodle did not expose a valid public configuration.");
+            const site = Lms.normalizeBaseUrl(data.httpswwwroot || data.wwwroot, {allowLocalDevelopment: this.allowLocalDevelopment});
+            if (new URL(site).origin !== new URL(instance.baseUrl).origin) throw new Lms.LmsError("POLICY_BLOCKED", "Moodle public configuration changed the approved instance origin.");
+            const launch = new URL(data.launchurl || "/admin/tool/mobile/launch.php", site);
+            if (launch.origin !== new URL(site).origin || launch.pathname !== "/admin/tool/mobile/launch.php" || launch.username || launch.password) throw new Lms.LmsError("POLICY_BLOCKED", "Moodle returned an unsupported authentication endpoint.");
+            return Object.freeze({siteUrl: site, launchUrl: launch.toString(), typeOfLogin: Number(data.typeoflogin), webServices: Number(data.enablewebservices) === 1, mobileWebService: Number(data.enablemobilewebservice) === 1});
+        } catch (error) {
+            if (error instanceof Lms.LmsError) throw error;
+            if (controller.signal.aborted) throw new Lms.LmsError("TIMEOUT", "Moodle did not respond while preparing sign-in.");
+            throw new Lms.LmsError("OFFLINE", "Moodle sign-in could not be prepared from this device.");
+        } finally { clearTimeout(timeout); }
+    }
+
+    registerProtocolClient() {
+        if (!this.app || typeof this.app.setAsDefaultProtocolClient !== "function") return false;
+        try { return this.app.setAsDefaultProtocolClient(MOODLE_APP_SCHEME); }
+        catch (error) { return false; }
+    }
+
+    async acceptSsoCallback(value) {
+        const pending = this.pendingSso;
+        if (!pending || pending.expiresAt <= Date.now()) { this.pendingSso = null; throw new Lms.LmsError("AUTH_REQUIRED", "The Moodle sign-in request expired. Start the connection again."); }
+        const callback = parseMoodleSsoCallback(value);
+        const expectedHttps = moodleSsoSignature(pending.siteUrl, pending.passport);
+        const alternate = moodleSsoSignature(pending.siteUrl.replace(/^https:/, "http:"), pending.passport);
+        const matches = [expectedHttps, alternate].some(signature => crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(callback.signature)));
+        this.pendingSso = null;
+        if (!matches) throw new Lms.LmsError("AUTH_REQUIRED", "Moodle returned a sign-in response that does not belong to this request.");
+        const instance = this.ensureDefaultInstance();
+        this.vault.put(instance.id, {token: callback.token, privateToken: callback.privateToken});
+        this.persistState(instance, {status: "PARTIAL", lastAttempt: Model.now(), lastErrorCode: null});
+        if (this.authBootstrapRunning) return Object.freeze({accepted: true, synchronized: false});
+        this.authBootstrapRunning = true;
+        try {
+            await this.probe({requestId: Lms.createRequestId("stud_moodle_sso_probe")});
+            await this.sync({requestId: Lms.createRequestId("stud_moodle_sso_sync")});
+            return Object.freeze({accepted: true, synchronized: true});
+        } finally { this.authBootstrapRunning = false; }
+    }
+
     async openWeb() {
         const instance = this.ensureDefaultInstance();
-        // UEL's public /login route temporarily redirects through HTTP before
-        // reaching OIDC. Enter the documented HTTPS OIDC route directly so the
-        // isolated window never has to relax its HTTPS-only navigation policy.
-        const url = `${Lms.deriveMoodleWebUrl(instance.baseUrl)}/auth/oidc/`;
-        if (!this.BrowserWindow) throw new Lms.LmsError("OFFLINE", "The secure Moodle sign-in window is unavailable.");
-        if (this.authWindow && !this.authWindow.isDestroyed()) { this.authWindow.show(); this.authWindow.focus(); return Object.freeze({opened: true, existing: true}); }
-        const authSession = this.authSession();
-        const window = new this.BrowserWindow({
-            width: 980, height: 720, minWidth: 780, minHeight: 560, useContentSize: true, center: true,
-            title: "AegisUi — Connect Moodle", frame: true, titleBarStyle: "default", closable: true, minimizable: true,
-            maximizable: false, fullscreenable: false, resizable: true,
-            webPreferences: {session: authSession, sandbox: true, contextIsolation: true, nodeIntegration: false, webSecurity: true, allowRunningInsecureContent: false, devTools: false, webviewTag: false, nativeWindowOpen: false}
-        });
-        this.authWindow = window;
-        const contents = window.webContents;
-        const complete = target => {
-            if (this.isAuthenticatedMoodleNavigation(target, instance.baseUrl)) {
-                this.verifyBrowserSession(instance).then(verified => {
-                    if (!verified || this.authBootstrapRunning) return;
-                        this.authBootstrapRunning = true;
-                        // Authentication is an explicit user action in the
-                        // official window. Once it succeeds, the approved
-                        // read-only probe and bounded first sync continue
-                        // automatically; no technical token UI is required.
-                        setTimeout(() => this.probe({requestId: Lms.createRequestId("stud_moodle_login_probe")})
-                            .then(() => this.sync({requestId: Lms.createRequestId("stud_moodle_login_sync")}))
-                            .catch(error => this.persistState(instance, {status: error.code === "OFFLINE" ? "OFFLINE" : "ERROR", lastAttempt: Model.now(), lastErrorCode: error.code || "SERVER_ERROR"}))
-                            .finally(() => { this.authBootstrapRunning = false; }), 350);
-                }).catch(() => {});
-            }
-        };
-        const attachAuthContents = (targetContents, owner) => {
-            targetContents.setWindowOpenHandler(({url: target}) => {
-                if (!this.isAllowedAuthUrl(target, instance.baseUrl)) return {action: "deny"};
-                // Microsoft can use a short-lived trusted child window to
-                // complete account or MFA continuation. Denying it makes a
-                // valid password submit appear to hang. The child receives
-                // the same isolated Aegis-owned session and no privileges.
-                return {action: "allow", overrideBrowserWindowOptions: {
-                    parent: window, modal: true, width: 900, height: 680, minWidth: 720, minHeight: 520,
-                    title: "AegisUi — Continue UEL sign-in", frame: true, closable: true, minimizable: true,
-                    maximizable: false, fullscreenable: false, resizable: true,
-                    webPreferences: {session: authSession, sandbox: true, contextIsolation: true, nodeIntegration: false, webSecurity: true, allowRunningInsecureContent: false, devTools: false, webviewTag: false, nativeWindowOpen: false}
-                }};
-            });
-            targetContents.on("will-navigate", (event, target) => { if (!this.isAllowedAuthUrl(target, instance.baseUrl)) event.preventDefault(); });
-            targetContents.on("will-redirect", (event, target) => { if (!this.isAllowedAuthUrl(target, instance.baseUrl)) event.preventDefault(); });
-            targetContents.on("before-input-event", (event, input) => {
-                if (input.key === "Escape" || ((input.meta || input.control) && String(input.key || "").toLowerCase() === "w")) {
-                    event.preventDefault();
-                    try { if (!owner.isDestroyed()) owner.close(); } catch (error) {}
-                }
-            });
-            // Do not react while an identity page is still navigating. Only
-            // inspect the final visible document after loading has settled.
-            targetContents.on("did-stop-loading", () => complete(targetContents.getURL()));
-            targetContents.on("did-create-window", child => {
-                attachAuthContents(child.webContents, child);
-            });
-        };
-        attachAuthContents(contents, window);
-        window.on("closed", () => { if (this.authWindow === window) this.authWindow = null; });
-        try { await contents.loadURL(url); }
-        catch (error) { try { if (!window.isDestroyed()) window.close(); } catch (_) {} throw new Lms.LmsError("OFFLINE", "The official Moodle sign-in page could not be opened."); }
-        return Object.freeze({opened: true, existing: false});
+        const config = await this.publicConfig(instance);
+        if (!config.webServices || !config.mobileWebService) throw new Lms.LmsError("SERVICE_DISABLED", "This Moodle instance has not enabled its supported mobile Web Service.");
+        if (config.typeOfLogin !== 2) throw new Lms.LmsError("PROTOCOL_DISABLED", "This Moodle instance does not advertise the required system-browser SSO flow.");
+        if (!this.shell || typeof this.shell.openExternal !== "function") throw new Lms.LmsError("OFFLINE", "The system browser is unavailable.");
+        this.registerProtocolClient();
+        const passport = String(crypto.randomInt(0x100000, 0x7fffffff));
+        this.pendingSso = Object.freeze({siteUrl: config.siteUrl, passport, expiresAt: Date.now() + MOODLE_SSO_TTL_MS});
+        const launch = new URL(config.launchUrl);
+        launch.search = "";
+        launch.searchParams.set("service", MOODLE_MOBILE_SERVICE);
+        launch.searchParams.set("passport", passport);
+        launch.searchParams.set("urlscheme", MOODLE_APP_SCHEME);
+        try { await this.shell.openExternal(launch.toString()); }
+        catch (error) { this.pendingSso = null; throw new Lms.LmsError("OFFLINE", "The official Moodle sign-in could not be opened in your browser."); }
+        return Object.freeze({opened: true, systemBrowser: true, authenticationPending: true});
     }
 
     cancel(requestId) { const controller = this.controllers.get(String(requestId || "")); if (controller) controller.abort(); return Object.freeze({cancelled: Boolean(controller)}); }
-    dispose() { if (this.syncTimer) clearTimeout(this.syncTimer); this.syncTimer = null; this.controllers.forEach(controller => controller.abort()); this.controllers.clear(); }
+    dispose() {
+        if (this.syncTimer) clearTimeout(this.syncTimer);
+        this.syncTimer = null;
+        this.pendingSso = null;
+        this.controllers.forEach(controller => controller.abort());
+        this.controllers.clear();
+        if (this.app && typeof this.app.removeListener === "function") this.app.removeListener("open-url", this.onOpenUrl);
+    }
 }
 
-module.exports = {StudLmsRuntime, parseIcs, parseIcsDate, stateFromCapabilities, DEFAULT_UEL_MOODLE_URL, MOODLE_AUTH_PARTITION};
+module.exports = {StudLmsRuntime, parseIcs, parseIcsDate, stateFromCapabilities, moodleSsoSignature, parseMoodleSsoCallback, DEFAULT_UEL_MOODLE_URL, MOODLE_AUTH_PARTITION, MOODLE_APP_SCHEME, MOODLE_MOBILE_SERVICE, MOODLE_SSO_TTL_MS};

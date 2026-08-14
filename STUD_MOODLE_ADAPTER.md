@@ -25,6 +25,33 @@ The audited read function set is:
 | Completion | `core_completion_get_activities_completion_status` |
 | Forum read (reserved) | `mod_forum_get_forums_by_courses` |
 
+## UEL system-browser SSO
+
+UEL's public Moodle configuration reports Web Services and Mobile Web Services
+enabled with `typeoflogin = 2` and the official
+`/admin/tool/mobile/launch.php` endpoint. Moodle defines this mode as external
+browser SSO. An embedded Electron login window is therefore not a supported
+substitute: Microsoft/UEL conditional-access and device checks must complete in
+the user's normal system browser.
+
+`CONNECT UEL MOODLE` now performs the official Moodle app flow:
+
+1. fetch the bounded unauthenticated public configuration from the fixed UEL
+   Moodle origin;
+2. create a short-lived, in-memory passport and open the official launch URL in
+   the system browser;
+3. receive `aegisui://token=...` through the packaged macOS URL scheme;
+4. validate the returned MD5 launch signature against the pending site and
+   passport, reject expiry/replay/malformed callbacks, and consume the request;
+5. encrypt the Moodle token/private token in the existing macOS `safeStorage`
+   vault;
+6. run the existing read-only capability probe and bounded initial sync.
+
+The password, MFA challenge, browser cookies and browser profile remain outside
+AegisUi. Callback URLs are secrets and are never logged, returned to the
+renderer or persisted. Reconnection uses the encrypted Web Service token while
+it remains valid.
+
 Submission status and feedback are reported only when the configured Moodle
 service exposes defensible read data. Unsupported, hidden or denied functions
 remain visible as `UNSUPPORTED`, `NOT_EXPOSED`, `PERMISSION_DENIED` or
@@ -42,20 +69,20 @@ executed by AegisUi. This is distinct from an unavailable Moodle capability.
 
 ## Institutional verification
 
-Reviewed on 2026-08-11 using public Moodle and UEL material:
+Reviewed on 2026-08-14 using public Moodle and UEL material:
 
 - **Confirmed:** Moodle supports external services and token-based Web Service
   access only when an institution enables an external service, authorizes the
   user and permits the required functions.
 - **Confirmed:** UEL public student information identifies Moodle as the
   learning environment and describes normal browser access.
-- **Conditional:** a UEL Moodle REST/Mobile service can be used only if UEL
-  exposes it to the student and the institution grants a sanctioned token and
-  read functions.
-- **Unknown:** the live UEL URL, exposed service, token issuance, function
-  allowlist and permissions. No UEL configuration or credentials were supplied,
-  so live institutional validation was not performed.
+- **Confirmed:** the live UEL Moodle public configuration exposes Web Services,
+  Mobile Web Services, external-browser SSO (`typeoflogin = 2`) and the official
+  mobile launch endpoint.
+- **Conditional:** the exact read-function allowlist and student permissions are
+  known only after the authenticated capability probe. Unsupported functions
+  remain fail-closed and visible as unavailable.
 
 Sources: [Moodle external services](https://moodledev.io/docs/5.0/apis/subsystems/external),
-[Moodle web services](https://docs.moodle.org/501/en/Using_web_services),
+[Moodle mobile features](https://docs.moodle.org/500/en/admin/setting/mobilefeatures),
 [UEL Track My Future](https://www.uel.ac.uk/about/professional-services/it-services/track-my-future).
