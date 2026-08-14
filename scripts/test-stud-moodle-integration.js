@@ -55,9 +55,9 @@ function fullFetch(url, options = {}) {
 
         const initial = runtime.status();
         check("MOODLE_CONFIG_REQUIRED_INITIAL", initial.status === "CONFIG_REQUIRED" && initial.tokenConfigured === false);
-        let openedAuthUrl = null; let protocol = null; let openUrlHandler = null; let prevented = false;
+        let openedAuthUrl = null; const openedAuthUrls = []; let protocol = null; let openUrlHandler = null; let prevented = false;
         const fakeApp = {on: (name, handler) => { if (name === "open-url") openUrlHandler = handler; }, removeListener: () => {}, setAsDefaultProtocolClient: value => { protocol = value; return true; }};
-        const sessionRuntime = new StudLmsRuntime({store, root, vault, fetch: fullFetch, safeStorage: fakeSafeStorage(), app: fakeApp, shell: {openExternal: async value => { openedAuthUrl = value; }}});
+        const sessionRuntime = new StudLmsRuntime({store, root, vault, fetch: fullFetch, safeStorage: fakeSafeStorage(), app: fakeApp, shell: {openExternal: async value => { openedAuthUrl = value; openedAuthUrls.push(value); }}});
         let bootstrapped = 0;
         sessionRuntime.probe = async () => { bootstrapped += 1; return {}; };
         sessionRuntime.sync = async () => { bootstrapped += 1; return {}; };
@@ -66,6 +66,8 @@ function fullFetch(url, options = {}) {
         check("MOODLE_SYSTEM_BROWSER_SSO", opened.opened && opened.systemBrowser && launch.origin === "https://moodle.uel.ac.uk" && launch.pathname === "/admin/tool/mobile/launch.php");
         check("MOODLE_OFFICIAL_MOBILE_SERVICE", launch.searchParams.get("service") === "moodle_mobile_app" && launch.searchParams.get("urlscheme") === "aegisui" && /^\d+$/.test(launch.searchParams.get("passport")));
         check("MOODLE_PROTOCOL_REGISTERED", protocol === "aegisui" && typeof openUrlHandler === "function");
+        const resumed = await sessionRuntime.openWeb();
+        check("MOODLE_SSO_RESUMES_PENDING_REQUEST", resumed.resumed === true && openedAuthUrls.length === 2 && openedAuthUrls[0] === openedAuthUrls[1]);
         const signature = moodleSsoSignature("https://moodle.uel.ac.uk", launch.searchParams.get("passport"));
         const callbackUrl = `aegisui://token=${signature}:::callbacktoken:::privatecallbacktoken`;
         openUrlHandler({preventDefault: () => { prevented = true; }}, callbackUrl);

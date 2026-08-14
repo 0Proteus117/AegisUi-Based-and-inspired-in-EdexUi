@@ -395,19 +395,25 @@ class StudLmsRuntime {
     }
 
     async openWeb() {
+        if (!this.shell || typeof this.shell.openExternal !== "function") throw new Lms.LmsError("OFFLINE", "The system browser is unavailable.");
+        const active = this.pendingSso && this.pendingSso.expiresAt > Date.now() ? this.pendingSso : null;
+        if (active) {
+            try { await this.shell.openExternal(active.launchUrl); }
+            catch (error) { throw new Lms.LmsError("OFFLINE", "The pending Moodle sign-in could not be resumed in your browser."); }
+            return Object.freeze({opened: true, resumed: true, systemBrowser: true, authenticationPending: true});
+        }
         const instance = this.ensureDefaultInstance();
         const config = await this.publicConfig(instance);
         if (!config.webServices || !config.mobileWebService) throw new Lms.LmsError("SERVICE_DISABLED", "This Moodle instance has not enabled its supported mobile Web Service.");
         if (config.typeOfLogin !== 2) throw new Lms.LmsError("PROTOCOL_DISABLED", "This Moodle instance does not advertise the required system-browser SSO flow.");
-        if (!this.shell || typeof this.shell.openExternal !== "function") throw new Lms.LmsError("OFFLINE", "The system browser is unavailable.");
         this.registerProtocolClient();
         const passport = String(crypto.randomInt(0x100000, 0x7fffffff));
-        this.pendingSso = Object.freeze({siteUrl: config.siteUrl, passport, expiresAt: Date.now() + MOODLE_SSO_TTL_MS});
         const launch = new URL(config.launchUrl);
         launch.search = "";
         launch.searchParams.set("service", MOODLE_MOBILE_SERVICE);
         launch.searchParams.set("passport", passport);
         launch.searchParams.set("urlscheme", MOODLE_APP_SCHEME);
+        this.pendingSso = Object.freeze({siteUrl: config.siteUrl, passport, launchUrl: launch.toString(), expiresAt: Date.now() + MOODLE_SSO_TTL_MS});
         try { await this.shell.openExternal(launch.toString()); }
         catch (error) { this.pendingSso = null; throw new Lms.LmsError("OFFLINE", "The official Moodle sign-in could not be opened in your browser."); }
         return Object.freeze({opened: true, systemBrowser: true, authenticationPending: true});
