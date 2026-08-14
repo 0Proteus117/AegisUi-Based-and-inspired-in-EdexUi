@@ -60,7 +60,7 @@ function fullFetch(url, options = {}) {
         const fakeWindow = {webContents: fakeContents, isDestroyed: () => false, show: () => {}, focus: () => {}, on: () => {}};
         const sessionRuntime = new StudLmsRuntime({store, root, vault, fetch: fullFetch, safeStorage: fakeSafeStorage(), session: {fromPartition: value => { check("MOODLE_AUTH_PARTITION_ISOLATED", value === "persist:aegis-stud-moodle-auth"); return fakeAuthSession; }}, BrowserWindow: function FakeBrowserWindow() { return fakeWindow; }});
         const opened = await sessionRuntime.openWeb();
-        check("MOODLE_OFFICIAL_LOGIN_WINDOW", opened.opened && openedAuthUrl === "https://moodle.uel.ac.uk/login");
+        check("MOODLE_OFFICIAL_LOGIN_WINDOW", opened.opened && openedAuthUrl === "https://moodle.uel.ac.uk/auth/oidc/");
         check("MOODLE_LOGIN_WINDOW_DENIES_PERMISSIONS", permissionCheck() === false && (() => { let denied = null; permissionRequest(null, "camera", value => { denied = value; }); return denied === false; })());
         check("MOODLE_LOGIN_DOES_NOT_COPY_BROWSER_COOKIES", !Object.keys(sessionRuntime.status()).some(key => /cookie|password/i.test(key)) && !fs.readFileSync(path.join(root, "academic.sqlite")).includes(Buffer.from("aegis-stud-moodle-auth")));
         sessionRuntime.dispose();

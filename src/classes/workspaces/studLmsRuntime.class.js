@@ -352,7 +352,10 @@ class StudLmsRuntime {
 
     async openWeb() {
         const instance = this.ensureDefaultInstance();
-        const url = `${Lms.deriveMoodleWebUrl(instance.baseUrl)}/login`;
+        // UEL's public /login route temporarily redirects through HTTP before
+        // reaching OIDC. Enter the documented HTTPS OIDC route directly so the
+        // isolated window never has to relax its HTTPS-only navigation policy.
+        const url = `${Lms.deriveMoodleWebUrl(instance.baseUrl)}/auth/oidc/`;
         if (!this.BrowserWindow) throw new Lms.LmsError("OFFLINE", "The secure Moodle sign-in window is unavailable.");
         if (this.authWindow && !this.authWindow.isDestroyed()) { this.authWindow.show(); this.authWindow.focus(); return Object.freeze({opened: true, existing: true}); }
         const authSession = this.authSession();
@@ -388,6 +391,7 @@ class StudLmsRuntime {
             return {action: "deny"};
         });
         contents.on("will-navigate", (event, target) => { if (!this.isAllowedAuthUrl(target, instance.baseUrl)) event.preventDefault(); });
+        contents.on("will-redirect", (event, target) => { if (!this.isAllowedAuthUrl(target, instance.baseUrl)) event.preventDefault(); });
         contents.on("did-navigate", (_event, target) => complete(target));
         contents.on("did-navigate-in-page", (_event, target) => complete(target));
         window.on("closed", () => { if (this.authWindow === window) this.authWindow = null; });
