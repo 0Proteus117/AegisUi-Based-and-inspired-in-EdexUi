@@ -66,6 +66,7 @@ class StudLmsRuntime {
         this.syncTimer = null;
         this.authWindow = null;
         this.browserSessionConfigured = false;
+        this.authVerificationRunning = false;
         this.authBootstrapRunning = false;
         this.scheduleAutomaticSync();
     }
@@ -206,8 +207,41 @@ class StudLmsRuntime {
             // Keep the sign-in window purpose-bound instead of making it a
             // general browser just because the identity flow crosses origins.
             const host = target.hostname.toLowerCase();
-            return host === base.hostname || host.endsWith(".uel.ac.uk") || host === "login.microsoftonline.com" || host.endsWith(".microsoftonline.com") || host.endsWith(".microsoft.com") || host === "login.live.com";
+            return host === base.hostname || host.endsWith(".uel.ac.uk") ||
+                host === "login.microsoftonline.com" || host.endsWith(".microsoftonline.com") ||
+                host.endsWith(".microsoft.com") || host === "login.live.com" ||
+                host === "login.windows.net" || host.endsWith(".windows.net") ||
+                host.endsWith(".windowsazure.com") || host.endsWith(".microsoftonline-p.com") ||
+                host.endsWith(".msauth.net") || host.endsWith(".msftauth.net");
         } catch (error) { return false; }
+    }
+
+    isAuthenticatedMoodleNavigation(value, baseUrl) {
+        try {
+            const target = new URL(value); const base = new URL(baseUrl);
+            if (target.protocol !== "https:" || target.hostname !== base.hostname) return false;
+            // /auth/oidc is the hand-off route into SSO, not evidence of an
+            // authenticated Moodle session.  Treating it as completion was
+            // starting read operations while the user was still signing in.
+            return !/^\/(?:login|auth\/oidc)(?:\/|$)/i.test(target.pathname);
+        } catch (error) { return false; }
+    }
+
+    async verifyBrowserSession(instance) {
+        if (this.authVerificationRunning) return false;
+        this.authVerificationRunning = true;
+        try {
+            // dashboard() makes one fixed same-instance request and requires
+            // Moodle's own session key.  It never reads, returns or persists
+            // cookie values.  This is the sole completion gate after SSO.
+            const adapter = this.adapter(instance, {}, Lms.createRequestId("stud_moodle_login_verify"), "BROWSER_SESSION");
+            await adapter.dashboard();
+            this.browserSessionConfigured = true;
+            this.persistState(instance, {status: "PARTIAL", lastAttempt: Model.now(), lastErrorCode: null});
+            return true;
+        } catch (error) {
+            return false;
+        } finally { this.authVerificationRunning = false; }
     }
 
     adapter(instance, secret, requestId, authentication = "WEB_SERVICE_TOKEN") {
@@ -371,12 +405,9 @@ class StudLmsRuntime {
         this.authWindow = window;
         const contents = window.webContents;
         const complete = target => {
-            try {
-                const parsed = new URL(target); const base = new URL(instance.baseUrl);
-                if (parsed.hostname === base.hostname && !/^\/login(?:\/|$)/i.test(parsed.pathname)) {
-                    this.browserSessionConfigured = true;
-                    this.persistState(instance, {status: "PARTIAL", lastAttempt: Model.now(), lastErrorCode: null});
-                    if (!this.authBootstrapRunning) {
+            if (this.isAuthenticatedMoodleNavigation(target, instance.baseUrl)) {
+                this.verifyBrowserSession(instance).then(verified => {
+                    if (!verified || this.authBootstrapRunning) return;
                         this.authBootstrapRunning = true;
                         // Authentication is an explicit user action in the
                         // official window. Once it succeeds, the approved
@@ -387,9 +418,8 @@ class StudLmsRuntime {
                             .then(() => { try { if (!window.isDestroyed()) window.close(); } catch (error) {} })
                             .catch(error => this.persistState(instance, {status: error.code === "OFFLINE" ? "OFFLINE" : "ERROR", lastAttempt: Model.now(), lastErrorCode: error.code || "SERVER_ERROR"}))
                             .finally(() => { this.authBootstrapRunning = false; }), 350);
-                    }
-                }
-            } catch (error) {}
+                }).catch(() => {});
+            }
         };
         contents.setWindowOpenHandler(({url: target}) => {
             if (this.isAllowedAuthUrl(target, instance.baseUrl)) contents.loadURL(target).catch(() => {});
