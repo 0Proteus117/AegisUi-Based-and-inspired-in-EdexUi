@@ -66,6 +66,7 @@ class StudLmsRuntime {
         this.syncTimer = null;
         this.authWindow = null;
         this.browserSessionConfigured = false;
+        this.authBootstrapRunning = false;
         this.scheduleAutomaticSync();
     }
 
@@ -367,6 +368,18 @@ class StudLmsRuntime {
                 if (parsed.hostname === base.hostname && !/^\/login(?:\/|$)/i.test(parsed.pathname)) {
                     this.browserSessionConfigured = true;
                     this.persistState(instance, {status: "PARTIAL", lastAttempt: Model.now(), lastErrorCode: null});
+                    if (!this.authBootstrapRunning) {
+                        this.authBootstrapRunning = true;
+                        // Authentication is an explicit user action in the
+                        // official window. Once it succeeds, the approved
+                        // read-only probe and bounded first sync continue
+                        // automatically; no technical token UI is required.
+                        setTimeout(() => this.probe({requestId: Lms.createRequestId("stud_moodle_login_probe")})
+                            .then(() => this.sync({requestId: Lms.createRequestId("stud_moodle_login_sync")}))
+                            .then(() => { try { if (!window.isDestroyed()) window.close(); } catch (error) {} })
+                            .catch(error => this.persistState(instance, {status: error.code === "OFFLINE" ? "OFFLINE" : "ERROR", lastAttempt: Model.now(), lastErrorCode: error.code || "SERVER_ERROR"}))
+                            .finally(() => { this.authBootstrapRunning = false; }), 350);
+                    }
                 }
             } catch (error) {}
         };
