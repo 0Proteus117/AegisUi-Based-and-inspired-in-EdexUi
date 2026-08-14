@@ -202,8 +202,11 @@ class StudLmsRuntime {
         try {
             const target = new URL(value); const base = new URL(baseUrl);
             if (target.protocol !== "https:" || target.username || target.password) return false;
+            // The documented UEL OIDC route redirects to Microsoft identity.
+            // Keep the sign-in window purpose-bound instead of making it a
+            // general browser just because the identity flow crosses origins.
             const host = target.hostname.toLowerCase();
-            return host === base.hostname || host.endsWith(".uel.ac.uk") || host === "login.microsoftonline.com" || host.endsWith(".microsoftonline.com") || host.endsWith(".microsoft.com");
+            return host === base.hostname || host.endsWith(".uel.ac.uk") || host === "login.microsoftonline.com" || host.endsWith(".microsoftonline.com") || host.endsWith(".microsoft.com") || host === "login.live.com";
         } catch (error) { return false; }
     }
 
@@ -360,7 +363,9 @@ class StudLmsRuntime {
         if (this.authWindow && !this.authWindow.isDestroyed()) { this.authWindow.show(); this.authWindow.focus(); return Object.freeze({opened: true, existing: true}); }
         const authSession = this.authSession();
         const window = new this.BrowserWindow({
-            width: 1120, height: 800, minWidth: 860, minHeight: 620, title: "AegisUi — Connect Moodle",
+            width: 980, height: 720, minWidth: 780, minHeight: 560, useContentSize: true, center: true,
+            title: "AegisUi — Connect Moodle", frame: true, titleBarStyle: "default", closable: true, minimizable: true,
+            maximizable: false, fullscreenable: false, resizable: true,
             webPreferences: {session: authSession, sandbox: true, contextIsolation: true, nodeIntegration: false, webSecurity: true, allowRunningInsecureContent: false, devTools: false, webviewTag: false, nativeWindowOpen: false}
         });
         this.authWindow = window;
@@ -392,6 +397,12 @@ class StudLmsRuntime {
         });
         contents.on("will-navigate", (event, target) => { if (!this.isAllowedAuthUrl(target, instance.baseUrl)) event.preventDefault(); });
         contents.on("will-redirect", (event, target) => { if (!this.isAllowedAuthUrl(target, instance.baseUrl)) event.preventDefault(); });
+        contents.on("before-input-event", (event, input) => {
+            if (input.key === "Escape" || ((input.meta || input.control) && String(input.key || "").toLowerCase() === "w")) {
+                event.preventDefault();
+                try { if (!window.isDestroyed()) window.close(); } catch (error) {}
+            }
+        });
         contents.on("did-navigate", (_event, target) => complete(target));
         contents.on("did-navigate-in-page", (_event, target) => complete(target));
         window.on("closed", () => { if (this.authWindow === window) this.authWindow = null; });
