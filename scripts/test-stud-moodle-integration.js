@@ -10,6 +10,7 @@ const {StudAcademicStore} = require("../src/classes/workspaces/studAcademicStore
 const {StudCredentialVault} = require("../src/classes/workspaces/studCredentialVault.class.js");
 const {StudLmsRuntime, parseIcs} = require("../src/classes/workspaces/studLmsRuntime.class.js");
 const {MoodleAdapter, READ_FUNCTIONS} = require("../src/classes/workspaces/studMoodleAdapter.class.js");
+const {MoodleSessionAdapter} = require("../src/classes/workspaces/studMoodleSessionAdapter.class.js");
 
 const checks = [];
 function check(name, condition) { assert.ok(condition, name); checks.push(name); console.log(`${name}: PASS`); }
@@ -67,7 +68,7 @@ function fullFetch(url, options = {}) {
         check("MOODLE_SECURE_TOKEN_STATUS", configured.tokenConfigured && configured.icsConfigured && !Object.prototype.hasOwnProperty.call(configured, "token"));
         const vaultText = fs.readFileSync(path.join(root, "secure-provider-credentials.json"), "utf8");
         check("MOODLE_TOKEN_ENCRYPTED_AT_REST", !vaultText.includes("synthetic-token") && vaultText.includes("dmF1bHQ6"));
-        const auto = runtime.configureSyncPreference({automaticSync: true, intervalMinutes: 180});
+        const auto = await runtime.configureSyncPreference({automaticSync: true, intervalMinutes: 180});
         check("MOODLE_AUTO_SYNC_PREFERENCE_PERSISTENT", auto.automaticSync && auto.intervalMinutes === 180 && Boolean(auto.nextSyncAt));
 
         const probe = await runtime.probe({requestId: "probe_full"});
@@ -107,7 +108,7 @@ function fullFetch(url, options = {}) {
         check("MOODLE_ICS_FALLBACK", ics.summary.assignments === 1 && store.findByExternalIdentifier("MOODLE_ICS_ASSIGNMENT:STUD_MOODLE_DEFAULT", "ics-1").length === 1);
         check("MOODLE_ICS_NO_CALENDAR_MUTATION", !fs.readdirSync(root).some(name => /calendar/i.test(name)));
         check("MOODLE_OFFLINE_CANONICAL_RETAINED", store.listEntities("COURSE", {limit: 10}).length === 1 && store.listEntities("ASSIGNMENT", {limit: 10}).length >= 2);
-        const forgotten = runtime.forgetAccount();
+        const forgotten = await runtime.forgetAccount();
         check("MOODLE_FORGET_REVOKES_SYNC_NOT_ACADEMIC_DATA", !forgotten.tokenConfigured && !forgotten.sync.automaticSync && store.listEntities("COURSE", {limit: 10}).length === 1 && store.listEntities("ACADEMIC_DOCUMENT", {limit: 10}).length === 1);
 
         const invalidAdapter = new MoodleAdapter({baseUrl: "https://moodle.synthetic.test", token: "bad", fetch: () => Promise.resolve(response({exception: "invalidtoken", errorcode: "invalidtoken", message: "Invalid token"}))});
@@ -139,6 +140,18 @@ function fullFetch(url, options = {}) {
         check("MOODLE_ICS_PARSE_BOUNDED", parsed.length === 1 && parsed[0].dueDate.endsWith(".000Z"));
         check("MOODLE_NO_GENERIC_PROXY", !MoodleAdapter.toString().includes("renderer-selected") && Object.values(READ_FUNCTIONS).every(item => item.includes("_")));
         check("MOODLE_NO_WRITE_ENDPOINT", !Object.values(READ_FUNCTIONS).some(item => /submit|upload|create|update|delete|message_send|add_discussion/i.test(item)));
+        const sessionCalls = [];
+        const sessionAdapter = new MoodleSessionAdapter({baseUrl: "https://moodle.synthetic.test", requestId: "session_fixture", session: {fetch: async (url, options = {}) => {
+            sessionCalls.push({url: String(url), method: options.method || "GET"});
+            if (String(url).endsWith("/my/")) return response('<script>M.cfg = {"sesskey":"syntheticsessionkey123"};</script>', 200, {"content-type": "text/html"});
+            const call = JSON.parse(options.body)[0];
+            const raw = await fullFetch("https://moodle.synthetic.test/webservice/rest/server.php", {body: new URLSearchParams({wsfunction: call.methodname})});
+            const payload = await raw.json();
+            return response([{index: 0, data: payload}]);
+        }}});
+        const sessionProbe = await sessionAdapter.probe();
+        check("MOODLE_SESSION_ADAPTER_FIXED_READS", sessionProbe.capabilities.COURSES === "SUPPORTED" && sessionCalls.some(item => /\/lib\/ajax\/service\.php\?sesskey=/.test(item.url)) && sessionCalls.every(item => !/[?&](?:token|wstoken)=/i.test(item.url)));
+        check("MOODLE_SESSION_FILE_ALLOWLIST", Lms.safeMoodleSessionFileUrl("https://moodle.synthetic.test/pluginfile.php/11/mod_resource/content/1/file.pdf", "https://moodle.synthetic.test") && !Lms.safeMoodleSessionFileUrl("https://moodle.synthetic.test/mod/resource/view.php?id=1", "https://moodle.synthetic.test"));
         console.log(`STUD_MOODLE_INTEGRATION: ${checks.length} checks passed`);
     } finally { runtime.dispose(); store.close(); fs.rmSync(root, {recursive: true, force: true}); }
 })().catch(error => { console.error(error.stack || error); process.exitCode = 1; });

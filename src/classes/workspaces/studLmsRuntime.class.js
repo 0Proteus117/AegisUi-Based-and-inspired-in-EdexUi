@@ -8,6 +8,7 @@ const Model = require("./studAcademicModel.class.js");
 const Lms = require("./studLmsModel.class.js");
 const {StudCredentialVault} = require("./studCredentialVault.class.js");
 const {MoodleAdapter} = require("./studMoodleAdapter.class.js");
+const {MoodleSessionAdapter} = require("./studMoodleSessionAdapter.class.js");
 
 const DEFAULT_UEL_MOODLE_URL = "https://moodle.uel.ac.uk";
 const MOODLE_AUTH_PARTITION = "persist:aegis-stud-moodle-auth";
@@ -95,21 +96,26 @@ class StudLmsRuntime {
         return this.status();
     }
 
-    configureSyncPreference(input = {}) {
+    async configureSyncPreference(input = {}) {
         Lms.allowedKeys(input, ["automaticSync", "intervalMinutes"], "Moodle sync preference");
         const instance = this.store.getProviderInstance("stud_moodle_default");
         if (!instance) throw new Lms.LmsError("CONFIG_REQUIRED", "Configure Moodle before enabling automatic synchronization.");
-        if (input.automaticSync === true && !this.vault.status(instance.id).tokenConfigured) throw new Lms.LmsError("AUTH_REQUIRED", "Secure Moodle authentication is required before automatic synchronization can be enabled.");
+        if (input.automaticSync === true && !this.vault.status(instance.id).tokenConfigured) {
+            this.browserSessionConfigured = this.browserSessionConfigured || await this.hasBrowserSession(instance);
+            if (!this.browserSessionConfigured) throw new Lms.LmsError("AUTH_REQUIRED", "Connect through the official Moodle sign-in window before enabling automatic synchronization.");
+        }
         const minutes = input.intervalMinutes === undefined ? undefined : Math.max(15, Math.min(Number(input.intervalMinutes) || 360, 24 * 60));
         const preference = this.store.saveProviderSyncPreference({providerId: instance.id, automaticSync: input.automaticSync, intervalMinutes: minutes, nextSyncAt: input.automaticSync ? new Date(Date.now() + (minutes || this.store.getProviderSyncPreference(instance.id).intervalMinutes) * 60000).toISOString() : null});
         this.scheduleAutomaticSync();
         return preference;
     }
 
-    forgetAccount() {
+    async forgetAccount() {
         const instance = this.store.getProviderInstance("stud_moodle_default");
         if (this.syncTimer) { clearTimeout(this.syncTimer); this.syncTimer = null; }
         this.vault.forget("stud_moodle_default");
+        this.browserSessionConfigured = false;
+        try { await this.authSession().clearStorageData({storages: ["cookies", "localstorage", "indexdb", "serviceworkers"]}); } catch (error) {}
         if (instance) {
             this.store.saveProviderSyncPreference({providerId: instance.id, automaticSync: false, nextSyncAt: null, lastResult: {status: "ACCOUNT_FORGOTTEN", at: Model.now()}});
             this.persistState(instance, {status: "CONFIG_REQUIRED", capabilities: instance.capabilities, lastAttempt: instance.lastAttempt, lastSuccessfulSync: instance.lastSuccessfulSync, lastErrorCode: null});
@@ -130,16 +136,18 @@ class StudLmsRuntime {
     scheduleAutomaticSync() {
         if (this.syncTimer) { clearTimeout(this.syncTimer); this.syncTimer = null; }
         const instance = this.store.getProviderInstance("stud_moodle_default");
-        if (!instance || !this.vault.status(instance.id).tokenConfigured) return;
+        if (!instance) return;
         const preference = this.store.getProviderSyncPreference(instance.id);
         if (!preference.automaticSync) return;
-        const due = preference.nextSyncAt ? new Date(preference.nextSyncAt).getTime() : Date.now() + preference.intervalMinutes * 60000;
-        const delay = Math.max(1000, Math.min(Math.max(0, due - Date.now()), 0x7fffffff));
-        this.syncTimer = setTimeout(() => {
-            this.syncTimer = null;
-            this.performSync(Lms.createRequestId("stud_moodle_auto"), true).catch(() => {});
-        }, delay);
-        if (!preference.nextSyncAt) this.store.saveProviderSyncPreference({providerId: instance.id, automaticSync: true, intervalMinutes: preference.intervalMinutes, nextSyncAt: new Date(Date.now() + preference.intervalMinutes * 60000).toISOString()});
+        const schedule = available => {
+            if (!available || this.syncTimer) return;
+            const due = preference.nextSyncAt ? new Date(preference.nextSyncAt).getTime() : Date.now() + preference.intervalMinutes * 60000;
+            const delay = Math.max(1000, Math.min(Math.max(0, due - Date.now()), 0x7fffffff));
+            this.syncTimer = setTimeout(() => { this.syncTimer = null; this.performSync(Lms.createRequestId("stud_moodle_auto"), true).catch(() => {}); }, delay);
+            if (!preference.nextSyncAt) this.store.saveProviderSyncPreference({providerId: instance.id, automaticSync: true, intervalMinutes: preference.intervalMinutes, nextSyncAt: new Date(Date.now() + preference.intervalMinutes * 60000).toISOString()});
+        };
+        if (this.vault.status(instance.id).tokenConfigured) { schedule(true); return; }
+        this.hasBrowserSession(instance).then(available => { this.browserSessionConfigured = available; schedule(available); }).catch(() => {});
     }
 
     requireInstance() {
@@ -149,10 +157,25 @@ class StudLmsRuntime {
         return {instance, secret};
     }
 
-    requireConfigured() {
+    async hasBrowserSession(instance) {
+        if (!instance || !instance.baseUrl) return false;
+        try {
+            const authSession = this.authSession();
+            const cookies = await authSession.cookies.get({url: instance.baseUrl});
+            // Cookie values are deliberately never read, returned, logged or
+            // copied. This merely asks Chromium's protected profile whether
+            // its own authorized session is still present.
+            return Array.isArray(cookies) && cookies.some(cookie => /^MoodleSession|^MOODLEID_/i.test(String(cookie.name || "")));
+        } catch (error) { return false; }
+    }
+
+    async requireConfigured() {
         const {instance, secret} = this.requireInstance();
-        if (!secret.token) throw new Lms.LmsError("AUTH_REQUIRED", "A sanctioned Moodle Web Service token is required. Username/password authentication is not stored or automated by Aegis.");
-        return {instance, secret};
+        if (secret.token) return {instance, secret, authentication: "WEB_SERVICE_TOKEN"};
+        const sessionAvailable = this.browserSessionConfigured || await this.hasBrowserSession(instance);
+        if (!sessionAvailable) throw new Lms.LmsError("AUTH_REQUIRED", "Connect through the official Moodle sign-in window before synchronizing.");
+        this.browserSessionConfigured = true;
+        return {instance, secret, authentication: "BROWSER_SESSION"};
     }
 
     ensureDefaultInstance() {
@@ -183,7 +206,10 @@ class StudLmsRuntime {
         } catch (error) { return false; }
     }
 
-    adapter(instance, secret, requestId) { return new MoodleAdapter({baseUrl: instance.baseUrl, token: secret.token, fetch: this.fetch, requestId, controllers: this.controllers, allowLocalDevelopment: this.allowLocalDevelopment}); }
+    adapter(instance, secret, requestId, authentication = "WEB_SERVICE_TOKEN") {
+        if (authentication === "BROWSER_SESSION") return new MoodleSessionAdapter({baseUrl: instance.baseUrl, session: this.authSession(), requestId, controllers: this.controllers, allowLocalDevelopment: this.allowLocalDevelopment});
+        return new MoodleAdapter({baseUrl: instance.baseUrl, token: secret.token, fetch: this.fetch, requestId, controllers: this.controllers, allowLocalDevelopment: this.allowLocalDevelopment});
+    }
 
     persistState(instance, patch = {}) {
         const merged = {...instance, ...patch};
@@ -192,10 +218,10 @@ class StudLmsRuntime {
 
     async probe(payload = {}) {
         Lms.allowedKeys(payload, ["requestId"], "Moodle probe");
-        const {instance, secret} = this.requireConfigured();
+        const {instance, secret, authentication} = await this.requireConfigured();
         const requestId = payload.requestId || Lms.createRequestId(); const attemptedAt = Model.now();
         try {
-            const result = await this.adapter(instance, secret, requestId).probe();
+            const result = await this.adapter(instance, secret, requestId, authentication).probe();
             const state = stateFromCapabilities(result.capabilities, true);
             const provider = this.persistState(instance, {status: state, capabilities: result.capabilities, lastAttempt: attemptedAt, lastErrorCode: null});
             return Object.freeze({provider: this.safeStatus(provider), probe: Object.freeze({instance: result.instance, capabilities: provider.capabilities, errors: result.errors, webServices: "AVAILABLE", mobileWebServices: result.instance.mobileService, rest: "AVAILABLE", writePolicy: "READ_ONLY / POLICY_DISABLED"})});
@@ -275,15 +301,17 @@ class StudLmsRuntime {
 
     async sync(payload = {}) {
         Lms.allowedKeys(payload, ["requestId"], "Moodle sync");
-        const {instance, secret} = this.requireConfigured();
-        return this.performSync(payload.requestId || Lms.createRequestId(), false, {instance, secret});
+        const {instance, secret, authentication} = await this.requireConfigured();
+        return this.performSync(payload.requestId || Lms.createRequestId(), false, {instance, secret, authentication});
     }
 
     async performSync(requestId, automatic = false, supplied = null) {
-        const {instance, secret} = supplied || this.requireConfigured();
+        const suppliedAuthentication = supplied && supplied.authentication;
+        const configured = supplied || await this.requireConfigured();
+        const {instance, secret, authentication = suppliedAuthentication || "WEB_SERVICE_TOKEN"} = configured;
         const attemptedAt = Model.now();
         try {
-            const adapter = this.adapter(instance, secret, requestId);
+            const adapter = this.adapter(instance, secret, requestId, authentication);
             const result = await adapter.sync();
             const summary = this.store.syncMoodleObservations(instance, {...result, sourceType: "MOODLE"});
             const files = await this.ingestMoodleFiles(instance, adapter, result.resources, requestId);

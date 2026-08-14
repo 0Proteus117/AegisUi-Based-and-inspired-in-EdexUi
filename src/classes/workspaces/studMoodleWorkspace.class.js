@@ -21,7 +21,11 @@ class StudMoodleWorkspace {
         this.state = {provider: null, probe: null, busy: false, requestId: "", error: "", calendarObservations: [], reauthenticate: false, indexing: false};
     }
 
-    async initialize() { await this.refreshStatus(); }
+    async initialize() {
+        await this.refreshStatus();
+        this.onWindowFocus = () => this.refreshStatus().then(() => this.parent.render()).catch(() => {});
+        if (typeof window !== "undefined") window.addEventListener("focus", this.onWindowFocus);
+    }
     async refreshStatus() { try { this.state.provider = await this.request("stud-moodle-status"); this.state.error = ""; } catch (error) { this.state.error = error.message || "Moodle connection state is unavailable."; } }
     status() { return this.state.provider && this.state.provider.status || "CONFIG_REQUIRED"; }
     renderServiceCard() {
@@ -124,7 +128,7 @@ class StudMoodleWorkspace {
         return true;
     }
 
-    dispose() { if (this.state.requestId) this.request("stud-moodle-cancel", {requestId: this.state.requestId}).catch(() => {}); this.state.requestId = ""; }
+    dispose() { if (this.state.requestId) this.request("stud-moodle-cancel", {requestId: this.state.requestId}).catch(() => {}); if (typeof window !== "undefined" && this.onWindowFocus) window.removeEventListener("focus", this.onWindowFocus); this.state.requestId = ""; }
 }
 
 module.exports = {StudMoodleWorkspace, CAPABILITY_LABELS, WRITE_CAPABILITIES};

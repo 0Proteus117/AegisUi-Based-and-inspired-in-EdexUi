@@ -82,6 +82,7 @@ class MoodleAdapter {
     }
 
     endpoint() { return Lms.deriveMoodleEndpoint(this.baseUrl); }
+    safeFileUrl(value) { return Lms.safeMoodleFileUrl(value, this.baseUrl); }
 
     async call(functionName, parameters = {}) {
         if (!Object.values(READ_FUNCTIONS).includes(functionName)) throw new Lms.LmsError("POLICY_BLOCKED", "Aegis permits only audited Moodle read functions.");
@@ -258,7 +259,7 @@ class MoodleAdapter {
             }
             contents.forEach((content, index) => {
                 const fileName = Lms.sanitizeDisplayText(content.filename || content.filepath || `Moodle file ${index + 1}`, 240) || `Moodle file ${index + 1}`;
-                const fileUrl = Lms.safeMoodleFileUrl(content.fileurl, this.baseUrl);
+                const fileUrl = this.safeFileUrl(content.fileurl);
                 resources.push({
                     moodleId: `${String(module.id)}:${String(content.id || content.contenthash || index)}`,
                     courseMoodleId: String(courseId), assignmentMoodleId, title: fileName,

@@ -161,6 +161,20 @@ function safeMoodleFileUrl(value, baseUrl) {
     } catch (error) { return null; }
 }
 
+function safeMoodleSessionFileUrl(value, baseUrl) {
+    if (!value) return null;
+    try {
+        const candidate = new URL(value, `${deriveMoodleWebUrl(baseUrl)}/`);
+        const base = new URL(deriveMoodleWebUrl(baseUrl));
+        const pathName = decodeURIComponent(candidate.pathname || "");
+        // Browser-session access is limited to the standard Moodle file route
+        // already advertised by fixed course-content responses. It accepts no
+        // query, token, redirect or arbitrary same-host path.
+        if (candidate.protocol !== "https:" || candidate.origin !== base.origin || candidate.username || candidate.password || candidate.search || candidate.hash || !/(?:^|\/)pluginfile\.php\//i.test(pathName)) return null;
+        return candidate.toString();
+    } catch (error) { return null; }
+}
+
 function mapMoodleError(error = {}) {
     const code = String(error.errorcode || error.code || "").toLowerCase();
     const message = String(error.message || "").toLowerCase();
@@ -171,4 +185,4 @@ function mapMoodleError(error = {}) {
     return new LmsError("SERVER_ERROR", "Moodle returned a bounded service error.");
 }
 
-module.exports = Object.freeze({LMS_PROVIDER_TYPES, LMS_CONNECTION_STATES, LMS_CAPABILITY_STATES, MOODLE_CAPABILITIES, WRITE_CAPABILITIES, ERROR_CODES, LIMITS, LmsError, plainObject, allowedKeys, text, enumValue, safeId, normalizeBaseUrl, deriveMoodleEndpoint, deriveMoodleWebUrl, emptyCapabilities, normalizeCapabilities, normalizeProviderConfig, createRequestId, sanitizeDisplayText, safeReferenceUrl, safeMoodleFileUrl, mapMoodleError});
+module.exports = Object.freeze({LMS_PROVIDER_TYPES, LMS_CONNECTION_STATES, LMS_CAPABILITY_STATES, MOODLE_CAPABILITIES, WRITE_CAPABILITIES, ERROR_CODES, LIMITS, LmsError, plainObject, allowedKeys, text, enumValue, safeId, normalizeBaseUrl, deriveMoodleEndpoint, deriveMoodleWebUrl, emptyCapabilities, normalizeCapabilities, normalizeProviderConfig, createRequestId, sanitizeDisplayText, safeReferenceUrl, safeMoodleFileUrl, safeMoodleSessionFileUrl, mapMoodleError});
