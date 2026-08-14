@@ -54,9 +54,9 @@ function fullFetch(url, options = {}) {
 
         const initial = runtime.status();
         check("MOODLE_CONFIG_REQUIRED_INITIAL", initial.status === "CONFIG_REQUIRED" && initial.tokenConfigured === false);
-        const authEvents = {}; let permissionCheck = null; let permissionRequest = null; let openedAuthUrl = null; let authWindowOptions = null;
+        const authEvents = {}; let permissionCheck = null; let permissionRequest = null; let openedAuthUrl = null; let authWindowOptions = null; let authWindowOpenHandler = null;
         const fakeAuthSession = {setPermissionCheckHandler: handler => { permissionCheck = handler; }, setPermissionRequestHandler: handler => { permissionRequest = handler; }};
-        const fakeContents = {setWindowOpenHandler: () => {}, on: (name, handler) => { authEvents[name] = handler; }, loadURL: async url => { openedAuthUrl = url; }};
+        const fakeContents = {setWindowOpenHandler: handler => { authWindowOpenHandler = handler; }, on: (name, handler) => { authEvents[name] = handler; }, loadURL: async url => { openedAuthUrl = url; }};
         const fakeWindow = {webContents: fakeContents, isDestroyed: () => false, show: () => {}, focus: () => {}, close: () => {}, on: () => {}};
         const sessionRuntime = new StudLmsRuntime({store, root, vault, fetch: fullFetch, safeStorage: fakeSafeStorage(), session: {fromPartition: value => { check("MOODLE_AUTH_PARTITION_ISOLATED", value === "persist:aegis-stud-moodle-auth"); return fakeAuthSession; }}, BrowserWindow: function FakeBrowserWindow(options) { authWindowOptions = options; return fakeWindow; }});
         const opened = await sessionRuntime.openWeb();
@@ -64,6 +64,7 @@ function fullFetch(url, options = {}) {
         check("MOODLE_LOGIN_WINDOW_DENIES_PERMISSIONS", permissionCheck() === false && (() => { let denied = null; permissionRequest(null, "camera", value => { denied = value; }); return denied === false; })());
         check("MOODLE_LOGIN_WINDOW_CAN_CLOSE", typeof authEvents["before-input-event"] === "function" && authWindowOptions.frame === true && authWindowOptions.closable === true && authWindowOptions.maximizable === false && authWindowOptions.fullscreenable === false && authWindowOptions.width === 980 && authWindowOptions.height === 720);
         check("MOODLE_LOGIN_SSO_CHAIN_ALLOWLIST", sessionRuntime.isAllowedAuthUrl("https://aadcdn.msauth.net/shared/1.0/content.js", "https://moodle.uel.ac.uk") && sessionRuntime.isAllowedAuthUrl("https://login.windows.net/common/oauth2/authorize", "https://moodle.uel.ac.uk") && !sessionRuntime.isAllowedAuthUrl("https://untrusted.example.test/redirect", "https://moodle.uel.ac.uk"));
+        check("MOODLE_LOGIN_TRUSTED_CONTINUATION_POPUP", authWindowOpenHandler({url: "https://login.microsoftonline.com/common/oauth2/authorize"}).action === "allow" && authWindowOpenHandler({url: "https://untrusted.example.test/redirect"}).action === "deny");
         check("MOODLE_LOGIN_WAITS_FOR_REAL_SESSION", sessionRuntime.isAuthenticatedMoodleNavigation("https://moodle.uel.ac.uk/auth/oidc/", "https://moodle.uel.ac.uk") === false && sessionRuntime.isAuthenticatedMoodleNavigation("https://moodle.uel.ac.uk/my/", "https://moodle.uel.ac.uk") === true);
         check("MOODLE_LOGIN_DOES_NOT_COPY_BROWSER_COOKIES", !Object.keys(sessionRuntime.status()).some(key => /cookie|password/i.test(key)) && !fs.readFileSync(path.join(root, "academic.sqlite")).includes(Buffer.from("aegis-stud-moodle-auth")));
         sessionRuntime.dispose();

@@ -415,26 +415,41 @@ class StudLmsRuntime {
                         // automatically; no technical token UI is required.
                         setTimeout(() => this.probe({requestId: Lms.createRequestId("stud_moodle_login_probe")})
                             .then(() => this.sync({requestId: Lms.createRequestId("stud_moodle_login_sync")}))
-                            .then(() => { try { if (!window.isDestroyed()) window.close(); } catch (error) {} })
                             .catch(error => this.persistState(instance, {status: error.code === "OFFLINE" ? "OFFLINE" : "ERROR", lastAttempt: Model.now(), lastErrorCode: error.code || "SERVER_ERROR"}))
                             .finally(() => { this.authBootstrapRunning = false; }), 350);
                 }).catch(() => {});
             }
         };
-        contents.setWindowOpenHandler(({url: target}) => {
-            if (this.isAllowedAuthUrl(target, instance.baseUrl)) contents.loadURL(target).catch(() => {});
-            return {action: "deny"};
-        });
-        contents.on("will-navigate", (event, target) => { if (!this.isAllowedAuthUrl(target, instance.baseUrl)) event.preventDefault(); });
-        contents.on("will-redirect", (event, target) => { if (!this.isAllowedAuthUrl(target, instance.baseUrl)) event.preventDefault(); });
-        contents.on("before-input-event", (event, input) => {
-            if (input.key === "Escape" || ((input.meta || input.control) && String(input.key || "").toLowerCase() === "w")) {
-                event.preventDefault();
-                try { if (!window.isDestroyed()) window.close(); } catch (error) {}
-            }
-        });
-        contents.on("did-navigate", (_event, target) => complete(target));
-        contents.on("did-navigate-in-page", (_event, target) => complete(target));
+        const attachAuthContents = (targetContents, owner) => {
+            targetContents.setWindowOpenHandler(({url: target}) => {
+                if (!this.isAllowedAuthUrl(target, instance.baseUrl)) return {action: "deny"};
+                // Microsoft can use a short-lived trusted child window to
+                // complete account or MFA continuation. Denying it makes a
+                // valid password submit appear to hang. The child receives
+                // the same isolated Aegis-owned session and no privileges.
+                return {action: "allow", overrideBrowserWindowOptions: {
+                    parent: window, modal: true, width: 900, height: 680, minWidth: 720, minHeight: 520,
+                    title: "AegisUi — Continue UEL sign-in", frame: true, closable: true, minimizable: true,
+                    maximizable: false, fullscreenable: false, resizable: true,
+                    webPreferences: {session: authSession, sandbox: true, contextIsolation: true, nodeIntegration: false, webSecurity: true, allowRunningInsecureContent: false, devTools: false, webviewTag: false, nativeWindowOpen: false}
+                }};
+            });
+            targetContents.on("will-navigate", (event, target) => { if (!this.isAllowedAuthUrl(target, instance.baseUrl)) event.preventDefault(); });
+            targetContents.on("will-redirect", (event, target) => { if (!this.isAllowedAuthUrl(target, instance.baseUrl)) event.preventDefault(); });
+            targetContents.on("before-input-event", (event, input) => {
+                if (input.key === "Escape" || ((input.meta || input.control) && String(input.key || "").toLowerCase() === "w")) {
+                    event.preventDefault();
+                    try { if (!owner.isDestroyed()) owner.close(); } catch (error) {}
+                }
+            });
+            // Do not react while an identity page is still navigating. Only
+            // inspect the final visible document after loading has settled.
+            targetContents.on("did-stop-loading", () => complete(targetContents.getURL()));
+            targetContents.on("did-create-window", child => {
+                attachAuthContents(child.webContents, child);
+            });
+        };
+        attachAuthContents(contents, window);
         window.on("closed", () => { if (this.authWindow === window) this.authWindow = null; });
         try { await contents.loadURL(url); }
         catch (error) { try { if (!window.isDestroyed()) window.close(); } catch (_) {} throw new Lms.LmsError("OFFLINE", "The official Moodle sign-in page could not be opened."); }
