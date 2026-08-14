@@ -6296,6 +6296,21 @@ button.eng-thread-row.active {
  * variable capability matrices, long institutional labels and partial states
  * cannot collide with sync actions or overflow the command deck. */
 .engineering-mode .stud-moodle-shell { display: grid; gap: .68vh; min-width: 0; }
+.engineering-mode .stud-moodle-primary-card .workspace-panel-content { display: grid; gap: .72vh; padding: 1.05vh; }
+.engineering-mode .stud-moodle-primary-card p { max-width: 72ch; margin: 0; color: var(--aegis-text-muted); font: .72vh/1.5 var(--font_main_light); }
+.engineering-mode .stud-moodle-status-card { min-width: 0; }
+.engineering-mode .stud-moodle-status-card > header { display: flex; align-items: center; justify-content: space-between; gap: .7vh; }
+.engineering-mode .stud-subtle-action { padding: .28vh .48vh; color: var(--aegis-text-muted); border-color: var(--aegis-border-subtle); background: transparent; font: .52vh var(--font_mono); }
+.engineering-mode .stud-moodle-settings { min-width: 0; }
+.engineering-mode .stud-moodle-settings > summary,
+.engineering-mode .stud-moodle-capability-panel > summary { display: flex; min-height: 3.1vh; align-items: center; cursor: pointer; list-style: none; padding: 0 .85vh; color: var(--aegis-accent-soft); font: .62vh var(--font_mono); letter-spacing: .08vh; }
+.engineering-mode .stud-moodle-settings > summary::-webkit-details-marker,
+.engineering-mode .stud-moodle-capability-panel > summary::-webkit-details-marker { display: none; }
+.engineering-mode .stud-moodle-settings > summary::after,
+.engineering-mode .stud-moodle-capability-panel > summary::after { margin-left: auto; content: "+"; color: var(--aegis-text-faint); }
+.engineering-mode .stud-moodle-settings[open] > summary::after,
+.engineering-mode .stud-moodle-capability-panel[open] > summary::after { content: "−"; }
+.engineering-mode .stud-moodle-settings .workspace-panel-content { display: grid; gap: .8vh; padding: .85vh; border-top: .08vh solid var(--aegis-border-subtle); }
 .engineering-mode .stud-moodle-control-grid,
 .engineering-mode .stud-moodle-data-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .68vh; align-items: start; min-width: 0; }
 .engineering-mode .stud-moodle-config-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .48vh; min-width: 0; }

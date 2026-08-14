@@ -3,11 +3,14 @@
 const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
-const {safeStorage, shell} = require("electron");
+const {safeStorage, shell, BrowserWindow, session} = require("electron");
 const Model = require("./studAcademicModel.class.js");
 const Lms = require("./studLmsModel.class.js");
 const {StudCredentialVault} = require("./studCredentialVault.class.js");
 const {MoodleAdapter} = require("./studMoodleAdapter.class.js");
+
+const DEFAULT_UEL_MOODLE_URL = "https://moodle.uel.ac.uk";
+const MOODLE_AUTH_PARTITION = "persist:aegis-stud-moodle-auth";
 
 function parseIcsDate(value) {
     const raw = String(value || "").trim();
@@ -53,11 +56,15 @@ class StudLmsRuntime {
         this.root = options.root;
         this.fetch = options.fetch || globalThis.fetch;
         this.shell = options.shell || shell;
+        this.BrowserWindow = options.BrowserWindow || BrowserWindow;
+        this.electronSession = options.session || session;
         this.vault = options.vault || new StudCredentialVault({root: this.root, safeStorage: options.safeStorage || safeStorage});
         this.controllers = new Map();
         this.documentRuntime = options.documentRuntime || null;
         this.allowLocalDevelopment = options.allowLocalDevelopment === true;
         this.syncTimer = null;
+        this.authWindow = null;
+        this.browserSessionConfigured = false;
         this.scheduleAutomaticSync();
     }
 
@@ -66,8 +73,8 @@ class StudLmsRuntime {
     safeStatus(instance = this.store.getProviderInstance("stud_moodle_default")) {
         const credential = this.vault.status("stud_moodle_default");
         const sync = instance ? this.store.getProviderSyncPreference(instance.id) : Object.freeze({providerId: "stud_moodle_default", automaticSync: false, intervalMinutes: 360, nextSyncAt: null, lastResult: Object.freeze({}), updatedAt: null});
-        if (!instance) return Object.freeze({id: "stud_moodle_default", providerType: "MOODLE", displayName: "Moodle", baseUrl: null, status: "CONFIG_REQUIRED", capabilities: Lms.emptyCapabilities(), lastSuccessfulSync: null, lastAttempt: null, lastErrorCode: null, sync, ...credential});
-        return Object.freeze({...instance, sync, ...credential});
+        if (!instance) return Object.freeze({id: "stud_moodle_default", providerType: "MOODLE", displayName: "UEL Moodle", baseUrl: DEFAULT_UEL_MOODLE_URL, status: "CONFIG_REQUIRED", capabilities: Lms.emptyCapabilities(), lastSuccessfulSync: null, lastAttempt: null, lastErrorCode: null, sync, browserSessionConfigured: this.browserSessionConfigured, ...credential});
+        return Object.freeze({...instance, sync, browserSessionConfigured: this.browserSessionConfigured, ...credential});
     }
 
     status() { return this.safeStatus(); }
@@ -146,6 +153,34 @@ class StudLmsRuntime {
         const {instance, secret} = this.requireInstance();
         if (!secret.token) throw new Lms.LmsError("AUTH_REQUIRED", "A sanctioned Moodle Web Service token is required. Username/password authentication is not stored or automated by Aegis.");
         return {instance, secret};
+    }
+
+    ensureDefaultInstance() {
+        const existing = this.store.getProviderInstance("stud_moodle_default");
+        if (existing) return existing;
+        return this.store.saveProviderInstance({
+            id: "stud_moodle_default", providerType: "MOODLE", displayName: "UEL Moodle", baseUrl: DEFAULT_UEL_MOODLE_URL,
+            status: "CONFIG_REQUIRED", capabilities: Lms.emptyCapabilities(), lastSuccessfulSync: null, lastAttempt: null, lastErrorCode: null
+        });
+    }
+
+    authSession() {
+        if (!this.electronSession || typeof this.electronSession.fromPartition !== "function") throw new Lms.LmsError("OFFLINE", "The secure Moodle sign-in window is unavailable.");
+        const authSession = this.electronSession.fromPartition(MOODLE_AUTH_PARTITION);
+        // The partition belongs only to Aegis' Moodle sign-in window.  It never
+        // imports browser cookies and cannot request device permissions.
+        authSession.setPermissionCheckHandler(() => false);
+        authSession.setPermissionRequestHandler((_webContents, _permission, callback) => callback(false));
+        return authSession;
+    }
+
+    isAllowedAuthUrl(value, baseUrl) {
+        try {
+            const target = new URL(value); const base = new URL(baseUrl);
+            if (target.protocol !== "https:" || target.username || target.password) return false;
+            const host = target.hostname.toLowerCase();
+            return host === base.hostname || host.endsWith(".uel.ac.uk") || host === "login.microsoftonline.com" || host.endsWith(".microsoftonline.com") || host.endsWith(".microsoft.com");
+        } catch (error) { return false; }
     }
 
     adapter(instance, secret, requestId) { return new MoodleAdapter({baseUrl: instance.baseUrl, token: secret.token, fetch: this.fetch, requestId, controllers: this.controllers, allowLocalDevelopment: this.allowLocalDevelopment}); }
@@ -287,16 +322,41 @@ class StudLmsRuntime {
     }
 
     async openWeb() {
-        const instance = this.store.getProviderInstance("stud_moodle_default");
-        if (!instance || !instance.baseUrl) throw new Lms.LmsError("CONFIG_REQUIRED", "Configure Moodle before opening it in the system browser.");
-        const url = Lms.deriveMoodleWebUrl(instance.baseUrl);
-        if (!this.shell || typeof this.shell.openExternal !== "function") throw new Lms.LmsError("OFFLINE", "System browser access is unavailable.");
-        await this.shell.openExternal(url);
-        return Object.freeze({opened: true});
+        const instance = this.ensureDefaultInstance();
+        const url = `${Lms.deriveMoodleWebUrl(instance.baseUrl)}/login`;
+        if (!this.BrowserWindow) throw new Lms.LmsError("OFFLINE", "The secure Moodle sign-in window is unavailable.");
+        if (this.authWindow && !this.authWindow.isDestroyed()) { this.authWindow.show(); this.authWindow.focus(); return Object.freeze({opened: true, existing: true}); }
+        const authSession = this.authSession();
+        const window = new this.BrowserWindow({
+            width: 1120, height: 800, minWidth: 860, minHeight: 620, title: "AegisUi — Connect Moodle",
+            webPreferences: {session: authSession, sandbox: true, contextIsolation: true, nodeIntegration: false, webSecurity: true, allowRunningInsecureContent: false, devTools: false, webviewTag: false, nativeWindowOpen: false}
+        });
+        this.authWindow = window;
+        const contents = window.webContents;
+        const complete = target => {
+            try {
+                const parsed = new URL(target); const base = new URL(instance.baseUrl);
+                if (parsed.hostname === base.hostname && !/^\/login(?:\/|$)/i.test(parsed.pathname)) {
+                    this.browserSessionConfigured = true;
+                    this.persistState(instance, {status: "PARTIAL", lastAttempt: Model.now(), lastErrorCode: null});
+                }
+            } catch (error) {}
+        };
+        contents.setWindowOpenHandler(({url: target}) => {
+            if (this.isAllowedAuthUrl(target, instance.baseUrl)) contents.loadURL(target).catch(() => {});
+            return {action: "deny"};
+        });
+        contents.on("will-navigate", (event, target) => { if (!this.isAllowedAuthUrl(target, instance.baseUrl)) event.preventDefault(); });
+        contents.on("did-navigate", (_event, target) => complete(target));
+        contents.on("did-navigate-in-page", (_event, target) => complete(target));
+        window.on("closed", () => { if (this.authWindow === window) this.authWindow = null; });
+        try { await contents.loadURL(url); }
+        catch (error) { try { if (!window.isDestroyed()) window.close(); } catch (_) {} throw new Lms.LmsError("OFFLINE", "The official Moodle sign-in page could not be opened."); }
+        return Object.freeze({opened: true, existing: false});
     }
 
     cancel(requestId) { const controller = this.controllers.get(String(requestId || "")); if (controller) controller.abort(); return Object.freeze({cancelled: Boolean(controller)}); }
     dispose() { if (this.syncTimer) clearTimeout(this.syncTimer); this.syncTimer = null; this.controllers.forEach(controller => controller.abort()); this.controllers.clear(); }
 }
 
-module.exports = {StudLmsRuntime, parseIcs, parseIcsDate, stateFromCapabilities};
+module.exports = {StudLmsRuntime, parseIcs, parseIcsDate, stateFromCapabilities, DEFAULT_UEL_MOODLE_URL, MOODLE_AUTH_PARTITION};
