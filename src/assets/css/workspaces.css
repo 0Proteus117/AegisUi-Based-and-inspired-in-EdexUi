@@ -6611,3 +6611,125 @@ button.eng-thread-row.active {
 .engineering-mode .stud-tool-catalog-policy small { color: var(--aegis-accent-soft); letter-spacing: .07vh; }
 @media (max-width: 1500px) { .engineering-mode .stud-tool-catalog-grid { grid-template-columns: minmax(25vh, .72fr) minmax(0, 1.2fr); }.engineering-mode .stud-tool-detail-panel { grid-column: 1 / -1; }.engineering-mode .stud-tool-detail-panel .workspace-panel-content { max-width: 95vh; }.engineering-mode .stud-tool-list { max-height: 43vh; } }
 @media (max-width: 1230px) { .engineering-mode .stud-tool-catalog-header { display: grid; }.engineering-mode .stud-tool-catalog-status { text-align: left; white-space: normal; }.engineering-mode .stud-tool-catalog-grid,.engineering-mode .stud-tool-packs-grid { grid-template-columns: minmax(0, 1fr); }.engineering-mode .stud-tool-detail-panel { grid-column: auto; }.engineering-mode .stud-tool-profile form > div,.engineering-mode .stud-tool-filter-checks { grid-template-columns: minmax(0, 1fr); }.engineering-mode .stud-tool-detail dl { grid-template-columns: minmax(0, 1fr); }.engineering-mode .stud-tool-detail dt { padding-top: .28vh; border-top: .08vh solid var(--aegis-border-subtle); } }
+
+/* STUD v2.7 reality pass.  Navigation and the command centre deliberately
+ * use task groups and a small number of primary surfaces.  This keeps the
+ * existing capabilities available without presenting fourteen equivalent
+ * tabs or turning ordinary course work into an inspector wall. */
+.engineering-mode .stud-command-nav {
+    display: grid;
+    gap: .42vh;
+    padding: .32vh 0 .48vh;
+    border-bottom: .08vh solid var(--aegis-border-subtle);
+}
+.engineering-mode .stud-nav-primary,
+.engineering-mode .stud-nav-context {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .34vh;
+    min-width: 0;
+}
+.engineering-mode .stud-nav-primary button {
+    min-width: clamp(7.6vh, 8.7vw, 14vh);
+    padding: .52vh .76vh;
+    background: var(--aegis-surface-muted);
+    border-color: var(--aegis-border-subtle);
+}
+.engineering-mode .stud-nav-primary button.active {
+    color: var(--aegis-text-primary);
+    background: color-mix(in srgb, var(--aegis-accent) 15%, var(--aegis-surface-muted));
+    border-color: var(--aegis-accent);
+    box-shadow: inset 0 -.12vh 0 var(--aegis-accent);
+}
+.engineering-mode .stud-nav-context {
+    padding-left: .72vh;
+    border-left: .14vh solid var(--aegis-border-subtle);
+}
+.engineering-mode .stud-nav-context button {
+    min-width: auto;
+    padding: .36vh .58vh;
+    color: var(--aegis-text-muted);
+    background: transparent;
+    border-color: transparent;
+}
+.engineering-mode .stud-nav-context button.active {
+    color: var(--aegis-accent-soft);
+    border-color: color-mix(in srgb, var(--aegis-accent) 70%, transparent);
+    background: var(--aegis-surface-muted);
+}
+.engineering-mode .stud-home-shell {
+    display: grid;
+    grid-template-columns: minmax(0, 1.5fr) repeat(2, minmax(18vh, 1fr));
+    gap: .72vh;
+    align-items: start;
+}
+.engineering-mode .stud-home-focus { grid-row: span 2; }
+.engineering-mode .stud-home-courses { grid-column: 2 / -1; }
+.engineering-mode .stud-home-focus-card {
+    display: grid;
+    align-content: start;
+    gap: .62vh;
+    min-height: 15vh;
+    padding: .82vh;
+    border-left: .2vh solid var(--aegis-accent);
+    background: linear-gradient(120deg, color-mix(in srgb, var(--aegis-accent) 10%, transparent), var(--aegis-surface-muted));
+}
+.engineering-mode .stud-home-focus-card small { color: var(--aegis-accent-soft); font: .56vh var(--font_mono); letter-spacing: .08vh; }
+.engineering-mode .stud-home-focus-card h3 { margin: 0; color: var(--aegis-text-primary); font: 1.06vh/1.32 var(--font_main); font-weight: normal; overflow-wrap: anywhere; }
+.engineering-mode .stud-home-focus-card p { margin: 0; color: var(--aegis-text-muted); font: .66vh/1.45 var(--font_main_light); overflow-wrap: anywhere; }
+.engineering-mode .stud-home-focus-card button { justify-self: start; margin-top: auto; }
+.engineering-mode .stud-moodle-sync-preferences {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(13vh, .4fr) max-content;
+    gap: .48vh;
+    align-items: end;
+    padding-top: .58vh;
+    border-top: .08vh dashed var(--aegis-border-subtle);
+}
+.engineering-mode .stud-moodle-sync-preferences label { display: grid; min-width: 0; gap: .24vh; }
+.engineering-mode .stud-moodle-sync-preferences label:first-child { display: flex; align-items: center; gap: .42vh; min-height: 2.35vh; color: var(--aegis-text-primary); }
+.engineering-mode .stud-moodle-sync-preferences input { accent-color: var(--aegis-accent); }
+.engineering-mode .stud-moodle-file-state { display: grid; gap: .22vh; padding: .5vh; border-left: .16vh solid var(--aegis-accent); background: var(--aegis-surface-muted); }
+.engineering-mode .stud-moodle-file-state strong { color: var(--aegis-text-primary); font: .58vh var(--font_mono); overflow-wrap: anywhere; }
+.engineering-mode .stud-moodle-file-state small { color: var(--aegis-text-muted); font: .5vh/1.38 var(--font_main_light); overflow-wrap: anywhere; }
+.engineering-mode .stud-advanced-inspector {
+    display: grid;
+    gap: .55vh;
+    margin: .66vh 0;
+    padding: .55vh;
+    border: .08vh solid var(--aegis-border-subtle);
+    background: var(--aegis-surface-muted);
+}
+.engineering-mode .stud-advanced-inspector > summary { cursor: pointer; color: var(--aegis-accent-soft); font: .58vh var(--font_mono); letter-spacing: .08vh; }
+.engineering-mode .stud-advanced-inspector[open] > summary { margin-bottom: .25vh; }
+.engineering-mode .stud-advanced-inspector form { margin-top: .45vh; }
+.engineering-mode .stud-resource-preview { display: grid; gap: .62vh; min-width: 0; }
+.engineering-mode .stud-resource-preview > small { color: var(--aegis-accent-soft); font: .52vh var(--font_mono); letter-spacing: .08vh; }
+.engineering-mode .stud-resource-preview h3 { margin: 0; color: var(--aegis-text-primary); font: .94vh/1.35 var(--font_main); overflow-wrap: anywhere; }
+.engineering-mode .stud-resource-preview dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .38vh; margin: 0; }
+.engineering-mode .stud-resource-preview dl > div { display: grid; gap: .14vh; min-width: 0; padding: .42vh; border-left: .14vh solid var(--aegis-accent); background: var(--aegis-surface-muted); }
+.engineering-mode .stud-resource-preview dt { color: var(--aegis-text-faint); font: .44vh var(--font_mono); letter-spacing: .06vh; }
+.engineering-mode .stud-resource-preview dd { min-width: 0; margin: 0; color: var(--aegis-text-primary); font: .52vh/1.35 var(--font_main_light); overflow-wrap: anywhere; }
+.engineering-mode .stud-resource-preview p { margin: 0; color: var(--aegis-text-muted); font: .58vh/1.45 var(--font_main_light); overflow-wrap: anywhere; }
+.engineering-mode .stud-assignment-requirements { display: grid; gap: .35vh; }
+.engineering-mode .stud-assignment-requirements article { display: grid; grid-template-columns: minmax(14vh, .36fr) minmax(0, 1fr); gap: .16vh .48vh; min-width: 0; padding: .42vh; border-left: .16vh solid var(--aegis-accent); background: var(--aegis-surface-muted); }
+.engineering-mode .stud-assignment-requirements strong { color: var(--aegis-accent-soft); font: .52vh var(--font_mono); letter-spacing: .05vh; overflow-wrap: anywhere; }
+.engineering-mode .stud-assignment-requirements span { color: var(--aegis-text-primary); font: .57vh/1.36 var(--font_main_light); overflow-wrap: anywhere; }
+.engineering-mode .stud-assignment-requirements small { grid-column: 1 / -1; color: var(--aegis-text-faint); font: .44vh/1.35 var(--font_mono); overflow-wrap: anywhere; }
+
+@media (max-width: 1450px) {
+    .engineering-mode .stud-home-shell { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .engineering-mode .stud-home-focus { grid-row: auto; grid-column: 1 / -1; }
+    .engineering-mode .stud-home-courses { grid-column: auto; }
+}
+@media (max-width: 1230px) {
+    .engineering-mode .stud-command-header { grid-template-columns: minmax(0, 1fr); }
+    .engineering-mode .stud-command-status { justify-items: start; text-align: left; grid-auto-flow: column; justify-content: start; }
+    .engineering-mode .stud-nav-primary button { min-width: 0; flex: 1 1 25%; }
+    .engineering-mode .stud-home-shell { grid-template-columns: minmax(0, 1fr); }
+    .engineering-mode .stud-home-focus,.engineering-mode .stud-home-courses { grid-column: auto; }
+    .engineering-mode .stud-moodle-sync-preferences { grid-template-columns: minmax(0, 1fr); }
+    .engineering-mode .stud-moodle-sync-preferences button { width: 100%; }
+    .engineering-mode .stud-resource-preview dl { grid-template-columns: minmax(0, 1fr); }
+    .engineering-mode .stud-assignment-requirements article { grid-template-columns: minmax(0, 1fr); }
+}

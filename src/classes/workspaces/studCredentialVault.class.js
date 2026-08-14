@@ -46,6 +46,16 @@ class StudCredentialVault {
         return this.status(id);
     }
 
+    forget(providerId) {
+        const id = safeId(providerId);
+        const current = this.read();
+        if (Object.prototype.hasOwnProperty.call(current, id)) {
+            delete current[id];
+            this.write(current);
+        }
+        return this.status(id);
+    }
+
     get(providerId) {
         const id = safeId(providerId);
         if (!this.available()) return {token: null, icsUrl: null};

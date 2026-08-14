@@ -51,6 +51,14 @@ try {
         assert.ok(context.notes.some(item => item.id === note.id));
         assert.ok(context.resources.some(item => item.id === resource.id));
     });
+    check("ASSIGNMENT_REQUIREMENTS_ARE_BOUNDED_AND_EXPLAINABLE", () => {
+        const requirementAssignment = store.createEntity("ASSIGNMENT", {courseId: course.id, title: "Requirements fixture", description: "Write a 2500 word report using Harvard referencing and submit a PDF.", dueDate: tomorrow, status: "NOT_STARTED"});
+        const requirements = store.assignmentRequirements(requirementAssignment.id);
+        assert.ok(requirements.some(item => item.label === "WORD COUNT" && item.kind === "DIRECT_REQUIREMENT"));
+        assert.ok(requirements.some(item => item.label === "CITATION STYLE"));
+        assert.ok(requirements.every(item => item.sourceType && item.location && item.confidence));
+        assert.ok(requirements.length <= 40);
+    });
     check("CALENDAR_EMAIL_REFERENCE_IDS_ONLY", () => {
         const calendar = store.linkReference({entityType: "ASSIGNMENT", entityId: urgent.id, kind: "CALENDAR", externalId: "synthetic-event-1"});
         const email = store.linkReference({entityType: "ASSIGNMENT", entityId: urgent.id, kind: "EMAIL", externalId: "synthetic-message-1"});
@@ -73,6 +81,8 @@ try {
         assert.ok(commandCenter.includes("StudToolCatalogWorkspace"));
         assert.ok(commandCenter.includes("FTS5 searches only local canonical academic records"));
         assert.ok(commandCenter.includes("STUD DOES NOT SCAN, OPEN OR COPY EXTERNAL CONTENT"));
+        assert.ok(commandCenter.includes("ASSIGNMENT ROADMAP"));
+        assert.ok(commandCenter.includes("SELECT FOR WORKFLOW TEST"));
         assert.ok(!commandCenter.includes("fetch("));
         assert.ok(!commandCenter.includes("localStorage"));
         assert.ok(commandCenter.includes('"REVISION"'));
@@ -81,6 +91,7 @@ try {
     });
     check("IPC_IS_NARROW_AND_EXPLICIT", () => {
         assert.ok(ipc.includes('"stud-command-center"'));
+        assert.ok(ipc.includes('"stud-assignment-requirements"'));
         assert.ok(ipc.includes('"stud-reference-link"'));
         assert.ok(ipc.includes('"stud-research-search"'));
         assert.ok(ipc.includes('"stud-moodle-probe"'));
@@ -97,6 +108,8 @@ try {
     check("COMMAND_CENTER_LAYOUT_THEME_CONTRACT", () => {
         assert.ok(css.includes("stud-command-center-grid"));
         assert.ok(css.includes("stud-overview-grid"));
+        assert.ok(css.includes("stud-nav-primary"));
+        assert.ok(css.includes("stud-assignment-requirements"));
         assert.ok(css.includes("stud-dialog"));
         assert.ok(css.includes("stud-revision-overview-grid"));
         assert.ok(css.includes("stud-tool-catalog-grid"));
