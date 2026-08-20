@@ -365,6 +365,14 @@ class StudAcademicStore {
                 discipline TEXT PRIMARY KEY, profile_rank INTEGER NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
             );
             CREATE INDEX stud_discipline_profile_rank_index ON stud_discipline_profile(profile_rank);
+        `}, {version: 14, sql: `
+            CREATE TABLE stud_provider_sync_preferences (
+                provider_id TEXT PRIMARY KEY, automatic_sync INTEGER NOT NULL DEFAULT 0,
+                interval_minutes INTEGER NOT NULL DEFAULT 360, next_sync_at TEXT,
+                last_result_json TEXT, updated_at TEXT NOT NULL,
+                FOREIGN KEY(provider_id) REFERENCES stud_provider_instances(id)
+            );
+            CREATE INDEX stud_provider_sync_due_index ON stud_provider_sync_preferences(automatic_sync, next_sync_at);
         `}];
         for (const migration of migrations) {
             if (applied.has(migration.version)) continue;
@@ -486,6 +494,31 @@ class StudAcademicStore {
         return this.getProviderInstance(id);
     }
 
+    getProviderSyncPreference(providerId) {
+        this.initialize();
+        const id = Model.safeId(providerId, "Provider ID");
+        const row = this.db.prepare("SELECT * FROM stud_provider_sync_preferences WHERE provider_id=?").get(id);
+        return Object.freeze({providerId: id, automaticSync: Boolean(row && row.automatic_sync), intervalMinutes: Number(row && row.interval_minutes) || 360, nextSyncAt: row && row.next_sync_at || null, lastResult: Object.freeze(parseJson(row && row.last_result_json, {})), updatedAt: row && row.updated_at || null});
+    }
+
+    saveProviderSyncPreference(input = {}) {
+        this.initialize();
+        Model.assertAllowedKeys(input, ["providerId", "automaticSync", "intervalMinutes", "nextSyncAt", "lastResult"], "Provider sync preference");
+        const providerId = Model.safeId(input.providerId, "Provider ID");
+        if (!this.getProviderInstance(providerId)) throw new Model.StudError("NOT_FOUND", "Provider instance does not exist.");
+        const previous = this.getProviderSyncPreference(providerId);
+        const automaticSync = input.automaticSync === undefined ? previous.automaticSync : Boolean(input.automaticSync);
+        const intervalMinutes = input.intervalMinutes === undefined ? previous.intervalMinutes : Math.max(15, Math.min(Number(input.intervalMinutes) || 360, 24 * 60));
+        const nextSyncAt = input.nextSyncAt === undefined ? previous.nextSyncAt : (input.nextSyncAt ? Model.optionalDate(input.nextSyncAt, "Next sync time") : null);
+        const lastResult = input.lastResult === undefined ? previous.lastResult : (input.lastResult && typeof input.lastResult === "object" && !Array.isArray(input.lastResult) ? input.lastResult : {});
+        const serialized = JSON.stringify(lastResult);
+        if (Buffer.byteLength(serialized, "utf8") > 8192) throw new Model.StudError("PAYLOAD_TOO_LARGE", "Provider sync result is too large.");
+        this.db.prepare(`INSERT INTO stud_provider_sync_preferences (provider_id,automatic_sync,interval_minutes,next_sync_at,last_result_json,updated_at)
+            VALUES (?,?,?,?,?,?) ON CONFLICT(provider_id) DO UPDATE SET automatic_sync=excluded.automatic_sync,interval_minutes=excluded.interval_minutes,next_sync_at=excluded.next_sync_at,last_result_json=excluded.last_result_json,updated_at=excluded.updated_at`)
+            .run(providerId, automaticSync ? 1 : 0, intervalMinutes, automaticSync ? nextSyncAt : null, serialized, Model.now());
+        return this.getProviderSyncPreference(providerId);
+    }
+
     providerFieldCanUpdate(entityType, entityId, field, currentValue) {
         if (currentValue === null || currentValue === undefined || currentValue === "") return true;
         const latest = this.db.prepare("SELECT source_type FROM stud_provenance_records WHERE entity_type=? AND entity_id=? AND field=? ORDER BY observed_at DESC, created_at DESC LIMIT 1").get(entityType, entityId, field);
@@ -497,6 +530,12 @@ class StudAcademicStore {
         const observedValue = value === null || value === undefined ? null : String(value);
         if (prior && prior.observed_value === observedValue && prior.source_type === sourceType && prior.source_id === sourceId) return;
         this.createProvenance({entityType, entityId, field, observedValue, sourceType, sourceId, sourceAuthority: "AUTHORITATIVE", observedAt: Model.now(), metadata});
+    }
+
+    providerObservationChanged(entityType, entityId, field, value, sourceType, sourceId) {
+        const prior = this.db.prepare("SELECT observed_value FROM stud_provenance_records WHERE entity_type=? AND entity_id=? AND field=? AND source_type=? AND source_id=? ORDER BY observed_at DESC, created_at DESC LIMIT 1").get(entityType, entityId, field, sourceType, sourceId);
+        const observedValue = value === null || value === undefined ? null : String(value);
+        return !prior || prior.observed_value !== observedValue;
     }
 
     upsertProviderEntity(entityType, namespace, externalId, sourceType, sourceId, value, fieldNames, metadata = {}) {
@@ -528,29 +567,50 @@ class StudAcademicStore {
         const sourceType = payload.sourceType === "MOODLE_ICS" ? "MOODLE_ICS" : "MOODLE";
         const courseIds = new Map();
         const assignmentIds = new Map();
-        const results = {courses: 0, assignments: 0, resources: 0, conflicts: 0};
+        const results = {courses: 0, assignments: 0, resources: 0, newCourses: 0, updatedCourses: 0, newAssignments: 0, updatedAssignments: 0, newResources: 0, updatedResources: 0, conflicts: 0};
         courses.slice(0, 100).forEach(raw => {
                 const {moodleId, uid, ...courseInput} = raw;
                 const value = Model.normalizeByEntityType("COURSE", courseInput);
                 const external = String(moodleId || uid);
-                const entity = this.upsertProviderEntity("COURSE", `${sourceType}_COURSE:${providerId}`, external, sourceType, `course:${external}`, value, ["title", "shortName", "code", "description", "startDate", "endDate", "status"], {providerId, capability: "COURSES"});
+                const fields = ["title", "shortName", "code", "description", "startDate", "endDate", "status"];
+                const prior = this.findByExternalIdentifier(`${sourceType}_COURSE:${providerId}`, external)[0];
+                const priorEntity = prior && this.getEntity("COURSE", prior.entityId, true);
+                const changed = priorEntity && fields.some(field => Object.prototype.hasOwnProperty.call(value, field) && this.providerObservationChanged("COURSE", priorEntity.id, field, value[field], sourceType, `course:${external}`));
+                const entity = this.upsertProviderEntity("COURSE", `${sourceType}_COURSE:${providerId}`, external, sourceType, `course:${external}`, value, fields, {providerId, capability: "COURSES"});
+                if (!priorEntity) results.newCourses += 1; else if (changed) results.updatedCourses += 1;
                 courseIds.set(external, entity.id); results.courses += 1;
         });
-        assignments.slice(0, 300).forEach(raw => {
+        assignments.slice(0, 1000).forEach(raw => {
                 const courseId = courseIds.get(String(raw.courseMoodleId || "")) || null;
                 const {moodleId, uid, courseMoodleId, url, ...assignmentInput} = raw;
                 const value = Model.normalizeByEntityType("ASSIGNMENT", {...assignmentInput, courseId});
                 const external = String(moodleId || uid);
-                const entity = this.upsertProviderEntity("ASSIGNMENT", `${sourceType}_ASSIGNMENT:${providerId}`, external, sourceType, `assignment:${external}`, value, ["title", "description", "releaseDate", "dueDate", "cutoffDate", "status", "submissionStatus", "submittedAt", "grade", "gradeMaximum", "weight", "feedback"], {providerId, capability: payload.sourceType === "MOODLE_ICS" ? "CALENDAR" : "ASSIGNMENTS"});
+                const fields = ["title", "description", "releaseDate", "dueDate", "cutoffDate", "status", "submissionStatus", "submittedAt", "grade", "gradeMaximum", "weight", "feedback"];
+                const prior = this.findByExternalIdentifier(`${sourceType}_ASSIGNMENT:${providerId}`, external)[0];
+                const priorEntity = prior && this.getEntity("ASSIGNMENT", prior.entityId, true);
+                const changed = priorEntity && fields.some(field => Object.prototype.hasOwnProperty.call(value, field) && this.providerObservationChanged("ASSIGNMENT", priorEntity.id, field, value[field], sourceType, `assignment:${external}`));
+                const entity = this.upsertProviderEntity("ASSIGNMENT", `${sourceType}_ASSIGNMENT:${providerId}`, external, sourceType, `assignment:${external}`, value, fields, {providerId, capability: payload.sourceType === "MOODLE_ICS" ? "CALENDAR" : "ASSIGNMENTS"});
+                if (!priorEntity) results.newAssignments += 1; else if (changed) results.updatedAssignments += 1;
                 assignmentIds.set(external, entity.id); results.assignments += 1;
         });
-        resources.slice(0, 1000).forEach(raw => {
+        resources.slice(0, 5000).forEach(raw => {
                 const courseId = courseIds.get(String(raw.courseMoodleId || "")) || null;
                 const assignmentId = assignmentIds.get(String(raw.assignmentMoodleId || "")) || null;
-                const {moodleId, uid, courseMoodleId, assignmentMoodleId, moduleContext, ...resourceInput} = raw;
+                // downloadUrl/fileSize are transient adapter-only values. They
+                // must never become canonical metadata: an authenticated file
+                // URL may carry access material and size is revalidated locally
+                // when the bytes are actually received.
+                const {moodleId, uid, courseMoodleId, assignmentMoodleId, moduleContext, downloadUrl, fileSize, contentHash, ...resourceInput} = raw;
+                const providerVersion = /^[a-f0-9]{32,128}$/i.test(String(contentHash || "")) ? String(contentHash).toLowerCase() : null;
                 const value = Model.normalizeByEntityType("RESOURCE", {...resourceInput, courseId, assignmentId});
                 const external = String(moodleId || uid);
-                this.upsertProviderEntity("RESOURCE", `${sourceType}_RESOURCE:${providerId}`, external, sourceType, `resource:${external}`, value, ["type", "title", "url", "mimeType"], {providerId, capability: "RESOURCES"});
+                const fields = ["type", "title", "url", "localReference", "mimeType", "checksum"];
+                const prior = this.findByExternalIdentifier(`${sourceType}_RESOURCE:${providerId}`, external)[0];
+                const priorEntity = prior && this.getEntity("RESOURCE", prior.entityId, true);
+                const changed = priorEntity && (fields.some(field => Object.prototype.hasOwnProperty.call(value, field) && this.providerObservationChanged("RESOURCE", priorEntity.id, field, value[field], sourceType, `resource:${external}`)) || (providerVersion && this.providerObservationChanged("RESOURCE", priorEntity.id, "providerVersion", providerVersion, sourceType, `resource:${external}`)));
+                const entity = this.upsertProviderEntity("RESOURCE", `${sourceType}_RESOURCE:${providerId}`, external, sourceType, `resource:${external}`, value, fields, {providerId, capability: "RESOURCES", moduleContext: moduleContext || null, providerFileSize: Number.isFinite(Number(fileSize)) ? Number(fileSize) : null});
+                if (providerVersion) this.recordProviderObservation("RESOURCE", entity.id, "providerVersion", providerVersion, sourceType, `resource:${external}`, {providerId, capability: "FILES", kind: "MOODLE_CONTENT_HASH"});
+                if (!priorEntity) results.newResources += 1; else if (changed) results.updatedResources += 1;
                 results.resources += 1;
         });
         completion.slice(0, 100).forEach(item => {
@@ -1269,6 +1329,62 @@ class StudAcademicStore {
         const revisions = this.listRevisionItems({assignmentId: assignment.id, limit: 100});
         const status = Orchestration.orchestrationStatus({references, conflicts});
         return Object.freeze({assignment, course, provenance, references, links, conflicts, relationships, notes: Object.freeze(notes), papers: Object.freeze(papers), resources, computeResults, documents, notebooks, datasets, repositories, revisions, status});
+    }
+
+    assignmentRequirements(assignmentId) {
+        this.initialize();
+        const assignment = this.getEntity("ASSIGNMENT", assignmentId);
+        if (!assignment) throw new Model.StudError("NOT_FOUND", "Assignment does not exist.");
+        const requirements = [];
+        const add = (entry) => {
+            if (requirements.length >= 40 || !entry || !entry.value) return;
+            const key = `${entry.kind}:${entry.label}:${entry.value}`.toLowerCase();
+            if (requirements.some(item => item._key === key)) return;
+            requirements.push({...entry, _key: key});
+        };
+        if (assignment.dueDate) add({kind: "DIRECT_REQUIREMENT", label: "DUE DATE", value: assignment.dueDate, sourceType: "ASSIGNMENT", sourceId: assignment.id, location: "CANONICAL ASSIGNMENT DEADLINE", confidence: "HIGH"});
+        if (assignment.weight !== null && assignment.weight !== undefined) add({kind: "DIRECT_REQUIREMENT", label: "WEIGHT", value: `${assignment.weight}%`, sourceType: "ASSIGNMENT", sourceId: assignment.id, location: "CANONICAL ASSIGNMENT METADATA", confidence: "HIGH"});
+        const patterns = Object.freeze([
+            Object.freeze({label: "WORD COUNT", expression: /\b\d{2,5}(?:\s*[-–]\s*\d{2,5})?\s+words?\b/i, concise: true}),
+            Object.freeze({label: "CITATION STYLE", expression: /\b(?:harvard|apa(?:\s*\d+)?|mla|oscola|chicago)\b(?:\s+(?:style|referencing|citation))?/i, concise: true}),
+            Object.freeze({label: "LEARNING OUTCOMES", expression: /\bLO(?:['’]?s)?\s*\d+(?:\s*[,/&–-]\s*\d+)*\b/i, concise: true}),
+            Object.freeze({label: "DURATION", expression: /\b(?:no more than|maximum(?:\s+length)?(?:\s+of)?|up to)\s+(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+minutes?\b/i, concise: true}),
+            Object.freeze({label: "ASSESSMENT WEIGHT", expression: /\b\d{1,3}%\s+(?:of|for)\s+(?:the\s+)?(?:portfolio|assessment|module|component|mark)\b/i}),
+            Object.freeze({label: "DELIVERABLE", expression: /\b(?:individual appendix|team design report|pre-recorded (?:presentation )?video|presentation slides|essay|report|presentation|portfolio|case study|literature review|reflection|poster|dissertation)\b/i}),
+            Object.freeze({label: "SUBMISSION FORMAT", expression: /\b(?:pdf|docx|pptx|mp4|powerpoint|word document)\b/i}),
+            Object.freeze({label: "REQUIRED STRUCTURE", expression: /\b(?:required structure(?: and formatting)?|should adhere to the following structure)\b/i}),
+            Object.freeze({label: "MARKING CRITERIA", expression: /\b(?:assessment criteria|marking criteria|rubric)\b/i}),
+            Object.freeze({label: "FORMATTING", expression: /\b(?:Arial font|\d{1,2}[- ]point font|line spacing of \d(?:\.\d+)?|margins? (?:must|should))\b/i})
+        ]);
+        const excerpt = (value, match) => {
+            if (!match || match.index === undefined) return "";
+            const start = Math.max(0, match.index - 90);
+            const end = Math.min(value.length, match.index + match[0].length + 150);
+            return value.slice(start, end).replace(/^\S*\s*/, start ? "… " : "").replace(/\s*\S*$/, end < value.length ? " …" : "").trim().slice(0, 360);
+        };
+        const inspect = (text, source) => {
+            const value = String(text || "").replace(/\s+/g, " ").trim();
+            if (!value) return;
+            patterns.forEach(pattern => {
+                const match = value.match(pattern.expression);
+                if (!match || requirements.filter(item => item.label === pattern.label).length >= 4) return;
+                add({kind: source.kind, label: pattern.label, value: pattern.concise ? match[0].slice(0, 240) : excerpt(value, match), sourceType: source.sourceType, sourceId: source.sourceId, location: source.location, confidence: source.confidence});
+            });
+        };
+        inspect(assignment.description, {kind: "DIRECT_REQUIREMENT", sourceType: "ASSIGNMENT", sourceId: assignment.id, location: "ASSIGNMENT DESCRIPTION", confidence: "MEDIUM"});
+        const documents = this.listAcademicDocuments({assignmentId: assignment.id, limit: 100});
+        documents.forEach(document => {
+            const extraction = this.db.prepare("SELECT id FROM stud_document_extractions WHERE document_id=? ORDER BY created_at DESC LIMIT 1").get(document.id);
+            if (!extraction) return;
+            const chunks = this.db.prepare("SELECT page_start,content FROM stud_document_chunks WHERE extraction_id=? ORDER BY ordinal LIMIT 120").all(extraction.id);
+            chunks.forEach(chunk => inspect(chunk.content, {kind: "EXTRACTED_REQUIREMENT", sourceType: "ACADEMIC_DOCUMENT", sourceId: document.id, location: `DOCUMENT · ${document.title} · PAGE ${chunk.page_start || "?"}`, confidence: "MEDIUM"}));
+        });
+        const critical = ["WORD COUNT", "CITATION STYLE", "LEARNING OUTCOMES", "SUBMISSION FORMAT", "REQUIRED STRUCTURE", "MARKING CRITERIA"];
+        critical.forEach(label => {
+            if (!requirements.some(item => item.label === label)) add({kind: "UNKNOWN", label, value: "Not stated in the currently linked assignment material.", sourceType: "LOCAL_STUD", sourceId: assignment.id, location: "LINKED ASSIGNMENT CONTEXT", confidence: "LOW"});
+        });
+        if (!requirements.length) add({kind: "UNKNOWN", label: "REQUIREMENTS", value: "No direct or bounded extracted requirement is available from the current local assignment material.", sourceType: "LOCAL_STUD", sourceId: assignment.id, location: "LOCAL ACADEMIC CONTEXT", confidence: "LOW"});
+        return Object.freeze(requirements.map(({_key, ...entry}) => Object.freeze(entry)));
     }
 
     recoverInterruptedStudySessions() {

@@ -26,6 +26,7 @@ const CHANNELS = Object.freeze([
     "stud-relationship-list",
     "stud-search",
     "stud-command-center",
+    "stud-assignment-requirements",
     "stud-progress-overview",
     "stud-progress-assessments",
     "stud-progress-revision",
@@ -124,6 +125,8 @@ const CHANNELS = Object.freeze([
     "stud-moodle-configure",
     "stud-moodle-probe",
     "stud-moodle-sync",
+    "stud-moodle-sync-preferences",
+    "stud-moodle-forget-account",
     "stud-moodle-ics-sync",
     "stud-moodle-cancel",
     "stud-moodle-open-web"
@@ -164,7 +167,7 @@ function registerStudAcademicIpc(options = {}) {
     let dialog = options.dialog || null;
     if (!dialog) { try { dialog = require("electron").dialog; } catch (error) {} }
     const runtime = options.researchRuntime || new StudResearchRuntime({root: resolveStorageRoot(options.app, options), dialog, env: options.env || process.env, fetch: options.fetch});
-    const lmsRuntime = options.lmsRuntime || new StudLmsRuntime({store, root: resolveStorageRoot(options.app, options), fetch: options.fetch, safeStorage: options.safeStorage, shell: options.shell, allowLocalDevelopment: options.allowLocalDevelopment === true});
+    const lmsRuntime = options.lmsRuntime || new StudLmsRuntime({store, root: resolveStorageRoot(options.app, options), fetch: options.fetch, safeStorage: options.safeStorage, shell: options.shell, app: options.app, allowLocalDevelopment: options.allowLocalDevelopment === true});
     // The compute runtime is pure local code. It has no process spawning,
     // filesystem, provider or network capability.
     const computeRuntime = options.computeRuntime || new StudComputeRuntime();
@@ -175,6 +178,10 @@ function registerStudAcademicIpc(options = {}) {
     // the established explicit-selector runtime; it has no own filesystem,
     // shell, environment or network authority.
     const documentRuntime = options.documentRuntime || new StudDocumentRuntime({readManagedPdf: reference => runtime.readManagedPdf(reference)});
+    // Moodle may classify explicitly synchronized PDFs through this already
+    // bounded local-only runtime. The adapter never receives document-parser
+    // authority, and no raw Moodle URL/token is exposed to it or the renderer.
+    if (typeof lmsRuntime.setDocumentRuntime === "function") lmsRuntime.setDocumentRuntime(documentRuntime);
     // This runtime receives Context Package snapshots only. It has no generic
     // filesystem, provider, shell or tool bridge and may contact only a
     // configured loopback Ollama endpoint after an explicit user request.
@@ -212,6 +219,7 @@ function registerStudAcademicIpc(options = {}) {
     add("stud-relationship-list", ["entityType", "entityId"], payload => store.listRelationships(payload.entityType, payload.entityId));
     add("stud-search", ["query", "options"], payload => store.search(payload.query, payload.options || {}));
     add("stud-command-center", ["now", "limit"], payload => store.getCommandCenter(payload));
+    add("stud-assignment-requirements", ["assignmentId"], payload => store.assignmentRequirements(payload.assignmentId));
     // Progress Analytics is a strictly derived local read surface. These
     // handlers cannot write, invoke providers, inspect Calendar/Email, or
     // create a background history.
@@ -411,6 +419,8 @@ function registerStudAcademicIpc(options = {}) {
     add("stud-moodle-configure", ["baseUrl", "displayName", "token", "icsUrl", "clearToken", "clearIcsUrl"], payload => lmsRuntime.configure(payload));
     add("stud-moodle-probe", ["requestId"], payload => lmsRuntime.probe(payload));
     add("stud-moodle-sync", ["requestId"], payload => lmsRuntime.sync(payload));
+    add("stud-moodle-sync-preferences", ["automaticSync", "intervalMinutes"], payload => lmsRuntime.configureSyncPreference(payload));
+    add("stud-moodle-forget-account", [], () => lmsRuntime.forgetAccount());
     add("stud-moodle-ics-sync", ["requestId"], payload => lmsRuntime.syncIcs(payload));
     add("stud-moodle-cancel", ["requestId"], payload => lmsRuntime.cancel(payload.requestId));
     add("stud-moodle-open-web", [], () => lmsRuntime.openWeb());

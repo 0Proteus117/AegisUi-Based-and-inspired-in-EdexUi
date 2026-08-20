@@ -11,8 +11,16 @@ const MOODLE_CAPABILITIES = Object.freeze([
     "ASSIGNMENT_WRITE", "FORUM_WRITE", "MESSAGE_WRITE", "QUIZ_WRITE"
 ]);
 const WRITE_CAPABILITIES = Object.freeze(["ASSIGNMENT_WRITE", "FORUM_WRITE", "MESSAGE_WRITE", "QUIZ_WRITE"]);
-const ERROR_CODES = Object.freeze(["INVALID_TOKEN", "AUTH_REQUIRED", "PERMISSION_DENIED", "SERVICE_DISABLED", "PROTOCOL_DISABLED", "CAPABILITY_UNAVAILABLE", "OFFLINE", "TIMEOUT", "RATE_LIMITED", "SERVER_ERROR", "MALFORMED_RESPONSE", "CANCELLED", "CONFIG_REQUIRED", "SECURE_STORAGE_UNAVAILABLE"]);
-const LIMITS = Object.freeze({baseUrl: 1024, displayName: 160, token: 4096, icsUrl: 4096, courses: 100, assignments: 300, resources: 1000, events: 500, responseBytes: 2 * 1024 * 1024});
+const ERROR_CODES = Object.freeze(["INVALID_TOKEN", "AUTH_REQUIRED", "PERMISSION_DENIED", "SERVICE_DISABLED", "PROTOCOL_DISABLED", "CAPABILITY_UNAVAILABLE", "OFFLINE", "TIMEOUT", "RATE_LIMITED", "SERVER_ERROR", "MALFORMED_RESPONSE", "CANCELLED", "CONFIG_REQUIRED", "SECURE_STORAGE_UNAVAILABLE", "LOCAL_STORAGE_ERROR", "POLICY_BLOCKED"]);
+// These limits deliberately bound a user-initiated full Moodle sync. They are
+// not a general file-transfer facility: only files advertised by the audited
+// course-content response may cross this boundary.
+const LIMITS = Object.freeze({
+    baseUrl: 1024, displayName: 160, token: 4096, icsUrl: 4096,
+    courses: 100, assignments: 1000, resources: 5000, events: 1000,
+    responseBytes: 2 * 1024 * 1024,
+    files: 2000, fileBytes: 40 * 1024 * 1024, totalFileBytes: 2 * 1024 * 1024 * 1024
+});
 
 class LmsError extends Error {
     constructor(code, message, details = {}) {
@@ -139,6 +147,39 @@ function safeReferenceUrl(value, baseUrl) {
     } catch (error) { return null; }
 }
 
+function safeMoodleFileUrl(value, baseUrl) {
+    if (!value) return null;
+    try {
+        const candidate = new URL(value, `${deriveMoodleWebUrl(baseUrl)}/`);
+        const base = new URL(deriveMoodleWebUrl(baseUrl));
+        const pathName = decodeURIComponent(candidate.pathname || "");
+        // Moodle Web Service file access is deliberately the only accepted
+        // authenticated file endpoint. Moodle's own Web Service exporters may
+        // append the non-secret `forcedownload` presentation flag. Preserve
+        // that flag, but reject tokens and every other query parameter.
+        if (candidate.protocol !== "https:" || candidate.origin !== base.origin || candidate.username || candidate.password || candidate.hash || !/(?:^|\/)webservice\/pluginfile\.php\//i.test(pathName)) return null;
+        const keys = [...candidate.searchParams.keys()];
+        if (keys.some(key => key !== "forcedownload") || keys.length > 1) return null;
+        const forceDownload = candidate.searchParams.get("forcedownload");
+        if (forceDownload !== null && !["0", "1"].includes(forceDownload)) return null;
+        return candidate.toString();
+    } catch (error) { return null; }
+}
+
+function safeMoodleSessionFileUrl(value, baseUrl) {
+    if (!value) return null;
+    try {
+        const candidate = new URL(value, `${deriveMoodleWebUrl(baseUrl)}/`);
+        const base = new URL(deriveMoodleWebUrl(baseUrl));
+        const pathName = decodeURIComponent(candidate.pathname || "");
+        // Browser-session access is limited to the standard Moodle file route
+        // already advertised by fixed course-content responses. It accepts no
+        // query, token, redirect or arbitrary same-host path.
+        if (candidate.protocol !== "https:" || candidate.origin !== base.origin || candidate.username || candidate.password || candidate.search || candidate.hash || !/(?:^|\/)pluginfile\.php\//i.test(pathName)) return null;
+        return candidate.toString();
+    } catch (error) { return null; }
+}
+
 function mapMoodleError(error = {}) {
     const code = String(error.errorcode || error.code || "").toLowerCase();
     const message = String(error.message || "").toLowerCase();
@@ -149,4 +190,4 @@ function mapMoodleError(error = {}) {
     return new LmsError("SERVER_ERROR", "Moodle returned a bounded service error.");
 }
 
-module.exports = Object.freeze({LMS_PROVIDER_TYPES, LMS_CONNECTION_STATES, LMS_CAPABILITY_STATES, MOODLE_CAPABILITIES, WRITE_CAPABILITIES, ERROR_CODES, LIMITS, LmsError, plainObject, allowedKeys, text, enumValue, safeId, normalizeBaseUrl, deriveMoodleEndpoint, deriveMoodleWebUrl, emptyCapabilities, normalizeCapabilities, normalizeProviderConfig, createRequestId, sanitizeDisplayText, safeReferenceUrl, mapMoodleError});
+module.exports = Object.freeze({LMS_PROVIDER_TYPES, LMS_CONNECTION_STATES, LMS_CAPABILITY_STATES, MOODLE_CAPABILITIES, WRITE_CAPABILITIES, ERROR_CODES, LIMITS, LmsError, plainObject, allowedKeys, text, enumValue, safeId, normalizeBaseUrl, deriveMoodleEndpoint, deriveMoodleWebUrl, emptyCapabilities, normalizeCapabilities, normalizeProviderConfig, createRequestId, sanitizeDisplayText, safeReferenceUrl, safeMoodleFileUrl, safeMoodleSessionFileUrl, mapMoodleError});

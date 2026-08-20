@@ -27,11 +27,27 @@ in provenance for review; AegisUi does not silently decide which source is
 correct. A remote object disappearing from a later sync never deletes or
 archives the local object automatically.
 
-Course-resource links are normalized as bounded references only. Moodle HTML
+Course-resource links are normalized as bounded references. Moodle HTML
 is converted to display text and same-host URLs preserve only numeric Moodle
 object identifiers (`id`, `course`, `section`, `cmid`); all other query values
 and fragments, including session/token values, are removed before persistence.
-Files are not downloaded and the provider's raw payload is never persisted.
+Files explicitly exposed by the read service are downloaded only during a
+user-initiated or user-enabled bounded sync into managed STUD storage. Each file
+keeps SHA-256, MIME type and provider provenance. Token-bearing download URLs
+exist only in memory and the provider's raw payload is never persisted. PDF
+interpretation remains a separate explicit indexing action.
+
+The lightweight capability probe checks the core contract without repeating a
+full course traversal. An `UNKNOWN` result from that lightweight probe does not
+erase a deeper capability already demonstrated by a successful explicit full
+sync. A later full sync can still change the stored state when the corresponding
+read actually succeeds or fails.
+
+Managed-file reconciliation is incremental. A file with the same stable Moodle
+identifier, declared hash/size and existing managed copy is not downloaded
+again. Changed or missing files are retrieved through the fixed official Moodle
+file endpoint and replace only their normalized managed observation; temporary
+download credentials remain memory-only.
 
 ## Calendar separation
 

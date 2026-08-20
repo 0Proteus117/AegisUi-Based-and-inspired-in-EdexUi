@@ -27,6 +27,11 @@ function isoFromUnix(value) {
     return Number.isFinite(number) && number > 0 ? new Date(number * 1000).toISOString() : null;
 }
 
+function positiveGradeMaximum(value) {
+    const number = Number(value);
+    return Number.isFinite(number) && number > 0 ? number : null;
+}
+
 function assignmentStatus(value) {
     const status = String(value || "").toUpperCase();
     if (status.includes("GRADE")) return "GRADED";
@@ -39,6 +44,22 @@ function submissionStatus(value) {
     if (status.includes("SUBMITTED") || status.includes("DRAFT")) return "SUBMITTED";
     if (status.includes("NEW") || status.includes("NOT")) return "NOT_SUBMITTED";
     return "UNKNOWN";
+}
+
+function normalizedSubmissionObservation(payload = {}) {
+    const attempt = payload && payload.lastattempt && payload.lastattempt.submission || {};
+    const rawStatus = String(attempt.status || payload && payload.status || "").toUpperCase();
+    const graded = String(payload && payload.lastattempt && payload.lastattempt.gradingstatus || "").toUpperCase();
+    const normalizedSubmissionStatus = submissionStatus(rawStatus);
+    return Object.freeze({
+        submissionStatus: normalizedSubmissionStatus,
+        // Some Moodle installations report gradingstatus=graded for an empty
+        // attempt. That describes the grading workflow, not proof that this
+        // student submitted or received a grade.
+        assignmentStatus: normalizedSubmissionStatus === "SUBMITTED" && graded.includes("GRADED") ? "GRADED" : null,
+        submittedAt: normalizedSubmissionStatus === "SUBMITTED" ? isoFromUnix(attempt.timemodified) : null,
+        feedback: Lms.sanitizeDisplayText(payload && payload.feedback && payload.feedback.grade || "", 12000) || null
+    });
 }
 
 function flattenAssignments(payload) {
@@ -70,6 +91,7 @@ class MoodleAdapter {
     }
 
     endpoint() { return Lms.deriveMoodleEndpoint(this.baseUrl); }
+    safeFileUrl(value) { return Lms.safeMoodleFileUrl(value, this.baseUrl); }
 
     async call(functionName, parameters = {}) {
         if (!Object.values(READ_FUNCTIONS).includes(functionName)) throw new Lms.LmsError("POLICY_BLOCKED", "Aegis permits only audited Moodle read functions.");
@@ -100,6 +122,41 @@ class MoodleAdapter {
         }
     }
 
+    async downloadResourceFile(resource = {}) {
+        const url = Lms.safeMoodleFileUrl(resource.downloadUrl, this.baseUrl);
+        if (!url) throw new Lms.LmsError("POLICY_BLOCKED", "Moodle resource is not an approved same-instance Web Service file.");
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(new Error("timeout")), this.timeoutMs);
+        this.controllers.set(this.requestId, controller);
+        try {
+            // Moodle's Web Service pluginfile endpoint accepts the token as a
+            // transient query value. It is constructed only in memory and the
+            // resulting URL is never returned, logged or persisted.
+            const authenticated = new URL(url);
+            authenticated.searchParams.set("token", this.token);
+            const response = await this.fetch(authenticated.toString(), {
+                method: "GET", credentials: "omit", redirect: "error", cache: "no-store",
+                headers: {accept: "application/pdf,application/octet-stream;q=0.8,*/*;q=0.1"}, signal: controller.signal
+            });
+            if (response.status === 429) throw new Lms.LmsError("RATE_LIMITED", "Moodle rate-limited this explicit file download.");
+            if (!response.ok) throw new Lms.LmsError("SERVER_ERROR", `Moodle file download returned HTTP ${response.status}.`);
+            const declared = Number(response.headers && response.headers.get && response.headers.get("content-length"));
+            if (Number.isFinite(declared) && declared > Lms.LIMITS.fileBytes) throw new Lms.LmsError("MALFORMED_RESPONSE", "Moodle file exceeds the permitted size.");
+            const bytes = Buffer.from(await response.arrayBuffer());
+            if (!bytes.length || bytes.length > Lms.LIMITS.fileBytes) throw new Lms.LmsError("MALFORMED_RESPONSE", "Moodle file exceeds the permitted size.");
+            const contentType = Lms.sanitizeDisplayText(String(response.headers && response.headers.get && response.headers.get("content-type") || "").split(";", 1)[0], 120);
+            return Object.freeze({bytes, mimeType: contentType || resource.mimeType || "application/octet-stream"});
+        } catch (error) {
+            if (error instanceof Lms.LmsError) throw error;
+            if (controller.signal.aborted) throw new Lms.LmsError("CANCELLED", "Moodle file download was cancelled.");
+            if (error && /timeout/i.test(String(error.message || ""))) throw new Lms.LmsError("TIMEOUT", "Moodle file did not respond within the bounded timeout.");
+            throw new Lms.LmsError("OFFLINE", "Moodle file could not be reached from this device.");
+        } finally {
+            clearTimeout(timeout);
+            if (this.controllers.get(this.requestId) === controller) this.controllers.delete(this.requestId);
+        }
+    }
+
     async probe() {
         const capabilities = {...Lms.emptyCapabilities()};
         const result = {instance: null, courses: [], assignments: [], calendar: [], capabilities, errors: {}};
@@ -119,7 +176,7 @@ class MoodleAdapter {
             capabilities.ASSIGNMENTS = "SUPPORTED";
         } catch (error) { capabilities.ASSIGNMENTS = capabilityFromError(error); result.errors.ASSIGNMENTS = error.code; }
         try {
-            const courseIds = result.courses.slice(0, 20).map(item => Number(item.id)).filter(Number.isFinite);
+            const courseIds = result.courses.map(item => Number(item.id)).filter(Number.isFinite);
             const calendar = await this.call(READ_FUNCTIONS.CALENDAR, {events: {courseids: courseIds}});
             result.calendar = Array.isArray(calendar && calendar.events) ? calendar.events.slice(0, Lms.LIMITS.events) : [];
             capabilities.CALENDAR = "SUPPORTED";
@@ -152,12 +209,75 @@ class MoodleAdapter {
         return detail;
     }
 
+    async fetchAssignmentStatus(assignment, capabilities, errors) {
+        const assignmentId = Number(assignment && assignment.id);
+        if (!Number.isFinite(assignmentId)) return null;
+        try {
+            const payload = await this.call(READ_FUNCTIONS.ASSIGNMENT_STATUS, {assignid: assignmentId});
+            capabilities.ASSIGNMENT_STATUS = "SUPPORTED";
+            const observation = normalizedSubmissionObservation(payload);
+            if (observation.feedback) capabilities.FEEDBACK = "SUPPORTED";
+            return observation;
+        } catch (error) {
+            capabilities.ASSIGNMENT_STATUS = capabilityFromError(error);
+            if (capabilities.FEEDBACK === "UNKNOWN") capabilities.FEEDBACK = capabilityFromError(error);
+            errors.ASSIGNMENT_STATUS = error.code;
+            return null;
+        }
+    }
+
+    async fetchForums(courseIds, capabilities, errors) {
+        if (!courseIds.length) return [];
+        try {
+            const payload = await this.call(READ_FUNCTIONS.FORUM_READ, {courseids: courseIds});
+            const forums = Array.isArray(payload) ? payload : Array.isArray(payload && payload.forums) ? payload.forums : [];
+            capabilities.FORUM_READ = "SUPPORTED";
+            // A Moodle "news" forum is an institutional announcement
+            // container. We preserve its public course metadata only; no posts,
+            // participants or private discussion content is fetched here.
+            capabilities.ANNOUNCEMENTS = forums.some(item => String(item.type || "").toLowerCase() === "news") ? "SUPPORTED" : "UNKNOWN";
+            return forums.slice(0, Lms.LIMITS.resources).map(item => ({
+                moodleId: `forum:${String(item.id)}`,
+                courseMoodleId: String(item.course || item.courseid || ""),
+                assignmentMoodleId: null,
+                title: Lms.sanitizeDisplayText(item.name, 240) || "Moodle forum",
+                type: String(item.type || "").toLowerCase() === "news" ? "ANNOUNCEMENTS" : "FORUM",
+                url: Lms.safeReferenceUrl(item.url, this.baseUrl),
+                mimeType: null,
+                moduleContext: "MOODLE COURSE FORUM"
+            })).filter(item => item.courseMoodleId);
+        } catch (error) {
+            capabilities.FORUM_READ = capabilityFromError(error);
+            capabilities.ANNOUNCEMENTS = capabilityFromError(error);
+            errors.FORUM_READ = error.code;
+            return [];
+        }
+    }
+
     normalizeResources(contents, courseId) {
         if (!Array.isArray(contents)) return [];
         const resources = [];
         contents.forEach(section => (Array.isArray(section.modules) ? section.modules : []).forEach(module => {
             const reference = Lms.safeReferenceUrl(module.url, this.baseUrl);
-            resources.push({moodleId: String(module.id), courseMoodleId: String(courseId), title: Lms.sanitizeDisplayText(module.name, 240) || "Moodle resource", type: Lms.sanitizeDisplayText(module.modname, 64) || "RESOURCE", url: reference, mimeType: null, moduleContext: Lms.sanitizeDisplayText(section.name, 240)});
+            const moduleContext = Lms.sanitizeDisplayText(section.name, 240);
+            const assignmentMoodleId = String(module.modname || "").toLowerCase() === "assign" && Number.isFinite(Number(module.instance)) ? String(module.instance) : null;
+            const contents = Array.isArray(module.contents) ? module.contents : [];
+            if (!contents.length) {
+                resources.push({moodleId: String(module.id), courseMoodleId: String(courseId), assignmentMoodleId, title: Lms.sanitizeDisplayText(module.name, 240) || "Moodle resource", type: Lms.sanitizeDisplayText(module.modname, 64) || "RESOURCE", url: reference, mimeType: null, moduleContext});
+                return;
+            }
+            contents.forEach((content, index) => {
+                const fileName = Lms.sanitizeDisplayText(content.filename || content.filepath || `Moodle file ${index + 1}`, 240) || `Moodle file ${index + 1}`;
+                const fileUrl = this.safeFileUrl(content.fileurl);
+                resources.push({
+                    moodleId: `${String(module.id)}:${String(content.id || content.contenthash || index)}`,
+                    courseMoodleId: String(courseId), assignmentMoodleId, title: fileName,
+                    type: "FILE", url: reference, mimeType: Lms.sanitizeDisplayText(content.mimetype, 120),
+                moduleContext, fileSize: Number(content.filesize) || null,
+                    contentHash: /^[a-f0-9]{32,128}$/i.test(String(content.contenthash || "")) ? String(content.contenthash).toLowerCase() : null,
+                    downloadUrl: fileUrl
+                });
+            });
         }));
         return resources.slice(0, Lms.LIMITS.resources);
     }
@@ -167,7 +287,10 @@ class MoodleAdapter {
     }
 
     normalizeAssignment(raw) {
-        return {moodleId: String(raw.id), courseMoodleId: String(raw.courseid), title: Lms.sanitizeDisplayText(raw.name, 240) || `Moodle assignment ${raw.id}`, description: Lms.sanitizeDisplayText(raw.intro, 12000), releaseDate: isoFromUnix(raw.allowsubmissionsfromdate), dueDate: isoFromUnix(raw.duedate), cutoffDate: isoFromUnix(raw.cutoffdate), status: assignmentStatus(raw.status), submissionStatus: submissionStatus(raw.submissionstatus), submittedAt: isoFromUnix(raw.timemodified), grade: null, gradeMaximum: Number.isFinite(Number(raw.grade)) ? Number(raw.grade) : null, weight: null, feedback: null};
+        // Assignment timemodified describes the activity configuration, not
+        // this student's submission. Only the dedicated submission-status
+        // endpoint may populate submittedAt.
+        return {moodleId: String(raw.id), courseMoodleId: String(raw.courseid), title: Lms.sanitizeDisplayText(raw.name, 240) || `Moodle assignment ${raw.id}`, description: Lms.sanitizeDisplayText(raw.intro, 12000), releaseDate: isoFromUnix(raw.allowsubmissionsfromdate), dueDate: isoFromUnix(raw.duedate), cutoffDate: isoFromUnix(raw.cutoffdate), status: assignmentStatus(raw.status), submissionStatus: submissionStatus(raw.submissionstatus), submittedAt: null, grade: null, gradeMaximum: positiveGradeMaximum(raw.grade), weight: null, feedback: null};
     }
 
     async sync() {
@@ -179,21 +302,37 @@ class MoodleAdapter {
         const resources = [];
         const gradeByAssignment = new Map();
         const completion = [];
-        const limitedCourses = probe.courses.slice(0, 20);
-        for (const course of limitedCourses) {
+        for (const course of probe.courses) {
             const detail = await this.fetchCourseDetail(course, probe.instance.userId, capabilities, errors);
             resources.push(...detail.resources);
             (detail.grades || []).forEach(user => (Array.isArray(user.gradeitems) ? user.gradeitems : []).forEach(item => {
                 const instance = String(item.iteminstance || "");
                 if (!instance || !/assign/i.test(String(item.itemmodule || ""))) return;
-                gradeByAssignment.set(instance, {grade: Number.isFinite(Number(item.graderaw)) ? Number(item.graderaw) : null, gradeMaximum: Number.isFinite(Number(item.grademax)) ? Number(item.grademax) : null, feedback: Lms.sanitizeDisplayText(item.feedback || item.feedbacktext, 12000)});
+                const gradeMaximum = positiveGradeMaximum(item.grademax);
+                gradeByAssignment.set(instance, {grade: gradeMaximum !== null && Number.isFinite(Number(item.graderaw)) ? Number(item.graderaw) : null, gradeMaximum, feedback: Lms.sanitizeDisplayText(item.feedback || item.feedbacktext, 12000)});
             }));
             if (detail.completion) completion.push({courseMoodleId: String(course.id), value: detail.completion});
         }
+        const forums = await this.fetchForums(probe.courses.map(item => Number(item.id)).filter(Number.isFinite), capabilities, errors);
+        resources.push(...forums);
+        for (const assignment of probe.assignments.slice(0, Lms.LIMITS.assignments)) {
+            const status = await this.fetchAssignmentStatus(assignment, capabilities, errors);
+            if (!status) continue;
+            const normalized = assignments.find(item => item.moodleId === String(assignment.id));
+            if (normalized) {
+                if (status.submissionStatus && status.submissionStatus !== "UNKNOWN") normalized.submissionStatus = status.submissionStatus;
+                // A known NOT_SUBMITTED observation must clear any stale
+                // timestamp imported by older builds.
+                if (status.submissionStatus && status.submissionStatus !== "UNKNOWN") normalized.submittedAt = status.submittedAt || null;
+                if (status.feedback) normalized.feedback = status.feedback;
+                if (status.assignmentStatus) normalized.status = status.assignmentStatus;
+            }
+        }
         assignments.forEach(item => { const grade = gradeByAssignment.get(String(item.moodleId)); if (grade) Object.assign(item, grade); });
         if (gradeByAssignment.size) capabilities.FEEDBACK = "SUPPORTED";
+        capabilities.FILES = resources.some(item => item.downloadUrl) ? "SUPPORTED" : capabilities.RESOURCES === "SUPPORTED" ? "UNSUPPORTED" : capabilities.RESOURCES;
         return Object.freeze({instance: probe.instance, capabilities: Lms.normalizeCapabilities(capabilities), errors, courses, assignments, resources: resources.slice(0, Lms.LIMITS.resources), completion, calendar: probe.calendar.map(item => ({uid: String(item.id || item.instance || item.name || ""), courseMoodleId: item.courseid ? String(item.courseid) : null, title: Lms.sanitizeDisplayText(item.name, 240) || "Moodle calendar event", description: Lms.sanitizeDisplayText(item.description, 12000), startDate: isoFromUnix(item.timestart), endDate: isoFromUnix(item.timestart && item.timestart + (Number(item.timeduration) || 0)), url: Lms.safeReferenceUrl(item.url, this.baseUrl)})).slice(0, Lms.LIMITS.events)});
     }
 }
 
-module.exports = {MoodleAdapter, READ_FUNCTIONS, capabilityFromError, formEncode, isoFromUnix};
+module.exports = {MoodleAdapter, READ_FUNCTIONS, capabilityFromError, formEncode, isoFromUnix, normalizedSubmissionObservation};

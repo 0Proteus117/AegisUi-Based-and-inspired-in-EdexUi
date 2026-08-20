@@ -6,7 +6,7 @@ class StudDocumentWorkspace {
         this.escape = options.escape || (value => String(value || ""));
         this.showToast = options.showToast || (() => {});
         this.parent = options.parent || null;
-        this.state = {capabilities: null, documents: [], choices: {courses: [], assignments: [], papers: [], resources: []}, selectedId: "", context: null, search: [], busy: false, requestId: null, error: null};
+        this.state = {capabilities: null, documents: [], choices: {courses: [], assignments: [], papers: [], resources: []}, selectedId: "", context: null, search: [], listQuery: "", listLimit: 40, importExpanded: false, busy: false, requestId: null, error: null};
     }
 
     async initialize() {
@@ -34,10 +34,13 @@ class StudDocumentWorkspace {
     render() {
         const selected = this.state.context && this.state.context.document;
         const cap = this.state.capabilities || {};
+        const query = this.state.listQuery.trim().toLocaleLowerCase();
+        const filteredDocuments = query ? this.state.documents.filter(document => `${document.title || ""} ${document.documentType || ""} ${document.displayName || ""}`.toLocaleLowerCase().includes(query)) : this.state.documents;
+        const visibleDocuments = filteredDocuments.slice(0, this.state.listLimit);
         return `<section class="stud-document-shell">
             <header class="workspace-panel stud-document-intro"><div><small>STUD / LOCAL DOCUMENT CONTEXT</small><h2>DOCUMENT INTELLIGENCE</h2><p>Explicit, offline PDF analysis with page-level provenance. It does not infer academic discipline, upload a document or contact a provider.</p></div><div class="stud-document-state"><small>BASE ENGINE</small><strong>${this.escape(cap.BUILTIN_PDF && cap.BUILTIN_PDF.status || "CHECKING")}</strong><span>PDF.JS / LOCAL</span></div></header>
             <div class="stud-document-grid">
-                <article class="workspace-panel"><header><h2>DOCUMENTS</h2><span>${this.state.documents.length} LOCAL</span></header><div class="workspace-panel-content stud-document-list">${this.renderImportForm()}${this.state.documents.length ? this.state.documents.map(document => `<button type="button" class="${document.id === this.state.selectedId ? "selected" : ""}" data-stud-document-select="${this.escape(document.id)}"><strong>${this.escape(document.title)}</strong><small>${this.escape(document.documentType)} · ${this.escape(document.extractionStatus)}</small></button>`).join("") : `<p class="stud-empty-inline">NO ACADEMIC DOCUMENTS. IMPORT ONE PDF EXPLICITLY TO BEGIN.</p>`}</div></article>
+                <article class="workspace-panel"><header><h2>DOCUMENTS</h2><span>${filteredDocuments.length} OF ${this.state.documents.length}</span></header><div class="workspace-panel-content stud-document-list"><div class="stud-document-library-actions"><form data-stud-document-filter-form><label>FIND LOCAL DOCUMENT<input class="aegis-input" name="query" maxlength="240" value="${this.escape(this.state.listQuery)}" placeholder="Title or document type"></label><button type="submit">FIND</button>${this.state.listQuery ? `<button type="button" data-stud-document-clear-filter>CLEAR</button>` : ""}</form><button type="button" data-stud-document-import-toggle aria-expanded="${this.state.importExpanded ? "true" : "false"}">${this.state.importExpanded ? "CLOSE IMPORT" : "IMPORT DOCUMENT"}</button></div>${this.state.importExpanded ? this.renderImportForm() : ""}${visibleDocuments.length ? visibleDocuments.map(document => `<button type="button" class="${document.id === this.state.selectedId ? "selected" : ""}" data-stud-document-select="${this.escape(document.id)}"><strong>${this.escape(document.title)}</strong><small>${this.escape(document.documentType)} · ${this.escape(document.extractionStatus)}</small></button>`).join("") : `<p class="stud-empty-inline">${this.state.documents.length ? "NO DOCUMENTS MATCH THIS LOCAL FILTER." : "NO ACADEMIC DOCUMENTS. IMPORT ONE PDF EXPLICITLY TO BEGIN."}</p>`}${visibleDocuments.length < filteredDocuments.length ? `<button type="button" class="stud-document-load-more" data-stud-document-load-more>SHOW 40 MORE · ${filteredDocuments.length - visibleDocuments.length} REMAINING</button>` : ""}</div></article>
                 <article class="workspace-panel stud-document-detail"><header><h2>${selected ? "DOCUMENT CONTEXT" : "LOCAL INGESTION"}</h2><span>${selected ? this.escape(selected.extractionStatus) : "EXPLICIT / OFFLINE"}</span></header><div class="workspace-panel-content">${selected ? this.renderContext() : this.renderEmpty()}</div></article>
             </div>
             <article class="workspace-panel stud-document-policy"><header><h2>ENGINE CAPABILITIES</h2><span>HONEST / OPTIONAL</span></header><div class="workspace-panel-content"><div class="stud-document-capabilities">${Object.entries(cap).map(([name, value]) => `<article><strong>${this.escape(name.replace(/_/g, " "))}</strong><span>${this.escape(value.status)}</span><small>${this.escape(value.reason || `${value.engine} · OFFLINE / NO NETWORK`)}</small></article>`).join("")}</div><p>Advanced engines are not bundled, detected via arbitrary local paths, or replaced by a cloud fallback. Flat page/chunk extraction remains explicit when structure is unavailable.</p></div></article>
@@ -73,9 +76,15 @@ class StudDocumentWorkspace {
         const note = event.target.closest("[data-stud-document-note]");
         const revision = event.target.closest("[data-stud-document-revision]");
         const openPdf = event.target.closest("[data-stud-document-open-pdf]");
-        if (!select && !importButton && !analyze && !cancel && !note && !revision && !openPdf) return false;
+        const importToggle = event.target.closest("[data-stud-document-import-toggle]");
+        const clearFilter = event.target.closest("[data-stud-document-clear-filter]");
+        const loadMore = event.target.closest("[data-stud-document-load-more]");
+        if (!select && !importButton && !analyze && !cancel && !note && !revision && !openPdf && !importToggle && !clearFilter && !loadMore) return false;
         try {
             if (select) await this.select(select.dataset.studDocumentSelect);
+            else if (importToggle) { this.state.importExpanded = !this.state.importExpanded; if (this.parent) this.parent.render(); }
+            else if (clearFilter) { this.state.listQuery = ""; this.state.listLimit = 40; if (this.parent) this.parent.render(); }
+            else if (loadMore) { this.state.listLimit += 40; if (this.parent) this.parent.render(); }
             else if (importButton) await this.importDocument({});
             else if (analyze) { this.state.busy = true; this.state.requestId = `document_${Date.now()}`; this.parent.render(); const result = await this.request("stud-document-analyze", {documentId: analyze.dataset.studDocumentAnalyze, requestId: this.state.requestId}); this.state.busy = false; this.state.requestId = null; await this.refresh(analyze.dataset.studDocumentAnalyze); this.showToast(this.parent.view, result.status === "CANCELLED" ? "DOCUMENT ANALYSIS CANCELLED" : "DOCUMENT EXTRACTION SAVED EXPLICITLY"); }
             else if (cancel) { await this.request("stud-document-cancel", {requestId: this.state.requestId}); }
@@ -95,6 +104,14 @@ class StudDocumentWorkspace {
     }
 
     async handleSubmit(event) {
+        const filterForm = event.target.closest("[data-stud-document-filter-form]");
+        if (filterForm) {
+            event.preventDefault();
+            this.state.listQuery = String(new FormData(filterForm).get("query") || "").trim();
+            this.state.listLimit = 40;
+            if (this.parent) this.parent.render();
+            return true;
+        }
         const form = event.target.closest("[data-stud-document-import-form]");
         if (!form) return false;
         event.preventDefault();

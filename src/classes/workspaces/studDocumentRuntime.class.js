@@ -4,6 +4,7 @@
 // filesystem API. It analyses only bytes returned by the existing managed-PDF
 // boundary after a user has explicitly selected one file.
 const crypto = require("crypto");
+const path = require("path");
 const {pathToFileURL} = require("url");
 const Academic = require("./studAcademicModel.class.js");
 
@@ -58,6 +59,13 @@ async function defaultPdfJsLoader() {
     return import(pathToFileURL(resolved).href);
 }
 
+function standardFontDataUrl() {
+    try {
+        const font = require.resolve("pdfjs-dist/standard_fonts/FoxitSymbol.pfb");
+        return pathToFileURL(`${path.dirname(font)}${path.sep}`).href;
+    } catch (_) { return undefined; }
+}
+
 class StudDocumentRuntime {
     constructor(options = {}) {
         if (typeof options.readManagedPdf !== "function") throw new Error("readManagedPdf is required for document analysis.");
@@ -94,7 +102,8 @@ class StudDocumentRuntime {
             if (controller.signal.aborted) throw error("CANCELLED", "Document analysis was cancelled.");
             const bytes = Buffer.from(managed.bytesBase64, "base64");
             const pdfjs = await this.loadPdfJs();
-            const task = pdfjs.getDocument({data: new Uint8Array(bytes), isEvalSupported: false, disableFontFace: true, useWorkerFetch: false});
+            const fontDataUrl = standardFontDataUrl();
+            const task = pdfjs.getDocument({data: new Uint8Array(bytes), isEvalSupported: false, disableFontFace: true, useWorkerFetch: false, ...(fontDataUrl ? {standardFontDataUrl: fontDataUrl} : {})});
             let pdf;
             try { pdf = await task.promise; }
             catch (cause) {
@@ -136,4 +145,4 @@ class StudDocumentRuntime {
     dispose() { this.controllers.forEach(controller => controller.abort()); this.controllers.clear(); }
 }
 
-module.exports = {StudDocumentRuntime, MAX_PAGES, MAX_PAGE_TEXT, MAX_TOTAL_TEXT, CHUNK_SIZE, chunkPage, directReferences, sha256};
+module.exports = {StudDocumentRuntime, MAX_PAGES, MAX_PAGE_TEXT, MAX_TOTAL_TEXT, CHUNK_SIZE, chunkPage, directReferences, sha256, standardFontDataUrl};

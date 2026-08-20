@@ -8,7 +8,7 @@ const path = require("path");
 const ROOT = path.resolve(__dirname, "..");
 const Model = require(path.join(ROOT, "src/classes/workspaces/studAcademicModel.class.js"));
 const {StudAcademicStore} = require(path.join(ROOT, "src/classes/workspaces/studAcademicStore.class.js"));
-const {StudDocumentRuntime, sha256} = require(path.join(ROOT, "src/classes/workspaces/studDocumentRuntime.class.js"));
+const {StudDocumentRuntime, sha256, standardFontDataUrl} = require(path.join(ROOT, "src/classes/workspaces/studDocumentRuntime.class.js"));
 const Ipc = require(path.join(ROOT, "src/classes/workspaces/studAcademicIpc.class.js"));
 
 let passed = 0;
@@ -30,6 +30,7 @@ function ipcMock() { const handlers = new Map(); return {handlers, handle: (name
         ])});
         sync("DISCIPLINE_NEUTRAL_SCHEMA", () => assert.ok(Model.ENTITY_TYPES.includes("ACADEMIC_DOCUMENT") && Model.DOCUMENT_TYPES.includes("LEGAL_MATERIAL")));
         sync("CAPABILITIES_HONEST", () => { const caps = runtime.capabilities(); assert.strictEqual(caps.BUILTIN_PDF.status, "AVAILABLE"); assert.strictEqual(caps.DOCLING.status, "NOT_INSTALLED"); assert.strictEqual(caps.GROBID.status, "NOT_INSTALLED"); assert.strictEqual(caps.OCR.status, "NOT_INSTALLED"); });
+        sync("PDF_STANDARD_FONTS_PACKAGED", () => assert.ok(/^file:/.test(standardFontDataUrl() || "")));
         const extraction = await runtime.analyze({document: {managedReference: managed.reference}, requestId: "synthetic_document"});
         sync("BUILTIN_PDF_EXTRACTION", () => assert.strictEqual(extraction.status, "READY") && assert.strictEqual(extraction.pages.length, 5) && assert.ok(extraction.chunks.length >= 5));
         sync("PAGE_AND_CHUNK_HASHES", () => assert.ok(extraction.pages.every(page => page.textHash === sha256(page.text)) && extraction.chunks.every(chunk => chunk.contentHash === sha256(chunk.content))));

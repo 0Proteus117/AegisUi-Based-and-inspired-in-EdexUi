@@ -16,6 +16,7 @@ const ipc = fs.readFileSync(path.join(ROOT, "src/classes/workspaces/studAcademic
 const css = fs.readFileSync(path.join(ROOT, "src/assets/css/workspaces.css"), "utf8");
 const theme = fs.readFileSync(path.join(ROOT, "src/assets/css/aegis_theme.css"), "utf8");
 const revision = fs.readFileSync(path.join(ROOT, "src/classes/workspaces/studRevisionWorkspace.class.js"), "utf8");
+const documents = fs.readFileSync(path.join(ROOT, "src/classes/workspaces/studDocumentWorkspace.class.js"), "utf8");
 const root = fs.mkdtempSync(path.join(os.tmpdir(), "aegis-stud-phase2-"));
 const store = new StudAcademicStore({root, applicationVersion: "test"});
 const checks = [];
@@ -51,6 +52,14 @@ try {
         assert.ok(context.notes.some(item => item.id === note.id));
         assert.ok(context.resources.some(item => item.id === resource.id));
     });
+    check("ASSIGNMENT_REQUIREMENTS_ARE_BOUNDED_AND_EXPLAINABLE", () => {
+        const requirementAssignment = store.createEntity("ASSIGNMENT", {courseId: course.id, title: "Requirements fixture", description: "Write a 2500 word report using Harvard referencing and submit a PDF.", dueDate: tomorrow, status: "NOT_STARTED"});
+        const requirements = store.assignmentRequirements(requirementAssignment.id);
+        assert.ok(requirements.some(item => item.label === "WORD COUNT" && item.kind === "DIRECT_REQUIREMENT"));
+        assert.ok(requirements.some(item => item.label === "CITATION STYLE"));
+        assert.ok(requirements.every(item => item.sourceType && item.location && item.confidence));
+        assert.ok(requirements.length <= 40);
+    });
     check("CALENDAR_EMAIL_REFERENCE_IDS_ONLY", () => {
         const calendar = store.linkReference({entityType: "ASSIGNMENT", entityId: urgent.id, kind: "CALENDAR", externalId: "synthetic-event-1"});
         const email = store.linkReference({entityType: "ASSIGNMENT", entityId: urgent.id, kind: "EMAIL", externalId: "synthetic-message-1"});
@@ -73,6 +82,17 @@ try {
         assert.ok(commandCenter.includes("StudToolCatalogWorkspace"));
         assert.ok(commandCenter.includes("FTS5 searches only local canonical academic records"));
         assert.ok(commandCenter.includes("STUD DOES NOT SCAN, OPEN OR COPY EXTERNAL CONTENT"));
+        assert.ok(commandCenter.includes("ASSIGNMENT ROADMAP"));
+        assert.ok(commandCenter.includes("13 · FINAL EDITING"));
+        assert.ok(commandCenter.includes("BRIEF &amp; MARKING DOCUMENTS"));
+        assert.ok(commandCenter.includes("EVIDENCE MATRIX"));
+        assert.ok(commandCenter.includes("SELECT FOR WORKFLOW TEST"));
+        assert.ok(commandCenter.includes("stud-nav-primary"));
+        assert.ok(commandCenter.includes("data-stud-search-toggle"));
+        assert.ok(commandCenter.includes("searchExpanded: false"));
+        assert.ok(documents.includes("listLimit: 40"));
+        assert.ok(documents.includes("data-stud-document-load-more"));
+        assert.ok(documents.includes("data-stud-document-import-toggle"));
         assert.ok(!commandCenter.includes("fetch("));
         assert.ok(!commandCenter.includes("localStorage"));
         assert.ok(commandCenter.includes('"REVISION"'));
@@ -81,6 +101,7 @@ try {
     });
     check("IPC_IS_NARROW_AND_EXPLICIT", () => {
         assert.ok(ipc.includes('"stud-command-center"'));
+        assert.ok(ipc.includes('"stud-assignment-requirements"'));
         assert.ok(ipc.includes('"stud-reference-link"'));
         assert.ok(ipc.includes('"stud-research-search"'));
         assert.ok(ipc.includes('"stud-moodle-probe"'));
@@ -97,9 +118,16 @@ try {
     check("COMMAND_CENTER_LAYOUT_THEME_CONTRACT", () => {
         assert.ok(css.includes("stud-command-center-grid"));
         assert.ok(css.includes("stud-overview-grid"));
+        assert.ok(css.includes("stud-nav-primary"));
+        assert.ok(css.includes("stud-assignment-requirements"));
+        assert.ok(css.includes("stud-evidence-matrix"));
         assert.ok(css.includes("stud-dialog"));
         assert.ok(css.includes("stud-revision-overview-grid"));
         assert.ok(css.includes("stud-tool-catalog-grid"));
+        assert.ok(css.includes("--stud-copy-size: clamp(11px"));
+        assert.ok(css.includes("stud-document-library-actions"));
+        assert.ok(css.includes(".stud-command-main { grid-row: 4; }"));
+        assert.ok(css.includes(".stud-command-search { grid-row: 3; }"));
         assert.ok(css.includes("@media (max-width: 1230px)"));
         assert.ok(theme.includes("STUD Phase 2 keeps the Command Center semantic"));
     });
