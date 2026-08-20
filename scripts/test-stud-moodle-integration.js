@@ -118,6 +118,8 @@ function fullFetch(url, options = {}) {
         const requirements = store.assignmentRequirements(assignment.id);
         check("MOODLE_REQUIREMENTS_ARE_LOCAL_EXPLAINABLE", requirements.some(item => item.kind === "DIRECT_REQUIREMENT" && item.label === "DUE DATE") && requirements.every(item => item.sourceType && item.location));
         check("MOODLE_ASSIGNMENT_STATUS_AND_ANNOUNCEMENTS", sync.provider.capabilities.ASSIGNMENT_STATUS === "SUPPORTED" && sync.provider.capabilities.FORUM_READ === "SUPPORTED" && sync.provider.capabilities.ANNOUNCEMENTS === "SUPPORTED");
+        const postSyncProbe = await runtime.probe({requestId: "probe_after_sync"});
+        check("MOODLE_LIGHT_PROBE_PRESERVES_SYNCED_CAPABILITIES", postSyncProbe.provider.capabilities.COURSE_CONTENT === "SUPPORTED" && postSyncProbe.provider.capabilities.FILES === "SUPPORTED" && postSyncProbe.provider.capabilities.GRADES === "SUPPORTED");
         check("MOODLE_NO_SECRET_IN_SQLITE", !fs.readFileSync(path.join(root, "academic.sqlite")).includes(Buffer.from("synthetic-token")));
         check("MOODLE_FILE_URL_NEVER_PERSISTED", !fs.readFileSync(path.join(root, "academic.sqlite")).includes(Buffer.from("pluginfile.php")) && !vaultText.includes("pluginfile.php"));
 

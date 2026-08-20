@@ -243,8 +243,16 @@ class StudLmsRuntime {
         const requestId = payload.requestId || Lms.createRequestId(); const attemptedAt = Model.now();
         try {
             const result = await this.adapter(instance, secret, requestId, authentication).probe();
-            const state = stateFromCapabilities(result.capabilities, true);
-            const provider = this.persistState(instance, {status: state, capabilities: result.capabilities, lastAttempt: attemptedAt, lastErrorCode: null});
+            // The lightweight probe intentionally exercises only the core
+            // service contract. It must not erase capabilities that a prior
+            // explicit full sync has already demonstrated merely because the
+            // lightweight probe reports those deeper reads as UNKNOWN.
+            const capabilities = {...result.capabilities};
+            Object.entries(instance.capabilities || {}).forEach(([name, previous]) => {
+                if (capabilities[name] === "UNKNOWN" && previous !== "UNKNOWN") capabilities[name] = previous;
+            });
+            const state = stateFromCapabilities(capabilities, true);
+            const provider = this.persistState(instance, {status: state, capabilities, lastAttempt: attemptedAt, lastErrorCode: null});
             return Object.freeze({provider: this.safeStatus(provider), probe: Object.freeze({instance: result.instance, capabilities: provider.capabilities, errors: result.errors, webServices: "AVAILABLE", mobileWebServices: result.instance.mobileService, rest: "AVAILABLE", writePolicy: "READ_ONLY / POLICY_DISABLED"})});
         } catch (error) {
             const probe = error.probe || null;
