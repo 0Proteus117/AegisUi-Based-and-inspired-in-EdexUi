@@ -25,7 +25,14 @@ const dist = path.join(ROOT, "dist");
 // Resolve before copying. fs.cpSync preserves framework links; comparing a
 // relative template path against an absolute link target used to leave links
 // pointing back into the worktree, invalidating the final bundle signature.
-const template = path.resolve(process.env.AEGISUI_ELECTRON_TEMPLATE || path.join(dist, "mac-arm64", "Electron.app"));
+const configuredTemplate = path.resolve(process.env.AEGISUI_ELECTRON_TEMPLATE || path.join(dist, "mac-arm64", "Electron.app"));
+// Resolve through a reused node_modules/worktree symlink as well as `..`.
+// Electron.framework contains absolute symlink targets on some installations;
+// comparing those targets against only the lexical path leaves references to
+// the source worktree inside the copied app and makes codesign fail closed.
+const template = fs.existsSync(configuredTemplate)
+    ? fs.realpathSync(configuredTemplate)
+    : configuredTemplate;
 const outputDir = path.join(dist, "mac-arm64");
 const app = path.join(outputDir, "AegisUi.app");
 const appResources = path.join(app, "Contents", "Resources");

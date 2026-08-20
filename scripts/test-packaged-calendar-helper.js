@@ -26,6 +26,11 @@ check("CALENDAR_HELPER_BUILD", build.includes("build-calendar-helper.js") && bui
 check("CALENDAR_HELPER_RESOURCE_COPY", build.includes("copy(calendarHelperSource, calendarHelperDestination)"));
 check("CALENDAR_HELPER_STAGE_GUARD", build.includes("Calendar helper executable missing from staged application."));
 check("CALENDAR_HELPER_SIGNING", build.includes("calendarHelperDestination") && build.includes("codesign"));
+check(
+    "PACKAGING_TEMPLATE_REALPATH",
+    build.includes("fs.realpathSync(configuredTemplate)") && build.includes("rewriteTemplateSymlinks(app, template, app)"),
+    "Electron framework links are rebased from the physical template path"
+);
 
 const appIndex = process.argv.indexOf("--app");
 if (appIndex >= 0) {
