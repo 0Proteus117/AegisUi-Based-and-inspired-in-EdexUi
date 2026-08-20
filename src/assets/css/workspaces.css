@@ -6223,6 +6223,7 @@ button.eng-thread-row.active {
 .engineering-mode .stud-document-library-actions form { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; align-items: end; }
 .engineering-mode .stud-document-library-actions label { display: grid; gap: 4px; }
 .engineering-mode .stud-document-load-more { width: 100%; margin-top: 8px; }
+.engineering-mode .stud-command-main .stud-document-list { min-height: 0; max-height: 70vh; overflow: auto; }
 .engineering-mode .stud-command-search[hidden] { display: none !important; }
 .engineering-mode .stud-nav-primary .stud-nav-search { margin-left: auto; border-style: dashed; }
 .engineering-mode .stud-roadmap-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5vh; margin: 0; padding: 0; list-style: none; counter-reset: stud-roadmap; }
@@ -6234,6 +6235,7 @@ button.eng-thread-row.active {
     .engineering-mode .stud-roadmap-steps { grid-template-columns: minmax(0, 1fr); }
     .engineering-mode .stud-document-library-actions,
     .engineering-mode .stud-document-library-actions form { grid-template-columns: minmax(0, 1fr); }
+    .engineering-mode .stud-command-main .stud-document-list { max-height: 34vh; }
 }
 
 /* STUD Phase 3 research/writing. Dynamic metadata remains in normal flow;
