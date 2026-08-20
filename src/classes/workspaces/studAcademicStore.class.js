@@ -580,7 +580,7 @@ class StudAcademicStore {
                 if (!priorEntity) results.newCourses += 1; else if (changed) results.updatedCourses += 1;
                 courseIds.set(external, entity.id); results.courses += 1;
         });
-        assignments.slice(0, 300).forEach(raw => {
+        assignments.slice(0, 1000).forEach(raw => {
                 const courseId = courseIds.get(String(raw.courseMoodleId || "")) || null;
                 const {moodleId, uid, courseMoodleId, url, ...assignmentInput} = raw;
                 const value = Model.normalizeByEntityType("ASSIGNMENT", {...assignmentInput, courseId});
@@ -593,7 +593,7 @@ class StudAcademicStore {
                 if (!priorEntity) results.newAssignments += 1; else if (changed) results.updatedAssignments += 1;
                 assignmentIds.set(external, entity.id); results.assignments += 1;
         });
-        resources.slice(0, 1000).forEach(raw => {
+        resources.slice(0, 5000).forEach(raw => {
                 const courseId = courseIds.get(String(raw.courseMoodleId || "")) || null;
                 const assignmentId = assignmentIds.get(String(raw.assignmentMoodleId || "")) || null;
                 // downloadUrl/fileSize are transient adapter-only values. They

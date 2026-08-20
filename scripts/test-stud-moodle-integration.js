@@ -159,6 +159,9 @@ function fullFetch(url, options = {}) {
         const blockedFileAdapter = new MoodleAdapter({baseUrl: "https://moodle.synthetic.test", token: "fixture", fetch: fullFetch});
         await assert.rejects(() => blockedFileAdapter.downloadResourceFile({downloadUrl: "https://moodle.synthetic.test/mod/resource/view.php?id=701"}), error => error.code === "POLICY_BLOCKED");
         check("MOODLE_FILE_ENDPOINT_FAIL_CLOSED", true);
+        const forcedDownload = Lms.safeMoodleFileUrl("https://moodle.synthetic.test/webservice/pluginfile.php/11/mod_resource/content/1/file.pdf?forcedownload=1", "https://moodle.synthetic.test");
+        check("MOODLE_FILE_FORCEDOWNLOAD_ALLOWED", forcedDownload && new URL(forcedDownload).searchParams.get("forcedownload") === "1");
+        check("MOODLE_FILE_SECRET_QUERY_BLOCKED", !Lms.safeMoodleFileUrl("https://moodle.synthetic.test/webservice/pluginfile.php/11/mod_resource/content/1/file.pdf?token=secret", "https://moodle.synthetic.test"));
         const controllers = new Map();
         const cancellableAdapter = new MoodleAdapter({baseUrl: "https://moodle.synthetic.test", token: "fixture", controllers, requestId: "cancel_fixture", fetch: (_url, options) => new Promise((_resolve, reject) => options.signal.addEventListener("abort", () => reject(new Error("aborted")), {once: true}))});
         const cancelled = cancellableAdapter.call(READ_FUNCTIONS.SITE_INFO); setTimeout(() => controllers.get("cancel_fixture").abort(), 0);

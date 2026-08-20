@@ -281,13 +281,40 @@ class StudLmsRuntime {
         return Object.freeze({reference, sha256: digest, size: bytes.length, mimeType: isPdf ? "application/pdf" : String(resource.mimeType || "application/octet-stream").slice(0, 120), isPdf});
     }
 
-    async ingestMoodleFiles(instance, adapter, resources, requestId) {
-        const summary = {declared: 0, downloaded: 0, classified: 0, documents: 0, skipped: 0, failed: 0};
+    managedReferenceExists(reference) {
+        if (!reference || typeof reference !== "string") return false;
+        const root = path.resolve(this.root);
+        const absolute = path.resolve(root, reference);
+        return absolute.startsWith(`${root}${path.sep}`) && fs.existsSync(absolute) && fs.statSync(absolute).isFile();
+    }
+
+    buildMoodleDownloadPlan(instance, resources) {
+        const namespace = `MOODLE_RESOURCE:${instance.id}`;
+        const required = new Set();
+        for (const raw of (Array.isArray(resources) ? resources : []).filter(item => item && item.downloadUrl)) {
+            const external = String(raw.moodleId || "");
+            const identifier = external && this.store.findByExternalIdentifier(namespace, external)[0];
+            const resource = identifier && this.store.getEntity("RESOURCE", identifier.entityId);
+            if (!resource || !resource.checksum || !this.managedReferenceExists(resource.localReference)) {
+                required.add(external);
+                continue;
+            }
+            const providerVersion = /^[a-f0-9]{32,128}$/i.test(String(raw.contentHash || "")) ? String(raw.contentHash).toLowerCase() : null;
+            if (!providerVersion) continue;
+            const prior = this.store.listProvenance("RESOURCE", resource.id, "providerVersion").find(item => item.sourceType === "MOODLE" && item.sourceId === `resource:${external}`);
+            if (!prior || prior.observedValue !== providerVersion) required.add(external);
+        }
+        return required;
+    }
+
+    async ingestMoodleFiles(instance, adapter, resources, requestId, requiredIds = null) {
+        const available = (Array.isArray(resources) ? resources : []).filter(item => item && item.downloadUrl);
+        const summary = {declared: available.length, downloaded: 0, unchanged: 0, classified: 0, documents: 0, skipped: Math.max(0, available.length - Lms.LIMITS.files), failed: 0};
         const errors = {};
         let totalBytes = 0;
         const namespace = `MOODLE_RESOURCE:${instance.id}`;
-        for (const raw of (Array.isArray(resources) ? resources : []).filter(item => item && item.downloadUrl).slice(0, Lms.LIMITS.files)) {
-            summary.declared += 1;
+        for (const raw of available.slice(0, Lms.LIMITS.files)) {
+            if (requiredIds && !requiredIds.has(String(raw.moodleId || ""))) { summary.unchanged += 1; continue; }
             if (Number(raw.fileSize) > Lms.LIMITS.fileBytes || totalBytes >= Lms.LIMITS.totalFileBytes) { summary.skipped += 1; continue; }
             try {
                 const downloaded = await adapter.downloadResourceFile(raw);
@@ -334,8 +361,9 @@ class StudLmsRuntime {
         try {
             const adapter = this.adapter(instance, secret, requestId, authentication);
             const result = await adapter.sync();
+            const requiredDownloads = this.buildMoodleDownloadPlan(instance, result.resources);
             const summary = this.store.syncMoodleObservations(instance, {...result, sourceType: "MOODLE"});
-            const files = await this.ingestMoodleFiles(instance, adapter, result.resources, requestId);
+            const files = await this.ingestMoodleFiles(instance, adapter, result.resources, requestId, requiredDownloads);
             const capabilities = {...result.capabilities};
             if (files.summary.declared) capabilities.FILES = files.summary.downloaded || files.summary.skipped ? "SUPPORTED" : "UNKNOWN";
             const allErrors = {...result.errors, ...(Object.keys(files.errors).length ? {FILES: Object.keys(files.errors).join(",")} : {})};

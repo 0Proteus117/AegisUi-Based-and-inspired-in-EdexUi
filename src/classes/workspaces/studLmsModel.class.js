@@ -17,9 +17,9 @@ const ERROR_CODES = Object.freeze(["INVALID_TOKEN", "AUTH_REQUIRED", "PERMISSION
 // course-content response may cross this boundary.
 const LIMITS = Object.freeze({
     baseUrl: 1024, displayName: 160, token: 4096, icsUrl: 4096,
-    courses: 100, assignments: 300, resources: 1000, events: 500,
+    courses: 100, assignments: 1000, resources: 5000, events: 1000,
     responseBytes: 2 * 1024 * 1024,
-    files: 300, fileBytes: 40 * 1024 * 1024, totalFileBytes: 250 * 1024 * 1024
+    files: 2000, fileBytes: 40 * 1024 * 1024, totalFileBytes: 2 * 1024 * 1024 * 1024
 });
 
 class LmsError extends Error {
@@ -154,9 +154,14 @@ function safeMoodleFileUrl(value, baseUrl) {
         const base = new URL(deriveMoodleWebUrl(baseUrl));
         const pathName = decodeURIComponent(candidate.pathname || "");
         // Moodle Web Service file access is deliberately the only accepted
-        // authenticated file endpoint. A course page, arbitrary plugin route,
-        // redirect, token, cookie or third-party URL cannot reach the runtime.
-        if (candidate.protocol !== "https:" || candidate.origin !== base.origin || candidate.username || candidate.password || candidate.search || candidate.hash || !/(?:^|\/)webservice\/pluginfile\.php\//i.test(pathName)) return null;
+        // authenticated file endpoint. Moodle's own Web Service exporters may
+        // append the non-secret `forcedownload` presentation flag. Preserve
+        // that flag, but reject tokens and every other query parameter.
+        if (candidate.protocol !== "https:" || candidate.origin !== base.origin || candidate.username || candidate.password || candidate.hash || !/(?:^|\/)webservice\/pluginfile\.php\//i.test(pathName)) return null;
+        const keys = [...candidate.searchParams.keys()];
+        if (keys.some(key => key !== "forcedownload") || keys.length > 1) return null;
+        const forceDownload = candidate.searchParams.get("forcedownload");
+        if (forceDownload !== null && !["0", "1"].includes(forceDownload)) return null;
         return candidate.toString();
     } catch (error) { return null; }
 }
