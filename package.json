@@ -18,10 +18,10 @@
     "install-darwin": "npm ci && cd src && npm ci && ./../node_modules/.bin/electron-rebuild -f -w node-pty --arch=arm64 --module-dir . && cd ..",
     "preinstall-windows": "npm install --global --production windows-build-tools && npm install --global node-gyp && setx PYTHON \"%USERPROFILE%\\.windows-build-tools\\python27\\python.exe\"",
     "install-windows": "npm install && cd src && npm install && ..\\node_modules\\.bin\\electron-rebuild -f -w node-pty && cd ..",
-    "prebuild-linux": "rsync -a --info=progress2 src/ prebuild-src --exclude node_modules && node prebuild-minify.js && cd prebuild-src && npm install",
+    "prebuild-linux": "rsync -a --delete --info=progress2 src/ prebuild-src --exclude node_modules && node prebuild-minify.js && node build/prebuild-integrity.js stamp && cd prebuild-src && npm install",
     "build-calendar-helper": "node build/build-calendar-helper.js",
-    "prebuild-darwin": "node build/build-calendar-helper.js && rsync -a --delete src/ prebuild-src --exclude node_modules && node prebuild-minify.js && cd prebuild-src && npm ci",
-    "prebuild-windows": "mkdir prebuild-src && xcopy src\\* prebuild-src\\ /E /C /Q /Y && node prebuild-minify.js && cd prebuild-src && npm install",
+    "prebuild-darwin": "node build/build-calendar-helper.js && rsync -a --delete src/ prebuild-src --exclude node_modules && node prebuild-minify.js && node build/prebuild-integrity.js stamp && cd prebuild-src && npm ci",
+    "prebuild-windows": "if not exist prebuild-src mkdir prebuild-src && xcopy src\\* prebuild-src\\ /E /C /Q /Y && node prebuild-minify.js && node build\\prebuild-integrity.js stamp && cd prebuild-src && npm install",
     "build-linux": "./node_modules/.bin/electron-builder build -l --x64 --ia32 --arm64 --armv7l",
     "build-darwin": "./node_modules/.bin/electron-builder build -m --arm64",
     "build-local-dmg": "node scripts/build-local-dmg.js",
@@ -70,6 +70,7 @@
       }
     ],
     "compression": "normal",
+    "beforePack": "build/prebuild-integrity.js",
     "afterPack": "build/after-pack.js",
     "copyright": "Copyright © 2017-2021 Gabriel 'Squared' SAILLARD <gabriel@saillard.dev> (https://gaby.dev)",
     "directories": {
