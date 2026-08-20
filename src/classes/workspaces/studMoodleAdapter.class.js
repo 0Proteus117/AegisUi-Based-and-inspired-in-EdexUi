@@ -287,7 +287,10 @@ class MoodleAdapter {
     }
 
     normalizeAssignment(raw) {
-        return {moodleId: String(raw.id), courseMoodleId: String(raw.courseid), title: Lms.sanitizeDisplayText(raw.name, 240) || `Moodle assignment ${raw.id}`, description: Lms.sanitizeDisplayText(raw.intro, 12000), releaseDate: isoFromUnix(raw.allowsubmissionsfromdate), dueDate: isoFromUnix(raw.duedate), cutoffDate: isoFromUnix(raw.cutoffdate), status: assignmentStatus(raw.status), submissionStatus: submissionStatus(raw.submissionstatus), submittedAt: isoFromUnix(raw.timemodified), grade: null, gradeMaximum: positiveGradeMaximum(raw.grade), weight: null, feedback: null};
+        // Assignment timemodified describes the activity configuration, not
+        // this student's submission. Only the dedicated submission-status
+        // endpoint may populate submittedAt.
+        return {moodleId: String(raw.id), courseMoodleId: String(raw.courseid), title: Lms.sanitizeDisplayText(raw.name, 240) || `Moodle assignment ${raw.id}`, description: Lms.sanitizeDisplayText(raw.intro, 12000), releaseDate: isoFromUnix(raw.allowsubmissionsfromdate), dueDate: isoFromUnix(raw.duedate), cutoffDate: isoFromUnix(raw.cutoffdate), status: assignmentStatus(raw.status), submissionStatus: submissionStatus(raw.submissionstatus), submittedAt: null, grade: null, gradeMaximum: positiveGradeMaximum(raw.grade), weight: null, feedback: null};
     }
 
     async sync() {
@@ -318,7 +321,9 @@ class MoodleAdapter {
             const normalized = assignments.find(item => item.moodleId === String(assignment.id));
             if (normalized) {
                 if (status.submissionStatus && status.submissionStatus !== "UNKNOWN") normalized.submissionStatus = status.submissionStatus;
-                if (status.submittedAt) normalized.submittedAt = status.submittedAt;
+                // A known NOT_SUBMITTED observation must clear any stale
+                // timestamp imported by older builds.
+                if (status.submissionStatus && status.submissionStatus !== "UNKNOWN") normalized.submittedAt = status.submittedAt || null;
                 if (status.feedback) normalized.feedback = status.feedback;
                 if (status.assignmentStatus) normalized.status = status.assignmentStatus;
             }

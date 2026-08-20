@@ -117,6 +117,15 @@ function fullFetch(url, options = {}) {
         check("MOODLE_FILE_INDEXING_REMAINS_EXPLICIT", store.listAcademicDocuments({limit: 10})[0].extractionStatus === "NOT_ANALYZED");
         check("MOODLE_FIELD_PROVENANCE", store.listProvenance("ASSIGNMENT", assignment.id, "dueDate").some(item => item.sourceType === "MOODLE"));
         check("MOODLE_GRADE_FEEDBACK_NORMALIZED", assignment.grade === 82 && assignment.gradeMaximum === 100 && assignment.feedback === "Synthetic read-only Moodle feedback");
+        store.updateEntity("ASSIGNMENT", assignment.id, {submittedAt: "2026-08-03T16:04:46.000Z"});
+        const emptyAttemptAdapter = new MoodleAdapter({baseUrl: "https://moodle.synthetic.test", token: "fixture", fetch: (url, options) => {
+            if (options.body && options.body.get("wsfunction") === READ_FUNCTIONS.ASSIGNMENT_STATUS) return Promise.resolve(response({lastattempt: {submission: {status: "new", timemodified: 1795900000}, gradingstatus: "graded"}}));
+            return fullFetch(url, options);
+        }});
+        const emptyAttemptSync = await emptyAttemptAdapter.sync();
+        store.syncMoodleObservations(store.getProviderInstance("stud_moodle_default"), emptyAttemptSync);
+        const clearedAttempt = store.getEntity("ASSIGNMENT", assignment.id);
+        check("MOODLE_EMPTY_ATTEMPT_CLEARS_STALE_SUBMISSION_TIMESTAMP", clearedAttempt.status === "IN_PROGRESS" && clearedAttempt.submissionStatus === "NOT_SUBMITTED" && clearedAttempt.submittedAt === null);
         const requirements = store.assignmentRequirements(assignment.id);
         check("MOODLE_REQUIREMENTS_ARE_LOCAL_EXPLAINABLE", requirements.some(item => item.kind === "DIRECT_REQUIREMENT" && item.label === "DUE DATE") && requirements.every(item => item.sourceType && item.location));
         check("MOODLE_ASSIGNMENT_STATUS_AND_ANNOUNCEMENTS", sync.provider.capabilities.ASSIGNMENT_STATUS === "SUPPORTED" && sync.provider.capabilities.FORUM_READ === "SUPPORTED" && sync.provider.capabilities.ANNOUNCEMENTS === "SUPPORTED");
