@@ -27,6 +27,11 @@ function isoFromUnix(value) {
     return Number.isFinite(number) && number > 0 ? new Date(number * 1000).toISOString() : null;
 }
 
+function positiveGradeMaximum(value) {
+    const number = Number(value);
+    return Number.isFinite(number) && number > 0 ? number : null;
+}
+
 function assignmentStatus(value) {
     const status = String(value || "").toUpperCase();
     if (status.includes("GRADE")) return "GRADED";
@@ -278,7 +283,7 @@ class MoodleAdapter {
     }
 
     normalizeAssignment(raw) {
-        return {moodleId: String(raw.id), courseMoodleId: String(raw.courseid), title: Lms.sanitizeDisplayText(raw.name, 240) || `Moodle assignment ${raw.id}`, description: Lms.sanitizeDisplayText(raw.intro, 12000), releaseDate: isoFromUnix(raw.allowsubmissionsfromdate), dueDate: isoFromUnix(raw.duedate), cutoffDate: isoFromUnix(raw.cutoffdate), status: assignmentStatus(raw.status), submissionStatus: submissionStatus(raw.submissionstatus), submittedAt: isoFromUnix(raw.timemodified), grade: null, gradeMaximum: Number.isFinite(Number(raw.grade)) ? Number(raw.grade) : null, weight: null, feedback: null};
+        return {moodleId: String(raw.id), courseMoodleId: String(raw.courseid), title: Lms.sanitizeDisplayText(raw.name, 240) || `Moodle assignment ${raw.id}`, description: Lms.sanitizeDisplayText(raw.intro, 12000), releaseDate: isoFromUnix(raw.allowsubmissionsfromdate), dueDate: isoFromUnix(raw.duedate), cutoffDate: isoFromUnix(raw.cutoffdate), status: assignmentStatus(raw.status), submissionStatus: submissionStatus(raw.submissionstatus), submittedAt: isoFromUnix(raw.timemodified), grade: null, gradeMaximum: positiveGradeMaximum(raw.grade), weight: null, feedback: null};
     }
 
     async sync() {
@@ -296,7 +301,8 @@ class MoodleAdapter {
             (detail.grades || []).forEach(user => (Array.isArray(user.gradeitems) ? user.gradeitems : []).forEach(item => {
                 const instance = String(item.iteminstance || "");
                 if (!instance || !/assign/i.test(String(item.itemmodule || ""))) return;
-                gradeByAssignment.set(instance, {grade: Number.isFinite(Number(item.graderaw)) ? Number(item.graderaw) : null, gradeMaximum: Number.isFinite(Number(item.grademax)) ? Number(item.grademax) : null, feedback: Lms.sanitizeDisplayText(item.feedback || item.feedbacktext, 12000)});
+                const gradeMaximum = positiveGradeMaximum(item.grademax);
+                gradeByAssignment.set(instance, {grade: gradeMaximum !== null && Number.isFinite(Number(item.graderaw)) ? Number(item.graderaw) : null, gradeMaximum, feedback: Lms.sanitizeDisplayText(item.feedback || item.feedbacktext, 12000)});
             }));
             if (detail.completion) completion.push({courseMoodleId: String(course.id), value: detail.completion});
         }

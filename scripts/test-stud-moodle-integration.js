@@ -135,6 +135,13 @@ function fullFetch(url, options = {}) {
         const forgotten = await runtime.forgetAccount();
         check("MOODLE_FORGET_REVOKES_SYNC_NOT_ACADEMIC_DATA", !forgotten.tokenConfigured && !forgotten.sync.automaticSync && store.listEntities("COURSE", {limit: 10}).length === 1 && store.listEntities("ACADEMIC_DOCUMENT", {limit: 10}).length === 1);
 
+        const zeroGradeAdapter = new MoodleAdapter({baseUrl: "https://moodle.synthetic.test", token: "fixture", fetch: (url, options) => {
+            if (options.body.get("wsfunction") === READ_FUNCTIONS.GRADES) return Promise.resolve(response({usergrades: [{gradeitems: [{itemmodule: "assign", iteminstance: 501, graderaw: null, grademax: 0}]}]}));
+            return fullFetch(url, options);
+        }});
+        const zeroGradeSync = await zeroGradeAdapter.sync();
+        check("MOODLE_ZERO_MAX_GRADE_NORMALIZED_AS_UNKNOWN", zeroGradeSync.assignments[0].grade === null && zeroGradeSync.assignments[0].gradeMaximum === null);
+
         const invalidAdapter = new MoodleAdapter({baseUrl: "https://moodle.synthetic.test", token: "bad", fetch: () => Promise.resolve(response({exception: "invalidtoken", errorcode: "invalidtoken", message: "Invalid token"}))});
         await assert.rejects(() => invalidAdapter.probe(), error => error.code === "INVALID_TOKEN");
         check("MOODLE_INVALID_TOKEN_TYPED", true);
