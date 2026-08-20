@@ -19,29 +19,36 @@ function moodleSsoSignature(siteUrl, passport) {
     return crypto.createHash("md5").update(`${siteUrl}${passport}`, "utf8").digest("hex");
 }
 
+function invalidMoodleSsoCallback(stage) {
+    return new Lms.LmsError("AUTH_REQUIRED", "Moodle returned an invalid sign-in response.", {stage});
+}
+
 function parseMoodleSsoCallback(value) {
     const prefix = `${MOODLE_APP_SCHEME}://token=`;
     const raw = String(value || "");
-    if (!raw.startsWith(prefix) || raw.length > 10000 || /[?#]/.test(raw)) throw new Lms.LmsError("AUTH_REQUIRED", "Moodle returned an invalid sign-in response.");
+    if (!raw.startsWith(prefix) || raw.length > 10000 || /[?#]/.test(raw)) throw invalidMoodleSsoCallback("TRANSPORT");
     // Moodle's official mobile launch endpoint base64-encodes the complete
     // signature:::token[:::privateToken] envelope before it invokes the
     // registered URL scheme. Keep this decoder strict: accepting the raw
     // pre-encoded form would both diverge from Moodle's protocol and make the
     // callback unsuitable for transport as a macOS custom URL.
     const payload = raw.slice(prefix.length);
-    if (!payload || payload.length % 4 !== 0 || !/^[A-Za-z0-9+/]+={0,2}$/.test(payload)) throw new Lms.LmsError("AUTH_REQUIRED", "Moodle returned an invalid sign-in response.");
+    if (!payload || payload.length % 4 !== 0 || !/^[A-Za-z0-9+/]+={0,2}$/.test(payload)) throw invalidMoodleSsoCallback("ENCODING");
     let decoded;
     try {
         decoded = Buffer.from(payload, "base64").toString("utf8");
     } catch (error) {
-        throw new Lms.LmsError("AUTH_REQUIRED", "Moodle returned an invalid sign-in response.");
+        throw invalidMoodleSsoCallback("ENCODING");
     }
-    if (Buffer.from(decoded, "utf8").toString("base64") !== payload) throw new Lms.LmsError("AUTH_REQUIRED", "Moodle returned an invalid sign-in response.");
+    if (Buffer.from(decoded, "utf8").toString("base64") !== payload) throw invalidMoodleSsoCallback("ENCODING");
     const parts = decoded.split(":::");
-    if (![2, 3].includes(parts.length) || !/^[a-f0-9]{32}$/i.test(parts[0])) throw new Lms.LmsError("AUTH_REQUIRED", "Moodle returned an invalid sign-in response.");
-    const token = Lms.text(parts[1], "Moodle token", Lms.LIMITS.token, true);
-    const privateToken = parts.length === 3 && parts[2] ? Lms.text(parts[2], "Moodle private token", Lms.LIMITS.token, true) : null;
-    if (!/^[a-z0-9]+$/i.test(token) || privateToken && !/^[a-z0-9]+$/i.test(privateToken)) throw new Lms.LmsError("AUTH_REQUIRED", "Moodle returned an invalid sign-in response.");
+    if (![2, 3].includes(parts.length) || !/^[a-f0-9]{32}$/i.test(parts[0])) throw invalidMoodleSsoCallback("ENVELOPE");
+    let token; let privateToken;
+    try {
+        token = Lms.text(parts[1], "Moodle token", Lms.LIMITS.token, true);
+        privateToken = parts.length === 3 && parts[2] ? Lms.text(parts[2], "Moodle private token", Lms.LIMITS.token, true) : null;
+    } catch (error) { throw invalidMoodleSsoCallback("TOKEN_LENGTH"); }
+    if (!/^[a-z0-9]+$/i.test(token) || privateToken && !/^[a-z0-9]+$/i.test(privateToken)) throw invalidMoodleSsoCallback("TOKEN_FORMAT");
     return Object.freeze({signature: parts[0].toLowerCase(), token, privateToken});
 }
 
@@ -102,7 +109,8 @@ class StudLmsRuntime {
             if (!this.pendingSso || !String(value || "").startsWith(`${MOODLE_APP_SCHEME}://token=`)) return;
             this.acceptSsoCallback(value).catch(error => {
                 const instance = this.store.getProviderInstance("stud_moodle_default");
-                if (instance) this.persistState(instance, {status: "ERROR", lastAttempt: Model.now(), lastErrorCode: error.code || "AUTH_REQUIRED"});
+                const stage = error && error.details && /^[A-Z_]{2,32}$/.test(error.details.stage || "") ? error.details.stage : null;
+                if (instance) this.persistState(instance, {status: "ERROR", lastAttempt: Model.now(), lastErrorCode: stage ? `AUTH_CALLBACK_${stage}` : error.code || "AUTH_REQUIRED"});
             });
         };
         this.onOpenUrl = (event, value) => {
