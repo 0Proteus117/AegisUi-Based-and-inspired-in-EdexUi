@@ -50,10 +50,14 @@ function normalizedSubmissionObservation(payload = {}) {
     const attempt = payload && payload.lastattempt && payload.lastattempt.submission || {};
     const rawStatus = String(attempt.status || payload && payload.status || "").toUpperCase();
     const graded = String(payload && payload.lastattempt && payload.lastattempt.gradingstatus || "").toUpperCase();
+    const normalizedSubmissionStatus = submissionStatus(rawStatus);
     return Object.freeze({
-        submissionStatus: submissionStatus(rawStatus),
-        assignmentStatus: graded.includes("GRADED") ? "GRADED" : null,
-        submittedAt: isoFromUnix(attempt.timemodified),
+        submissionStatus: normalizedSubmissionStatus,
+        // Some Moodle installations report gradingstatus=graded for an empty
+        // attempt. That describes the grading workflow, not proof that this
+        // student submitted or received a grade.
+        assignmentStatus: normalizedSubmissionStatus === "SUBMITTED" && graded.includes("GRADED") ? "GRADED" : null,
+        submittedAt: normalizedSubmissionStatus === "SUBMITTED" ? isoFromUnix(attempt.timemodified) : null,
         feedback: Lms.sanitizeDisplayText(payload && payload.feedback && payload.feedback.grade || "", 12000) || null
     });
 }

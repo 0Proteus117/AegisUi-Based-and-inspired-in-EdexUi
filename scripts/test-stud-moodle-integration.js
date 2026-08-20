@@ -9,7 +9,7 @@ const Model = require("../src/classes/workspaces/studAcademicModel.class.js");
 const {StudAcademicStore} = require("../src/classes/workspaces/studAcademicStore.class.js");
 const {StudCredentialVault} = require("../src/classes/workspaces/studCredentialVault.class.js");
 const {StudLmsRuntime, parseIcs, moodleSsoSignature, parseMoodleSsoCallback} = require("../src/classes/workspaces/studLmsRuntime.class.js");
-const {MoodleAdapter, READ_FUNCTIONS} = require("../src/classes/workspaces/studMoodleAdapter.class.js");
+const {MoodleAdapter, READ_FUNCTIONS, normalizedSubmissionObservation} = require("../src/classes/workspaces/studMoodleAdapter.class.js");
 const {MoodleSessionAdapter} = require("../src/classes/workspaces/studMoodleSessionAdapter.class.js");
 
 const checks = [];
@@ -99,6 +99,8 @@ function fullFetch(url, options = {}) {
         check("MOODLE_PROBE_SITE_INFO", probe.probe.capabilities.SITE_INFO === "SUPPORTED");
         check("MOODLE_PROBE_READ_CAPABILITIES", probe.probe.capabilities.COURSES === "SUPPORTED" && probe.probe.capabilities.ASSIGNMENTS === "SUPPORTED" && probe.probe.capabilities.CALENDAR === "SUPPORTED");
         check("MOODLE_PROBE_WRITES_DISABLED", probe.probe.capabilities.ASSIGNMENT_WRITE === "POLICY_DISABLED" && probe.probe.writePolicy.includes("READ_ONLY"));
+        const emptyAttempt = normalizedSubmissionObservation({lastattempt: {submission: {status: "new", timemodified: 1795900000}, gradingstatus: "graded"}});
+        check("MOODLE_EMPTY_ATTEMPT_NOT_MISLABELED_GRADED", emptyAttempt.submissionStatus === "NOT_SUBMITTED" && emptyAttempt.assignmentStatus === null && emptyAttempt.submittedAt === null);
 
         const sync = await runtime.sync({requestId: "sync_full"});
         check("MOODLE_SYNC_CANONICAL", sync.summary.courses === 1 && sync.summary.assignments === 1 && sync.summary.resources === 2);
