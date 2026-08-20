@@ -6769,6 +6769,16 @@ button.eng-thread-row.active {
 .engineering-mode .stud-assignment-requirements strong { color: var(--aegis-accent-soft); font: .52vh var(--font_mono); letter-spacing: .05vh; overflow-wrap: anywhere; }
 .engineering-mode .stud-assignment-requirements span { color: var(--aegis-text-primary); font: .57vh/1.36 var(--font_main_light); overflow-wrap: anywhere; }
 .engineering-mode .stud-assignment-requirements small { grid-column: 1 / -1; color: var(--aegis-text-faint); font: .44vh/1.35 var(--font_mono); overflow-wrap: anywhere; }
+.engineering-mode .stud-assignment-brief-preview > div,
+.engineering-mode .stud-evidence-matrix > div { display: grid; gap: .34vh; }
+.engineering-mode .stud-evidence-matrix article { display: grid; grid-template-columns: minmax(12vh, .32fr) minmax(0, 1fr) max-content; gap: .18vh .48vh; min-width: 0; padding: .46vh; border-left: .16vh solid var(--aegis-accent); background: var(--aegis-surface-muted); }
+.engineering-mode .stud-evidence-matrix strong,
+.engineering-mode .stud-evidence-matrix span,
+.engineering-mode .stud-evidence-matrix small { min-width: 0; overflow-wrap: anywhere; }
+.engineering-mode .stud-evidence-matrix strong { color: var(--aegis-accent-soft); font: .52vh/1.35 var(--font_mono); }
+.engineering-mode .stud-evidence-matrix span { color: var(--aegis-text-primary); font: .57vh/1.4 var(--font_main_light); }
+.engineering-mode .stud-evidence-matrix small { grid-column: 1 / span 2; color: var(--aegis-text-faint); font: .44vh/1.35 var(--font_mono); }
+.engineering-mode .stud-evidence-matrix em { grid-row: 1 / span 2; grid-column: 3; align-self: center; color: var(--aegis-accent-soft); font: .43vh var(--font_mono); font-style: normal; letter-spacing: .05vh; }
 
 @media (max-width: 1450px) {
     .engineering-mode .stud-home-shell { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -6785,4 +6795,7 @@ button.eng-thread-row.active {
     .engineering-mode .stud-moodle-sync-preferences button { width: 100%; }
     .engineering-mode .stud-resource-preview dl { grid-template-columns: minmax(0, 1fr); }
     .engineering-mode .stud-assignment-requirements article { grid-template-columns: minmax(0, 1fr); }
+    .engineering-mode .stud-evidence-matrix article { grid-template-columns: minmax(0, 1fr); }
+    .engineering-mode .stud-evidence-matrix small,
+    .engineering-mode .stud-evidence-matrix em { grid-column: 1; grid-row: auto; }
 }

@@ -1345,17 +1345,30 @@ class StudAcademicStore {
         if (assignment.dueDate) add({kind: "DIRECT_REQUIREMENT", label: "DUE DATE", value: assignment.dueDate, sourceType: "ASSIGNMENT", sourceId: assignment.id, location: "CANONICAL ASSIGNMENT DEADLINE", confidence: "HIGH"});
         if (assignment.weight !== null && assignment.weight !== undefined) add({kind: "DIRECT_REQUIREMENT", label: "WEIGHT", value: `${assignment.weight}%`, sourceType: "ASSIGNMENT", sourceId: assignment.id, location: "CANONICAL ASSIGNMENT METADATA", confidence: "HIGH"});
         const patterns = Object.freeze([
-            Object.freeze({label: "WORD COUNT", expression: /\b\d{2,5}(?:\s*[-–]\s*\d{2,5})?\s+words?\b/i}),
-            Object.freeze({label: "CITATION STYLE", expression: /\b(?:harvard|apa(?:\s*\d+)?|mla|oscola|chicago)\b(?:\s+(?:style|referencing|citation))?/i}),
-            Object.freeze({label: "DELIVERABLE", expression: /\b(?:essay|report|presentation|portfolio|case study|literature review|reflection|poster|dissertation)\b/i}),
-            Object.freeze({label: "SUBMISSION FORMAT", expression: /\b(?:pdf|docx|pptx|powerpoint|word document)\b/i})
+            Object.freeze({label: "WORD COUNT", expression: /\b\d{2,5}(?:\s*[-–]\s*\d{2,5})?\s+words?\b/i, concise: true}),
+            Object.freeze({label: "CITATION STYLE", expression: /\b(?:harvard|apa(?:\s*\d+)?|mla|oscola|chicago)\b(?:\s+(?:style|referencing|citation))?/i, concise: true}),
+            Object.freeze({label: "LEARNING OUTCOMES", expression: /\bLO(?:['’]?s)?\s*\d+(?:\s*[,/&–-]\s*\d+)*\b/i, concise: true}),
+            Object.freeze({label: "DURATION", expression: /\b(?:no more than|maximum(?:\s+length)?(?:\s+of)?|up to)\s+(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+minutes?\b/i, concise: true}),
+            Object.freeze({label: "ASSESSMENT WEIGHT", expression: /\b\d{1,3}%\s+(?:of|for)\s+(?:the\s+)?(?:portfolio|assessment|module|component|mark)\b/i}),
+            Object.freeze({label: "DELIVERABLE", expression: /\b(?:individual appendix|team design report|pre-recorded (?:presentation )?video|presentation slides|essay|report|presentation|portfolio|case study|literature review|reflection|poster|dissertation)\b/i}),
+            Object.freeze({label: "SUBMISSION FORMAT", expression: /\b(?:pdf|docx|pptx|mp4|powerpoint|word document)\b/i}),
+            Object.freeze({label: "REQUIRED STRUCTURE", expression: /\b(?:required structure(?: and formatting)?|should adhere to the following structure)\b/i}),
+            Object.freeze({label: "MARKING CRITERIA", expression: /\b(?:assessment criteria|marking criteria|rubric)\b/i}),
+            Object.freeze({label: "FORMATTING", expression: /\b(?:Arial font|\d{1,2}[- ]point font|line spacing of \d(?:\.\d+)?|margins? (?:must|should))\b/i})
         ]);
+        const excerpt = (value, match) => {
+            if (!match || match.index === undefined) return "";
+            const start = Math.max(0, match.index - 90);
+            const end = Math.min(value.length, match.index + match[0].length + 150);
+            return value.slice(start, end).replace(/^\S*\s*/, start ? "… " : "").replace(/\s*\S*$/, end < value.length ? " …" : "").trim().slice(0, 360);
+        };
         const inspect = (text, source) => {
             const value = String(text || "").replace(/\s+/g, " ").trim();
             if (!value) return;
             patterns.forEach(pattern => {
                 const match = value.match(pattern.expression);
-                if (match) add({kind: source.kind, label: pattern.label, value: match[0].slice(0, 240), sourceType: source.sourceType, sourceId: source.sourceId, location: source.location, confidence: source.confidence});
+                if (!match || requirements.filter(item => item.label === pattern.label).length >= 4) return;
+                add({kind: source.kind, label: pattern.label, value: pattern.concise ? match[0].slice(0, 240) : excerpt(value, match), sourceType: source.sourceType, sourceId: source.sourceId, location: source.location, confidence: source.confidence});
             });
         };
         inspect(assignment.description, {kind: "DIRECT_REQUIREMENT", sourceType: "ASSIGNMENT", sourceId: assignment.id, location: "ASSIGNMENT DESCRIPTION", confidence: "MEDIUM"});
@@ -1364,7 +1377,11 @@ class StudAcademicStore {
             const extraction = this.db.prepare("SELECT id FROM stud_document_extractions WHERE document_id=? ORDER BY created_at DESC LIMIT 1").get(document.id);
             if (!extraction) return;
             const chunks = this.db.prepare("SELECT page_start,content FROM stud_document_chunks WHERE extraction_id=? ORDER BY ordinal LIMIT 120").all(extraction.id);
-            chunks.forEach(chunk => inspect(chunk.content, {kind: "EXTRACTED_REQUIREMENT", sourceType: "ACADEMIC_DOCUMENT", sourceId: document.id, location: `DOCUMENT · ${document.title} · PAGE ${chunk.page_start || "?"}`, confidence: "LOW"}));
+            chunks.forEach(chunk => inspect(chunk.content, {kind: "EXTRACTED_REQUIREMENT", sourceType: "ACADEMIC_DOCUMENT", sourceId: document.id, location: `DOCUMENT · ${document.title} · PAGE ${chunk.page_start || "?"}`, confidence: "MEDIUM"}));
+        });
+        const critical = ["WORD COUNT", "CITATION STYLE", "LEARNING OUTCOMES", "SUBMISSION FORMAT", "REQUIRED STRUCTURE", "MARKING CRITERIA"];
+        critical.forEach(label => {
+            if (!requirements.some(item => item.label === label)) add({kind: "UNKNOWN", label, value: "Not stated in the currently linked assignment material.", sourceType: "LOCAL_STUD", sourceId: assignment.id, location: "LINKED ASSIGNMENT CONTEXT", confidence: "LOW"});
         });
         if (!requirements.length) add({kind: "UNKNOWN", label: "REQUIREMENTS", value: "No direct or bounded extracted requirement is available from the current local assignment material.", sourceType: "LOCAL_STUD", sourceId: assignment.id, location: "LOCAL ACADEMIC CONTEXT", confidence: "LOW"});
         return Object.freeze(requirements.map(({_key, ...entry}) => Object.freeze(entry)));

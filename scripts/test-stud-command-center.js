@@ -83,6 +83,9 @@ try {
         assert.ok(commandCenter.includes("FTS5 searches only local canonical academic records"));
         assert.ok(commandCenter.includes("STUD DOES NOT SCAN, OPEN OR COPY EXTERNAL CONTENT"));
         assert.ok(commandCenter.includes("ASSIGNMENT ROADMAP"));
+        assert.ok(commandCenter.includes("13 · FINAL EDITING"));
+        assert.ok(commandCenter.includes("BRIEF &amp; MARKING DOCUMENTS"));
+        assert.ok(commandCenter.includes("EVIDENCE MATRIX"));
         assert.ok(commandCenter.includes("SELECT FOR WORKFLOW TEST"));
         assert.ok(commandCenter.includes("stud-nav-primary"));
         assert.ok(commandCenter.includes("data-stud-search-toggle"));
@@ -117,6 +120,7 @@ try {
         assert.ok(css.includes("stud-overview-grid"));
         assert.ok(css.includes("stud-nav-primary"));
         assert.ok(css.includes("stud-assignment-requirements"));
+        assert.ok(css.includes("stud-evidence-matrix"));
         assert.ok(css.includes("stud-dialog"));
         assert.ok(css.includes("stud-revision-overview-grid"));
         assert.ok(css.includes("stud-tool-catalog-grid"));
