@@ -16,6 +16,7 @@ const ipc = fs.readFileSync(path.join(ROOT, "src/classes/workspaces/studAcademic
 const css = fs.readFileSync(path.join(ROOT, "src/assets/css/workspaces.css"), "utf8");
 const theme = fs.readFileSync(path.join(ROOT, "src/assets/css/aegis_theme.css"), "utf8");
 const revision = fs.readFileSync(path.join(ROOT, "src/classes/workspaces/studRevisionWorkspace.class.js"), "utf8");
+const documents = fs.readFileSync(path.join(ROOT, "src/classes/workspaces/studDocumentWorkspace.class.js"), "utf8");
 const root = fs.mkdtempSync(path.join(os.tmpdir(), "aegis-stud-phase2-"));
 const store = new StudAcademicStore({root, applicationVersion: "test"});
 const checks = [];
@@ -83,6 +84,12 @@ try {
         assert.ok(commandCenter.includes("STUD DOES NOT SCAN, OPEN OR COPY EXTERNAL CONTENT"));
         assert.ok(commandCenter.includes("ASSIGNMENT ROADMAP"));
         assert.ok(commandCenter.includes("SELECT FOR WORKFLOW TEST"));
+        assert.ok(commandCenter.includes("stud-nav-primary"));
+        assert.ok(commandCenter.includes("data-stud-search-toggle"));
+        assert.ok(commandCenter.includes("searchExpanded: false"));
+        assert.ok(documents.includes("listLimit: 40"));
+        assert.ok(documents.includes("data-stud-document-load-more"));
+        assert.ok(documents.includes("data-stud-document-import-toggle"));
         assert.ok(!commandCenter.includes("fetch("));
         assert.ok(!commandCenter.includes("localStorage"));
         assert.ok(commandCenter.includes('"REVISION"'));
@@ -113,6 +120,8 @@ try {
         assert.ok(css.includes("stud-dialog"));
         assert.ok(css.includes("stud-revision-overview-grid"));
         assert.ok(css.includes("stud-tool-catalog-grid"));
+        assert.ok(css.includes("--stud-copy-size: clamp(11px"));
+        assert.ok(css.includes("stud-document-library-actions"));
         assert.ok(css.includes("@media (max-width: 1230px)"));
         assert.ok(theme.includes("STUD Phase 2 keeps the Command Center semantic"));
     });

@@ -6211,11 +6211,18 @@ button.eng-thread-row.active {
     --stud-heading-size: clamp(14px, .95vw, 18px);
 }
 .engineering-mode .stud-command-center-deck :is(p, li, dd, pre, textarea, input, select) { font-size: var(--stud-copy-size) !important; line-height: 1.45; }
-.engineering-mode .stud-command-center-deck :is(small, dt, label, header > span, .stud-search-policy) { font-size: var(--stud-meta-size) !important; line-height: 1.4; }
+.engineering-mode .stud-command-center-deck :is(span, small, dt, label, summary, code, header > span, .stud-search-policy) { font-size: var(--stud-meta-size) !important; line-height: 1.4; }
 .engineering-mode .stud-command-center-deck :is(button) { min-height: 30px; padding: 6px 9px; font-size: var(--stud-meta-size) !important; line-height: 1.3; }
 .engineering-mode .stud-command-center-deck :is(h2, h3) { font-size: var(--stud-heading-size) !important; line-height: 1.28; }
 .engineering-mode .stud-command-center-deck strong { font-size: max(11px, .68vw) !important; line-height: 1.38; }
 .engineering-mode .stud-command-center-deck :is(input, select, textarea) { min-height: 32px; padding: 6px 8px; }
+.engineering-mode .stud-command-center-deck .workspace-toast { font-size: var(--stud-meta-size) !important; }
+.engineering-mode .stud-command-center-deck :is(.stud-empty-inline, .stud-tiptap-editor, .stud-prosemirror) { font-size: var(--stud-copy-size) !important; line-height: 1.45; }
+.engineering-mode .stud-command-center-deck em { font-size: var(--stud-meta-size) !important; line-height: 1.4; }
+.engineering-mode .stud-document-library-actions { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: end; padding-bottom: 10px; border-bottom: 1px solid color-mix(in srgb, var(--aegis-line) 66%, transparent); }
+.engineering-mode .stud-document-library-actions form { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; align-items: end; }
+.engineering-mode .stud-document-library-actions label { display: grid; gap: 4px; }
+.engineering-mode .stud-document-load-more { width: 100%; margin-top: 8px; }
 .engineering-mode .stud-command-search[hidden] { display: none !important; }
 .engineering-mode .stud-nav-primary .stud-nav-search { margin-left: auto; border-style: dashed; }
 .engineering-mode .stud-roadmap-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5vh; margin: 0; padding: 0; list-style: none; counter-reset: stud-roadmap; }
@@ -6225,6 +6232,8 @@ button.eng-thread-row.active {
 @media (max-width: 1230px) {
     .engineering-mode .stud-nav-primary .stud-nav-search { margin-left: 0; }
     .engineering-mode .stud-roadmap-steps { grid-template-columns: minmax(0, 1fr); }
+    .engineering-mode .stud-document-library-actions,
+    .engineering-mode .stud-document-library-actions form { grid-template-columns: minmax(0, 1fr); }
 }
 
 /* STUD Phase 3 research/writing. Dynamic metadata remains in normal flow;
