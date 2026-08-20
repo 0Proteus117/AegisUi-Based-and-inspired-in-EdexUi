@@ -84,14 +84,25 @@ class StudLmsRuntime {
         this.browserSessionConfigured = false;
         this.authBootstrapRunning = false;
         this.pendingSso = null;
-        this.onOpenUrl = (event, value) => {
-            if (event && typeof event.preventDefault === "function") event.preventDefault();
+        this.handleSsoProtocolUrl = value => {
+            if (!this.pendingSso || !String(value || "").startsWith(`${MOODLE_APP_SCHEME}://token=`)) return;
             this.acceptSsoCallback(value).catch(error => {
                 const instance = this.store.getProviderInstance("stud_moodle_default");
                 if (instance) this.persistState(instance, {status: "ERROR", lastAttempt: Model.now(), lastErrorCode: error.code || "AUTH_REQUIRED"});
             });
         };
-        if (this.app && typeof this.app.on === "function") this.app.on("open-url", this.onOpenUrl);
+        this.onOpenUrl = (event, value) => {
+            if (event && typeof event.preventDefault === "function") event.preventDefault();
+            this.handleSsoProtocolUrl(value);
+        };
+        this.onSecondInstance = (_event, argv) => {
+            const callback = (Array.isArray(argv) ? argv : []).find(value => String(value || "").startsWith(`${MOODLE_APP_SCHEME}://token=`));
+            if (callback) this.handleSsoProtocolUrl(callback);
+        };
+        if (this.app && typeof this.app.on === "function") {
+            this.app.on("open-url", this.onOpenUrl);
+            this.app.on("second-instance", this.onSecondInstance);
+        }
         this.scheduleAutomaticSync();
     }
 
@@ -426,7 +437,10 @@ class StudLmsRuntime {
         this.pendingSso = null;
         this.controllers.forEach(controller => controller.abort());
         this.controllers.clear();
-        if (this.app && typeof this.app.removeListener === "function") this.app.removeListener("open-url", this.onOpenUrl);
+        if (this.app && typeof this.app.removeListener === "function") {
+            this.app.removeListener("open-url", this.onOpenUrl);
+            this.app.removeListener("second-instance", this.onSecondInstance);
+        }
     }
 }
 

@@ -55,8 +55,8 @@ function fullFetch(url, options = {}) {
 
         const initial = runtime.status();
         check("MOODLE_CONFIG_REQUIRED_INITIAL", initial.status === "CONFIG_REQUIRED" && initial.tokenConfigured === false);
-        let openedAuthUrl = null; const openedAuthUrls = []; let protocol = null; let openUrlHandler = null; let prevented = false;
-        const fakeApp = {on: (name, handler) => { if (name === "open-url") openUrlHandler = handler; }, removeListener: () => {}, setAsDefaultProtocolClient: value => { protocol = value; return true; }};
+        let openedAuthUrl = null; const openedAuthUrls = []; let protocol = null; let openUrlHandler = null; let secondInstanceHandler = null; let prevented = false;
+        const fakeApp = {on: (name, handler) => { if (name === "open-url") openUrlHandler = handler; if (name === "second-instance") secondInstanceHandler = handler; }, removeListener: () => {}, setAsDefaultProtocolClient: value => { protocol = value; return true; }};
         const sessionRuntime = new StudLmsRuntime({store, root, vault, fetch: fullFetch, safeStorage: fakeSafeStorage(), app: fakeApp, shell: {openExternal: async value => { openedAuthUrl = value; openedAuthUrls.push(value); }}});
         let bootstrapped = 0;
         sessionRuntime.probe = async () => { bootstrapped += 1; return {}; };
@@ -65,18 +65,20 @@ function fullFetch(url, options = {}) {
         const launch = new URL(openedAuthUrl);
         check("MOODLE_SYSTEM_BROWSER_SSO", opened.opened && opened.systemBrowser && launch.origin === "https://moodle.uel.ac.uk" && launch.pathname === "/admin/tool/mobile/launch.php");
         check("MOODLE_OFFICIAL_MOBILE_SERVICE", launch.searchParams.get("service") === "moodle_mobile_app" && launch.searchParams.get("urlscheme") === "aegisui" && /^\d+$/.test(launch.searchParams.get("passport")));
-        check("MOODLE_PROTOCOL_REGISTERED", protocol === "aegisui" && typeof openUrlHandler === "function");
+        check("MOODLE_PROTOCOL_REGISTERED", protocol === "aegisui" && typeof openUrlHandler === "function" && typeof secondInstanceHandler === "function");
         const resumed = await sessionRuntime.openWeb();
         check("MOODLE_SSO_RESUMES_PENDING_REQUEST", resumed.resumed === true && openedAuthUrls.length === 2 && openedAuthUrls[0] === openedAuthUrls[1]);
         const signature = moodleSsoSignature("https://moodle.uel.ac.uk", launch.searchParams.get("passport"));
         const callbackUrl = `aegisui://token=${signature}:::callbacktoken:::privatecallbacktoken`;
-        openUrlHandler({preventDefault: () => { prevented = true; }}, callbackUrl);
+        secondInstanceHandler({}, ["/Applications/AegisUi.app/Contents/MacOS/AegisUi", callbackUrl]);
         await new Promise(resolve => setTimeout(resolve, 20));
-        check("MOODLE_SSO_CALLBACK_ACCEPTED", prevented && vault.status("stud_moodle_default").tokenConfigured && bootstrapped === 2 && !sessionRuntime.status().authenticationPending);
+        check("MOODLE_SSO_SECOND_INSTANCE_CALLBACK_ACCEPTED", vault.status("stud_moodle_default").tokenConfigured && bootstrapped === 2 && !sessionRuntime.status().authenticationPending);
         const callbackVaultText = fs.readFileSync(path.join(root, "secure-provider-credentials.json"), "utf8");
         check("MOODLE_SSO_SECRETS_ENCRYPTED", !callbackVaultText.includes("callbacktoken") && !callbackVaultText.includes("privatecallbacktoken") && !fs.readFileSync(path.join(root, "academic.sqlite")).includes(Buffer.from("callbacktoken")));
         await assert.rejects(() => sessionRuntime.acceptSsoCallback(callbackUrl), error => error.code === "AUTH_REQUIRED");
         check("MOODLE_SSO_REPLAY_BLOCKED", true);
+        openUrlHandler({preventDefault: () => { prevented = true; }}, callbackUrl);
+        check("MOODLE_SSO_DUPLICATE_OPEN_URL_IGNORED", prevented && !sessionRuntime.status().authenticationPending);
         assert.throws(() => parseMoodleSsoCallback("aegisui://token=bad:::token:::private"), error => error.code === "AUTH_REQUIRED");
         check("MOODLE_SSO_MALFORMED_CALLBACK_BLOCKED", true);
         check("MOODLE_LOGIN_DOES_NOT_COPY_BROWSER_COOKIES", !Object.keys(sessionRuntime.status()).some(key => /cookie|password/i.test(key)));
