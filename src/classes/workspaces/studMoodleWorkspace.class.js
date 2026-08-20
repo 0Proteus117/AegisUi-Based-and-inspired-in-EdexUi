@@ -108,7 +108,7 @@ class StudMoodleWorkspace {
     }
 
     async indexAllCourseMaterial() {
-        const pending = (this.parent.documents && this.parent.documents.state.documents || []).filter(item => item.documentType === "COURSE_MATERIAL" && item.extractionStatus === "NOT_ANALYZED").slice(0, 100);
+        const pending = (this.parent.documents && this.parent.documents.state.documents || []).filter(item => item.documentType === "COURSE_MATERIAL" && item.extractionStatus === "NOT_ANALYZED").slice(0, 500);
         if (!pending.length) return;
         this.state.indexing = true; this.state.error = ""; this.parent.render();
         let indexed = 0; let failed = 0;
