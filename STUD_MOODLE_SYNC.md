@@ -37,6 +37,18 @@ keeps SHA-256, MIME type and provider provenance. Token-bearing download URLs
 exist only in memory and the provider's raw payload is never persisted. PDF
 interpretation remains a separate explicit indexing action.
 
+The lightweight capability probe checks the core contract without repeating a
+full course traversal. An `UNKNOWN` result from that lightweight probe does not
+erase a deeper capability already demonstrated by a successful explicit full
+sync. A later full sync can still change the stored state when the corresponding
+read actually succeeds or fails.
+
+Managed-file reconciliation is incremental. A file with the same stable Moodle
+identifier, declared hash/size and existing managed copy is not downloaded
+again. Changed or missing files are retrieved through the fixed official Moodle
+file endpoint and replace only their normalized managed observation; temporary
+download credentials remain memory-only.
+
 ## Calendar separation
 
 Moodle calendar results can help inform an Assignment but do not create,
