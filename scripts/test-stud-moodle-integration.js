@@ -69,7 +69,8 @@ function fullFetch(url, options = {}) {
         const resumed = await sessionRuntime.openWeb();
         check("MOODLE_SSO_RESUMES_PENDING_REQUEST", resumed.resumed === true && openedAuthUrls.length === 2 && openedAuthUrls[0] === openedAuthUrls[1]);
         const signature = moodleSsoSignature("https://moodle.uel.ac.uk", launch.searchParams.get("passport"));
-        const callbackUrl = `aegisui://token=${signature}:::callbacktoken:::privatecallbacktoken`;
+        const callbackEnvelope = `${signature}:::callbacktoken:::privatecallbacktoken`;
+        const callbackUrl = `aegisui://token=${Buffer.from(callbackEnvelope, "utf8").toString("base64")}`;
         secondInstanceHandler({}, ["/Applications/AegisUi.app/Contents/MacOS/AegisUi", callbackUrl]);
         await new Promise(resolve => setTimeout(resolve, 20));
         check("MOODLE_SSO_SECOND_INSTANCE_CALLBACK_ACCEPTED", vault.status("stud_moodle_default").tokenConfigured && bootstrapped === 2 && !sessionRuntime.status().authenticationPending);
@@ -79,7 +80,11 @@ function fullFetch(url, options = {}) {
         check("MOODLE_SSO_REPLAY_BLOCKED", true);
         openUrlHandler({preventDefault: () => { prevented = true; }}, callbackUrl);
         check("MOODLE_SSO_DUPLICATE_OPEN_URL_IGNORED", prevented && !sessionRuntime.status().authenticationPending);
+        assert.deepStrictEqual(parseMoodleSsoCallback(callbackUrl), {signature, token: "callbacktoken", privateToken: "privatecallbacktoken"});
+        const callbackWithoutPrivateToken = `aegisui://token=${Buffer.from(`${signature}:::callbacktoken`, "utf8").toString("base64")}`;
+        assert.deepStrictEqual(parseMoodleSsoCallback(callbackWithoutPrivateToken), {signature, token: "callbacktoken", privateToken: null});
         assert.throws(() => parseMoodleSsoCallback("aegisui://token=bad:::token:::private"), error => error.code === "AUTH_REQUIRED");
+        assert.throws(() => parseMoodleSsoCallback(`aegisui://token=${Buffer.from("bad:::token:::private", "utf8").toString("base64")}`), error => error.code === "AUTH_REQUIRED");
         check("MOODLE_SSO_MALFORMED_CALLBACK_BLOCKED", true);
         check("MOODLE_LOGIN_DOES_NOT_COPY_BROWSER_COOKIES", !Object.keys(sessionRuntime.status()).some(key => /cookie|password/i.test(key)));
         sessionRuntime.dispose();

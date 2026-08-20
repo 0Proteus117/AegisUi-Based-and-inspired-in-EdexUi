@@ -23,10 +23,24 @@ function parseMoodleSsoCallback(value) {
     const prefix = `${MOODLE_APP_SCHEME}://token=`;
     const raw = String(value || "");
     if (!raw.startsWith(prefix) || raw.length > 10000 || /[?#]/.test(raw)) throw new Lms.LmsError("AUTH_REQUIRED", "Moodle returned an invalid sign-in response.");
-    const parts = raw.slice(prefix.length).split(":::");
-    if (parts.length !== 3 || !/^[a-f0-9]{32}$/i.test(parts[0])) throw new Lms.LmsError("AUTH_REQUIRED", "Moodle returned an invalid sign-in response.");
+    // Moodle's official mobile launch endpoint base64-encodes the complete
+    // signature:::token[:::privateToken] envelope before it invokes the
+    // registered URL scheme. Keep this decoder strict: accepting the raw
+    // pre-encoded form would both diverge from Moodle's protocol and make the
+    // callback unsuitable for transport as a macOS custom URL.
+    const payload = raw.slice(prefix.length);
+    if (!payload || payload.length % 4 !== 0 || !/^[A-Za-z0-9+/]+={0,2}$/.test(payload)) throw new Lms.LmsError("AUTH_REQUIRED", "Moodle returned an invalid sign-in response.");
+    let decoded;
+    try {
+        decoded = Buffer.from(payload, "base64").toString("utf8");
+    } catch (error) {
+        throw new Lms.LmsError("AUTH_REQUIRED", "Moodle returned an invalid sign-in response.");
+    }
+    if (Buffer.from(decoded, "utf8").toString("base64") !== payload) throw new Lms.LmsError("AUTH_REQUIRED", "Moodle returned an invalid sign-in response.");
+    const parts = decoded.split(":::");
+    if (![2, 3].includes(parts.length) || !/^[a-f0-9]{32}$/i.test(parts[0])) throw new Lms.LmsError("AUTH_REQUIRED", "Moodle returned an invalid sign-in response.");
     const token = Lms.text(parts[1], "Moodle token", Lms.LIMITS.token, true);
-    const privateToken = parts[2] ? Lms.text(parts[2], "Moodle private token", Lms.LIMITS.token, true) : null;
+    const privateToken = parts.length === 3 && parts[2] ? Lms.text(parts[2], "Moodle private token", Lms.LIMITS.token, true) : null;
     if (!/^[a-z0-9]+$/i.test(token) || privateToken && !/^[a-z0-9]+$/i.test(privateToken)) throw new Lms.LmsError("AUTH_REQUIRED", "Moodle returned an invalid sign-in response.");
     return Object.freeze({signature: parts[0].toLowerCase(), token, privateToken});
 }
