@@ -5992,6 +5992,10 @@ button.eng-thread-row.active {
     gap: .72vh;
     overflow: hidden;
 }
+.engineering-mode .stud-command-header { grid-row: 1; }
+.engineering-mode .stud-command-nav { grid-row: 2; }
+.engineering-mode .stud-command-search { grid-row: 3; }
+.engineering-mode .stud-command-main { grid-row: 4; }
 .engineering-mode .stud-command-header,
 .engineering-mode .stud-command-search,
 .engineering-mode .stud-command-main .workspace-panel {

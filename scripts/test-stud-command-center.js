@@ -126,6 +126,8 @@ try {
         assert.ok(css.includes("stud-tool-catalog-grid"));
         assert.ok(css.includes("--stud-copy-size: clamp(11px"));
         assert.ok(css.includes("stud-document-library-actions"));
+        assert.ok(css.includes(".stud-command-main { grid-row: 4; }"));
+        assert.ok(css.includes(".stud-command-search { grid-row: 3; }"));
         assert.ok(css.includes("@media (max-width: 1230px)"));
         assert.ok(theme.includes("STUD Phase 2 keeps the Command Center semantic"));
     });
