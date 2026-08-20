@@ -89,10 +89,19 @@ leaf text below 10px. Dark, Light and System ownership remains token-based; the
 final sanitized visual matrix is produced only after the real assignment
 workflow has been selected and completed.
 
-## Remaining acceptance gate
+## Real assignment workflow gate completed
 
-The real Assignment workflow intentionally requires the user to choose the
-Assignment. Aegis must not select one merely because its brief is convenient.
-After that explicit choice, the brief, roadmap, source plan, evidence matrix,
-draft simulation and rubric review can proceed without submitting anything to
-Moodle.
+The user explicitly selected one real Assignment after Moodle ingestion. STUD
+then exercised its brief/document links, explainable requirements, deterministic
+13-stage roadmap, source/evidence matrix, notes, Context Package and local
+academic-assistant boundary without submitting or mutating anything in Moodle.
+
+The local validation artifacts remain deliberately honest: the workflow process
+is validated, but the synthetic design scenario is labelled `DRAFT / SIMULATION`
+and `NOT SUBMISSION-READY` because team-specific inputs, final measurements,
+complete external scholarly acquisition and every marking-brief detail were not
+available. No invented result is promoted as completed university work.
+
+Public release evidence is a separate 18-image synthetic matrix. Real Course,
+Assignment and document information remains only in the user's local STUD data
+and local acceptance PDFs.

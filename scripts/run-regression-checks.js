@@ -27,6 +27,7 @@ const CHECKS = [
     "scripts/test-stud-academic-core.js",
     "scripts/test-stud-phase14-reproducibility.js",
     "scripts/test-stud-phase14-acceptance.js",
+    "scripts/test-stud-v270-reality-pass.js",
     "scripts/test-stud-workspace.js",
     "scripts/test-stud-command-center.js",
     "scripts/test-stud-tool-catalog.js",
