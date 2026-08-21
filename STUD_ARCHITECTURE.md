@@ -1,5 +1,16 @@
 # STUD academic core and Command Center
 
+## Assignment Workflow Engine programme
+
+The authoritative product specification for the next STUD development programme
+is preserved at
+[docs/product/stud/AEGIS_STUD_ASSIGNMENT_WORKFLOW_ENGINE_SPEC.pdf](docs/product/stud/AEGIS_STUD_ASSIGNMENT_WORKFLOW_ENGINE_SPEC.pdf).
+Its audited v2.7.0 gap analysis, target architecture and independently completable
+implementation roadmap are indexed in
+[docs/product/stud/README.md](docs/product/stud/README.md). Future workflow work
+must preserve the proven foundations described below and must not reinterpret
+historical phase documents as newer product authority.
+
 STUD is AegisUi's canonical, local-first academic context. It owns academic
 objects and their provenance; it does not own Moodle, Calendar, Email, Zotero
 or any commercial service. Moodle is an explicit, optional read-only provider:
