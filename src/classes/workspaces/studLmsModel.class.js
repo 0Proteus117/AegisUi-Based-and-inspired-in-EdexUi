@@ -120,11 +120,36 @@ function normalizeProviderConfig(input = {}, options = {}) {
 
 function createRequestId(prefix = "stud_moodle") { return `${prefix}_${crypto.randomUUID().replace(/-/g, "").slice(0, 24)}`; }
 
+function stripMarkup(value) {
+    let output = "";
+    let insideTag = false;
+    const source = String(value);
+    for (let index = 0; index < source.length; index += 1) {
+        const character = source[index];
+        if (!insideTag && character === "<" && /[a-z!/?]/i.test(source[index + 1] || "")) { insideTag = true; output += " "; continue; }
+        if (insideTag) { if (character === ">") insideTag = false; continue; }
+        output += character;
+    }
+    return output;
+}
+
+function decodeDisplayEntitiesOnce(value) {
+    const replacements = Object.freeze({nbsp: " ", amp: "&", lt: "<", gt: ">", "#39": "'", quot: '"'});
+    return String(value).replace(/&(nbsp|amp|lt|gt|#39|quot);/gi, match => replacements[match.slice(1, -1).toLowerCase()]);
+}
+
 function sanitizeDisplayText(value, max = 12000) {
     if (value === undefined || value === null) return null;
-    const source = String(value);
-    const stripped = source.replace(/<[^>]*>/g, " ").replace(/&nbsp;/gi, " ").replace(/&amp;/gi, "&").replace(/&lt;/gi, "<").replace(/&gt;/gi, ">").replace(/&#39;/g, "'").replace(/&quot;/gi, '"').replace(/\s+/g, " ").trim();
+    // Moodle may return formatted HTML. Remove markup with a single-pass
+    // state machine, then decode each supported entity at most once. A value
+    // such as &amp;lt;script&amp;gt; therefore cannot become executable markup
+    // through recursive/double decoding.
+    const stripped = decodeDisplayEntitiesOnce(stripMarkup(value)).replace(/\s+/g, " ").trim();
     return stripped.slice(0, max) || null;
+}
+
+function hasEncodedUrlDelimiter(pathname) {
+    return /%(?:25)*(?:2f|5c|3a|40)/i.test(String(pathname || ""));
 }
 
 function safeReferenceUrl(value, baseUrl) {
@@ -132,7 +157,7 @@ function safeReferenceUrl(value, baseUrl) {
     try {
         const candidate = new URL(value, `${deriveMoodleWebUrl(baseUrl)}/`);
         const base = new URL(deriveMoodleWebUrl(baseUrl));
-        if (candidate.protocol !== "https:" || candidate.origin !== base.origin || candidate.username || candidate.password) return null;
+        if (candidate.protocol !== "https:" || candidate.origin !== base.origin || candidate.username || candidate.password || hasEncodedUrlDelimiter(candidate.pathname)) return null;
         // Preserve only stable, non-secret Moodle object identifiers. Tokens,
         // session parameters and arbitrary query values never cross the
         // provider boundary into canonical STUD records.
@@ -157,7 +182,7 @@ function safeMoodleFileUrl(value, baseUrl) {
         // authenticated file endpoint. Moodle's own Web Service exporters may
         // append the non-secret `forcedownload` presentation flag. Preserve
         // that flag, but reject tokens and every other query parameter.
-        if (candidate.protocol !== "https:" || candidate.origin !== base.origin || candidate.username || candidate.password || candidate.hash || !/(?:^|\/)webservice\/pluginfile\.php\//i.test(pathName)) return null;
+        if (candidate.protocol !== "https:" || candidate.origin !== base.origin || candidate.username || candidate.password || candidate.hash || hasEncodedUrlDelimiter(candidate.pathname) || !/(?:^|\/)webservice\/pluginfile\.php\//i.test(pathName)) return null;
         const keys = [...candidate.searchParams.keys()];
         if (keys.some(key => key !== "forcedownload") || keys.length > 1) return null;
         const forceDownload = candidate.searchParams.get("forcedownload");
@@ -175,7 +200,7 @@ function safeMoodleSessionFileUrl(value, baseUrl) {
         // Browser-session access is limited to the standard Moodle file route
         // already advertised by fixed course-content responses. It accepts no
         // query, token, redirect or arbitrary same-host path.
-        if (candidate.protocol !== "https:" || candidate.origin !== base.origin || candidate.username || candidate.password || candidate.search || candidate.hash || !/(?:^|\/)pluginfile\.php\//i.test(pathName)) return null;
+        if (candidate.protocol !== "https:" || candidate.origin !== base.origin || candidate.username || candidate.password || candidate.search || candidate.hash || hasEncodedUrlDelimiter(candidate.pathname) || !/(?:^|\/)pluginfile\.php\//i.test(pathName)) return null;
         return candidate.toString();
     } catch (error) { return null; }
 }
@@ -190,4 +215,4 @@ function mapMoodleError(error = {}) {
     return new LmsError("SERVER_ERROR", "Moodle returned a bounded service error.");
 }
 
-module.exports = Object.freeze({LMS_PROVIDER_TYPES, LMS_CONNECTION_STATES, LMS_CAPABILITY_STATES, MOODLE_CAPABILITIES, WRITE_CAPABILITIES, ERROR_CODES, LIMITS, LmsError, plainObject, allowedKeys, text, enumValue, safeId, normalizeBaseUrl, deriveMoodleEndpoint, deriveMoodleWebUrl, emptyCapabilities, normalizeCapabilities, normalizeProviderConfig, createRequestId, sanitizeDisplayText, safeReferenceUrl, safeMoodleFileUrl, safeMoodleSessionFileUrl, mapMoodleError});
+module.exports = Object.freeze({LMS_PROVIDER_TYPES, LMS_CONNECTION_STATES, LMS_CAPABILITY_STATES, MOODLE_CAPABILITIES, WRITE_CAPABILITIES, ERROR_CODES, LIMITS, LmsError, plainObject, allowedKeys, text, enumValue, safeId, normalizeBaseUrl, deriveMoodleEndpoint, deriveMoodleWebUrl, emptyCapabilities, normalizeCapabilities, normalizeProviderConfig, createRequestId, stripMarkup, decodeDisplayEntitiesOnce, sanitizeDisplayText, hasEncodedUrlDelimiter, safeReferenceUrl, safeMoodleFileUrl, safeMoodleSessionFileUrl, mapMoodleError});

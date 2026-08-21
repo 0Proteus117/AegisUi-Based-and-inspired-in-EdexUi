@@ -12,6 +12,7 @@ const height = Number(process.argv[5] || 900);
 const scale = Number(process.argv[6] || 2);
 const appearance = String(process.argv[7] || "dark").toLowerCase();
 const scenario = String(process.argv[8] || "overview").toLowerCase();
+if (!["overview", "case", "geo", "media", "domain", "source", "entity", "evidence"].includes(scenario)) throw new Error("Unsupported validation scenario.");
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function connect() {

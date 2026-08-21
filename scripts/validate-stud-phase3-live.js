@@ -9,6 +9,7 @@ const height = Number(process.argv[5] || 900);
 const scale = Number(process.argv[6] || 2);
 const appearance = String(process.argv[7] || "dark").toLowerCase();
 const scenario = String(process.argv[8] || "search").toLowerCase();
+if (!["search", "library", "oa", "notes", "assignment", "citations", "services", "compact"].includes(scenario)) throw new Error("Unsupported validation scenario.");
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function connect() {
@@ -22,6 +23,7 @@ async function connect() {
 }
 function command(socket, method, params = {}) { const id = ++socket.sequence; return new Promise((resolve, reject) => { socket.pending.set(id, {resolve, reject, raw: true}); socket.send(JSON.stringify({id, method, params})); }); }
 function evaluate(socket, expression) { const id = ++socket.sequence; return new Promise((resolve, reject) => { socket.pending.set(id, {resolve, reject, raw: false}); socket.send(JSON.stringify({id, method: "Runtime.evaluate", params: {expression, returnByValue: true, awaitPromise: true}})); }); }
+function fixtureId(value) { const id = String(value || ""); if (!/^stud_[a-z0-9_]{6,120}$/i.test(id)) throw new Error("Renderer returned an invalid synthetic fixture identifier."); return id; }
 
 function fixture() {
     return `(async()=>{const manager=window.workspaceManager;manager.activate('student',false);await new Promise(r=>setTimeout(r,180));const cc=manager.studCommandCenter;const now='2026-08-11T12:00:00.000Z';const doi='10.5555/aegis.synthetic.phase3';
@@ -43,7 +45,8 @@ async function main() {
     try {
         await command(socket, "Emulation.setDeviceMetricsOverride", {width, height, deviceScaleFactor: scale, mobile: false});
         await evaluate(socket, `document.documentElement.dataset.aegisAppearance=${JSON.stringify(appearance)}==='system'?(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):${JSON.stringify(appearance)};true`);
-        const ids = await evaluate(socket, fixture());
+        const returnedIds = await evaluate(socket, fixture());
+        const ids = {paperId: fixtureId(returnedIds.paperId), noteId: fixtureId(returnedIds.noteId), assignmentId: fixtureId(returnedIds.assignmentId)};
         const scenarios = {
             search: `cc.research.state.tab='SEARCH';cc.setActiveView('RESEARCH')`,
             library: `cc.research.state.tab='LIBRARY';cc.research.state.selectedPaperId='${ids.paperId}';cc.setActiveView('RESEARCH')`,

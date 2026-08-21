@@ -1,3 +1,59 @@
+"use strict";
+
+const TERMINAL_INPUT_LIMIT = 64 * 1024;
+
+function terminalSenderUrl(event) {
+    if (event && event.senderFrame && event.senderFrame.url) return event.senderFrame.url;
+    if (event && event.sender && typeof event.sender.getURL === "function") return event.sender.getURL();
+    return "";
+}
+
+function isTrustedTerminalSender(event) {
+    if (!event || event.senderFrame && event.senderFrame.parent) return false;
+    try {
+        const parsed = new URL(terminalSenderUrl(event));
+        if (parsed.protocol !== "file:" || parsed.search || parsed.hash) return false;
+        const actual = require("url").fileURLToPath(parsed);
+        const expected = require("path").resolve(__dirname, "..", "ui.html");
+        return actual === expected;
+    } catch (error) {
+        return false;
+    }
+}
+
+function isLoopbackAddress(value) {
+    const address = String(value || "").toLowerCase();
+    return address === "127.0.0.1" || address === "::1" || address === "::ffff:127.0.0.1";
+}
+
+function terminalTokenMatches(expected, supplied) {
+    if (typeof expected !== "string" || typeof supplied !== "string" || !expected || expected.length !== supplied.length) return false;
+    const crypto = require("crypto");
+    return crypto.timingSafeEqual(Buffer.from(expected, "utf8"), Buffer.from(supplied, "utf8"));
+}
+
+function authorizeTerminalWebSocket(info, expectedToken, connectedClients = 0) {
+    if (!info || connectedClients >= 1 || !isLoopbackAddress(info.req && info.req.socket && info.req.socket.remoteAddress)) return false;
+    try {
+        const requestUrl = new URL(info.req.url || "/", "ws://127.0.0.1");
+        const supplied = requestUrl.searchParams.get("token");
+        const keys = [...requestUrl.searchParams.keys()];
+        return requestUrl.pathname === "/" && keys.length === 1 && keys[0] === "token" && terminalTokenMatches(expectedToken, supplied);
+    } catch (error) {
+        return false;
+    }
+}
+
+function normalizeTerminalInput(value) {
+    let input;
+    if (typeof value === "string") input = value;
+    else if (Buffer.isBuffer(value)) input = value.toString("utf8");
+    else if (value instanceof ArrayBuffer) input = Buffer.from(value).toString("utf8");
+    else throw new TypeError("Terminal input must be UTF-8 text.");
+    if (Buffer.byteLength(input, "utf8") > TERMINAL_INPUT_LIMIT) throw new RangeError("Terminal input exceeds the permitted frame size.");
+    return input;
+}
+
 class Terminal {
     constructor(opts) {
         if (opts.role === "client") {
@@ -150,6 +206,8 @@ class Terminal {
             this.term.focus();
 
             this.Ipc.send("terminal_channel-"+this.port, "Renderer startup");
+            this.authToken = this.Ipc.sendSync("terminal_auth-"+this.port, "Request token");
+            if (typeof this.authToken !== "string" || this.authToken.length < 32) throw new Error("Terminal authentication failed.");
             this.Ipc.on("terminal_channel-"+this.port, (e, ...args) => {
                 switch(args[0]) {
                     case "New cwd":
@@ -176,7 +234,7 @@ class Terminal {
             let sockHost = opts.host || "127.0.0.1";
             let sockPort = this.port;
 
-            this.socket = new WebSocket("ws://"+sockHost+":"+sockPort);
+            this.socket = new WebSocket("ws://"+sockHost+":"+sockPort+"/?token="+encodeURIComponent(this.authToken));
             this.socket.onopen = () => {
                 let attachAddon = new AttachAddon(this.socket);
                 this.term.loadAddon(attachAddon);
@@ -307,6 +365,9 @@ class Terminal {
 
             this.renderer = null;
             this.port = opts.port || 3000;
+            this.authToken = require("crypto").randomBytes(32).toString("base64url");
+            this._channel = "terminal_channel-"+this.port;
+            this._authChannel = "terminal_auth-"+this.port;
 
             this._closed = false;
             this.onclosed = () => {};
@@ -422,23 +483,31 @@ class Terminal {
                 env: opts.env || process.env
             });
 
+            this._cleanupSecurityBoundary = () => {
+                clearInterval(this._tick);
+                if (this._ipcHandler) this.Ipc.removeListener(this._channel, this._ipcHandler);
+                if (this._authHandler) this.Ipc.removeListener(this._authChannel, this._authHandler);
+            };
+
             this.tty.onExit((code, signal) => {
                 this._closed = true;
+                this._cleanupSecurityBoundary();
                 this.onclosed(code, signal);
             });
 
             this.wss = new this.Websocket({
+                host: "127.0.0.1",
                 port: this.port,
                 clientTracking: true,
-                verifyClient: info => {
-                    if (this.wss.clients.length >= 1) {
-                        return false;
-                    } else {
-                        return true;
-                    }
-                }
+                maxPayload: TERMINAL_INPUT_LIMIT,
+                verifyClient: info => authorizeTerminalWebSocket(info, this.authToken, this.wss && this.wss.clients ? this.wss.clients.size : 0)
             });
-            this.Ipc.on("terminal_channel-"+this.port, (e, ...args) => {
+            this._authHandler = e => {
+                e.returnValue = isTrustedTerminalSender(e) ? this.authToken : null;
+            };
+            this.Ipc.on(this._authChannel, this._authHandler);
+            this._ipcHandler = (e, ...args) => {
+                if (!isTrustedTerminalSender(e)) return;
                 switch(args[0]) {
                     case "Renderer startup":
                         this.renderer = e.sender;
@@ -462,14 +531,23 @@ class Terminal {
                     default:
                         return;
                 }
-            });
+            };
+            this.Ipc.on(this._channel, this._ipcHandler);
             this.wss.on("connection", ws => {
                 this.onopened(this.tty.pid || this.tty._pid);
                 ws.on("close", (code, reason) => {
                     this.ondisconnected(code, reason);
                 });
                 ws.on("message", msg => {
-                    this.tty.write(msg);
+                    try {
+                        // This is the intended terminal-input sink. The frame is
+                        // accepted only after loopback + capability-token
+                        // authentication; shell metacharacters are deliberately
+                        // preserved so the terminal behaves like a terminal.
+                        this.tty.write(normalizeTerminalInput(msg));
+                    } catch (error) {
+                        ws.close(1009, "Invalid terminal input");
+                    }
                 });
                 this.tty.onData(data => {
                     this._nextTickUpdateTtyCWD = true;
@@ -485,6 +563,7 @@ class Terminal {
             this.close = () => {
                 this.tty.kill();
                 this._closed = true;
+                this._cleanupSecurityBoundary();
             };
         } else {
             throw "Unknown purpose";
@@ -493,5 +572,9 @@ class Terminal {
 }
 
 module.exports = {
-    Terminal
+    Terminal,
+    TERMINAL_INPUT_LIMIT,
+    isTrustedTerminalSender,
+    authorizeTerminalWebSocket,
+    normalizeTerminalInput
 };

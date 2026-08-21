@@ -9,6 +9,7 @@ const height = Number(process.argv[5] || 900);
 const scale = Number(process.argv[6] || 2);
 const appearance = String(process.argv[7] || "dark").toLowerCase();
 const scenario = String(process.argv[8] || "overview").toLowerCase();
+if (!["overview", "modules", "assignments", "provenance"].includes(scenario)) throw new Error("Unsupported validation scenario.");
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function connect() {
@@ -28,6 +29,7 @@ async function connect() {
 }
 function command(socket, method, params = {}) { const id = ++socket.sequence; return new Promise((resolve, reject) => { socket.pending.set(id, {resolve, reject, raw: true}); socket.send(JSON.stringify({id, method, params})); }); }
 function evaluate(socket, expression) { const id = ++socket.sequence; return new Promise((resolve, reject) => { socket.pending.set(id, {resolve, reject, raw: false}); socket.send(JSON.stringify({id, method: "Runtime.evaluate", params: {expression, returnByValue: true, awaitPromise: true}})); }); }
+function fixtureId(value) { const id = String(value || ""); if (!/^stud_[a-z0-9_]{6,120}$/i.test(id)) throw new Error("Renderer returned an invalid synthetic fixture identifier."); return id; }
 
 function fixture() {
     return `(async () => { const manager=window.workspaceManager; manager.activate('student',false); await new Promise(resolve => setTimeout(resolve, 40));
@@ -48,10 +50,11 @@ async function main() {
     try {
         await command(socket, "Emulation.setDeviceMetricsOverride", {width, height, deviceScaleFactor: scale, mobile: false});
         await evaluate(socket, `document.documentElement.dataset.aegisAppearance=${JSON.stringify(appearance)} === 'system' ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : ${JSON.stringify(appearance)}; true;`);
-        const ids = await evaluate(socket, fixture());
-        if (scenario === "modules") await evaluate(socket, `(async () => { const cc=window.workspaceManager.studCommandCenter; await cc.selectCourse(${JSON.stringify(ids.courseId)},'MODULES'); })()`);
-        if (scenario === "assignments") await evaluate(socket, `(async () => { const cc=window.workspaceManager.studCommandCenter; await cc.selectAssignment(${JSON.stringify(ids.assignmentId)},'ASSIGNMENTS'); })()`);
-        if (scenario === "provenance") await evaluate(socket, `(async () => { const cc=window.workspaceManager.studCommandCenter; await cc.selectAssignment(${JSON.stringify(ids.assignmentId)},'ASSIGNMENTS'); cc.openProvenance('ASSIGNMENT:${ids.assignmentId}', document.querySelector('[data-workspace="student"]')); })()`);
+        const returnedIds = await evaluate(socket, fixture());
+        const ids = {courseId: fixtureId(returnedIds.courseId), assignmentId: fixtureId(returnedIds.assignmentId)};
+        if (scenario === "modules") await evaluate(socket, `(async () => { const cc=window.workspaceManager.studCommandCenter; await cc.selectCourse('${ids.courseId}','MODULES'); })()`);
+        if (scenario === "assignments") await evaluate(socket, `(async () => { const cc=window.workspaceManager.studCommandCenter; await cc.selectAssignment('${ids.assignmentId}','ASSIGNMENTS'); })()`);
+        if (scenario === "provenance") await evaluate(socket, `(async () => { const cc=window.workspaceManager.studCommandCenter; await cc.selectAssignment('${ids.assignmentId}','ASSIGNMENTS'); cc.openProvenance('ASSIGNMENT:${ids.assignmentId}', document.querySelector('[data-workspace="student"]')); })()`);
         await delay(350);
         const report = await evaluate(socket, `(() => { const deck=document.querySelector('[data-workspace="student"] .stud-command-center-deck'); if(!deck)return {available:false}; const rect=item=>item.getBoundingClientRect(); const panels=[...deck.querySelectorAll('.workspace-panel')]; const controls=[...deck.querySelectorAll('button,input,textarea,select')].filter(item=>!item.disabled); const escaped=controls.filter(item=>{const panel=item.closest('.workspace-panel');if(!panel)return false;const r=rect(item),p=rect(panel);return r.left<p.left-2||r.right>p.right+2||r.top<p.top-2||r.bottom>p.bottom+2;}); return {available:true,title:deck.querySelector('.stud-command-header h2')?.textContent||'',panels:panels.length,controls:controls.length,escapedControls:escaped.length,horizontalOverflow:deck.scrollWidth>deck.clientWidth+3,active:deck.querySelector('.stud-command-nav .active')?.textContent||'',future:[...deck.querySelectorAll('.stud-nav-deferred')].length}; })()`);
         console.log(`STUD_PHASE2_LIVE_AVAILABLE: ${report && report.available ? "OK" : "FAIL"}`);

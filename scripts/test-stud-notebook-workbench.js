@@ -59,7 +59,7 @@ function ipcMock() { const handlers = new Map(); return {handlers, handle: (name
         check("GITHUB_EXPLICIT_FIXED_ENDPOINT_METADATA", () => assert.strictEqual(fetchCalls, 1) && publicMetadata.metadata.license === "MIT" && publicMetadata.metadata.visibility === "PUBLIC");
         check("CONTEXT_PACKAGE_INCLUDES_BOUNDED_NOTEBOOK_CELLS", () => { const packageResult = store.createAcademicContextPackage("ASSIGNMENT", assignment.id, {}); assert.ok(packageResult.snapshot.candidates.some(item => item.entityId === notebook.id)); assert.ok(packageResult.snapshot.fragments.some(item => item.kind === "NOTEBOOK_MARKDOWN_CELL")); assert.ok(!packageResult.snapshot.policy.llmInvoked); });
         check("DISCIPLINE_NEUTRAL_FIVE_FIXTURES", () => [humanities, law, social, generic].every(course => store.buildAcademicContext("COURSE", course.id).root.entityType === "COURSE"));
-        check("RUNTIME_HAS_NO_SHELL_OR_GENERIC_PROXY", () => { const source = fs.readFileSync(path.join(ROOT, "src/classes/workspaces/studNotebookRuntime.class.js"), "utf8"); assert.ok(!/child_process|spawn\(|exec\(|process\.env|http:\/\//.test(source)); assert.ok(source.includes("https://api.github.com")); });
+        check("RUNTIME_HAS_NO_SHELL_OR_GENERIC_PROXY", () => { const source = fs.readFileSync(path.join(ROOT, "src/classes/workspaces/studNotebookRuntime.class.js"), "utf8"); assert.ok(!/child_process|spawn\(|exec\(|process\.env|http:\/\//.test(source)); assert.match(source, /const GITHUB_API = "https:\/\/api\.github\.com";/); });
 
         // Bounded scale seed: the renderer reads only limited lists, while the
         // SQLite store can retain a realistic local academic corpus.

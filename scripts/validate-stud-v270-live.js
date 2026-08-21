@@ -11,6 +11,7 @@ const height = Number(process.argv[5] || 900);
 const scale = Number(process.argv[6] || 2);
 const appearance = String(process.argv[7] || "dark").toLowerCase();
 const mode = String(process.argv[8] || "assignment").toLowerCase();
+if (!["assignment", "home", "course", "document", "moodle", "roadmap", "brief", "requirements", "evidence", "resources", "research"].includes(mode)) throw new Error("Unsupported validation mode.");
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function connect() {

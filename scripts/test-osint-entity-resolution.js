@@ -22,7 +22,7 @@ function main() {
     check("ENTITY_CREATE_EXPLICIT", state.entities.length === 3 && state.selectedEntityId === "entity-gamma-000003");
     check("ENTITY_FIELD_PROVENANCE", state.entities[0].attributes[0].sourceType === "ANALYST_OBSERVATION" && state.entities[0].attributes[0].sourceIdentifier === "SYNTHETIC FIXTURE");
     state = Entity.updateEntity(state, "entity-alpha-000001", {label: "Example Organization Domain", aliases: ["example.org"], confidence: "MEDIUM", status: "PARTIALLY_RESOLVED"});
-    check("ENTITY_EDIT_EXPLICIT", state.entities[0].label === "Example Organization Domain" && state.entities[0].aliases.includes("example.org") && state.entities[0].attributes[0].sourceIdentifier === "SYNTHETIC FIXTURE");
+    check("ENTITY_EDIT_EXPLICIT", state.entities[0].label === "Example Organization Domain" && state.entities[0].aliases.some(alias => alias === "example.org") && state.entities[0].attributes[0].sourceIdentifier === "SYNTHETIC FIXTURE");
     check("ENTITY_EXACT_DUPLICATE_HINT", Entity.exactDuplicateHints(state.entities).length === 1 && Entity.exactDuplicateHints(state.entities)[0].strength === "EXACT_IDENTIFIER");
     rejects("ENTITY_RELATIONSHIP_REQUIRES_EVIDENCE", () => Entity.addRelationship(state, {fromId: "entity-alpha-000001", toId: "entity-beta-000002", type: "ASSOCIATED_WITH"}), "EVIDENCE_REQUIRED");
     state = Entity.addRelationship(state, {fromId: "entity-alpha-000001", toId: "entity-beta-000002", type: "ASSOCIATED_WITH", evidence: [{summary: "Synthetic source footer names the organization.", sourceType: "SOURCE_METADATA", sourceIdentifier: "synthetic-source", confidence: "MEDIUM"}], contradictions: ["No direct registration evidence."], confidence: "MEDIUM", status: "AMBIGUOUS"});

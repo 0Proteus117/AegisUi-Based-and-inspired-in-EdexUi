@@ -175,12 +175,17 @@ fs.writeFileSync(path.join(__dirname, "src", "assets", "icons", "file-icons.json
 console.log("Wrote file-icons.json");
 
 
-var fileIconsMatchScript = `/*
- * Thanks everyone for pointing out this is probably on of the ugliest source code files on GitHub
- * This is script-generated code, however, so it might disqualify
- * See file-icons-generator.js at root dir of git tree
-*/
-function matchIcon(filename) {\n`;
+const fileIconRules = [];
+
+function literalSuffixPattern(value) {
+    return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "$";
+}
+
+function addFileIconRule(match, icon) {
+    const pattern = typeof match === "string" ? new RegExp(literalSuffixPattern(match), "i") : match;
+    if (!(pattern instanceof RegExp)) throw new TypeError("File icon match must be text or a regular expression.");
+    fileIconRules.push(Object.freeze({source: pattern.source, flags: pattern.flags, icon: String(icon)}));
+}
 
 // Parse the configuration file of file-icons/atom
 let atomConfig = CSON.parse(fs.readFileSync(path.join(__dirname, "file-icons", "atom", "config.cson"), {encoding: "utf8"}));
@@ -189,17 +194,13 @@ Object.keys(atomConfig.directoryIcons).forEach(key => {
     if (config.icon.startsWith("_")) config.icon = config.icon.substr(1);
     if (Array.isArray(config.match)) {
         config.match.forEach(key => {
-            let match = key[0];
-            if (typeof match === "string") match = new RegExp(match.replace(/\./g, "\\.")+"$", "i"); // lgtm [js/incomplete-sanitization]
-            fileIconsMatchScript += `    if (${match}.test(filename)) { return "${config.icon}"; }\n`;
+            addFileIconRule(key[0], config.icon);
         });
     } else {
-        if (typeof config.match === "string") config.match = new RegExp(config.match.replace(/\./g, "\\.")+"$", "i"); // lgtm [js/incomplete-sanitization]
-        fileIconsMatchScript += `    if (${config.match}.test(filename)) { return "${config.icon}"; }\n`;
+        addFileIconRule(config.match, config.icon);
 
         if (config.alias) {
-            if (typeof config.alias === "string") config.alias = new RegExp(config.alias.replace(/\./g, "\\.")+"$", "i"); // lgtm [js/incomplete-sanitization]
-            fileIconsMatchScript += `    if (${config.alias}.test(filename)) { return "${config.icon}"; }\n`;
+            addFileIconRule(config.alias, config.icon);
         }
     }
 });
@@ -208,22 +209,34 @@ Object.keys(atomConfig.fileIcons).forEach(key => {
     if (config.icon.startsWith("_")) config.icon = config.icon.substr(1);
     if (Array.isArray(config.match)) {
         config.match.forEach(key => {
-            let match = key[0];
-            if (typeof match === "string") match = new RegExp(match.replace(/\./g, "\\.")+"$", "i"); // lgtm [js/incomplete-sanitization]
-            fileIconsMatchScript += `    if (${match}.test(filename)) { return "${config.icon}"; }\n`;
+            addFileIconRule(key[0], config.icon);
         });
     } else {
-        if (typeof config.match === "string") config.match = new RegExp(config.match.replace(/\./g, "\\.")+"$", "i"); // lgtm [js/incomplete-sanitization]
-        fileIconsMatchScript += `    if (${config.match}.test(filename)) { return "${config.icon}"; }\n`;
+        addFileIconRule(config.match, config.icon);
 
         if (config.alias) {
-            if (typeof config.alias === "string") config.alias = new RegExp(config.alias.replace(/\./g, "\\.")+"$", "i"); // lgtm [js/incomplete-sanitization]
-            fileIconsMatchScript += `    if (${config.alias}.test(filename)) { return "${config.icon}"; }\n`;
+            addFileIconRule(config.alias, config.icon);
         }
     }
 });
-// End script
-fileIconsMatchScript += "}\nmodule.exports = matchIcon;";
+
+// Data is serialized rather than interpolated into executable source. This
+// keeps backslashes, quotes and regular-expression delimiters as data even if
+// the vendored icon configuration changes.
+const fileIconsMatchScript = `/*
+ * Generated from the vendored file-icons configuration.
+ * See file-icons-generator.js at the repository root.
+ */
+"use strict";
+const RULE_DATA = Object.freeze(${JSON.stringify(fileIconRules)});
+const RULES = Object.freeze(RULE_DATA.map(rule => Object.freeze({pattern: new RegExp(rule.source, rule.flags), icon: rule.icon})));
+function matchIcon(filename) {
+    const value = String(filename || "");
+    const match = RULES.find(rule => rule.pattern.test(value));
+    return match ? match.icon : undefined;
+}
+module.exports = matchIcon;
+`;
 // Write the script
 fs.writeFileSync(path.join(__dirname, "src", "assets", "misc", "file-icons-match.js"), fileIconsMatchScript);
 console.log("Wrote file-icons-match.js");

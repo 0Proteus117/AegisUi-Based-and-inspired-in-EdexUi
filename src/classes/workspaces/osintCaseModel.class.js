@@ -54,12 +54,24 @@
         });
     }
 
+    function stripMarkup(value) {
+        let output = "";
+        let insideTag = false;
+        for (let index = 0; index < value.length; index += 1) {
+            const character = value[index];
+            if (!insideTag && character === "<" && /[a-z!/?]/i.test(value[index + 1] || "")) { insideTag = true; output += " "; continue; }
+            if (insideTag) { if (character === ">") insideTag = false; continue; }
+            output += character;
+        }
+        return output;
+    }
+
     function plainText(value, max, label, options = {}) {
         if (value === undefined || value === null) return options.optional ? "" : (() => { throw new CaseError("CASE_INVALID", `${label} is required.`); })();
         if (typeof value !== "string") throw new CaseError("CASE_INVALID", `${label} must be text.`);
         if (/\u0000|[\u0001-\u0008\u000b\u000c\u000e-\u001f]/.test(value)) throw new CaseError("CASE_INVALID", `${label} contains control characters.`);
         if (/<\s*script|javascript\s*:/i.test(value)) throw new CaseError("CASE_INVALID", `${label} cannot contain executable content.`);
-        const normalized = value.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
+        const normalized = stripMarkup(value).replace(/\s+/g, " ").trim();
         if (!normalized && !options.optional) throw new CaseError("CASE_INVALID", `${label} is required.`);
         if (normalized.length > max) throw new CaseError("PAYLOAD_TOO_LARGE", `${label} exceeds its allowed length.`);
         return normalized;
@@ -571,5 +583,5 @@
         };
     }
 
-    return Object.freeze({CASE_SCHEMA_VERSION, CASE_STATUSES, CASE_PRIORITIES, EVIDENCE_TYPES, ACQUISITION_METHODS, INTEGRITY_STATES, TIMELINE_EVENTS, ERROR_CODES, LIMITS, REDACTABLE_FIELDS, CaseError, now, bytesOf, rejectUnsafeObject, assertAllowedKeys, plainText, nullableText, safeId, generateId, normalizeTags, assertEnum, assertTimestamp, safeUrl, canonicalize, canonicalStringify, sha256, integrityPayload, createIntegrity, validateIntegrity, validateCaseRecord, createCase, updateCase, sanitizeNormalizedResult, sanitizeMediaEvidenceData, sanitizeInfrastructureEvidenceData, sanitizeResearchEvidenceData, sanitizeEntityResolutionEvidenceData, applyRedactions, createProviderEvidence, createManualEvidence, validateEvidenceRecord, createTimelineEvent, createNote, updateNote});
+    return Object.freeze({CASE_SCHEMA_VERSION, CASE_STATUSES, CASE_PRIORITIES, EVIDENCE_TYPES, ACQUISITION_METHODS, INTEGRITY_STATES, TIMELINE_EVENTS, ERROR_CODES, LIMITS, REDACTABLE_FIELDS, CaseError, now, bytesOf, rejectUnsafeObject, assertAllowedKeys, stripMarkup, plainText, nullableText, safeId, generateId, normalizeTags, assertEnum, assertTimestamp, safeUrl, canonicalize, canonicalStringify, sha256, integrityPayload, createIntegrity, validateIntegrity, validateCaseRecord, createCase, updateCase, sanitizeNormalizedResult, sanitizeMediaEvidenceData, sanitizeInfrastructureEvidenceData, sanitizeResearchEvidenceData, sanitizeEntityResolutionEvidenceData, applyRedactions, createProviderEvidence, createManualEvidence, validateEvidenceRecord, createTimelineEvent, createNote, updateNote});
 });
