@@ -2,7 +2,7 @@
 
 ## Scope and evidence
 
-This audit covers all 18 alerts reported open for `feature/systems-online-pass` at baseline commit `1418cd3`. The supplied CodeQL export and the live GitHub Code Scanning API agreed on rule, severity, file and location for every alert. No alert was dismissed or suppressed to change dashboard state.
+This audit covers all 18 alerts reported open for `feature/systems-online-pass` at baseline commit `1418cd3`. The supplied CodeQL export and the live GitHub Code Scanning API agreed on rule, severity, file and location for every alert. No alert was dismissed before source tracing and remediation. Post-fix dismissals are recorded below with reproducible scope and rationale.
 
 Classification vocabulary follows the security-pass request. `NEEDS_REFACTOR` means the reported pattern did not provide a demonstrated exploit through the current escaped renderer, but violated a production trust-boundary invariant and was changed rather than dismissed.
 
@@ -70,8 +70,16 @@ No vendored icon value is interpolated into executable source. Generation was re
 
 ## Validation and residual risk
 
-Local CodeQL CLI was not installed, so no local CodeQL database was fabricated. The authoritative dashboard must be refreshed by GitHub Code Scanning after push; fixed alerts are intentionally not dismissed by API. Runtime residual risk is limited to the already-trusted renderer having terminal authority, which is inherent in the existing Node-enabled terminal architecture. A future renderer sandbox migration could reduce that broader legacy trust, but it is outside this focused pass.
+Local CodeQL CLI was not installed, so no local CodeQL database was fabricated. The authoritative GitHub workflow and alert API supplied post-push static-analysis evidence. Runtime residual risk is limited to the already-trusted renderer having terminal authority, which is inherent in the existing Node-enabled terminal architecture. A future renderer sandbox migration could reduce that broader legacy trust, but it is outside this focused pass.
 
 Development Electron 42.4.1 was launched from this worktree with the ARM64 runtime and current `node-pty`. The authenticated frontend reached `Connected to frontend`, while a separate unauthenticated connection to `ws://127.0.0.1:3000/` was rejected with HTTP 401.
 
 No packaging, preload, Calendar helper, node-pty binary, SSO protocol, credential vault or startup path changed. A DMG is therefore not required for this pass.
+
+## Post-fix GitHub CodeQL result
+
+GitHub CodeQL run `32465777388` analyzed commit `3251176` successfully. It closed 14 of the 18 original alerts through code changes. The four original alerts still reported were DevTools visual validators (#10, #11, #15 and #18); each was dismissed as `used in tests` only after its scenario/identifier allowlist was added and its non-packaged scope was verified.
+
+CodeQL reissued the intentional `node-pty.write` sink as new alert #19 after the unauthenticated transport path had been removed. Alert #19 was dismissed as `false positive` because an interactive terminal must deliver authorized shell text unchanged. The dismissal cites the exact loopback, renderer, capability-token, timing-safe, single-client and payload-bound controls plus the live HTTP 401 rejection test. This dismissal does not claim that arbitrary renderer input is safe outside that authenticated terminal capability.
+
+Open alerts on `feature/systems-online-pass` after the successful scan and documented dismissals: **0**.
