@@ -37,7 +37,7 @@ function rowToCamel(row) {
     Object.entries(row).forEach(([key, value]) => {
         const camel = key.replace(/_([a-z])/g, (_match, letter) => letter.toUpperCase());
         const progress = key === "local_progress" && value !== null ? Number(value) : null;
-        if (["spaced_revision_enabled", "pinned", "schedule_requested"].includes(key)) result[camel] = Boolean(value);
+        if (["spaced_revision_enabled", "pinned", "schedule_requested", "user_pinned", "user_corrected"].includes(key)) result[camel] = Boolean(value);
         else if (key === "local_progress" && value !== null) result[camel] = Number.isFinite(progress) && progress >= 0 && progress <= 100 ? progress : null;
         else result[camel] = value;
     });
@@ -452,6 +452,36 @@ class StudAcademicStore {
                 details_json TEXT NOT NULL, checked_at TEXT NOT NULL, updated_at TEXT NOT NULL,
                 FOREIGN KEY(contract_id) REFERENCES stud_requirement_contracts(id)
             );
+        `}, {version: 16, sql: `
+            ALTER TABLE stud_courses ADD COLUMN academic_year TEXT;
+            ALTER TABLE stud_courses ADD COLUMN academic_term TEXT;
+            ALTER TABLE stud_courses ADD COLUMN academic_level TEXT;
+            CREATE INDEX stud_courses_academic_organisation_index ON stud_courses(academic_year, academic_term, status, updated_at DESC);
+            CREATE TABLE stud_assignment_classifications (
+                assignment_id TEXT PRIMARY KEY,
+                classification TEXT NOT NULL CHECK(classification IN ('COURSEWORK','EXAM','LAB_PRACTICAL','PRESENTATION','TEAM_PROJECT','INDIVIDUAL_COMPONENT','PEER_FEEDBACK','SUBMISSION_POINT','FORMATIVE_PRACTICE','ADMINISTRATIVE','OTHER','UNKNOWN')),
+                source_kind TEXT NOT NULL CHECK(source_kind IN ('EXPLICIT','DETERMINISTIC','USER')),
+                source_detail TEXT,
+                user_corrected INTEGER NOT NULL DEFAULT 0 CHECK(user_corrected IN (0,1)),
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY(assignment_id) REFERENCES stud_assignments(id)
+            );
+            CREATE INDEX stud_assignment_classifications_kind_index ON stud_assignment_classifications(classification, updated_at DESC);
+            CREATE TABLE stud_working_context (
+                id TEXT PRIMARY KEY CHECK(id = 'current'),
+                active_course_id TEXT,
+                active_assignment_id TEXT,
+                active_requirement_contract_id TEXT,
+                active_object_type TEXT,
+                active_object_id TEXT,
+                origin_surface TEXT,
+                user_pinned INTEGER NOT NULL DEFAULT 0 CHECK(user_pinned IN (0,1)),
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY(active_course_id) REFERENCES stud_courses(id),
+                FOREIGN KEY(active_assignment_id) REFERENCES stud_assignments(id),
+                FOREIGN KEY(active_requirement_contract_id) REFERENCES stud_requirement_contracts(id)
+            );
         `}];
         for (const migration of migrations) {
             if (applied.has(migration.version)) continue;
@@ -810,7 +840,7 @@ class StudAcademicStore {
 
     insertEntity(type, id, value, timestamp) {
         switch (type) {
-        case "COURSE": this.db.prepare("INSERT INTO stud_courses (id,title,short_name,code,description,start_date,end_date,status,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)").run(id,value.title,value.shortName,value.code,value.description,value.startDate,value.endDate,value.status,timestamp,timestamp); break;
+        case "COURSE": this.db.prepare("INSERT INTO stud_courses (id,title,short_name,code,description,start_date,end_date,academic_year,academic_term,academic_level,status,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)").run(id,value.title,value.shortName,value.code,value.description,value.startDate,value.endDate,value.academicYear,value.academicTerm,value.academicLevel,value.status,timestamp,timestamp); break;
         case "ASSIGNMENT": this.db.prepare("INSERT INTO stud_assignments (id,course_id,title,description,release_date,due_date,cutoff_date,status,submission_status,submitted_at,grade,grade_maximum,grade_scheme,grade_text,weight,feedback,local_progress,priority,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)").run(id,value.courseId,value.title,value.description,value.releaseDate,value.dueDate,value.cutoffDate,value.status,value.submissionStatus,value.submittedAt,value.grade,value.gradeMaximum,value.gradeScheme,value.gradeText,value.weight,value.feedback,value.localProgress,value.priority,timestamp,timestamp); break;
         case "RESOURCE": this.db.prepare("INSERT INTO stud_resources (id,course_id,assignment_id,type,title,url,local_reference,mime_type,checksum,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)").run(id,value.courseId,value.assignmentId,value.type,value.title,value.url,value.localReference,value.mimeType,value.checksum,timestamp,timestamp); break;
         case "RESEARCH_PAPER": this.db.prepare("INSERT INTO stud_research_papers (id,title,object_type,year,published_date,abstract,venue,publisher,authors,doi,source_url,citation_json,oa_json,local_document_reference,document_metadata_json,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)").run(id,value.title,value.objectType,value.year,value.publishedDate,value.abstract,value.venue,value.publisher,value.authors,value.doi,value.sourceUrl,value.citationJson,value.oaJson,value.localDocumentReference,value.documentMetadataJson,timestamp,timestamp); break;
@@ -827,7 +857,7 @@ class StudAcademicStore {
 
     updateEntityRow(type, id, value, timestamp) {
         switch (type) {
-        case "COURSE": this.db.prepare("UPDATE stud_courses SET title=?,short_name=?,code=?,description=?,start_date=?,end_date=?,status=?,updated_at=? WHERE id=?").run(value.title,value.shortName,value.code,value.description,value.startDate,value.endDate,value.status,timestamp,id); break;
+        case "COURSE": this.db.prepare("UPDATE stud_courses SET title=?,short_name=?,code=?,description=?,start_date=?,end_date=?,academic_year=?,academic_term=?,academic_level=?,status=?,updated_at=? WHERE id=?").run(value.title,value.shortName,value.code,value.description,value.startDate,value.endDate,value.academicYear,value.academicTerm,value.academicLevel,value.status,timestamp,id); break;
         case "ASSIGNMENT": this.db.prepare("UPDATE stud_assignments SET course_id=?,title=?,description=?,release_date=?,due_date=?,cutoff_date=?,status=?,submission_status=?,submitted_at=?,grade=?,grade_maximum=?,grade_scheme=?,grade_text=?,weight=?,feedback=?,local_progress=?,priority=?,updated_at=? WHERE id=?").run(value.courseId,value.title,value.description,value.releaseDate,value.dueDate,value.cutoffDate,value.status,value.submissionStatus,value.submittedAt,value.grade,value.gradeMaximum,value.gradeScheme,value.gradeText,value.weight,value.feedback,value.localProgress,value.priority,timestamp,id); break;
         case "RESOURCE": this.db.prepare("UPDATE stud_resources SET course_id=?,assignment_id=?,type=?,title=?,url=?,local_reference=?,mime_type=?,checksum=?,updated_at=? WHERE id=?").run(value.courseId,value.assignmentId,value.type,value.title,value.url,value.localReference,value.mimeType,value.checksum,timestamp,id); break;
         case "RESEARCH_PAPER": this.db.prepare("UPDATE stud_research_papers SET title=?,object_type=?,year=?,published_date=?,abstract=?,venue=?,publisher=?,authors=?,doi=?,source_url=?,citation_json=?,oa_json=?,local_document_reference=?,document_metadata_json=?,updated_at=? WHERE id=?").run(value.title,value.objectType,value.year,value.publishedDate,value.abstract,value.venue,value.publisher,value.authors,value.doi,value.sourceUrl,value.citationJson,value.oaJson,value.localDocumentReference,value.documentMetadataJson,timestamp,id); break;

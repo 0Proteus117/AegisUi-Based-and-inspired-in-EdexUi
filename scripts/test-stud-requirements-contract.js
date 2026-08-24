@@ -41,7 +41,7 @@ try {
     const store = storeAt(freshRoot);
     const service = new StudRequirementsContractService({store});
 
-    check("FRESH_DATABASE_SCHEMA_V15", () => assert.strictEqual(store.schemaInfo().version, 15));
+    check("FRESH_DATABASE_SCHEMA_V16", () => assert.strictEqual(store.schemaInfo().version, 16));
     check("V15_NORMALIZED_TABLES", () => {
         const names = store.db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'stud_requirement%' OR name='stud_assignment_requirement_contracts'").all().map(row => row.name);
         ["stud_requirement_contracts", "stud_assignment_requirement_contracts", "stud_requirement_candidate_runs", "stud_requirement_candidates", "stud_requirement_items", "stud_requirement_sources", "stud_requirement_contract_freshness"].forEach(name => assert.ok(names.includes(name), name));
@@ -200,7 +200,7 @@ try {
     const legacyAssignment = legacy.createEntity("ASSIGNMENT", {title: "Existing v14 Assignment"});
     legacy.close(); stripV15(path.join(migrateRoot, "academic.sqlite"));
     legacy = storeAt(migrateRoot);
-    check("V14_TO_V15_MIGRATION", () => assert.strictEqual(legacy.schemaInfo().version, 15));
+    check("V14_TO_V16_MIGRATION", () => assert.strictEqual(legacy.schemaInfo().version, 16));
     check("EXISTING_ASSIGNMENT_HAS_NO_FABRICATED_CONTRACT", () => {
         const migratedState = new StudRequirementsContractService({store: legacy}).state(legacyAssignment.id);
         assert.strictEqual(migratedState.current, null);

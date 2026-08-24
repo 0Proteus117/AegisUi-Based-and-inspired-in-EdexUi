@@ -2,7 +2,7 @@
 
 const crypto = require("crypto");
 
-const SCHEMA_VERSION = 15;
+const SCHEMA_VERSION = 16;
 const ENTITY_TYPES = Object.freeze(["COURSE", "ASSIGNMENT", "RESOURCE", "RESEARCH_PAPER", "NOTE", "REVISION_ITEM", "COMPUTE_RESULT", "ACADEMIC_DOCUMENT", "NOTEBOOK", "DATASET", "REPOSITORY_REFERENCE"]);
 const RELATIONSHIP_ENTITY_TYPES = Object.freeze([...ENTITY_TYPES, "EXTERNAL_IDENTIFIER"]);
 const RELATIONSHIP_TYPES = Object.freeze(["BELONGS_TO", "RELATES_TO", "SUPPORTS", "USES", "REFERENCES", "HAS_RESOURCE", "HAS_NOTE", "HAS_PAPER", "HAS_DOCUMENT", "CITES", "DERIVED_FROM_DOCUMENT", "RELATED_EMAIL", "RELATED_CALENDAR_EVENT"]);
@@ -10,6 +10,7 @@ const PROVENANCE_SOURCE_TYPES = Object.freeze(["USER", "MOODLE", "MOODLE_ICS", "
 const PROVENANCE_AUTHORITIES = Object.freeze(["AUTHORITATIVE", "USER_OVERRIDE", "TRUSTED", "CORROBORATING", "INFERRED", "SUGGESTED", "UNKNOWN"]);
 const COST_MODELS = Object.freeze(["FREE_OPEN", "FREE_LOCAL", "FREE_SERVICE", "FREEMIUM", "PAID", "SUBSCRIPTION"]);
 const COURSE_STATUSES = Object.freeze(["ACTIVE", "COMPLETED", "ARCHIVED"]);
+const ASSESSMENT_CLASSIFICATIONS = Object.freeze(["COURSEWORK", "EXAM", "LAB_PRACTICAL", "PRESENTATION", "TEAM_PROJECT", "INDIVIDUAL_COMPONENT", "PEER_FEEDBACK", "SUBMISSION_POINT", "FORMATIVE_PRACTICE", "ADMINISTRATIVE", "OTHER", "UNKNOWN"]);
 const ASSIGNMENT_STATUSES = Object.freeze(["NOT_STARTED", "IN_PROGRESS", "SUBMITTED", "GRADED", "ARCHIVED"]);
 const SUBMISSION_STATUSES = Object.freeze(["UNKNOWN", "NOT_SUBMITTED", "SUBMITTED"]);
 const GRADE_SCHEMES = Object.freeze(["PERCENTAGE", "POINTS", "TEXT", "PASS_FAIL", "UNKNOWN"]);
@@ -130,7 +131,7 @@ function validateEntityType(type) { return enumValue(type, ENTITY_TYPES, "Entity
 function validateRelationshipEntityType(type) { return enumValue(type, RELATIONSHIP_ENTITY_TYPES, "Relationship entity type"); }
 
 function normalizeCourse(input = {}, existing = {}) {
-    assertAllowedKeys(input, ["title", "shortName", "code", "description", "startDate", "endDate", "status"], "Course");
+    assertAllowedKeys(input, ["title", "shortName", "code", "description", "startDate", "endDate", "academicYear", "academicTerm", "academicLevel", "status"], "Course");
     const result = {
         title: input.title === undefined ? existing.title : requiredText(input.title, "Course title"),
         shortName: input.shortName === undefined ? existing.shortName || null : optionalText(input.shortName, "Course short name", LIMITS.code),
@@ -138,6 +139,11 @@ function normalizeCourse(input = {}, existing = {}) {
         description: input.description === undefined ? existing.description || null : optionalText(input.description, "Course description"),
         startDate: input.startDate === undefined ? existing.startDate || null : optionalDate(input.startDate, "Course start date"),
         endDate: input.endDate === undefined ? existing.endDate || null : optionalDate(input.endDate, "Course end date"),
+        // These are explicit academic organisation fields.  They are never
+        // inferred from a module code, title or an institution-specific rule.
+        academicYear: input.academicYear === undefined ? existing.academicYear || null : optionalText(input.academicYear, "Academic year", 80),
+        academicTerm: input.academicTerm === undefined ? existing.academicTerm || null : optionalText(input.academicTerm, "Academic term", 80),
+        academicLevel: input.academicLevel === undefined ? existing.academicLevel || null : optionalText(input.academicLevel, "Academic level", 80),
         status: input.status === undefined ? existing.status || "ACTIVE" : enumValue(input.status, COURSE_STATUSES, "Course status", "ACTIVE")
     };
     if (result.startDate && result.endDate && result.startDate > result.endDate) throw new StudError("INVALID_INPUT", "Course end date cannot precede the start date.");
@@ -413,7 +419,7 @@ function normalizedSearchTerms(query) {
 
 module.exports = Object.freeze({
     SCHEMA_VERSION, ENTITY_TYPES, RELATIONSHIP_ENTITY_TYPES, RELATIONSHIP_TYPES, PROVENANCE_SOURCE_TYPES,
-    PROVENANCE_AUTHORITIES, COST_MODELS, COURSE_STATUSES, ASSIGNMENT_STATUSES, DOCUMENT_TYPES, DOCUMENT_EXTRACTION_STATUSES,
+    PROVENANCE_AUTHORITIES, COST_MODELS, COURSE_STATUSES, ASSESSMENT_CLASSIFICATIONS, ASSIGNMENT_STATUSES, DOCUMENT_TYPES, DOCUMENT_EXTRACTION_STATUSES,
     CONTEXT_RELATION_STATUSES, CONTEXT_DECISIONS, CONTEXT_PACKAGE_STATUSES, NOTEBOOK_TYPES, NOTEBOOK_LANGUAGES, NOTEBOOK_EXECUTION_STATUSES, DATASET_FORMATS,
     SUBMISSION_STATUSES, GRADE_SCHEMES, PRIORITY_LEVELS, REVISION_STATUSES, REVISION_DIFFICULTIES, REVISION_CONFIDENCE, LIMITS, StudError, now, bytesOf, assertPlainObject,
     assertAllowedKeys, requiredText, optionalText, optionalNumber, optionalProgress, optionalNonNegativeInteger, optionalDate, enumValue,

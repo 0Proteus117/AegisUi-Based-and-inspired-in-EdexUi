@@ -11,6 +11,7 @@ const {StudAcademicAssistantRuntime} = require("./studAcademicAssistantRuntime.c
 const {StudNotebookRuntime, normalizeGitHub} = require("./studNotebookRuntime.class.js");
 const {StudToolCatalog} = require("./studToolCatalog.class.js");
 const {StudRequirementsContractService} = require("./studRequirementsContractService.class.js");
+const {StudWorkingContextService} = require("./studWorkingContextService.class.js");
 
 const CHANNELS = Object.freeze([
     "stud-core-status",
@@ -28,6 +29,8 @@ const CHANNELS = Object.freeze([
     "stud-search",
     "stud-command-center",
     "stud-assignment-requirements",
+    "stud-assessment-classification-list",
+    "stud-assessment-classification-set",
     "stud-requirements-state",
     "stud-requirements-create-draft",
     "stud-requirements-review-candidate",
@@ -139,7 +142,11 @@ const CHANNELS = Object.freeze([
     "stud-moodle-forget-account",
     "stud-moodle-ics-sync",
     "stud-moodle-cancel",
-    "stud-moodle-open-web"
+    "stud-moodle-open-web",
+    "stud-working-context-read",
+    "stud-working-context-update",
+    "stud-working-context-clear",
+    "stud-course-organisation"
 ]);
 
 function senderIsTrusted(event) {
@@ -201,6 +208,9 @@ function registerStudAcademicIpc(options = {}) {
     // use the existing canonical SQLite connection through a bounded domain
     // repository/service. The renderer never receives SQL or filesystem access.
     const requirements = options.requirementsService || new StudRequirementsContractService({store});
+    // M2 context is a single validated local work reference. It cannot cause
+    // network activity, provider calls, AI work or relationship creation.
+    const workingContext = options.workingContextService || new StudWorkingContextService({store, requirementsService: requirements});
     let shell = options.shell || null;
     if (!shell) { try { shell = require("electron").shell; } catch (error) {} }
     const handlers = new Map();
@@ -234,6 +244,12 @@ function registerStudAcademicIpc(options = {}) {
     add("stud-search", ["query", "options"], payload => store.search(payload.query, payload.options || {}));
     add("stud-command-center", ["now", "limit"], payload => store.getCommandCenter(payload));
     add("stud-assignment-requirements", ["assignmentId"], payload => store.assignmentRequirements(payload.assignmentId));
+    add("stud-assessment-classification-list", ["limit"], payload => workingContext.listClassifications(payload));
+    add("stud-assessment-classification-set", ["assignmentId", "classification", "reason"], payload => workingContext.setClassification(payload));
+    add("stud-course-organisation", ["limit"], payload => workingContext.courseOrganisation(payload));
+    add("stud-working-context-read", [], () => workingContext.read());
+    add("stud-working-context-update", ["courseId", "assignmentId", "objectType", "objectId", "originSurface", "userPinned"], payload => workingContext.update(payload));
+    add("stud-working-context-clear", [], () => workingContext.clear());
     add("stud-requirements-state", ["assignmentId"], payload => requirements.state(payload.assignmentId));
     add("stud-requirements-create-draft", ["assignmentId"], payload => requirements.createDraft(payload.assignmentId));
     add("stud-requirements-review-candidate", ["contractId", "candidateId", "disposition", "expectedVersion"], payload => requirements.reviewCandidate(payload));

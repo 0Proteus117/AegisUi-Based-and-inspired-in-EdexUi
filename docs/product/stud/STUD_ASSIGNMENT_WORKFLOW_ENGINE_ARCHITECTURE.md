@@ -28,7 +28,7 @@ Non-negotiable invariants:
 
 ```text
 STUD Assignment Workspace (renderer)
-  |-- Working Context (ephemeral selection, explicit navigation)
+  |-- Working Context (one validated, meaningful local work reference)
   |-- Preview adapters / Notes / Evidence / Research / Citations
   |-- Mission Control (real events only)
   v
@@ -71,15 +71,40 @@ migration inventory are recorded in
 
 ### Assignment ownership and organisation
 
-- `Course` continues to represent a module/course. Add optional, provenance-aware
-  `academicYear`, `term` and `level` fields only through a migration; existing rows
-  remain valid with `NULL` values.
+- `Course` continues to represent a module/course. M2 provides optional,
+  provenance-aware `academicYear`, `academicTerm` and `academicLevel` fields in
+  schema v16; existing rows remain valid with `NULL` values and appear honestly
+  under `UNCLASSIFIED` / `TERM UNKNOWN`.
 - `Assignment` remains the primary work object and retains its stable ID whether
   created manually or reconciled from Moodle.
 - Provider IDs continue in `stud_external_identifiers`; no provider ID becomes a
   primary key.
 - One Assignment may have many workflow runs. A run references the Assignment and
   a versioned Requirements Contract; it never owns a duplicate Assignment record.
+
+### Implemented M2 academic organisation and Working Context
+
+M2 adds a bounded organisation/presentation layer without rewriting canonical
+Course or Assignment identity:
+
+- Courses group by explicitly stored academic year then term. No module-code or
+  title heuristic invents a year or term.
+- Assessment presentation classification is separate from `stud_assignments`.
+  A small deterministic title/description readout may produce a classification;
+  `UNKNOWN` is the fallback. Student corrections persist in
+  `stud_assignment_classifications` and carry `USER_OVERRIDE` provenance.
+- `stud_working_context` stores only one meaningful last-work reference: Course,
+  optional Assignment, optional related current object, applicable Requirements
+  Contract and visible origin/pin. It is not click history, a hidden task queue
+  or a second academic database.
+- `StudWorkingContextService` validates canonical IDs and relationship scope in
+  main process. The renderer `StudWorkingContext` coordinator can only request
+  typed read/update/clear operations. Context changes prefill compatible
+  surfaces; they never query Moodle/providers, call Ollama, create notes or
+  persist relationships.
+- A missing/archived referenced object clears the stale context rather than
+  rebinding it. A user can always change or clear context from the compact
+  visible strip.
 
 ### Requirements Contract
 

@@ -33,6 +33,8 @@ const CHECKS = [
     "scripts/test-stud-command-center.js",
     "scripts/test-stud-requirements-contract.js",
     "scripts/test-stud-requirements-contract-ipc.js",
+    "scripts/test-stud-working-context.js",
+    "scripts/test-stud-working-context-ipc.js",
     "scripts/test-stud-tool-catalog.js",
     "scripts/test-stud-academic-ai.js",
     "scripts/test-osint-workspace.js",

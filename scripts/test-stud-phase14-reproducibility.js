@@ -13,6 +13,7 @@ const SRC = path.join(ROOT, "src");
 const {StudAcademicStore} = require(path.join(SRC, "classes/workspaces/studAcademicStore.class.js"));
 const {SCHEMA_VERSION} = require(path.join(SRC, "classes/workspaces/studAcademicModel.class.js"));
 const REQUIREMENTS_TABLES = ["stud_requirement_contract_freshness", "stud_requirement_sources", "stud_requirement_items", "stud_requirement_candidates", "stud_requirement_candidate_runs", "stud_assignment_requirement_contracts", "stud_requirement_contracts"];
+const M2_TABLES = ["stud_working_context", "stud_assignment_classifications"];
 
 let passed = 0;
 function check(name, fn) {
@@ -23,6 +24,17 @@ function check(name, fn) {
 function removeTables(store, tables) {
     store.db.exec("PRAGMA foreign_keys = OFF;");
     tables.forEach(table => store.db.exec(`DROP TABLE IF EXISTS ${table};`));
+    store.db.exec("PRAGMA foreign_keys = ON;");
+}
+
+function removeM2Schema(store) {
+    // Recreate the v15 course shape before replaying the v16 migration.
+    // SQLite cannot drop the M2 columns in place, so this mirrors a real
+    // pre-M2 database without changing any canonical course rows.
+    store.db.exec("PRAGMA foreign_keys = OFF;");
+    M2_TABLES.forEach(table => store.db.exec(`DROP TABLE IF EXISTS ${table};`));
+    store.db.exec("DROP INDEX IF EXISTS stud_courses_academic_organisation_index;");
+    store.db.exec("CREATE TABLE stud_courses_v15 AS SELECT id,title,short_name,code,description,start_date,end_date,status,created_at,updated_at,archived_at FROM stud_courses; DROP TABLE stud_courses; ALTER TABLE stud_courses_v15 RENAME TO stud_courses;");
     store.db.exec("PRAGMA foreign_keys = ON;");
 }
 
@@ -57,6 +69,7 @@ try {
     const v12Root = path.join(root, "legacy-v12");
     const v12 = freshStore(v12Root);
     removeTables(v12, [...REQUIREMENTS_TABLES, "stud_provider_sync_preferences", "stud_discipline_profile", "stud_tool_preferences"]);
+    removeM2Schema(v12);
     v12.db.prepare("DELETE FROM stud_schema_migrations WHERE version>=13").run();
     v12.close();
     const upgradedV12 = freshStore(v12Root);
@@ -72,6 +85,7 @@ try {
     const legacyCourse = v9.createEntity("COURSE", {title: "Legacy course retained across migration"});
     const legacyAssignment = v9.createEntity("ASSIGNMENT", {courseId: legacyCourse.id, title: "Legacy assignment retained across migration"});
     removeTables(v9, [...REQUIREMENTS_TABLES, "stud_provider_sync_preferences", "stud_discipline_profile", "stud_tool_preferences", "stud_repository_references", "stud_datasets", "stud_notebook_outputs", "stud_notebook_cells", "stud_notebooks", "stud_context_packages", "stud_context_decisions", "stud_concept_observations", "stud_academic_concepts"]);
+    removeM2Schema(v9);
     v9.db.exec("DROP INDEX IF EXISTS stud_assignments_grade_context_index; ALTER TABLE stud_assignments DROP COLUMN grade_scheme; ALTER TABLE stud_assignments DROP COLUMN grade_text;");
     v9.db.prepare("DELETE FROM stud_schema_migrations WHERE version >= 10").run();
     v9.close();

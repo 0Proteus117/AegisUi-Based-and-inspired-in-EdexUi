@@ -82,13 +82,16 @@ repository has advanced, preserve monotonic numbering and document the mapping.
 
 - **Objective:** make Course/year/term/module/Assignment context explicit and
   propagate the active work context between existing STUD surfaces.
+- **Status:** COMPLETE — schema v16 and the M2 validation record implement this
+  milestone without beginning M3.
 - **Exact scope:** optional Course academic-year/term/level metadata; one
-  renderer-owned `StudWorkingContext`; contextual navigation/prefill and visible
-  correction control.
+  main-process-validated, persistently meaningful `StudWorkingContext`;
+  contextual navigation/prefill and visible correction control.
 - **Components:** model/store/IPC for optional Course metadata, Command Center,
   existing STUD workspace classes and a new renderer context coordinator.
-- **Schema/migration:** expected v16; nullable Course organisation fields with
-  provenance. Active selection remains ephemeral, not hidden history.
+- **Schema/migration:** v16; nullable Course organisation fields, presentation
+  classification records and one current working-context row. It stores the
+  last meaningful context only, never an automatic navigation history.
 - **Dependencies:** M1 and existing Course/Assignment hierarchy.
 - **Non-goals:** no automatic queries, saves, provider actions, new global tab or
   permanent wall of controls.
@@ -440,6 +443,6 @@ repository has advanced, preserve monotonic numbering and document the mapping.
 
 ## Exact next milestone
 
-M1 and the dedicated Electron Trust-Boundary Hardening intervention are complete.
-The exact next product milestone is **M2 — Academic organisation and working
-context**. No M2 implementation was included in the security intervention.
+M1, the dedicated Electron Trust-Boundary Hardening intervention and M2 are
+complete. The exact next product milestone is **M3 — Workflow Templates and
+Persistent DAG**. No M3 implementation is included in M2.

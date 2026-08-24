@@ -83,14 +83,15 @@ try {
         assert.ok(commandCenter.includes("StudToolCatalogWorkspace"));
         assert.ok(commandCenter.includes("FTS5 searches only local canonical academic records"));
         assert.ok(commandCenter.includes("STUD DOES NOT SCAN, OPEN OR COPY EXTERNAL CONTENT"));
-        assert.ok(commandCenter.includes("ASSIGNMENT ROADMAP"));
-        assert.ok(commandCenter.includes("13 · FINAL EDITING"));
+        assert.ok(commandCenter.includes("WORK CONTEXT"));
+        assert.ok(commandCenter.includes("REQUIREMENTS"));
         assert.ok(commandCenter.includes("BRIEF &amp; MARKING DOCUMENTS"));
         assert.ok(commandCenter.includes("StudRequirementsContractWorkspace"));
         assert.ok(requirementsContract.includes("REQUIREMENTS CONTRACT"));
         assert.ok(requirementsContract.includes("APPROVE AS INCOMPLETE"));
         assert.ok(requirementsContract.includes("SOURCE PREVIEW"));
-        assert.ok(commandCenter.includes("SELECT FOR WORKFLOW TEST"));
+        assert.ok(commandCenter.includes("StudWorkingContext"));
+        assert.ok(commandCenter.includes("ACTIVE CONTEXT"));
         assert.ok(commandCenter.includes("stud-nav-primary"));
         assert.ok(commandCenter.includes("data-stud-search-toggle"));
         assert.ok(commandCenter.includes("searchExpanded: false"));
