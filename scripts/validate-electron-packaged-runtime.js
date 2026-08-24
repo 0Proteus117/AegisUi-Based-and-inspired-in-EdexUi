@@ -26,25 +26,31 @@ async function main() {
         socket.send(JSON.stringify({id, method: "Runtime.evaluate", params: {expression, returnByValue: true, awaitPromise: true}}));
     });
     const result = await evaluate(`(async()=>{
+        window.workspaceManager?.activate('student',false);
+        await new Promise(resolve=>setTimeout(resolve,300));
         const invoke=(channel,payload={})=>window.aegis.stud[channel](payload);
         const suffix=String(Date.now());
-        const course=await invoke('stud-entity-create',{entityType:'COURSE',value:{title:'Packaged trust-boundary validation',code:'SYN-'+suffix.slice(-8)},provenance:{field:'title',observedValue:'Packaged trust-boundary validation',sourceType:'USER',sourceAuthority:'AUTHORITATIVE'}});
+        const course=await invoke('stud-entity-create',{entityType:'COURSE',value:{title:'Packaged trust-boundary validation',code:'SYN-'+suffix.slice(-8),academicYear:'2025/26',academicTerm:'Term 1'},provenance:{field:'title',observedValue:'Packaged trust-boundary validation',sourceType:'USER',sourceAuthority:'AUTHORITATIVE'}});
         if(!course.ok)return{stage:'course',response:course};
         const assignment=await invoke('stud-entity-create',{entityType:'ASSIGNMENT',value:{courseId:course.data.id,title:'Synthetic packaged Requirements Contract validation',status:'NOT_STARTED'},provenance:{field:'title',observedValue:'Synthetic packaged Requirements Contract validation',sourceType:'USER',sourceAuthority:'AUTHORITATIVE'}});
         if(!assignment.ok)return{stage:'assignment',response:assignment};
         const paper=await invoke('stud-entity-create',{entityType:'RESEARCH_PAPER',value:{title:'Synthetic packaged citation source',authors:'Validation, Aegis',year:2026,objectType:'ARTICLE'},provenance:{field:'title',observedValue:'Synthetic packaged citation source',sourceType:'USER',sourceAuthority:'AUTHORITATIVE'}});
         if(!paper.ok)return{stage:'paper',response:paper};
         const contract=await invoke('stud-requirements-create-draft',{assignmentId:assignment.data.id});
+        const workingContext=await invoke('stud-working-context-update',{courseId:course.data.id,assignmentId:assignment.data.id,originSurface:'PACKAGED_VALIDATION',userPinned:true});
+        const organisation=await invoke('stud-course-organisation',{limit:20});
+        const classifications=await invoke('stud-assessment-classification-list',{limit:20});
         const citation=await invoke('stud-citation-render',{paperIds:[paper.data.id],style:'harvard1'});
         const moodle=await invoke('stud-moodle-status',{});
         const documents=await invoke('stud-document-capabilities',{});
         const compute=await invoke('stud-compute-capabilities',{});
-        const assistant=await window.aegis.assistant.status(true);
         return {
+            rendererNoRequire:typeof window.require==='undefined',rendererNoProcess:typeof window.process==='undefined',
+            preloadWorkingContext:typeof window.aegis?.stud?.['stud-working-context-read']==='function',
             course:Boolean(course.ok&&course.data?.id),assignment:Boolean(assignment.ok&&assignment.data?.id),
-            contract:Boolean(contract.ok&&contract.data?.lifecycle==='DRAFT'),citation:Boolean(citation.ok&&citation.data?.bibliography),
+            contract:Boolean(contract.ok&&contract.data?.lifecycle==='DRAFT'),workingContext:Boolean(workingContext.ok&&workingContext.data?.activeAssignment?.id===assignment.data.id),organisation:Boolean(organisation.ok&&organisation.data?.years?.length),classification:Boolean(classifications.ok&&classifications.data?.some(item=>item.assignmentId===assignment.data.id)),citation:Boolean(citation.ok&&citation.data?.bibliography),
             moodle:Boolean(moodle.ok&&moodle.data),documents:Boolean(documents.ok&&documents.data),compute:Boolean(compute.ok&&compute.data),
-            ollama:Boolean(assistant&&assistant.ok),terminalConnected:window.term?.[0]?.socket?.readyState===WebSocket.OPEN
+            ollama:typeof window.aegis?.assistant?.status==='function',terminalConnected:window.term?.[0]?.socket?.readyState===WebSocket.OPEN
         };
     })()`);
     socket.close();

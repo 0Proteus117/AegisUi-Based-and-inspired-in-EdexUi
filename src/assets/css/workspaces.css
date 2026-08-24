@@ -6735,6 +6735,32 @@ button.eng-thread-row.active {
 .engineering-mode .stud-home-focus-card h3 { margin: 0; color: var(--aegis-text-primary); font: 1.06vh/1.32 var(--font_main); font-weight: normal; overflow-wrap: anywhere; }
 .engineering-mode .stud-home-focus-card p { margin: 0; color: var(--aegis-text-muted); font: .66vh/1.45 var(--font_main_light); overflow-wrap: anywhere; }
 .engineering-mode .stud-home-focus-card button { justify-self: start; margin-top: auto; }
+/* M2 keeps orientation visible without turning every STUD surface into a
+ * dashboard. The active context is one compact, correctable strip. */
+.engineering-mode .stud-working-context {
+    display: flex; min-width: 0; align-items: center; justify-content: space-between;
+    gap: .72vh; margin: 0 0 .58vh; padding: .52vh .68vh;
+    border-left: .18vh solid var(--aegis-accent);
+    background: color-mix(in srgb, var(--aegis-accent) 7%, var(--aegis-surface-muted));
+}
+.engineering-mode .stud-working-context > div:first-child { display: grid; min-width: 0; gap: .12vh; }
+.engineering-mode .stud-working-context small,.engineering-mode .stud-working-context span { color: var(--aegis-text-muted); font: .53vh var(--font_mono); letter-spacing: .07vh; overflow-wrap: anywhere; }
+.engineering-mode .stud-working-context strong { color: var(--aegis-text-primary); font: .7vh/1.35 var(--font_main); overflow-wrap: anywhere; }
+.engineering-mode .stud-working-context > div:last-child { display: flex; flex: 0 0 auto; flex-wrap: wrap; gap: .32vh; }
+.engineering-mode .stud-working-context.is-empty { border-left-color: var(--aegis-border-subtle); }
+.engineering-mode .stud-academic-hierarchy { display: grid; gap: .52vh; margin-top: .58vh; }
+.engineering-mode .stud-academic-year { min-width: 0; border-top: .08vh solid var(--aegis-border-subtle); }
+.engineering-mode .stud-academic-year > summary { display: flex; align-items: center; justify-content: space-between; gap: .5vh; padding: .56vh 0; cursor: pointer; color: var(--aegis-text-primary); font: .72vh var(--font_main); }
+.engineering-mode .stud-academic-year > summary small,.engineering-mode .stud-academic-term header > span { color: var(--aegis-text-muted); font: .5vh var(--font_mono); letter-spacing: .07vh; }
+.engineering-mode .stud-academic-term { display: grid; gap: .28vh; margin: 0 0 .62vh .52vh; padding-left: .62vh; border-left: .1vh solid var(--aegis-border-subtle); }
+.engineering-mode .stud-academic-term > header,.engineering-mode .stud-academic-unassigned > header { display: flex; justify-content: space-between; gap: .5vh; align-items: baseline; }
+.engineering-mode .stud-academic-term h3,.engineering-mode .stud-academic-unassigned h3 { margin: 0; color: var(--aegis-accent-soft); font: .58vh var(--font_mono); letter-spacing: .08vh; }
+.engineering-mode .stud-academic-term button,.engineering-mode .stud-academic-unassigned > .stud-assignment-row { min-width: 0; display: grid; gap: .12vh; padding: .45vh .5vh; text-align: left; border-color: var(--aegis-border-subtle); background: var(--aegis-surface-muted); }
+.engineering-mode .stud-academic-term button.selected { border-color: var(--aegis-accent); background: color-mix(in srgb, var(--aegis-accent) 13%, var(--aegis-surface-muted)); }
+.engineering-mode .stud-academic-term button strong { color: var(--aegis-text-primary); font: .67vh var(--font_main); overflow-wrap: anywhere; }
+.engineering-mode .stud-academic-term button span,.engineering-mode .stud-academic-term button small { color: var(--aegis-text-muted); font: .54vh/1.35 var(--font_main_light); overflow-wrap: anywhere; }
+.engineering-mode .stud-academic-unassigned { display: grid; gap: .32vh; margin-top: .68vh; padding-top: .58vh; border-top: .08vh dashed var(--aegis-border-subtle); }
+.engineering-mode .stud-context-pin { display: flex !important; align-items: center; gap: .45vh; color: var(--aegis-text-primary) !important; }
 .engineering-mode .stud-moodle-sync-preferences {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(13vh, .4fr) max-content;

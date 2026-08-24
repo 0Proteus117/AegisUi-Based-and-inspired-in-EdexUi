@@ -6,7 +6,7 @@ const crypto = require("crypto");
 const STUD_CHANNELS = Object.freeze([
     "stud-academic-ai-cancel", "stud-academic-ai-generate", "stud-academic-ai-revision-accept", "stud-academic-ai-revision-candidates", "stud-academic-ai-save-note", "stud-academic-ai-status",
     "stud-academic-context-build", "stud-academic-context-decide", "stud-academic-context-package-create", "stud-academic-context-package-list", "stud-academic-context-package-read", "stud-academic-context-search",
-    "stud-assignment-requirements", "stud-citation-render", "stud-command-center", "stud-compute-capabilities", "stud-compute-list", "stud-compute-run", "stud-compute-save-result", "stud-core-status", "stud-course-context",
+    "stud-assessment-classification-list", "stud-assessment-classification-set", "stud-assignment-requirements", "stud-citation-render", "stud-command-center", "stud-compute-capabilities", "stud-compute-list", "stud-compute-run", "stud-compute-save-result", "stud-core-status", "stud-course-context", "stud-course-organisation",
     "stud-dataset-analyze", "stud-dataset-import", "stud-dataset-list", "stud-dataset-read", "stud-document-analyze", "stud-document-cancel", "stud-document-capabilities", "stud-document-context", "stud-document-create-note", "stud-document-create-revision", "stud-document-import-pdf", "stud-document-list", "stud-document-read-pdf", "stud-document-search",
     "stud-entity-archive", "stud-entity-create", "stud-entity-list", "stud-entity-read", "stud-entity-update", "stud-external-identifier-create", "stud-external-identifier-find",
     "stud-github-cancel", "stud-github-create", "stud-github-list", "stud-github-metadata", "stud-github-normalize",
@@ -19,7 +19,7 @@ const STUD_CHANNELS = Object.freeze([
     "stud-requirements-add-manual", "stud-requirements-approve", "stud-requirements-create-draft", "stud-requirements-create-revision", "stud-requirements-remove-item", "stud-requirements-review-candidate", "stud-requirements-source-preview", "stud-requirements-state", "stud-requirements-update-item",
     "stud-research-cancel", "stud-research-context", "stud-research-library", "stud-research-link", "stud-research-open-access", "stud-research-resolve-crossref", "stud-research-resolve-datacite", "stud-research-save", "stud-research-search", "stud-research-status",
     "stud-revision-context", "stud-revision-list", "stud-revision-overview", "stud-revision-plan", "stud-revision-schedule", "stud-search", "stud-study-session-history", "stud-study-session-start", "stud-study-session-transition",
-    "stud-tool-catalog", "stud-tool-detail", "stud-tool-launch", "stud-tool-packs", "stud-tool-preference-update", "stud-tool-preferences-reset", "stud-tool-profile", "stud-tool-profile-update",
+    "stud-tool-catalog", "stud-tool-detail", "stud-tool-launch", "stud-tool-packs", "stud-tool-preference-update", "stud-tool-preferences-reset", "stud-tool-profile", "stud-tool-profile-update", "stud-working-context-clear", "stud-working-context-read", "stud-working-context-update",
     "stud-zotero-import", "stud-zotero-list", "stud-zotero-status"
 ]);
 

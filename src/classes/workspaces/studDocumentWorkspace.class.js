@@ -27,6 +27,7 @@ class StudDocumentWorkspace {
     async select(id, page = null) {
         this.state.selectedId = id;
         this.state.context = await this.request("stud-document-context", {documentId: id, page: page || undefined, chunkLimit: 200});
+        if (this.parent && typeof this.parent.setCurrentObject === "function") await this.parent.setCurrentObject("ACADEMIC_DOCUMENT", id, "DOCUMENTS");
         this.state.error = null;
         if (this.parent) this.parent.render();
     }
