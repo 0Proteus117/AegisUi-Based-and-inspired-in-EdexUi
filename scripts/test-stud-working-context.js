@@ -24,8 +24,8 @@ try {
     const requirements = new StudRequirementsContractService({store});
     const service = new StudWorkingContextService({store, requirementsService: requirements});
 
-    check("SCHEMA_V16_AND_NO_FABRICATED_CONTEXT", () => {
-        assert.strictEqual(store.schemaInfo().version, 16);
+    check("SCHEMA_V17_AND_NO_FABRICATED_CONTEXT", () => {
+        assert.strictEqual(store.schemaInfo().version, 17);
         assert.strictEqual(service.read().status, "EMPTY");
     });
     const engineering = store.createEntity("COURSE", {title: "Structures", code: "ENG101", academicYear: "2025/26", academicTerm: "Term 1"});
@@ -98,12 +98,16 @@ try {
     const v15Root = path.join(root, "v15");
     let legacy = makeStore(v15Root); const legacyCourse = legacy.createEntity("COURSE", {title: "Existing course"}); legacy.close();
     const db = new DatabaseSync(path.join(v15Root, "academic.sqlite"));
-    db.exec(`DROP TABLE stud_working_context; DROP TABLE stud_assignment_classifications; DROP INDEX stud_courses_academic_organisation_index; DELETE FROM stud_schema_migrations WHERE version=16;`);
+    db.exec(`PRAGMA foreign_keys=OFF;
+        DROP TABLE stud_workflow_events; DROP TABLE stud_workflow_edges; DROP TABLE stud_workflow_nodes; DROP TABLE stud_workflow_instances;
+        DROP TABLE stud_workflow_template_edges; DROP TABLE stud_workflow_template_nodes; DROP TABLE stud_workflow_template_versions; DROP TABLE stud_workflow_templates;
+        DROP TABLE stud_working_context; DROP TABLE stud_assignment_classifications; DROP INDEX stud_courses_academic_organisation_index;
+        DELETE FROM stud_schema_migrations WHERE version IN (16,17); PRAGMA foreign_keys=ON;`);
     db.exec(`CREATE TABLE stud_courses_legacy AS SELECT id,title,short_name,code,description,start_date,end_date,status,created_at,updated_at,archived_at FROM stud_courses; DROP TABLE stud_courses; ALTER TABLE stud_courses_legacy RENAME TO stud_courses;`);
     db.close();
     legacy = makeStore(v15Root);
-    check("V15_TO_V16_MIGRATION_NO_FABRICATED_STATE", () => {
-        assert.strictEqual(legacy.schemaInfo().version, 16);
+    check("V15_TO_V17_MIGRATION_NO_FABRICATED_STATE", () => {
+        assert.strictEqual(legacy.schemaInfo().version, 17);
         assert.strictEqual(legacy.getEntity("COURSE", legacyCourse.id).academicYear, null);
         assert.strictEqual(new StudWorkingContextService({store: legacy}).read().status, "EMPTY");
     });

@@ -6945,3 +6945,134 @@ button.eng-thread-row.active {
     .engineering-mode .stud-evidence-matrix small,
     .engineering-mode .stud-evidence-matrix em { grid-column: 1; grid-row: auto; }
 }
+
+/* STUD M3 persistent workflow. The rail is a calm Assignment-centred state
+ * surface; READY is derived and every state also has a textual label so status
+ * never depends on colour. Dynamic titles remain in ordinary document flow. */
+.engineering-mode .stud-workflow { display: grid; gap: .8vh; min-width: 0; margin: .9vh 0; padding: 1vh; border: .09vh solid var(--aegis-border); background: var(--aegis-surface); }
+.engineering-mode .stud-workflow-heading { display: flex; align-items: start; justify-content: space-between; gap: 1.2vh; min-width: 0; padding-bottom: .65vh; border-bottom: .09vh solid var(--aegis-border-subtle); }
+.engineering-mode .stud-workflow-heading > div { display: grid; gap: .18vh; min-width: 0; }
+.engineering-mode .stud-workflow-heading > div:last-child { flex: 0 1 28vh; justify-items: end; text-align: right; }
+.engineering-mode .stud-workflow-heading small,
+.engineering-mode .stud-workflow-heading span { color: var(--aegis-text-faint); font: .44vh/1.35 var(--font_mono); letter-spacing: .07vh; overflow-wrap: anywhere; }
+.engineering-mode .stud-workflow-heading h3 { margin: 0; color: var(--aegis-text-primary); font: .82vh/1.25 var(--font_main); overflow-wrap: anywhere; }
+.engineering-mode .stud-workflow-heading p { max-width: 78ch; margin: 0; color: var(--aegis-text-muted); font: .52vh/1.48 var(--font_main_light); overflow-wrap: anywhere; }
+.engineering-mode .stud-workflow-heading strong { color: var(--aegis-accent-soft); font: .49vh/1.35 var(--font_mono); overflow-wrap: anywhere; }
+.engineering-mode .stud-workflow-setup { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(25vh, .7fr); gap: 1vh; align-items: start; min-width: 0; }
+.engineering-mode .stud-workflow-setup fieldset { display: grid; gap: .35vh; min-width: 0; margin: 0; padding: 0; border: 0; }
+.engineering-mode .stud-workflow-setup legend { margin-bottom: .35vh; color: var(--aegis-text-faint); font: .43vh var(--font_mono); letter-spacing: .07vh; }
+.engineering-mode .stud-workflow-template { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: .55vh; align-items: start; min-width: 0; padding: .58vh .65vh; border-left: .14vh solid var(--aegis-border); cursor: pointer; }
+.engineering-mode .stud-workflow-template:hover,
+.engineering-mode .stud-workflow-template:focus-within { background: color-mix(in srgb, var(--aegis-accent) 7%, transparent); }
+.engineering-mode .stud-workflow-template.is-suggested { border-left-color: var(--aegis-accent); }
+.engineering-mode .stud-workflow-template > span { display: grid; gap: .12vh; min-width: 0; }
+.engineering-mode .stud-workflow-template strong { color: var(--aegis-text-primary); font: .56vh/1.35 var(--font_main); overflow-wrap: anywhere; }
+.engineering-mode .stud-workflow-template small { color: var(--aegis-text-muted); font: .47vh/1.4 var(--font_main_light); overflow-wrap: anywhere; }
+.engineering-mode .stud-workflow-template em { color: var(--aegis-accent-soft); font: normal .4vh/1.35 var(--font_mono); overflow-wrap: anywhere; }
+.engineering-mode .stud-workflow-contract-link { display: grid; gap: .35vh; min-width: 0; padding: .8vh; border-left: .16vh solid var(--aegis-accent); background: var(--aegis-surface-muted); }
+.engineering-mode .stud-workflow-contract-link small { color: var(--aegis-text-faint); font: .42vh var(--font_mono); letter-spacing: .07vh; }
+.engineering-mode .stud-workflow-contract-link strong { color: var(--aegis-text-primary); font: .56vh/1.35 var(--font_main); overflow-wrap: anywhere; }
+.engineering-mode .stud-workflow-contract-link span,
+.engineering-mode .stud-workflow-contract-link p { margin: 0; color: var(--aegis-text-muted); font: .47vh/1.45 var(--font_main_light); overflow-wrap: anywhere; }
+.engineering-mode .stud-workflow-contract-link label { display: grid; gap: .2vh; min-width: 0; color: var(--aegis-text-faint); font: .42vh var(--font_mono); }
+.engineering-mode .stud-workflow-contract-link textarea { min-height: 7vh; width: 100%; box-sizing: border-box; resize: vertical; color: var(--aegis-text-primary); border: .09vh solid var(--aegis-border); background: var(--aegis-input-bg); }
+.engineering-mode .stud-workflow-contract-link select { min-width: 0; width: 100%; box-sizing: border-box; color: var(--aegis-text-primary); border: .09vh solid var(--aegis-border); background: var(--aegis-input-bg); }
+.engineering-mode .stud-workflow-no-contract { grid-template-columns: max-content minmax(0, 1fr) !important; align-items: center; }
+.engineering-mode .stud-workflow-setup > button { grid-column: 1 / -1; justify-self: end; }
+.engineering-mode .stud-workflow-workspace { display: grid; grid-template-columns: minmax(24vh, .8fr) minmax(0, 1.2fr); gap: 1vh; min-width: 0; align-items: start; }
+.engineering-mode .stud-workflow-rail { position: relative; display: grid; gap: .18vh; min-width: 0; margin: 0; padding: .15vh 0; list-style: none; }
+.engineering-mode .stud-workflow-rail::before { content: ""; position: absolute; top: 1.2vh; bottom: 1.2vh; left: 1.18vh; width: .08vh; background: var(--aegis-border); }
+.engineering-mode .stud-workflow-rail li { position: relative; min-width: 0; }
+.engineering-mode .stud-workflow-rail button { display: grid; grid-template-columns: 2.35vh minmax(0, 1fr); align-items: center; gap: .5vh; width: 100%; min-width: 0; padding: .48vh .55vh .48vh 0; text-align: left; border: 0; background: transparent; }
+.engineering-mode .stud-workflow-rail button:hover,
+.engineering-mode .stud-workflow-rail button:focus-visible,
+.engineering-mode .stud-workflow-rail li.is-selected button { background: color-mix(in srgb, var(--aegis-accent) 8%, transparent); }
+.engineering-mode .stud-workflow-node-mark { position: relative; z-index: 1; display: grid; place-items: center; width: 1.55vh; height: 1.55vh; margin-left: .42vh; border: .09vh solid var(--aegis-border); border-radius: 50%; color: var(--aegis-text-muted); background: var(--aegis-surface); font: .55vh/1 var(--font_mono); }
+.engineering-mode .stud-workflow-rail li.is-ready .stud-workflow-node-mark,
+.engineering-mode .stud-workflow-rail li.is-in-progress .stud-workflow-node-mark { border-color: var(--aegis-accent); color: var(--aegis-accent-soft); }
+.engineering-mode .stud-workflow-rail li.is-complete .stud-workflow-node-mark { border-color: var(--aegis-success); color: var(--aegis-success); }
+.engineering-mode .stud-workflow-rail li.is-skipped .stud-workflow-node-mark { border-style: dashed; color: var(--aegis-text-faint); }
+.engineering-mode .stud-workflow-rail button > span:last-child { display: grid; gap: .08vh; min-width: 0; }
+.engineering-mode .stud-workflow-rail strong { color: var(--aegis-text-primary); font: .55vh/1.35 var(--font_main); overflow-wrap: anywhere; }
+.engineering-mode .stud-workflow-rail small { color: var(--aegis-text-faint); font: .4vh/1.35 var(--font_mono); letter-spacing: .04vh; overflow-wrap: anywhere; }
+.engineering-mode .stud-workflow-inspector { display: grid; gap: .55vh; min-width: 0; padding: .9vh; border-left: .16vh solid var(--aegis-accent); background: var(--aegis-surface-muted); }
+.engineering-mode .stud-workflow-inspector > header { display: flex; justify-content: space-between; gap: .5vh; color: var(--aegis-text-faint); font: .42vh var(--font_mono); letter-spacing: .06vh; }
+.engineering-mode .stud-workflow-inspector h4 { margin: 0; color: var(--aegis-text-primary); font: .72vh/1.3 var(--font_main); overflow-wrap: anywhere; }
+.engineering-mode .stud-workflow-inspector > p { margin: 0; color: var(--aegis-text-muted); font: .51vh/1.5 var(--font_main_light); overflow-wrap: anywhere; }
+.engineering-mode .stud-workflow-actions { display: flex; flex-wrap: wrap; gap: .35vh; align-items: center; min-height: 2.3vh; }
+.engineering-mode .stud-workflow-actions span { color: var(--aegis-text-faint); font: .42vh var(--font_mono); }
+.engineering-mode .stud-workflow-inspector dl,
+.engineering-mode .stud-workflow-advanced dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .4vh; min-width: 0; margin: 0; }
+.engineering-mode .stud-workflow-inspector dl > div,
+.engineering-mode .stud-workflow-advanced dl > div { min-width: 0; }
+.engineering-mode .stud-workflow-inspector dt,
+.engineering-mode .stud-workflow-advanced dt { color: var(--aegis-text-faint); font: .4vh var(--font_mono); }
+.engineering-mode .stud-workflow-inspector dd,
+.engineering-mode .stud-workflow-advanced dd { margin: .1vh 0 0; color: var(--aegis-text-muted); font: .45vh/1.4 var(--font_mono); overflow-wrap: anywhere; }
+.engineering-mode .stud-workflow-inspector details,
+.engineering-mode .stud-workflow-advanced { color: var(--aegis-text-muted); font: .45vh/1.45 var(--font_main_light); }
+.engineering-mode .stud-workflow-inspector details ol { display: grid; gap: .2vh; max-height: 14vh; overflow: auto; padding-left: 2vh; }
+.engineering-mode .stud-workflow-inspector details li { display: grid; gap: .05vh; }
+.engineering-mode .stud-workflow-inspector details strong { color: var(--aegis-text-primary); font-family: var(--font_mono); }
+.engineering-mode .stud-workflow-inspector details small { color: var(--aegis-text-faint); font-family: var(--font_mono); overflow-wrap: anywhere; }
+.engineering-mode .stud-workflow-integrity,
+.engineering-mode .stud-workflow-attention { display: grid; gap: .1vh; padding: .5vh .65vh; border-left: .16vh solid var(--aegis-warning); background: color-mix(in srgb, var(--aegis-warning) 7%, transparent); }
+.engineering-mode .stud-workflow-integrity strong,
+.engineering-mode .stud-workflow-attention strong { color: var(--aegis-warning); font: .45vh var(--font_mono); }
+.engineering-mode .stud-workflow-integrity span,
+.engineering-mode .stud-workflow-attention span { color: var(--aegis-text-muted); font: .46vh/1.4 var(--font_main_light); }
+.engineering-mode .stud-workflow-advanced { padding-top: .45vh; border-top: .08vh solid var(--aegis-border-subtle); }
+.engineering-mode .stud-workflow-advanced > summary { cursor: pointer; color: var(--aegis-text-faint); font-family: var(--font_mono); letter-spacing: .05vh; }
+.engineering-mode .stud-workflow-history { margin-top: .55vh; padding-top: .45vh; border-top: .08vh solid var(--aegis-border-subtle); color: var(--aegis-text-muted); font: .45vh/1.45 var(--font_main_light); }
+.engineering-mode .stud-workflow-history > summary,
+.engineering-mode .stud-workflow-replacement > summary { cursor: pointer; color: var(--aegis-text-faint); font-family: var(--font_mono); letter-spacing: .05vh; }
+.engineering-mode .stud-workflow-history > article { display: grid; grid-template-columns: minmax(0, 1fr) max-content; gap: .16vh .6vh; min-width: 0; padding: .55vh 0; border-bottom: .06vh dotted var(--aegis-border); }
+.engineering-mode .stud-workflow-history article > div { display: grid; gap: .06vh; min-width: 0; }
+.engineering-mode .stud-workflow-history article strong,
+.engineering-mode .stud-workflow-history article span,
+.engineering-mode .stud-workflow-history article small { overflow-wrap: anywhere; }
+.engineering-mode .stud-workflow-history article strong { color: var(--aegis-text-primary); font: .5vh/1.35 var(--font_main); }
+.engineering-mode .stud-workflow-history article small,
+.engineering-mode .stud-workflow-history article span { color: var(--aegis-text-faint); font: .4vh/1.35 var(--font_mono); }
+.engineering-mode .stud-workflow-history article > details { grid-column: 1 / -1; }
+.engineering-mode .stud-workflow-history ol { margin: .4vh 0; padding-left: 2vh; columns: 2; }
+.engineering-mode .stud-workflow-replacement { margin-top: .75vh; padding-top: .55vh; border-top: .06vh dotted var(--aegis-border); }
+.engineering-mode .stud-workflow-replacement form { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(24vh, .65fr); gap: .65vh; margin-top: .55vh; }
+.engineering-mode .stud-workflow-replacement form > fieldset { display: grid; gap: .3vh; min-width: 0; margin: 0; padding: 0; border: 0; }
+.engineering-mode .stud-workflow-replacement form > label,
+.engineering-mode .stud-workflow-replacement form > button { grid-column: 1 / -1; }
+.engineering-mode .stud-workflow-replacement form > label { display: grid; gap: .16vh; color: var(--aegis-text-faint); font: .4vh var(--font_mono); }
+.engineering-mode .stud-workflow-replacement textarea { min-height: 5vh; resize: vertical; color: var(--aegis-text-primary); border: .09vh solid var(--aegis-border); background: var(--aegis-input-bg); }
+.engineering-mode .stud-workflow-topology { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .55vh; margin-top: .55vh; }
+.engineering-mode .stud-workflow-topology form { display: grid; gap: .3vh; padding: .55vh; border: .08vh solid var(--aegis-border-subtle); }
+.engineering-mode .stud-workflow-topology label { display: grid; gap: .16vh; min-width: 0; color: var(--aegis-text-faint); font: .4vh var(--font_mono); }
+.engineering-mode .stud-workflow-topology input,
+.engineering-mode .stud-workflow-topology select { min-width: 0; width: 100%; box-sizing: border-box; color: var(--aegis-text-primary); border: .09vh solid var(--aegis-border); background: var(--aegis-input-bg); }
+.engineering-mode .stud-workflow-edge-list { display: grid; gap: .22vh; min-width: 0; padding: .55vh; border: .08vh solid var(--aegis-border-subtle); }
+.engineering-mode .stud-workflow-edge-list > small { color: var(--aegis-text-faint); font: .4vh var(--font_mono); }
+.engineering-mode .stud-workflow-edge-list p { display: grid; grid-template-columns: minmax(0, 1fr) max-content; gap: .35vh; align-items: center; min-width: 0; margin: 0; padding-top: .2vh; border-top: .06vh solid var(--aegis-border-subtle); }
+.engineering-mode .stud-workflow-edge-list span { color: var(--aegis-text-muted); font: .43vh/1.35 var(--font_main_light); overflow-wrap: anywhere; }
+.engineering-mode .stud-workflow-edge-list button { font-size: .38vh; }
+
+/* The shell's system sidebar reduces the usable STUD width without changing
+ * the browser media width. Collapse Assignment list/detail before the two
+ * columns become narrow and leave the long workflow stranded in half a deck. */
+@media (max-width: 1780px) {
+    .engineering-mode .stud-assignments-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 1300px) {
+    .engineering-mode .stud-workflow-setup,
+    .engineering-mode .stud-workflow-workspace { grid-template-columns: minmax(0, 1fr); }
+    .engineering-mode .stud-workflow-rail { max-height: 33vh; overflow: auto; }
+    .engineering-mode .stud-workflow-rail::before { bottom: 0; }
+}
+@media (max-width: 900px) {
+    .engineering-mode .stud-workflow-heading { flex-direction: column; }
+    .engineering-mode .stud-workflow-heading > div:last-child { justify-items: start; text-align: left; }
+    .engineering-mode .stud-workflow-topology,
+    .engineering-mode .stud-workflow-replacement form,
+    .engineering-mode .stud-workflow-inspector dl,
+    .engineering-mode .stud-workflow-advanced dl { grid-template-columns: minmax(0, 1fr); }
+    .engineering-mode .stud-workflow-history ol { columns: 1; }
+    .engineering-mode .stud-workflow-setup > button { justify-self: stretch; }
+}

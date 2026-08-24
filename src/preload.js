@@ -20,6 +20,7 @@ const STUD_CHANNELS = Object.freeze([
     "stud-research-cancel", "stud-research-context", "stud-research-library", "stud-research-link", "stud-research-open-access", "stud-research-resolve-crossref", "stud-research-resolve-datacite", "stud-research-save", "stud-research-search", "stud-research-status",
     "stud-revision-context", "stud-revision-list", "stud-revision-overview", "stud-revision-plan", "stud-revision-schedule", "stud-search", "stud-study-session-history", "stud-study-session-start", "stud-study-session-transition",
     "stud-tool-catalog", "stud-tool-detail", "stud-tool-launch", "stud-tool-packs", "stud-tool-preference-update", "stud-tool-preferences-reset", "stud-tool-profile", "stud-tool-profile-update", "stud-working-context-clear", "stud-working-context-read", "stud-working-context-update",
+    "stud-workflow-assignment-state", "stud-workflow-create", "stud-workflow-edge-add", "stud-workflow-edge-remove", "stud-workflow-history", "stud-workflow-node-add", "stud-workflow-node-rename", "stud-workflow-node-transition", "stud-workflow-read", "stud-workflow-templates",
     "stud-zotero-import", "stud-zotero-list", "stud-zotero-status"
 ]);
 

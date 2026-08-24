@@ -12,6 +12,7 @@ const {StudNotebookRuntime, normalizeGitHub} = require("./studNotebookRuntime.cl
 const {StudToolCatalog} = require("./studToolCatalog.class.js");
 const {StudRequirementsContractService} = require("./studRequirementsContractService.class.js");
 const {StudWorkingContextService} = require("./studWorkingContextService.class.js");
+const {StudWorkflowService} = require("./studWorkflowService.class.js");
 
 const CHANNELS = Object.freeze([
     "stud-core-status",
@@ -146,7 +147,17 @@ const CHANNELS = Object.freeze([
     "stud-working-context-read",
     "stud-working-context-update",
     "stud-working-context-clear",
-    "stud-course-organisation"
+    "stud-course-organisation",
+    "stud-workflow-templates",
+    "stud-workflow-assignment-state",
+    "stud-workflow-read",
+    "stud-workflow-create",
+    "stud-workflow-node-transition",
+    "stud-workflow-node-rename",
+    "stud-workflow-node-add",
+    "stud-workflow-edge-add",
+    "stud-workflow-edge-remove",
+    "stud-workflow-history"
 ]);
 
 function senderIsTrusted(event) {
@@ -211,6 +222,11 @@ function registerStudAcademicIpc(options = {}) {
     // M2 context is a single validated local work reference. It cannot cause
     // network activity, provider calls, AI work or relationship creation.
     const workingContext = options.workingContextService || new StudWorkingContextService({store, requirementsService: requirements});
+    // M3 persists a bounded, validated DAG in the canonical STUD database.
+    // Template selection and every graph/state mutation remain explicit and
+    // main-process authoritative; this service has no provider, AI or tool
+    // execution capability.
+    const workflow = options.workflowService || new StudWorkflowService({store, requirementsService: requirements, workingContextService: workingContext});
     let shell = options.shell || null;
     if (!shell) { try { shell = require("electron").shell; } catch (error) {} }
     const handlers = new Map();
@@ -248,8 +264,18 @@ function registerStudAcademicIpc(options = {}) {
     add("stud-assessment-classification-set", ["assignmentId", "classification", "reason"], payload => workingContext.setClassification(payload));
     add("stud-course-organisation", ["limit"], payload => workingContext.courseOrganisation(payload));
     add("stud-working-context-read", [], () => workingContext.read());
-    add("stud-working-context-update", ["courseId", "assignmentId", "objectType", "objectId", "originSurface", "userPinned"], payload => workingContext.update(payload));
+    add("stud-working-context-update", ["courseId", "assignmentId", "objectType", "objectId", "workflowId", "workflowNodeId", "originSurface", "userPinned"], payload => workingContext.update(payload));
     add("stud-working-context-clear", [], () => workingContext.clear());
+    add("stud-workflow-templates", ["assignmentId"], payload => workflow.templates(payload));
+    add("stud-workflow-assignment-state", ["assignmentId", "historyLimit"], payload => workflow.assignmentState(payload));
+    add("stud-workflow-read", ["workflowId", "historyLimit"], payload => workflow.read(payload));
+    add("stud-workflow-create", ["assignmentId", "templateKey", "templateVersion", "contractId", "allowNoContract", "noContractReason", "replaceCurrent", "replaceWorkflowId", "expectedWorkflowVersion", "replacementReason"], payload => workflow.create(payload));
+    add("stud-workflow-node-transition", ["workflowId", "nodeId", "action", "reason", "expectedWorkflowVersion", "expectedNodeVersion"], payload => workflow.transition(payload));
+    add("stud-workflow-node-rename", ["workflowId", "nodeId", "title", "expectedWorkflowVersion", "expectedNodeVersion"], payload => workflow.renameNode(payload));
+    add("stud-workflow-node-add", ["workflowId", "node", "expectedWorkflowVersion"], payload => workflow.addNode(payload));
+    add("stud-workflow-edge-add", ["workflowId", "fromNodeId", "toNodeId", "expectedWorkflowVersion"], payload => workflow.addEdge(payload));
+    add("stud-workflow-edge-remove", ["workflowId", "edgeId", "expectedWorkflowVersion"], payload => workflow.removeEdge(payload));
+    add("stud-workflow-history", ["workflowId", "limit"], payload => workflow.history(payload));
     add("stud-requirements-state", ["assignmentId"], payload => requirements.state(payload.assignmentId));
     add("stud-requirements-create-draft", ["assignmentId"], payload => requirements.createDraft(payload.assignmentId));
     add("stud-requirements-review-candidate", ["contractId", "candidateId", "disposition", "expectedVersion"], payload => requirements.reviewCandidate(payload));

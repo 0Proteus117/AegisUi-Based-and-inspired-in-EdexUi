@@ -56,6 +56,7 @@ class StudCommandCenter {
         this.toolCatalog = null;
         this.requirements = null;
         this.workingContext = null;
+        this.workflow = null;
     }
 
     mount(view) {
@@ -64,7 +65,7 @@ class StudCommandCenter {
         view.classList.add("stud-command-center-deck");
         grid.className = "workspace-grid stud-command-center-grid";
         this.state = {
-            activeView: "OVERVIEW", navGroup: "HOME", courses: [], assignments: [], overview: null, organisation: null, classifications: new Map(), workingContext: null, workflowAssignmentId: "", searchExpanded: false,
+            activeView: "OVERVIEW", navGroup: "HOME", courses: [], assignments: [], overview: null, organisation: null, classifications: new Map(), workingContext: null, searchExpanded: false,
             selectedCourseId: "", selectedAssignmentId: "", courseContext: null,
             assignmentContext: null, searchQuery: "", searchResults: [],
             assignmentFilters: {courseId: "", status: "ALL", sort: "DUE_ASC", query: ""},
@@ -82,6 +83,7 @@ class StudCommandCenter {
         this.toolCatalog = new StudToolCatalogWorkspace({request: (channel, payload) => this.request(channel, payload), escape: value => this.escape(value), showToast: (target, message) => this.showToast(target, message), parent: this, compute: this.compute});
         this.requirements = new StudRequirementsContractWorkspace({request: (channel, payload) => this.request(channel, payload), escape: value => this.escape(value), showToast: (target, message) => this.showToast(target, message), parent: this});
         this.workingContext = new StudWorkingContext({request: (channel, payload) => this.request(channel, payload)});
+        this.workflow = new StudWorkflowWorkspace({request: (channel, payload) => this.request(channel, payload), escape: value => this.escape(value), showToast: (target, message) => this.showToast(target, message), parent: this});
         grid.innerHTML = `
             <section class="stud-command-header workspace-panel">
                 <div><small>STUD / LOCAL ACADEMIC CONTEXT</small><h2>STUDENT COMMAND CENTER</h2><p>Courses, assignments and local work context remain explicit, offline and provenance-aware.</p></div>
@@ -150,12 +152,14 @@ class StudCommandCenter {
     }
 
     async loadAssignmentContext(id) {
-        const [context, requirementsContract] = await Promise.all([
+        const [context, requirementsContract, workflowState] = await Promise.all([
             this.request("stud-orchestration-context", {assignmentId: id}),
-            this.request("stud-requirements-state", {assignmentId: id})
+            this.request("stud-requirements-state", {assignmentId: id}),
+            this.request("stud-workflow-assignment-state", {assignmentId: id, historyLimit: 100})
         ]);
-        this.state.assignmentContext = {...context, requirementsContract};
+        this.state.assignmentContext = {...context, requirementsContract, workflowState};
         this.requirements.setState(context.assignment, requirementsContract);
+        this.workflow.setState(context.assignment, workflowState);
     }
 
     setActiveView(view) {
@@ -259,11 +263,12 @@ class StudCommandCenter {
 
     renderWorkingContext() {
         const context = this.state.workingContext;
-        if (!context || !context.activeCourse) return `<section class="stud-working-context is-empty"><span>ACTIVE CONTEXT</span><strong>NONE SELECTED</strong><button type="button" data-stud-dialog="CHANGE_CONTEXT">CHOOSE</button></section>`;
+        if (!context || (!context.activeCourse && !context.activeAssignment)) return `<section class="stud-working-context is-empty"><span>ACTIVE CONTEXT</span><strong>NONE SELECTED</strong><button type="button" data-stud-dialog="CHANGE_CONTEXT">CHOOSE</button></section>`;
         const assignment = context.activeAssignment;
         const object = context.activeObject;
+        const workflowNode = context.activeWorkflowNode;
         const objectType = object && object.entityType ? object.entityType.replace(/_/g, " ") : "OBJECT";
-        return `<section class="stud-working-context"><div><small>ACTIVE CONTEXT${context.userPinned ? " · PINNED" : ""}</small><strong>${this.escape(this.courseLabel(context.activeCourse.id))}${assignment ? ` · ${this.escape(assignment.title)}` : ""}</strong>${object ? `<span>${this.escape(objectType)} · ${this.escape(object.title || object.displayName || object.id)}</span>` : ""}</div><div><button type="button" data-stud-dialog="CHANGE_CONTEXT">CHANGE</button><button type="button" data-stud-context-clear>CLEAR</button></div></section>`;
+        return `<section class="stud-working-context"><div><small>ACTIVE CONTEXT${context.userPinned ? " · PINNED" : ""}</small><strong>${context.activeCourse ? this.escape(this.courseLabel(context.activeCourse.id)) : "UNASSIGNED"}${assignment ? ` · ${this.escape(assignment.title)}` : ""}</strong>${workflowNode ? `<span>WORKFLOW · ${this.escape(workflowNode.title)}</span>` : object ? `<span>${this.escape(objectType)} · ${this.escape(object.title || object.displayName || object.id)}</span>` : ""}</div><div><button type="button" data-stud-dialog="CHANGE_CONTEXT">CHANGE</button><button type="button" data-stud-context-clear>CLEAR</button></div></section>`;
     }
 
     renderServices() {
@@ -357,18 +362,18 @@ class StudCommandCenter {
     }
 
     renderAssignmentDetail(context) {
-        const {assignment, provenance, relationships, references, resources, documents = [], notes = [], papers = [], revisions = [], links = [], conflicts = [], requirementsContract = null, status = "CLEAN"} = context;
+        const {assignment, provenance, relationships, references, resources, documents = [], notes = [], papers = [], revisions = [], links = [], conflicts = [], status = "CLEAN"} = context;
         const course = this.state.courses.find(item => item.id === assignment.courseId);
         const classification = this.state.classifications.get(assignment.id);
         const deadlines = [["RELEASE", assignment.releaseDate], ["DUE", assignment.dueDate], ["CUTOFF", assignment.cutoffDate]];
         const briefDocuments = documents.filter(item => /brief|instruction|assessment|criteria|guidance|resit|portfolio/i.test(item.title || "")).slice(0, 8);
-        const activeRequirementsContract = requirementsContract && (requirementsContract.draft || requirementsContract.current);
         return `<div class="stud-detail-heading"><small>ASSIGNMENT</small><h3>${this.escape(assignment.title)}</h3><span>${this.escape(course ? this.courseLabel(course.id) : "NO MODULE")} · ${this.escape(classification && classification.label || "UNKNOWN")} · ${this.escape(assignment.status)}</span></div>
             <div class="stud-deadline-grid">${deadlines.map(([label, value]) => `<section><small>${label}</small><strong>${value ? dateText(value) : "UNKNOWN"}</strong></section>`).join("")}</div>
             <section class="stud-orchestration-context"><header><h3>ACADEMIC CONTEXT</h3><span>${this.escape(status)}</span></header><div class="stud-orchestration-trace"><article><strong>MOODLE / CANONICAL</strong><small>${provenance.some(item => item.sourceType === "MOODLE") ? "AUTHORITATIVE OBSERVATION AVAILABLE" : "NO MOODLE OBSERVATION"}</small></article><article><strong>CALENDAR</strong><small>${links.filter(item => item.referenceKind === "CALENDAR").length || references.filter(item => item.kind === "CALENDAR").length} EXPLICIT LINKS</small></article><article><strong>EMAIL</strong><small>${links.filter(item => item.referenceKind === "EMAIL").length || references.filter(item => item.kind === "EMAIL").length} EXPLICIT LINKS</small></article><article><strong>LOCAL CONTEXT</strong><small>${resources.length} RESOURCES · ${notes.length} NOTES · ${papers.length} PAPERS</small></article></div>${conflicts.length ? `<div class="stud-conflict-banner" role="status"><strong>⚠ DEADLINE / ACADEMIC CONFLICT</strong><span>${conflicts.map(item => `${this.escape(item.field)} · ${item.values.length} OBSERVATIONS`).join(" · ")}</span><button type="button" data-stud-provenance="ASSIGNMENT:${this.escape(assignment.id)}">REVIEW SOURCES</button></div>` : `<p class="stud-orchestration-note">No material field conflict detected. External systems remain read-only and no action runs automatically.</p>`}</section>
-            <section class="stud-object-section stud-assignment-roadmap"><header><h3>WORK CONTEXT</h3><span>EXPLICIT / LOCAL</span></header><ol class="stud-roadmap-steps"><li><strong>REQUIREMENTS</strong><small>${activeRequirementsContract ? `REV ${activeRequirementsContract.revision} · ${activeRequirementsContract.lifecycle} · ${activeRequirementsContract.completeness}` : "CONTRACT NOT CREATED"}</small></li><li><strong>COURSE MATERIAL</strong><small>${documents.length || resources.length ? `${documents.length} DOCUMENTS · ${resources.length} RESOURCES` : "ADD OR SYNC MATERIAL"}</small></li><li><strong>RESEARCH</strong><small>${papers.length ? `${papers.length} SOURCES LINKED` : "NO LOCAL SOURCES LINKED"}</small></li><li><strong>NOTES</strong><small>${notes.length ? `${notes.length} LOCAL NOTES` : "NO LOCAL NOTES"}</small></li></ol><div class="stud-detail-actions"><button type="button" data-stud-assignment-knowledge="${this.escape(assignment.id)}">OPEN ACADEMIC CONTEXT</button><button type="button" data-stud-assignment-research="${this.escape(assignment.id)}">OPEN RESEARCH</button><button type="button" data-stud-dialog="CREATE_NOTE">TAKE NOTE</button><button type="button" data-stud-dialog="CLASSIFY_ASSIGNMENT">ASSESSMENT TYPE</button></div></section>
+            <section class="stud-object-section stud-assignment-roadmap"><header><h3>RELATED WORK</h3><span>EXPLICIT / LOCAL</span></header><p>${documents.length} DOCUMENTS · ${resources.length} RESOURCES · ${papers.length} RESEARCH SOURCES · ${notes.length} NOTES</p><div class="stud-detail-actions"><button type="button" data-stud-assignment-knowledge="${this.escape(assignment.id)}">ACADEMIC CONTEXT</button><button type="button" data-stud-assignment-research="${this.escape(assignment.id)}">RESEARCH</button><button type="button" data-stud-dialog="CREATE_NOTE">TAKE NOTE</button><button type="button" data-stud-dialog="CLASSIFY_ASSIGNMENT">ASSESSMENT TYPE</button></div></section>
             <section class="stud-object-section stud-assignment-brief-preview"><header><h3>BRIEF &amp; MARKING DOCUMENTS</h3><span>${briefDocuments.length} LINKED</span></header>${briefDocuments.length ? `<div>${briefDocuments.map(item => `<button type="button" data-stud-search-result="${this.escape(item.id)}" data-stud-search-type="ACADEMIC_DOCUMENT"><strong>${this.escape(item.title)}</strong><small>${this.escape(item.extractionStatus)} · ${item.pageCount || "?"} PAGES · OPEN PREVIEW</small></button>`).join("")}</div>` : `<p>No assignment brief is linked yet. Link the relevant managed Course document explicitly; STUD will not guess or persist a suggestion.</p>`}</section>
             ${this.requirements.render()}
+            ${this.workflow.render()}
             <details class="stud-advanced-inspector"><summary>ADVANCED / EDIT LOCAL DETAILS</summary><form class="stud-edit-grid" data-stud-form="EDIT_ASSIGNMENT" data-stud-entity-id="${this.escape(assignment.id)}"><label>TITLE<input class="aegis-input" name="title" required maxlength="240" value="${this.escape(assignment.title)}"></label><label>STATUS<select class="aegis-select" name="status">${["NOT_STARTED", "IN_PROGRESS", "SUBMITTED", "GRADED"].map(status => `<option${assignment.status === status ? " selected" : ""}>${status}</option>`).join("")}</select></label><label>DUE DATE<input class="aegis-input" name="dueDate" type="datetime-local" value="${inputDate(assignment.dueDate)}"></label><label>LOCAL PROGRESS<input class="aegis-input" name="localProgress" type="number" min="0" max="100" step="1" value="${assignment.localProgress ?? ""}" placeholder="0–100"></label><label>GRADE SCHEME<select class="aegis-select" name="gradeScheme">${["UNKNOWN", "PERCENTAGE", "POINTS", "TEXT", "PASS_FAIL"].map(scheme => `<option${(assignment.gradeScheme || "UNKNOWN") === scheme ? " selected" : ""}>${scheme}</option>`).join("")}</select></label><label>NUMERIC GRADE<input class="aegis-input" name="grade" type="number" step="0.01" value="${assignment.grade ?? ""}"></label><label>MAXIMUM<input class="aegis-input" name="gradeMaximum" type="number" min="0.01" step="0.01" value="${assignment.gradeMaximum ?? ""}"></label><label>TEXT / PASS-FAIL<input class="aegis-input" name="gradeText" maxlength="240" value="${this.escape(assignment.gradeText || "")}"></label><label>WEIGHT %<input class="aegis-input" name="weight" type="number" min="0" max="100" step="0.01" value="${assignment.weight ?? ""}"></label><label>PRIORITY<select class="aegis-select" name="priority"><option value="">AUTO / DETERMINISTIC</option>${["URGENT", "HIGH", "NORMAL", "LOW"].map(priority => `<option${assignment.priority === priority ? " selected" : ""}>${priority}</option>`).join("")}</select></label><label class="stud-wide-label">DESCRIPTION<textarea class="aegis-input" name="description" maxlength="12000">${this.escape(assignment.description || "")}</textarea></label><button type="submit">SAVE LOCAL WORK</button></form></details>
             <section class="stud-academic-data"><small>ACADEMIC DATA · ONLY WHEN KNOWN</small><p>SUBMISSION ${this.escape(assignment.submissionStatus || "UNKNOWN")} · GRADE ${assignment.gradeText || (assignment.grade ?? "UNKNOWN")}${assignment.gradeMaximum !== null ? ` / ${assignment.gradeMaximum}` : ""} · ${this.escape(assignment.gradeScheme || "UNKNOWN")} · WEIGHT ${assignment.weight ?? "UNKNOWN"}</p>${assignment.feedback ? `<p>${this.escape(assignment.feedback)}</p>` : ""}</section>
             ${resources.length ? `<section class="stud-object-section"><header><h3>RELATED RESOURCES</h3><span>${resources.length}</span></header><div>${resources.map(item => `<button type="button" data-stud-search-result="${this.escape(item.id)}" data-stud-search-type="RESOURCE"><strong>${this.escape(item.title)}</strong><small>${this.escape(item.type)}</small></button>`).join("")}</div></section>` : `<div class="stud-empty-inline">NO RELATED RESOURCES.</div>`}
@@ -440,6 +445,7 @@ class StudCommandCenter {
         this.view.dataset.studPhase2Bound = "true";
         this.view.addEventListener("click", async event => {
             if (await this.requirements.handleClick(event)) return;
+            if (await this.workflow.handleClick(event)) return;
             if (await this.research.handleClick(event)) return;
             if (await this.moodle.handleClick(event)) return;
             if (await this.revision.handleClick(event)) return;
@@ -460,7 +466,6 @@ class StudCommandCenter {
             const unlink = event.target.closest("[data-stud-reference-unlink]");
             const assignmentResearch = event.target.closest("[data-stud-assignment-research]");
             const assignmentKnowledge = event.target.closest("[data-stud-assignment-knowledge]");
-            const workflowAssignment = event.target.closest("[data-stud-workflow-assignment]");
             const searchToggle = event.target.closest("[data-stud-search-toggle]");
             const contextClear = event.target.closest("[data-stud-context-clear]");
             if (searchToggle) { this.state.searchExpanded = !this.state.searchExpanded; this.render(); if (this.state.searchExpanded) requestAnimationFrame(() => this.view.querySelector("[data-stud-form=search] input")?.focus()); }
@@ -475,10 +480,9 @@ class StudCommandCenter {
             else if (contextClear) { this.state.workingContext = await this.workingContext.clear(); this.state.selectedCourseId = ""; this.state.selectedAssignmentId = ""; await this.refreshContexts(); }
             else if (assignmentResearch) { await this.selectAssignment(assignmentResearch.dataset.studAssignmentResearch, "RESEARCH"); }
             else if (assignmentKnowledge) { await this.selectAssignment(assignmentKnowledge.dataset.studAssignmentKnowledge, "KNOWLEDGE"); }
-            else if (workflowAssignment) { this.state.workflowAssignmentId = workflowAssignment.dataset.studWorkflowAssignment; this.showToast(this.view, "ASSIGNMENT SELECTED FOR THE EXPLICIT REAL-WORKFLOW TEST"); this.render(); }
             else if (event.target.closest("[data-stud-close-dialog]")) this.closeDialog();
         });
-        this.view.addEventListener("submit", async event => { if (await this.requirements.handleSubmit(event)) return; if (await this.research.handleSubmit(event)) return; if (await this.moodle.handleSubmit(event)) return; if (await this.revision.handleSubmit(event)) return; if (await this.compute.handleSubmit(event)) return; if (await this.documents.handleSubmit(event)) return; if (await this.knowledge.handleSubmit(event)) return; if (await this.academicAssistant.handleSubmit(event)) return; if (await this.notebook.handleSubmit(event)) return; if (await this.progress.handleSubmit(event)) return; if (await this.toolCatalog.handleSubmit(event)) return; this.handleForm(event); });
+        this.view.addEventListener("submit", async event => { if (await this.requirements.handleSubmit(event)) return; if (await this.workflow.handleSubmit(event)) return; if (await this.research.handleSubmit(event)) return; if (await this.moodle.handleSubmit(event)) return; if (await this.revision.handleSubmit(event)) return; if (await this.compute.handleSubmit(event)) return; if (await this.documents.handleSubmit(event)) return; if (await this.knowledge.handleSubmit(event)) return; if (await this.academicAssistant.handleSubmit(event)) return; if (await this.notebook.handleSubmit(event)) return; if (await this.progress.handleSubmit(event)) return; if (await this.toolCatalog.handleSubmit(event)) return; this.handleForm(event); });
         this.view.addEventListener("change", event => { this.compute.handleChange(event).catch(() => {}); this.documents.handleChange(event).catch(() => {}); this.knowledge.handleChange(event).catch(() => {}); this.academicAssistant.handleChange(event).catch(() => {}); });
         const dialog = this.view.querySelector("[data-stud-dialog-element]");
         dialog.addEventListener("close", () => { const target = this.state.dialogReturnFocus; this.state.dialogReturnFocus = null; if (target && document.contains(target)) target.focus(); });

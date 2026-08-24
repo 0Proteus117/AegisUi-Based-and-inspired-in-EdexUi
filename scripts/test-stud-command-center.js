@@ -18,6 +18,7 @@ const theme = fs.readFileSync(path.join(ROOT, "src/assets/css/aegis_theme.css"),
 const revision = fs.readFileSync(path.join(ROOT, "src/classes/workspaces/studRevisionWorkspace.class.js"), "utf8");
 const documents = fs.readFileSync(path.join(ROOT, "src/classes/workspaces/studDocumentWorkspace.class.js"), "utf8");
 const requirementsContract = fs.readFileSync(path.join(ROOT, "src/classes/workspaces/studRequirementsContractWorkspace.class.js"), "utf8");
+const workflowWorkspace = fs.readFileSync(path.join(ROOT, "src/classes/workspaces/studWorkflowWorkspace.class.js"), "utf8");
 const root = fs.mkdtempSync(path.join(os.tmpdir(), "aegis-stud-phase2-"));
 const store = new StudAcademicStore({root, applicationVersion: "test"});
 const checks = [];
@@ -83,8 +84,10 @@ try {
         assert.ok(commandCenter.includes("StudToolCatalogWorkspace"));
         assert.ok(commandCenter.includes("FTS5 searches only local canonical academic records"));
         assert.ok(commandCenter.includes("STUD DOES NOT SCAN, OPEN OR COPY EXTERNAL CONTENT"));
-        assert.ok(commandCenter.includes("WORK CONTEXT"));
-        assert.ok(commandCenter.includes("REQUIREMENTS"));
+        assert.ok(commandCenter.includes("RELATED WORK"));
+        assert.ok(commandCenter.includes("StudWorkflowWorkspace"));
+        assert.ok(workflowWorkspace.includes("CREATE WORKFLOW"));
+        assert.ok(workflowWorkspace.includes("NO WORK EXECUTED"));
         assert.ok(commandCenter.includes("BRIEF &amp; MARKING DOCUMENTS"));
         assert.ok(commandCenter.includes("StudRequirementsContractWorkspace"));
         assert.ok(requirementsContract.includes("REQUIREMENTS CONTRACT"));

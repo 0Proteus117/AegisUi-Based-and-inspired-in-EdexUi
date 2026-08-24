@@ -37,6 +37,10 @@ async function main() {
         const paper=await invoke('stud-entity-create',{entityType:'RESEARCH_PAPER',value:{title:'Synthetic packaged citation source',authors:'Validation, Aegis',year:2026,objectType:'ARTICLE'},provenance:{field:'title',observedValue:'Synthetic packaged citation source',sourceType:'USER',sourceAuthority:'AUTHORITATIVE'}});
         if(!paper.ok)return{stage:'paper',response:paper};
         const contract=await invoke('stud-requirements-create-draft',{assignmentId:assignment.data.id});
+        const templates=await invoke('stud-workflow-templates',{assignmentId:assignment.data.id});
+        const genericTemplate=templates.data?.templates?.find(template=>template.templateKey==='GENERIC_MANUAL');
+        const workflow=genericTemplate?await invoke('stud-workflow-create',{assignmentId:assignment.data.id,templateKey:genericTemplate.templateKey,templateVersion:genericTemplate.version,allowNoContract:true,noContractReason:'Packaged synthetic validation uses an explicit no-contract path.'}):{ok:false};
+        const workflowRead=workflow.ok?await invoke('stud-workflow-read',{workflowId:workflow.data.id}):{ok:false};
         const workingContext=await invoke('stud-working-context-update',{courseId:course.data.id,assignmentId:assignment.data.id,originSurface:'PACKAGED_VALIDATION',userPinned:true});
         const organisation=await invoke('stud-course-organisation',{limit:20});
         const classifications=await invoke('stud-assessment-classification-list',{limit:20});
@@ -48,7 +52,7 @@ async function main() {
             rendererNoRequire:typeof window.require==='undefined',rendererNoProcess:typeof window.process==='undefined',
             preloadWorkingContext:typeof window.aegis?.stud?.['stud-working-context-read']==='function',
             course:Boolean(course.ok&&course.data?.id),assignment:Boolean(assignment.ok&&assignment.data?.id),
-            contract:Boolean(contract.ok&&contract.data?.lifecycle==='DRAFT'),workingContext:Boolean(workingContext.ok&&workingContext.data?.activeAssignment?.id===assignment.data.id),organisation:Boolean(organisation.ok&&organisation.data?.years?.length),classification:Boolean(classifications.ok&&classifications.data?.some(item=>item.assignmentId===assignment.data.id)),citation:Boolean(citation.ok&&citation.data?.bibliography),
+            contract:Boolean(contract.ok&&contract.data?.lifecycle==='DRAFT'),workflow:Boolean(workflow.ok&&workflow.data?.assignmentId===assignment.data.id&&workflowRead.ok&&workflowRead.data?.graph?.nodes?.length),workingContext:Boolean(workingContext.ok&&workingContext.data?.activeAssignment?.id===assignment.data.id),organisation:Boolean(organisation.ok&&organisation.data?.years?.length),classification:Boolean(classifications.ok&&classifications.data?.some(item=>item.assignmentId===assignment.data.id)),citation:Boolean(citation.ok&&citation.data?.bibliography),
             moodle:Boolean(moodle.ok&&moodle.data),documents:Boolean(documents.ok&&documents.data),compute:Boolean(compute.ok&&compute.data),
             ollama:typeof window.aegis?.assistant?.status==='function',terminalConnected:window.term?.[0]?.socket?.readyState===WebSocket.OPEN
         };
