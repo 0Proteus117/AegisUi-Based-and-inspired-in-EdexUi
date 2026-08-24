@@ -42,17 +42,38 @@
         <!-- Final semantic appearance layer: Dark remains the approved baseline;
              Light/System are resolved without touching provider/runtime logic. -->
         <link rel="stylesheet" href="assets/css/aegis_theme.css" />
+        <link rel="stylesheet" href="node_modules/xterm/css/xterm.css" />
 
         <script src="assets/vendor/leaflet/leaflet.js"></script>
+        <script src="assets/vendor/encom-globe.js"></script>
+        <script src="node_modules/xterm/lib/xterm.js"></script>
+        <script src="node_modules/xterm-addon-attach/lib/xterm-addon-attach.js"></script>
+        <script src="node_modules/xterm-addon-fit/lib/xterm-addon-fit.js"></script>
+        <script src="node_modules/xterm-addon-webgl/lib/xterm-addon-webgl.js"></script>
+        <script src="node_modules/howler/dist/howler.min.js"></script>
+        <script src="node_modules/smoothie/smoothie.js"></script>
+        <script src="node_modules/satellite.js/dist/satellite.min.js"></script>
         <script src="config/workspaces.config.js"></script>
+        <script>window.module = {exports: {}};</script>
+        <script src="classes/rendererBridge.class.js"></script>
 
         <!-- Load main modules classes -->
         <script src="classes/modal.class.js"></script>
-        <script src="classes/terminal.class.js"></script>
+        <script src="classes/terminalClient.class.js"></script>
         <script src="classes/docReader.class.js"></script>
         <script src="classes/mediaPlayer.class.js"></script>
-        <script src="classes/filesystem.class.js"></script>
         <script src="classes/applications.class.js"></script>
+        <script src="classes/map/utils/mapLayerState.js"></script>
+        <script src="classes/map/utils/mapCache.js"></script>
+        <script src="classes/map/providers/baseProvider.js"></script>
+        <script src="classes/map/providers/trafficProvider.js"></script>
+        <script src="classes/map/providers/weatherRadarProvider.js"></script>
+        <script src="classes/map/providers/openSkyProvider.js"></script>
+        <script src="classes/map/providers/aisProvider.js"></script>
+        <script src="classes/map/providers/celestrakProvider.js"></script>
+        <script src="classes/map/providers/noaaOceanProvider.js"></script>
+        <script src="classes/map/providers/marineWeatherProvider.js"></script>
+        <script src="classes/map/mapLayerRegistry.js"></script>
         <script src="classes/engineeringDashboard.class.js"></script>
         <script src="classes/workspaces/engineeringTools.registry.js"></script>
         <script src="classes/workspaces/osintProviderSchema.class.js"></script>
@@ -87,12 +108,8 @@
         <script src="classes/assistant/assistantPersonality.class.js"></script>
         <script src="classes/assistant/assistantSettings.class.js"></script>
         <script src="classes/assistant/assistantMicrocopy.class.js"></script>
-        <script src="classes/assistant/assistantMemoryBootstrap.class.js"></script>
-        <script src="classes/assistant/assistantOllamaClient.class.js"></script>
-        <script src="classes/assistant/assistantAIProvider.class.js"></script>
-        <script src="classes/assistant/assistantChatSession.class.js"></script>
+        <script src="classes/assistant/assistantClient.class.js"></script>
         <script src="classes/assistant/assistantCommandRouter.class.js"></script>
-        <script src="classes/assistant/assistantLocalChat.class.js"></script>
         <script src="classes/assistant/assistantBridge.class.js"></script>
         <script src="classes/assistant/assistantPermissions.class.js"></script>
         <script src="classes/assistant/assistantPanel.class.js"></script>

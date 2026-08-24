@@ -28,7 +28,7 @@ check("THEME_SEMANTIC_TOKENS", [
 check("THEME_DARK_BASELINE", css.includes(":root") && css.includes('html[data-aegis-appearance="dark"]'));
 check("THEME_LIGHT_PALETTE", css.includes('html[data-aegis-appearance="light"]') && css.includes("color-scheme: light"));
 check("THEME_LEGACY_VARIABLE_BRIDGE", ["--color_r", "--color_g", "--color_b", "--color_light_black", "--color_grey"].every(token => css.includes(token)));
-check("THEME_SETTINGS_SINGLE_STORE", renderer.includes("settingsFile") && renderer.includes("settings.aegisAppearance") && !renderer.includes("aegisAppearance.json"));
+check("THEME_SETTINGS_SINGLE_STORE", renderer.includes("window.aegis.runtime.saveSettings(window.settings)") && renderer.includes("settings.aegisAppearance") && !renderer.includes("aegisAppearance.json") && !renderer.includes("settingsFile"));
 check("THEME_MODE_ENUM", renderer.includes('new Set(["light", "dark", "system"])'));
 check("THEME_SYSTEM_MEDIA_QUERY", renderer.includes('matchMedia("(prefers-color-scheme: dark)")') && renderer.includes('aegisAppearanceMedia.addEventListener("change"'));
 check("THEME_LIVE_SWITCH", renderer.includes("window.setAegisAppearance") && renderer.includes("window.applyAegisAppearance"));

@@ -2,10 +2,7 @@ class LocationGlobe {
     constructor(parentId) {
         if (!parentId) throw "Missing parameters";
 
-        const path = require("path");
-
-        this._geodata = require(path.join(__dirname, "assets/misc/grid.json"));
-        require(path.join(__dirname, "assets/vendor/encom-globe.js"));
+        this._geodata = window.aegis.runtime.bootstrap.globeGrid;
         this.ENCOM = window.ENCOM;
 
         // Create DOM and include lib

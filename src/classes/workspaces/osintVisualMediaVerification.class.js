@@ -202,7 +202,6 @@
             const digest = await crypto.subtle.digest("SHA-256", source);
             return [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, "0")).join("");
         }
-        if (typeof require === "function") return require("crypto").createHash("sha256").update(Buffer.from(source)).digest("hex");
         throw new MediaVerificationError("ERROR", "Local SHA-256 support is unavailable.");
     }
 

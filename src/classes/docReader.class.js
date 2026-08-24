@@ -11,12 +11,11 @@ class DocReader {
             pageNumPending = null,
             zoom = 100;
 
-        const {pathToFileURL} = require("url");
-        const pdfDocument = import(pathToFileURL(require.resolve("pdfjs-dist/legacy/build/pdf.mjs")).href)
+        const pdfDocument = import("../node_modules/pdfjs-dist/legacy/build/pdf.mjs")
             .then(pdfjsLib => {
-                pdfjsLib.GlobalWorkerOptions.workerSrc = pathToFileURL(require.resolve("pdfjs-dist/legacy/build/pdf.worker.mjs")).href;
+                pdfjsLib.GlobalWorkerOptions.workerSrc = new URL("../node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs", window.location.href).href;
                 return pdfjsLib.getDocument({
-                    url: pathToFileURL(path).href,
+                    url: path,
                     isEvalSupported: false
                 }).promise;
             });

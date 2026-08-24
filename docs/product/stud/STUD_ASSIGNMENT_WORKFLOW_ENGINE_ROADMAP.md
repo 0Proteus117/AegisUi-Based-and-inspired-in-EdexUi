@@ -62,6 +62,9 @@ repository has advanced, preserve monotonic numbering and document the mapping.
 
 ## Electron Trust-Boundary Hardening intervention
 
+**Status: COMPLETE — 2026-08-24.** See
+[`ELECTRON_TRUST_BOUNDARY_HARDENING_2026-08-24.md`](../../security/ELECTRON_TRUST_BOUNDARY_HARDENING_2026-08-24.md).
+
 - **Objective:** incrementally move the primary renderer to a typed preload trust
   boundary before more powerful Workflow Engine surfaces are added.
 - **Exact scope:** `nodeIntegration: false`, `contextIsolation: true`, remove
@@ -437,7 +440,6 @@ repository has advanced, preserve monotonic numbering and document the mapping.
 
 ## Exact next milestone
 
-After M1 is complete, the next implementation session must execute the dedicated
-**Electron Trust-Boundary Hardening intervention** only. **M2 — Academic
-organisation and working context** follows only after that intervention is
-complete and its regressions are clean.
+M1 and the dedicated Electron Trust-Boundary Hardening intervention are complete.
+The exact next product milestone is **M2 — Academic organisation and working
+context**. No M2 implementation was included in the security intervention.

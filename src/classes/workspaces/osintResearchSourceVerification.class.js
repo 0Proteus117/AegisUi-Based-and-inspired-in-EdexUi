@@ -120,7 +120,6 @@
             const digest = await globalThis.crypto.subtle.digest("SHA-256", source);
             return Array.from(new Uint8Array(digest)).map(byte => byte.toString(16).padStart(2, "0")).join("");
         }
-        if (typeof require === "function") return require("crypto").createHash("sha256").update(Buffer.from(source)).digest("hex");
         throw new ResearchSourceError("ERROR", "SHA-256 support is unavailable in this runtime.");
     }
 

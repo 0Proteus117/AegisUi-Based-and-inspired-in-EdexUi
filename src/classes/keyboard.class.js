@@ -1,8 +1,8 @@
 class Keyboard {
     constructor(opts) {
-        if (!opts.layout || !opts.container) throw "Missing options";
+        if (!opts.container) throw "Missing options";
 
-        const layout = JSON.parse(require("fs").readFileSync(opts.layout, {encoding: "utf-8"}));
+        const layout = JSON.parse(JSON.stringify(opts.layoutData || window.aegis.runtime.keyboardLayout(opts.layoutName || window.settings.keyboard)));
         this.ctrlseq = ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""];
         this.container = document.getElementById(opts.container);
 

@@ -5,14 +5,10 @@
 })(typeof window !== "undefined" ? window : null, function() {
     "use strict";
 
-    const Runtime = (typeof window !== "undefined" && window.OSINTProviderRuntime)
-        || (typeof require === "function" ? require("./osintProviderRuntime.class.js") : null);
-    const Policy = (typeof window !== "undefined" && window.OSINTProviderPolicy)
-        || (typeof require === "function" ? require("./osintProviderPolicy.class.js") : null);
-    const DomainInfrastructure = (typeof window !== "undefined" && window.OSINTDomainInfrastructure)
-        || (typeof require === "function" ? require("./osintDomainInfrastructure.class.js") : null);
-    const ResearchSource = (typeof window !== "undefined" && window.OSINTResearchSourceVerification)
-        || (typeof require === "function" ? require("./osintResearchSourceVerification.class.js") : null);
+    const Runtime = typeof window !== "undefined" ? window.OSINTProviderRuntime : require("./osintProviderRuntime.class.js");
+    const Policy = typeof window !== "undefined" ? window.OSINTProviderPolicy : require("./osintProviderPolicy.class.js");
+    const DomainInfrastructure = typeof window !== "undefined" ? window.OSINTDomainInfrastructure : require("./osintDomainInfrastructure.class.js");
+    const ResearchSource = typeof window !== "undefined" ? window.OSINTResearchSourceVerification : require("./osintResearchSourceVerification.class.js");
     if (!Runtime || !Policy || !DomainInfrastructure || !ResearchSource) throw new Error("OSINT provider runtime, policy, domain and source modules must load before adapters.");
 
     const WAYBACK_AVAILABILITY_ENDPOINT = "https://archive.org/wayback/available";

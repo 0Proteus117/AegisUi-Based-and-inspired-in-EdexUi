@@ -2,7 +2,7 @@ class ApplicationsDisplay {
     constructor(parentId) {
         if (!parentId) throw "Missing options";
 
-        this.ipc = require("electron").ipcRenderer;
+        this.ipc = window.aegisIpc;
         this.parent = document.getElementById(parentId);
         this.parent.innerHTML = `
             <div class="eng-apps-loading">

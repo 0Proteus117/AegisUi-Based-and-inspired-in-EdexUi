@@ -1,5 +1,6 @@
-const {BaseMapProvider} = require("./baseProvider.js");
-const {MAP_LAYER_STATES, isOffline} = require("../utils/mapLayerState.js");
+(function noaaOceanProviderModule() {
+const {BaseMapProvider} = typeof window !== "undefined" ? window.AegisBaseMapProvider : require("./baseProvider.js");
+const {MAP_LAYER_STATES, isOffline} = typeof window !== "undefined" ? window.AegisMapLayerState : require("../utils/mapLayerState.js");
 
 const NDBC_ACTIVE_STATIONS_URL = "https://www.ndbc.noaa.gov/activestations.xml";
 const NDBC_REALTIME_URL = "https://www.ndbc.noaa.gov/data/realtime2";
@@ -229,4 +230,6 @@ class NOAAOceanProvider extends BaseMapProvider {
     }
 }
 
-module.exports = {NOAAOceanProvider};
+if (typeof module !== "undefined" && module.exports) module.exports = {NOAAOceanProvider};
+if (typeof window !== "undefined") window.AegisNOAAOceanProvider = {NOAAOceanProvider};
+})();

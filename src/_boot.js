@@ -1,5 +1,5 @@
 const signale = require("signale");
-const {app, BrowserWindow, dialog, shell, nativeImage, WebContentsView, session} = require("electron");
+const {app, BrowserWindow, dialog, shell, nativeImage, WebContentsView, session, globalShortcut, protocol, net} = require("electron");
 const {execFile, execFileSync} = require("child_process");
 const {promisify} = require("util");
 const path = require("path");
@@ -41,9 +41,10 @@ if (!gotLock) {
 signale.time("Startup");
 
 const electron = require("electron");
-const remoteMain = require('@electron/remote/main');
-remoteMain.initialize();
-const ipc = electron.ipcMain;
+const {createTrustedIpcMain} = require("./classes/ipcSecurity.class.js");
+const {registerTrustBoundaryRuntime} = require("./classes/trustBoundaryRuntime.class.js");
+const uiPath = path.join(__dirname, "ui.html");
+const ipc = createTrustedIpcMain(electron.ipcMain, uiPath);
 const url = require("url");
 const fs = require("fs");
 const crypto = require("crypto");
@@ -51,8 +52,14 @@ const which = require("which");
 const Terminal = require("./classes/terminal.class.js").Terminal;
 const OsintToolsRegistry = require("./classes/workspaces/osintTools.registry.js");
 
+protocol.registerSchemesAsPrivileged([{
+    scheme: "aegis-tomtom",
+    privileges: {standard: true, secure: true, supportFetchAPI: true, stream: true}
+}]);
+
 ipc.on("log", (e, type, content) => {
-    signale[type](content);
+    const level = ["info", "warn", "error", "debug", "note", "success"].includes(type) ? type : "info";
+    signale[level](String(content || "").slice(0, 4096));
 });
 
 var win, tty, extraTtys;
@@ -81,6 +88,25 @@ let applicationsCache = null;
 let knownApplications = new Set();
 const execFileAsync = promisify(execFile);
 const musicArtworkCache = new Map();
+
+registerTrustBoundaryRuntime({
+    ipc,
+    app,
+    dialog,
+    shell,
+    screen: electron.screen,
+    globalShortcut,
+    getWindow: () => win,
+    files: {
+        settings: settingsFile,
+        shortcuts: shortcutsFile,
+        lastWindowState: lastWindowStateFile,
+        themes: themesDir,
+        keyboards: kblayoutsDir,
+        fonts: fontsDir,
+        sourceRoot: __dirname
+    }
+});
 
 function envFlag(name) {
     return /^(1|true|yes|on)$/i.test(String(process.env[name] || ""));
@@ -1100,7 +1126,7 @@ function tomTomDiagnosticStatusFromHttp(statusCode) {
 }
 
 ipc.handle("runtime-config", () => ({
-    tomtomApiKey: getTomTomApiKey(),
+    tomtomConfigured: Boolean(getTomTomApiKey()),
     tomtomKeyStatus: getTomTomApiKey() ? "CONFIGURED" : "MISSING",
     tomtomKeyLast4: maskSecret(getTomTomApiKey()),
     offlineMode: envFlag("AEGISUI_OFFLINE_MODE"),
@@ -1140,7 +1166,10 @@ function getJSON(remoteUrl) {
     return new Promise((resolve, reject) => {
         const request = require("https").get(remoteUrl, response => {
             let body = "";
-            response.on("data", chunk => body += chunk);
+            response.on("data", chunk => {
+                body += chunk;
+                if (Buffer.byteLength(body, "utf8") > 1024 * 1024) request.destroy(new Error("Remote response exceeded the bounded size"));
+            });
             response.on("end", () => {
                 if (response.statusCode < 200 || response.statusCode >= 300) {
                     reject(new Error(`Remote service returned ${response.statusCode}`));
@@ -2205,25 +2234,37 @@ function createWindow(settings) {
         backgroundColor: '#000000',
         webPreferences: {
             devTools: true,
-            contextIsolation: false,
+            preload: path.join(__dirname, "preload.js"),
+            contextIsolation: true,
             backgroundThrottling: false,
             webSecurity: true,
-            nodeIntegration: true,
+            nodeIntegration: false,
             nodeIntegrationInSubFrames: false,
+            sandbox: false,
+            webviewTag: false,
+            nativeWindowOpen: false,
             allowRunningInsecureContent: false,
             experimentalFeatures: settings.experimentalFeatures || false
         }
     });
 
-    remoteMain.enable(win.webContents);
-
     win.loadURL(url.format({
-        pathname: path.join(__dirname, 'ui.html'),
+        pathname: uiPath,
         protocol: 'file:',
         slashes: true
     }));
 
     signale.complete("Frontend window created!");
+    win.on("resize", () => {
+        if (win && !win.isDestroyed()) win.webContents.send("aegis-window-resize", {
+            size: win.getSize(),
+            fullScreen: win.isFullScreen(),
+            maximized: win.isMaximized()
+        });
+    });
+    win.on("leave-full-screen", () => {
+        if (win && !win.isDestroyed()) win.webContents.send("aegis-window-leave-full-screen");
+    });
     win.show();
     if (!settings.allowWindowed) {
         win.setResizable(false);
@@ -2235,6 +2276,17 @@ function createWindow(settings) {
 }
 
 app.on('ready', async () => {
+    protocol.handle("aegis-tomtom", request => {
+        const key = getTomTomApiKey();
+        if (!key) return new Response("TomTom credential is not configured.", {status: 503});
+        const parsed = new URL(request.url);
+        const match = parsed.pathname.match(/^\/(?:1\/tile\/basic\/main|traffic\/map\/4\/tile\/flow\/relative0-dark)\/(\d{1,2})\/(\d{1,8})\/(\d{1,8})\.png$/);
+        if (!match || !["map", "traffic"].includes(parsed.hostname)) return new Response("Unsupported map resource.", {status: 404});
+        const [, z, x, y] = match;
+        const prefix = parsed.hostname === "map" ? "map/1/tile/basic/main" : "traffic/map/4/tile/flow/relative0-dark";
+        const target = `https://api.tomtom.com/${prefix}/${z}/${x}/${y}.png?tileSize=256&key=${encodeURIComponent(key)}`;
+        return net.fetch(target, {method: "GET"});
+    });
     signale.pending(`Loading settings file...`);
     let settings = require(settingsFile);
     settings.offlineMode = Boolean(settings.offlineMode || envFlag("AEGISUI_OFFLINE_MODE"));

@@ -1,16 +1,17 @@
-const {MapLayerCache} = require("./utils/mapCache.js");
+(function mapLayerRegistryModule() {
+const {MapLayerCache} = typeof window !== "undefined" ? window.AegisMapLayerCache : require("./utils/mapCache.js");
 const {
     MAP_LAYER_STATES,
     normalizeProviderError,
     sanitizeErrorMessage
-} = require("./utils/mapLayerState.js");
-const {TrafficProvider} = require("./providers/trafficProvider.js");
-const {WeatherRadarProvider} = require("./providers/weatherRadarProvider.js");
-const {OpenSkyProvider} = require("./providers/openSkyProvider.js");
-const {AISProvider} = require("./providers/aisProvider.js");
-const {CelesTrakProvider} = require("./providers/celestrakProvider.js");
-const {NOAAOceanProvider} = require("./providers/noaaOceanProvider.js");
-const {MarineWeatherProvider} = require("./providers/marineWeatherProvider.js");
+} = typeof window !== "undefined" ? window.AegisMapLayerState : require("./utils/mapLayerState.js");
+const {TrafficProvider} = typeof window !== "undefined" ? window.AegisTrafficProvider : require("./providers/trafficProvider.js");
+const {WeatherRadarProvider} = typeof window !== "undefined" ? window.AegisWeatherRadarProvider : require("./providers/weatherRadarProvider.js");
+const {OpenSkyProvider} = typeof window !== "undefined" ? window.AegisOpenSkyProvider : require("./providers/openSkyProvider.js");
+const {AISProvider} = typeof window !== "undefined" ? window.AegisAISProvider : require("./providers/aisProvider.js");
+const {CelesTrakProvider} = typeof window !== "undefined" ? window.AegisCelesTrakProvider : require("./providers/celestrakProvider.js");
+const {NOAAOceanProvider} = typeof window !== "undefined" ? window.AegisNOAAOceanProvider : require("./providers/noaaOceanProvider.js");
+const {MarineWeatherProvider} = typeof window !== "undefined" ? window.AegisMarineWeatherProvider : require("./providers/marineWeatherProvider.js");
 
 class MapLayerRegistry {
     constructor(options = {}) {
@@ -160,4 +161,6 @@ class MapLayerRegistry {
     }
 }
 
-module.exports = {MapLayerRegistry, MAP_LAYER_STATES};
+if (typeof module !== "undefined" && module.exports) module.exports = {MapLayerRegistry, MAP_LAYER_STATES};
+if (typeof window !== "undefined") window.AegisMapLayerRegistry = {MapLayerRegistry, MAP_LAYER_STATES};
+})();

@@ -30,11 +30,6 @@ class Netstat {
         this.failedAttempts = {};
         this.runsBeforeGeoIPUpdate = 0;
 
-        this._httpsAgent = new require("https").Agent({
-            keepAlive: false,
-            maxSockets: 10
-        });
-
         // Init updaters
         this.updateInfo();
         this.infoUpdater = setInterval(() => {
@@ -43,7 +38,7 @@ class Netstat {
 
         // Init GeoIP integrated backend
         this.geoLookup = {
-            get: ip => require("electron").ipcRenderer.invoke("geoip-lookup", ip)
+            get: ip => window.aegisIpc.invoke("geoip-lookup", ip)
         };
     }
     updateInfo() {
@@ -95,44 +90,21 @@ class Netstat {
                 offline = true;
             } else {
                 if (this.runsBeforeGeoIPUpdate === 0 && this.lastconn.finished) {
-                    this.lastconn = require("https").get({host: "myexternalip.com", port: 443, path: "/json", localAddress: net.ip4, agent: this._httpsAgent}, res => {
-                        let rawData = "";
-                        res.on("data", chunk => {
-                            rawData += chunk;
-                        });
-                        res.on("end", async () => {
-                            try {
-                                let data = JSON.parse(rawData);
-                                let geoData = await this.geoLookup.get(data.ip);
-                                this.ipinfo = {
-                                    ip: data.ip,
-                                    geo: geoData ? geoData.location : null
-                                };
-
-                                let ip = this.ipinfo.ip;
-                                document.querySelector("#mod_netstat_innercontainer > div:nth-child(2) > h2").innerHTML = window._escapeHtml(ip);
-
-                                this.runsBeforeGeoIPUpdate = 10;
-                            } catch(e) {
-                                this.failedAttempts[e] = (this.failedAttempts[e] || 0) + 1;
-                                if (this.failedAttempts[e] > 2) return false;
-                                console.warn(e);
-                                let electron = require("electron");
-                                electron.ipcRenderer.send("log", "note", "NetStat: Error parsing data from myexternalip.com");
-                                electron.ipcRenderer.send("log", "debug", `Error: ${e}`);
-                            }
-                        });
-                    }).on("error", e => {
-                        // Drop it
-                    });
-                    this.lastconn.setTimeout(2500, () => {
-                        this.lastconn.destroy(new Error("External IP lookup timeout"));
-                    });
+                    this.lastconn = {finished: false};
+                    window.aegis.network.externalIp().then(async data => {
+                        const geoData = await this.geoLookup.get(data.ip);
+                        this.ipinfo = {ip: data.ip, geo: geoData ? geoData.location : null};
+                        document.querySelector("#mod_netstat_innercontainer > div:nth-child(2) > h2").innerText = this.ipinfo.ip;
+                        this.runsBeforeGeoIPUpdate = 10;
+                    }).catch(error => {
+                        window.aegis.runtime.log("note", "NetStat: bounded external IP lookup failed");
+                        window.aegis.runtime.log("debug", `Error: ${error && error.message ? error.message : error}`);
+                    }).finally(() => { this.lastconn.finished = true; });
                 } else if (this.runsBeforeGeoIPUpdate !== 0) {
                     this.runsBeforeGeoIPUpdate = this.runsBeforeGeoIPUpdate - 1;
                 }
 
-                let p = await this.ping(window.settings.pingAddr || "1.1.1.1", 80, net.ip4).catch(() => { offline = true });
+                let p = await this.ping().catch(() => { offline = true });
 
                 this.offline = offline;
                 if (offline) {
@@ -146,31 +118,8 @@ class Netstat {
             }
         });
     }
-    ping(target, port, local) {
-        return new Promise((resolve, reject) => {
-            let s = new require("net").Socket();
-            let start = process.hrtime();
-
-            s.connect({
-                port,
-                host: target,
-                localAddress: local,
-                family: 4
-            }, () => {
-                let time_arr = process.hrtime(start);
-                let time = (time_arr[0] * 1e9 + time_arr[1]) / 1e6;
-                resolve(time);
-                s.destroy();
-            });
-            s.on('error', e => {
-                s.destroy();
-                reject(e);
-            });
-            s.setTimeout(1900, function() {
-                s.destroy();
-                reject(new Error("Socket timeout"));
-            });
-        });
+    ping() {
+        return window.aegis.network.pingConfigured();
     }
 }
 

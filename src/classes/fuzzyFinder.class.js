@@ -77,7 +77,7 @@ class FuzzyFinder {
     }
 
     search(text) {
-           let files = window.fsDisp.cwd;
+           let files = Array.isArray(window.fsDisp.cwd) ? window.fsDisp.cwd : [];
            let i = 0;
            let results = files.filter(file => {
                if (i >= 5 || file.type === "showDisks" || file.type === "up") {
@@ -123,9 +123,8 @@ class FuzzyFinder {
              return;
         }
         
-        let filePath = path.resolve(window.fsDisp.dirpath, file);
-        
-          window.term[window.currentTerm].write(`'${filePath}'`);
+        const match = (window.fsDisp.cwd || []).find(entry => entry.name === file);
+        if (match && match.displayPath) window.term[window.currentTerm].write(`'${String(match.displayPath).replace(/'/g, "'\\''")}'`);
           this.disp.close();
      }
 }
