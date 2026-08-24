@@ -81,7 +81,7 @@ async function run() {
         const launchResponse = await ipc.handlers.get("stud-tool-launch")(trusted, {toolId: "deepl"});
         check("IPC_LAUNCHES_BY_ID_NOT_URL", launchResponse.ok && launchResponse.data.toolId === "deepl");
         registration.dispose();
-        check("SCHEMA_V14_AND_NO_SHADOW_STORE", store.schemaInfo().version === 14 && Model.SCHEMA_VERSION === 14 && fs.readdirSync(root).filter(item => !["academic.sqlite", "academic.sqlite-wal", "academic.sqlite-shm", "ipc"].includes(item)).length === 0);
+        check("SCHEMA_CURRENT_AND_NO_SHADOW_STORE", store.schemaInfo().version === Model.SCHEMA_VERSION && Model.SCHEMA_VERSION >= 14 && fs.readdirSync(root).filter(item => !["academic.sqlite", "academic.sqlite-wal", "academic.sqlite-shm", "ipc"].includes(item)).length === 0);
         store.close();
         console.log(`STUD_TOOL_CATALOG: ${passed} checks passed`);
     } finally { fs.rmSync(root, {recursive: true, force: true}); }

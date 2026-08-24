@@ -16,6 +16,7 @@ documents translate that intent into the audited v2.7.0 implementation:
 - [v2.7.0 gap analysis](STUD_ASSIGNMENT_WORKFLOW_ENGINE_GAP_ANALYSIS.md)
 - [target architecture](STUD_ASSIGNMENT_WORKFLOW_ENGINE_ARCHITECTURE.md)
 - [implementation roadmap](STUD_ASSIGNMENT_WORKFLOW_ENGINE_ROADMAP.md)
+- [M1 Requirements Contract implementation and validation](STUD_M1_REQUIREMENTS_CONTRACT_VALIDATION.md)
 
 When documents disagree, use this order:
 
@@ -29,3 +30,9 @@ When documents disagree, use this order:
 Historical documents do not override the Master Specification. Existing real
 v2.7.0 data, provider, provenance and packaging contracts remain protected as
 described in the architecture document.
+
+The first implemented programme milestone is M1. It advances the canonical STUD
+schema from v14 to v15 and replaces the transient requirements readout as product
+authority with a reviewed, revisioned Requirements Contract. The next task is the
+dedicated Electron Trust-Boundary Hardening intervention recorded in the roadmap;
+M2 has not started.

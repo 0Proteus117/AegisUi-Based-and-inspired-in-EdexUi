@@ -17,6 +17,7 @@ const css = fs.readFileSync(path.join(ROOT, "src/assets/css/workspaces.css"), "u
 const theme = fs.readFileSync(path.join(ROOT, "src/assets/css/aegis_theme.css"), "utf8");
 const revision = fs.readFileSync(path.join(ROOT, "src/classes/workspaces/studRevisionWorkspace.class.js"), "utf8");
 const documents = fs.readFileSync(path.join(ROOT, "src/classes/workspaces/studDocumentWorkspace.class.js"), "utf8");
+const requirementsContract = fs.readFileSync(path.join(ROOT, "src/classes/workspaces/studRequirementsContractWorkspace.class.js"), "utf8");
 const root = fs.mkdtempSync(path.join(os.tmpdir(), "aegis-stud-phase2-"));
 const store = new StudAcademicStore({root, applicationVersion: "test"});
 const checks = [];
@@ -85,7 +86,10 @@ try {
         assert.ok(commandCenter.includes("ASSIGNMENT ROADMAP"));
         assert.ok(commandCenter.includes("13 · FINAL EDITING"));
         assert.ok(commandCenter.includes("BRIEF &amp; MARKING DOCUMENTS"));
-        assert.ok(commandCenter.includes("EVIDENCE MATRIX"));
+        assert.ok(commandCenter.includes("StudRequirementsContractWorkspace"));
+        assert.ok(requirementsContract.includes("REQUIREMENTS CONTRACT"));
+        assert.ok(requirementsContract.includes("APPROVE AS INCOMPLETE"));
+        assert.ok(requirementsContract.includes("SOURCE PREVIEW"));
         assert.ok(commandCenter.includes("SELECT FOR WORKFLOW TEST"));
         assert.ok(commandCenter.includes("stud-nav-primary"));
         assert.ok(commandCenter.includes("data-stud-search-toggle"));
@@ -102,6 +106,8 @@ try {
     check("IPC_IS_NARROW_AND_EXPLICIT", () => {
         assert.ok(ipc.includes('"stud-command-center"'));
         assert.ok(ipc.includes('"stud-assignment-requirements"'));
+        assert.ok(ipc.includes('"stud-requirements-create-draft"'));
+        assert.ok(ipc.includes('"stud-requirements-approve"'));
         assert.ok(ipc.includes('"stud-reference-link"'));
         assert.ok(ipc.includes('"stud-research-search"'));
         assert.ok(ipc.includes('"stud-moodle-probe"'));
@@ -120,7 +126,7 @@ try {
         assert.ok(css.includes("stud-overview-grid"));
         assert.ok(css.includes("stud-nav-primary"));
         assert.ok(css.includes("stud-assignment-requirements"));
-        assert.ok(css.includes("stud-evidence-matrix"));
+        assert.ok(css.includes("stud-requirements-workspace"));
         assert.ok(css.includes("stud-dialog"));
         assert.ok(css.includes("stud-revision-overview-grid"));
         assert.ok(css.includes("stud-tool-catalog-grid"));

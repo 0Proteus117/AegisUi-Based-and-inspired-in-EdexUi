@@ -373,6 +373,85 @@ class StudAcademicStore {
                 FOREIGN KEY(provider_id) REFERENCES stud_provider_instances(id)
             );
             CREATE INDEX stud_provider_sync_due_index ON stud_provider_sync_preferences(automatic_sync, next_sync_at);
+        `}, {version: 15, sql: `
+            CREATE TABLE stud_requirement_contracts (
+                id TEXT PRIMARY KEY, assignment_id TEXT NOT NULL, revision INTEGER NOT NULL,
+                parent_contract_id TEXT, lifecycle TEXT NOT NULL CHECK(lifecycle IN ('DRAFT','APPROVED','SUPERSEDED')),
+                completeness TEXT NOT NULL CHECK(completeness IN ('COMPLETE','INCOMPLETE','CONFLICTING')),
+                approved_as_incomplete INTEGER NOT NULL DEFAULT 0 CHECK(approved_as_incomplete IN (0,1)),
+                approved_at TEXT, approved_by TEXT, contract_hash TEXT,
+                row_version INTEGER NOT NULL DEFAULT 1 CHECK(row_version >= 1),
+                created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+                FOREIGN KEY(assignment_id) REFERENCES stud_assignments(id),
+                FOREIGN KEY(parent_contract_id) REFERENCES stud_requirement_contracts(id),
+                UNIQUE(assignment_id, revision)
+            );
+            CREATE INDEX stud_requirement_contracts_assignment_index ON stud_requirement_contracts(assignment_id, revision DESC);
+            CREATE INDEX stud_requirement_contracts_lifecycle_index ON stud_requirement_contracts(assignment_id, lifecycle);
+            CREATE TABLE stud_assignment_requirement_contracts (
+                assignment_id TEXT PRIMARY KEY, current_contract_id TEXT NOT NULL UNIQUE, updated_at TEXT NOT NULL,
+                FOREIGN KEY(assignment_id) REFERENCES stud_assignments(id),
+                FOREIGN KEY(current_contract_id) REFERENCES stud_requirement_contracts(id)
+            );
+            CREATE TABLE stud_requirement_candidate_runs (
+                id TEXT PRIMARY KEY, contract_id TEXT NOT NULL, linked_documents INTEGER NOT NULL,
+                indexable_documents INTEGER NOT NULL, inspected_documents INTEGER NOT NULL,
+                ocr_required_documents INTEGER NOT NULL, chunks_inspected INTEGER NOT NULL,
+                truncation_reached INTEGER NOT NULL CHECK(truncation_reached IN (0,1)),
+                candidates_generated INTEGER NOT NULL, bounds_json TEXT NOT NULL, created_at TEXT NOT NULL,
+                FOREIGN KEY(contract_id) REFERENCES stud_requirement_contracts(id)
+            );
+            CREATE INDEX stud_requirement_candidate_runs_contract_index ON stud_requirement_candidate_runs(contract_id, created_at DESC);
+            CREATE TABLE stud_requirement_candidates (
+                id TEXT PRIMARY KEY, contract_id TEXT NOT NULL, run_id TEXT, candidate_key TEXT NOT NULL,
+                requirement_type TEXT NOT NULL, subtype TEXT, label TEXT NOT NULL,
+                original_value TEXT, display_value TEXT, normalized_value TEXT, unit TEXT,
+                disposition TEXT NOT NULL CHECK(disposition IN ('PENDING','INCLUDED','EXCLUDED','UNRESOLVED')),
+                resolution_state TEXT NOT NULL CHECK(resolution_state IN ('RESOLVED','UNRESOLVED','CONFLICTING')),
+                extraction_method TEXT NOT NULL, confidence TEXT NOT NULL, item_order INTEGER NOT NULL DEFAULT 0,
+                created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+                FOREIGN KEY(contract_id) REFERENCES stud_requirement_contracts(id),
+                FOREIGN KEY(run_id) REFERENCES stud_requirement_candidate_runs(id),
+                UNIQUE(contract_id, candidate_key)
+            );
+            CREATE INDEX stud_requirement_candidates_contract_index ON stud_requirement_candidates(contract_id, disposition, item_order);
+            CREATE TABLE stud_requirement_items (
+                id TEXT PRIMARY KEY, contract_id TEXT NOT NULL, candidate_id TEXT UNIQUE,
+                requirement_type TEXT NOT NULL, subtype TEXT, label TEXT NOT NULL,
+                original_value TEXT, display_value TEXT, normalized_value TEXT, unit TEXT,
+                resolution_state TEXT NOT NULL CHECK(resolution_state IN ('RESOLVED','UNRESOLVED','CONFLICTING')),
+                user_note TEXT, item_order INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+                FOREIGN KEY(contract_id) REFERENCES stud_requirement_contracts(id),
+                FOREIGN KEY(candidate_id) REFERENCES stud_requirement_candidates(id)
+            );
+            CREATE INDEX stud_requirement_items_contract_index ON stud_requirement_items(contract_id, item_order, created_at);
+            CREATE TABLE stud_requirement_sources (
+                id TEXT PRIMARY KEY, contract_id TEXT NOT NULL, candidate_id TEXT, requirement_item_id TEXT,
+                source_kind TEXT NOT NULL, source_entity_type TEXT, source_entity_id TEXT, source_field TEXT,
+                provenance_id TEXT, external_identifier_id TEXT, document_id TEXT, extraction_id TEXT, chunk_id TEXT,
+                page_start INTEGER, page_end INTEGER, content_hash TEXT, source_version_hash TEXT,
+                snapshot_hash TEXT NOT NULL, presentation_label TEXT, excerpt TEXT, metadata_json TEXT,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY(contract_id) REFERENCES stud_requirement_contracts(id),
+                FOREIGN KEY(candidate_id) REFERENCES stud_requirement_candidates(id),
+                FOREIGN KEY(requirement_item_id) REFERENCES stud_requirement_items(id),
+                FOREIGN KEY(provenance_id) REFERENCES stud_provenance_records(id),
+                FOREIGN KEY(external_identifier_id) REFERENCES stud_external_identifiers(id),
+                FOREIGN KEY(document_id) REFERENCES stud_academic_documents(id),
+                FOREIGN KEY(extraction_id) REFERENCES stud_document_extractions(id),
+                FOREIGN KEY(chunk_id) REFERENCES stud_document_chunks(id),
+                CHECK((candidate_id IS NOT NULL AND requirement_item_id IS NULL) OR (candidate_id IS NULL AND requirement_item_id IS NOT NULL))
+            );
+            CREATE INDEX stud_requirement_sources_contract_index ON stud_requirement_sources(contract_id);
+            CREATE INDEX stud_requirement_sources_candidate_index ON stud_requirement_sources(candidate_id);
+            CREATE INDEX stud_requirement_sources_item_index ON stud_requirement_sources(requirement_item_id);
+            CREATE INDEX stud_requirement_sources_document_index ON stud_requirement_sources(document_id, extraction_id, chunk_id);
+            CREATE TABLE stud_requirement_contract_freshness (
+                contract_id TEXT PRIMARY KEY,
+                review_condition TEXT NOT NULL CHECK(review_condition IN ('CURRENT','SOURCE_CHANGED','SOURCE_MISSING','OCR_BLOCKED','NEEDS_REVIEW')),
+                details_json TEXT NOT NULL, checked_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+                FOREIGN KEY(contract_id) REFERENCES stud_requirement_contracts(id)
+            );
         `}];
         for (const migration of migrations) {
             if (applied.has(migration.version)) continue;

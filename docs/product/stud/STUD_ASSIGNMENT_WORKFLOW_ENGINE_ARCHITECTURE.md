@@ -72,22 +72,70 @@ fixed security boundaries.
 
 ### Requirements Contract
 
-The current regex readout becomes a candidate extractor, not truth. Proposed
-canonical records:
+The current regex readout becomes bounded candidate generation, never truth.
+Requirements Contracts live behind a dedicated repository/service over the one
+canonical STUD SQLite connection; lifecycle logic must not enlarge
+`StudAcademicStore` into a broader domain god class.
 
-- `stud_requirement_contracts`: assignment, revision, lifecycle
-  (`DRAFT`, `NEEDS_REVIEW`, `APPROVED`, `SUPERSEDED`), approval identity/time and
-  source snapshot metadata.
-- `stud_requirement_items`: typed requirement (`DELIVERABLE`, `DEADLINE`,
-  `WORD_COUNT`, `LEARNING_OUTCOME`, `RUBRIC`, `EVIDENCE`, `FORMAT`, `INTEGRITY`,
-  `DEPENDENCY`, `CUSTOM`), normalized value, review state and criticality.
-- `stud_requirement_sources`: exact source entity plus document/page/chunk or
-  provider observation reference.
+Contract state has three independent dimensions:
 
-Candidate extraction never edits an approved contract. Changing requirements
-creates a new revision and preserves the previous contract and its run history.
-An expensive run cannot launch without explicit contract approval or an explicit
-`INCOMPLETE_CONTRACT_ACCEPTED` decision recorded by the student.
+- lifecycle: `DRAFT`, `APPROVED`, `SUPERSEDED` (and `ARCHIVED` only if a later
+  milestone demonstrates a real requirement);
+- completeness: `COMPLETE`, `INCOMPLETE`, `CONFLICTING`;
+- freshness/review condition: `CURRENT`, `SOURCE_CHANGED`, `SOURCE_MISSING`,
+  `OCR_BLOCKED`, `NEEDS_REVIEW`.
+
+Approval therefore does not imply completeness or source freshness. Valid states
+include `APPROVED + INCOMPLETE + CURRENT` and
+`APPROVED + COMPLETE + SOURCE_CHANGED`.
+
+Canonical M1 records are:
+
+- `stud_requirement_contracts`: Assignment, monotonically increasing revision,
+  immutable approved semantic state, completeness, approval identity/time,
+  optimistic row version and deterministic canonical hash;
+- `stud_assignment_requirement_contracts`: an explicit transactional pointer from
+  the Assignment to the currently applicable approved revision (never inferred
+  by sorting timestamps);
+- `stud_requirement_candidates`: generated review candidates and persistent
+  disposition (`PENDING`, `INCLUDED`, `EXCLUDED`, `UNRESOLVED`);
+- `stud_requirement_candidate_runs`: bounded extraction coverage including linked,
+  indexable, inspected and OCR-blocked documents, chunks inspected, truncation and
+  candidate count;
+- `stud_requirement_items`: discipline-neutral typed requirements, original and
+  normalized values, units, resolution, note and order;
+- `stud_requirement_sources`: exact canonical evidence references and approval-
+  time snapshot hashes;
+- `stud_requirement_contract_freshness`: mutable review condition derived without
+  changing the approved semantic revision.
+
+Document sources identify the AcademicDocument, extraction, chunk, page range and
+content hash wherever available. Assignment/Moodle sources identify the canonical
+entity/field and existing provenance observation or stable external identifier.
+Human-readable labels are presentation metadata only. The output text of
+`assignmentRequirements()` is never provenance authority.
+
+Candidate extraction records what was and was not inspected. `UNKNOWN` means that
+no supported pattern was found in bounded inspected evidence; it is not
+institutional confirmation that no requirement exists. OCR-required and truncated
+sources remain visible. Exclusion is retained as review history rather than being
+regenerated as an unseen candidate.
+
+Approved revisions are semantically immutable. Editing an approved contract first
+creates a new `DRAFT` revision. Approval computes a deterministic canonical hash,
+supersedes the prior current revision and updates the Assignment pointer in one
+transaction. Normal approval requires resolved completeness; an explicit
+`APPROVE AS INCOMPLETE` decision records unresolved information honestly. Every
+mutation supplies an expected row version; stale writes fail with
+`STALE_CONTRACT_VERSION` instead of overwriting newer state.
+
+Freshness checks compare stored source snapshots with current canonical evidence.
+Drift changes only the independent freshness record: historical approved content
+and its hash remain unchanged. The user may then create, review and approve a new
+revision. A new revision retains explicit user-entered requirements and regenerates
+source-derived candidates from current bounded evidence; it does not copy stale
+source-derived approval as if still reviewed. Future workflow executions will
+reference the exact approved contract revision and hash used.
 
 ### Persistent workflow and DAG
 
@@ -127,10 +175,16 @@ explicit student decision or artifact.
 - `stud_workflow_events`: append-only meaningful events, bounded payload and
   sequence. It is an audit feed, not developer logs or every click.
 
-On restart, any `RUNNING` task becomes `INTERRUPTED` until its coordinator proves
-it can resume from a checkpoint. Completed expensive work is not replayed.
-Checkpoint payloads never contain credentials, temporary URLs or raw provider
-responses.
+M4 introduces blocker propagation, the workflow-state journal, human checkpoints
+and dependency semantics. It defines durable checkpoint/event contracts but does
+not speculate about process-worker crash payloads before an execution coordinator
+exists. Runtime worker recovery, heartbeat and resumable execution payloads belong
+with M13.
+
+Once M13 exists, any interrupted `RUNNING` task becomes `INTERRUPTED` until its
+coordinator proves it can resume from a valid checkpoint. Completed expensive
+work is not replayed. Checkpoint payloads never contain credentials, temporary
+URLs or raw provider responses.
 
 ### Working context and Assignment Workspace
 
@@ -161,6 +215,9 @@ to an existing canonical entity, managed relative asset or versioned workflow
 document and records role, milestone, provenance, integrity and availability.
 The same PDF, Note or ResearchPaper is not copied merely to appear in Artifact
 Bay. Disconnected external storage yields `OFFLINE`, not deletion or duplication.
+M6 also defines the bounded event-feed contract and a minimal Mission Control
+shell for real historical/current events. Full operational controls, workers,
+heartbeats, resource profiles and watchdog remain M13 responsibilities.
 
 ### Research, Topic Dossiers and Faculty Gems
 
@@ -232,6 +289,11 @@ progress. `GIVE MAC BACK` checkpoints and pauses/reduces workers safely.
 
 ### External academic storage and portable mode
 
+Separate Storage Profile Core from Portable Mode. The core must be available
+before the first milestone that genuinely depends on large local academic model
+or external model/artifact storage. Portable Mode remains a later explicit copy
+and reconciliation workflow.
+
 Introduce a narrow main-process `StudStorageProfileService`:
 
 - local default profile maps to current `userData/stud` managed references;
@@ -279,6 +341,14 @@ New channels are narrowly named (`stud-workflow-*`, `stud-requirements-*`, etc.)
 allowlist payload keys, validate sender and IDs, and return normalized bounded
 objects. No channel accepts SQL, executable, shell command, arbitrary path, URL,
 HTTP method/header, model endpoint, secret or raw provider response.
+
+M1 remains compatible with the legacy BrowserWindow configuration but all of its
+renderer calls are preload-ready and main-process authoritative. A dedicated
+incremental Electron Trust-Boundary Hardening intervention follows M1 before M2.
+Its target is `nodeIntegration: false`, `contextIsolation: true`, typed preload
+APIs, removal of renderer direct Node dependencies and removal/reduction of
+`@electron/remote`. That migration is deliberately not folded into the M1 domain
+change.
 
 Automatic scheduling is local workflow scheduling, not authorization expansion.
 Tasks can call only adapters named in the approved run plan. Moodle remains

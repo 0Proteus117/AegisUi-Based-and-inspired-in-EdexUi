@@ -8,6 +8,7 @@ const path = require("path");
 const ROOT = path.resolve(__dirname, "..");
 const read = file => fs.readFileSync(path.join(ROOT, file), "utf8");
 const commandCenter = read("src/classes/workspaces/studCommandCenter.class.js");
+const requirementsWorkspace = read("src/classes/workspaces/studRequirementsContractWorkspace.class.js");
 const moodle = read("src/classes/workspaces/studMoodleWorkspace.class.js");
 const runtime = read("src/classes/workspaces/studLmsRuntime.class.js");
 const validation = read("STUD_V270_VALIDATION.md");
@@ -18,7 +19,7 @@ const screenshots = fs.readdirSync(screenshotRoot).filter(name => name.endsWith(
 const checks = {
     PRIMARY_NAVIGATION_REDUCED: ["HOME", "COURSES", "WORK", "LIBRARY", "STUDY", "TOOLS"].every(label => commandCenter.includes(`label: "${label}"`)),
     OBJECT_CENTRIC_ASSIGNMENT: commandCenter.includes("ASSIGNMENT DETAIL") && commandCenter.includes("ASSIGNMENT ROADMAP") && commandCenter.includes("BRIEF &amp; MARKING DOCUMENTS"),
-    REQUIREMENTS_EXPLAINABLE: commandCenter.includes("DIRECT / EXTRACTED / UNKNOWN") && commandCenter.includes("EVIDENCE MATRIX") && commandCenter.includes("REQUIREMENT → SOURCE"),
+    REQUIREMENTS_EXPLAINABLE: commandCenter.includes("this.requirements.render()") && requirementsWorkspace.includes("SOURCE PREVIEW") && requirementsWorkspace.includes("EXTRACTION COVERAGE") && requirementsWorkspace.includes("APPROVE AS INCOMPLETE"),
     PROGRESSIVE_DISCLOSURE: commandCenter.includes("ADVANCED / EDIT LOCAL DETAILS") && moodle.includes("CONNECTION &amp; SYNC OPTIONS") && moodle.includes("CAPABILITY REPORT / READ ONLY"),
     MOODLE_ACTIONS_CLEAR: moodle.includes("SYNC NOW") && moodle.includes("INDEX COURSE MATERIAL") && moodle.includes("FORGET ACCOUNT"),
     SSO_SYSTEM_BROWSER_ONLY: runtime.includes("SYSTEM_BROWSER_SSO") && runtime.includes("moodle_mobile_app") && runtime.includes("aegisui"),

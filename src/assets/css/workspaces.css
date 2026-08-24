@@ -6773,6 +6773,122 @@ button.eng-thread-row.active {
 .engineering-mode .stud-assignment-requirements strong { color: var(--aegis-accent-soft); font: .52vh var(--font_mono); letter-spacing: .05vh; overflow-wrap: anywhere; }
 .engineering-mode .stud-assignment-requirements span { color: var(--aegis-text-primary); font: .57vh/1.36 var(--font_main_light); overflow-wrap: anywhere; }
 .engineering-mode .stud-assignment-requirements small { grid-column: 1 / -1; color: var(--aegis-text-faint); font: .44vh/1.35 var(--font_mono); overflow-wrap: anywhere; }
+
+/* STUD M1 — reviewed Requirements Contract. Dynamic content remains in normal
+   flow; the two-pane review collapses before either pane can overlap. */
+.engineering-mode .stud-requirements-contract {
+    display: grid;
+    gap: .78vh;
+    min-width: 0;
+    padding: clamp(12px, 1.05vh, 20px);
+    border: .12vh solid var(--aegis-border);
+    background: color-mix(in srgb, var(--aegis-surface) 94%, transparent);
+}
+.engineering-mode .stud-requirements-contract.is-empty > div { max-width: 78vh; padding: clamp(12px, 1.4vh, 24px); }
+.engineering-mode .stud-requirements-contract.is-empty small,
+.engineering-mode .stud-requirements-heading small { color: var(--aegis-accent-soft); font: .48vh/1.35 var(--font_mono); letter-spacing: .11vh; }
+.engineering-mode .stud-requirements-contract.is-empty h3,
+.engineering-mode .stud-requirements-heading h3 { margin: .24vh 0; color: var(--aegis-text-primary); font: clamp(18px, 1.2vh, 28px)/1.16 var(--font_main); }
+.engineering-mode .stud-requirements-contract.is-empty p,
+.engineering-mode .stud-requirements-heading p { max-width: 80ch; margin: 0 0 .55vh; color: var(--aegis-text-muted); font: .54vh/1.5 var(--font_main_light); }
+.engineering-mode .stud-requirements-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 1.2vh; min-width: 0; padding-bottom: .66vh; border-bottom: .1vh solid var(--aegis-border); }
+.engineering-mode .stud-requirements-heading > div:first-child { min-width: 0; }
+.engineering-mode .stud-requirements-heading > div:last-child { display: grid; flex: 0 0 auto; justify-items: end; gap: .15vh; padding-top: .2vh; }
+.engineering-mode .stud-requirements-heading > div:last-child strong { color: var(--aegis-text-primary); font: .48vh/1.35 var(--font_mono); }
+.engineering-mode .stud-requirements-heading > div:last-child span { color: var(--aegis-text-faint); font: .43vh/1.35 var(--font_mono); letter-spacing: .06vh; }
+.engineering-mode .stud-requirements-freshness { display: flex; align-items: center; gap: .65vh; min-width: 0; padding: .52vh .68vh; border-left: .18vh solid var(--aegis-warning); background: color-mix(in srgb, var(--aegis-warning) 9%, var(--aegis-surface)); }
+.engineering-mode .stud-requirements-freshness strong { flex: 0 0 auto; color: var(--aegis-warning); font: .48vh var(--font_mono); }
+.engineering-mode .stud-requirements-freshness span { min-width: 0; color: var(--aegis-text-muted); font: .5vh/1.4 var(--font_main_light); overflow-wrap: anywhere; }
+.engineering-mode .stud-requirements-workspace { display: grid; grid-template-columns: minmax(0, 1.06fr) minmax(28vh, .94fr); align-items: start; gap: .9vh; min-width: 0; }
+.engineering-mode .stud-requirements-list { display: grid; gap: .75vh; min-width: 0; }
+.engineering-mode .stud-requirements-group { display: grid; gap: .34vh; min-width: 0; }
+.engineering-mode .stud-requirements-group > h4 { display: flex; align-items: center; justify-content: space-between; gap: .5vh; margin: 0; padding: 0 .1vh .28vh; color: var(--aegis-text-muted); font: .48vh/1.35 var(--font_mono); letter-spacing: .08vh; border-bottom: .08vh solid var(--aegis-border); }
+.engineering-mode .stud-requirements-group > h4 span { color: var(--aegis-text-faint); }
+.engineering-mode .stud-requirement-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: .45vh; min-width: 0; padding: .22vh .24vh .22vh .08vh; border-left: .14vh solid var(--aegis-border); }
+.engineering-mode .stud-requirement-row.is-item { border-left-color: var(--aegis-accent); }
+.engineering-mode .stud-requirement-row.is-unresolved { border-left-color: var(--aegis-warning); }
+.engineering-mode .stud-requirement-row.is-excluded { opacity: .72; }
+.engineering-mode .stud-requirement-row.is-selected { background: color-mix(in srgb, var(--aegis-accent) 8%, transparent); }
+.engineering-mode .stud-requirement-row-main { display: grid; grid-template-columns: 1.8vh minmax(0, 1fr); align-items: center; gap: .5vh; min-width: 0; padding: .42vh .5vh; text-align: left; border: 0; background: transparent; }
+.engineering-mode .stud-requirement-row-main:hover:not(:disabled),
+.engineering-mode .stud-requirement-row-main:focus-visible { background: color-mix(in srgb, var(--aegis-accent) 9%, transparent); }
+.engineering-mode .stud-requirement-row-main:disabled { cursor: default; opacity: 1; }
+.engineering-mode .stud-requirement-mark { display: grid; place-items: center; width: 1.5vh; height: 1.5vh; border: .09vh solid var(--aegis-border); color: var(--aegis-accent-soft); font: .62vh/1 var(--font_mono); }
+.engineering-mode .stud-requirement-row-main > span:last-child { display: grid; gap: .08vh; min-width: 0; }
+.engineering-mode .stud-requirement-row-main strong { color: var(--aegis-text-primary); font: .55vh/1.35 var(--font_main); overflow-wrap: anywhere; }
+.engineering-mode .stud-requirement-row-main small { color: var(--aegis-text-muted); font: .48vh/1.4 var(--font_main_light); overflow-wrap: anywhere; }
+.engineering-mode .stud-requirement-review-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .28vh; }
+.engineering-mode .stud-requirement-review-actions button,
+.engineering-mode .stud-requirement-edit summary,
+.engineering-mode .stud-requirement-add summary,
+.engineering-mode .stud-requirements-excluded summary { font-size: .42vh; }
+.engineering-mode .stud-requirement-edit { min-width: 7vh; }
+.engineering-mode .stud-requirement-edit:not([open]) > :not(summary),
+.engineering-mode .stud-requirement-add:not([open]) > :not(summary),
+.engineering-mode .stud-requirements-excluded:not([open]) > :not(summary),
+.engineering-mode .stud-requirements-coverage:not([open]) > :not(summary) { display: none !important; }
+.engineering-mode .stud-requirement-edit[open] { grid-column: 1 / -1; width: 100%; }
+.engineering-mode .stud-requirement-edit > form,
+.engineering-mode .stud-requirement-add > form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .48vh; min-width: 0; margin-top: .42vh; padding: .62vh; border: .08vh solid var(--aegis-border); background: var(--aegis-surface-muted); }
+.engineering-mode .stud-requirement-edit label,
+.engineering-mode .stud-requirement-add label { display: grid; gap: .16vh; min-width: 0; color: var(--aegis-text-faint); font: .42vh/1.3 var(--font_mono); }
+.engineering-mode .stud-requirement-edit textarea,
+.engineering-mode .stud-requirement-add textarea { min-height: 6vh; resize: vertical; }
+.engineering-mode .stud-requirement-edit input,
+.engineering-mode .stud-requirement-edit select,
+.engineering-mode .stud-requirement-edit textarea,
+.engineering-mode .stud-requirement-add input,
+.engineering-mode .stud-requirement-add select,
+.engineering-mode .stud-requirement-add textarea { min-width: 0; width: 100%; box-sizing: border-box; color: var(--aegis-text-primary); border: .09vh solid var(--aegis-border); background: var(--aegis-input-bg); }
+.engineering-mode .stud-requirement-edit form > div { display: flex; align-items: end; gap: .35vh; }
+.engineering-mode .stud-requirements-source-preview { display: grid; align-self: start; gap: .52vh; min-width: 0; padding: .82vh; border: .1vh solid var(--aegis-border); background: var(--aegis-surface-muted); }
+.engineering-mode .stud-requirements-source-preview > header { display: flex; justify-content: space-between; gap: .5vh; color: var(--aegis-text-faint); font: .43vh var(--font_mono); letter-spacing: .07vh; }
+.engineering-mode .stud-requirements-source-preview h4 { margin: 0; color: var(--aegis-text-primary); font: .67vh/1.25 var(--font_main); overflow-wrap: anywhere; }
+.engineering-mode .stud-requirements-source-preview blockquote { max-height: 22vh; margin: 0; padding: .72vh .82vh; overflow: auto; color: var(--aegis-text-primary); border-left: .16vh solid var(--aegis-accent); background: var(--aegis-surface); font: .57vh/1.54 var(--font_main_light); overflow-wrap: anywhere; }
+.engineering-mode .stud-requirements-source-preview dl,
+.engineering-mode .stud-requirements-approved-footer dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .36vh; min-width: 0; margin: 0; }
+.engineering-mode .stud-requirements-source-preview dl > div,
+.engineering-mode .stud-requirements-approved-footer dl > div { display: grid; gap: .08vh; min-width: 0; }
+.engineering-mode .stud-requirements-source-preview dt,
+.engineering-mode .stud-requirements-approved-footer dt { color: var(--aegis-text-faint); font: .4vh var(--font_mono); }
+.engineering-mode .stud-requirements-source-preview dd,
+.engineering-mode .stud-requirements-approved-footer dd { min-width: 0; margin: 0; color: var(--aegis-text-muted); font: .45vh/1.4 var(--font_mono); overflow-wrap: anywhere; }
+.engineering-mode .stud-requirements-source-condition { display: grid; gap: .1vh; margin: 0; padding: .42vh; border-left: .14vh solid var(--aegis-warning); color: var(--aegis-text-muted); font: .47vh/1.4 var(--font_main_light); }
+.engineering-mode .stud-requirements-source-condition strong { color: var(--aegis-warning); font-family: var(--font_mono); }
+.engineering-mode .stud-requirements-preview-empty { display: grid; gap: .25vh; min-height: 14vh; align-content: center; text-align: center; color: var(--aegis-text-muted); }
+.engineering-mode .stud-requirements-list-empty { padding: 1.1vh; text-align: center; color: var(--aegis-text-muted); border: .08vh dashed var(--aegis-border); }
+.engineering-mode .stud-requirements-list-empty strong { display: block; color: var(--aegis-text-primary); font: .5vh var(--font_mono); }
+.engineering-mode .stud-requirements-list-empty p { margin: .22vh 0 0; font: .48vh/1.4 var(--font_main_light); }
+.engineering-mode .stud-requirements-excluded p { display: grid; grid-template-columns: minmax(12vh, .35fr) minmax(0, 1fr); gap: .5vh; margin: .25vh 0; color: var(--aegis-text-muted); font: .45vh/1.4 var(--font_main_light); }
+.engineering-mode .stud-requirements-review-footer,
+.engineering-mode .stud-requirements-approved-footer { display: flex; align-items: center; justify-content: space-between; gap: .8vh; min-width: 0; padding-top: .62vh; border-top: .1vh solid var(--aegis-border); }
+.engineering-mode .stud-requirements-review-footer > span { color: var(--aegis-text-muted); font: .45vh var(--font_mono); }
+.engineering-mode .stud-requirements-approved-footer dl { flex: 1 1 auto; grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.engineering-mode .stud-requirements-approval-confirm { display: grid; gap: .36vh; padding: .72vh; border-left: .18vh solid var(--aegis-warning); background: color-mix(in srgb, var(--aegis-warning) 8%, var(--aegis-surface)); }
+.engineering-mode .stud-requirements-approval-confirm strong { color: var(--aegis-text-primary); font: .55vh var(--font_main); }
+.engineering-mode .stud-requirements-approval-confirm p { margin: 0; color: var(--aegis-text-muted); font: .49vh/1.4 var(--font_main_light); }
+.engineering-mode .stud-requirements-approval-confirm > div { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .4vh; }
+.engineering-mode .stud-requirements-coverage { color: var(--aegis-text-muted); font: .44vh/1.45 var(--font_main_light); }
+.engineering-mode .stud-requirements-coverage p { margin: .3vh 0 .1vh; overflow-wrap: anywhere; }
+.engineering-mode .stud-requirements-coverage small { color: var(--aegis-text-faint); }
+
+@media (max-width: 1300px) {
+    .engineering-mode .stud-requirements-workspace { grid-template-columns: minmax(0, 1fr); }
+    .engineering-mode .stud-requirements-source-preview { width: auto; }
+    .engineering-mode .stud-requirements-approved-footer dl { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 900px) {
+    .engineering-mode .stud-requirements-heading,
+    .engineering-mode .stud-requirements-review-footer,
+    .engineering-mode .stud-requirements-approved-footer { align-items: stretch; flex-direction: column; }
+    .engineering-mode .stud-requirements-heading > div:last-child { justify-items: start; }
+    .engineering-mode .stud-requirement-row { grid-template-columns: minmax(0, 1fr); }
+    .engineering-mode .stud-requirement-review-actions { justify-content: flex-start; padding-left: 2.45vh; }
+    .engineering-mode .stud-requirement-edit > form,
+    .engineering-mode .stud-requirement-add > form,
+    .engineering-mode .stud-requirements-source-preview dl,
+    .engineering-mode .stud-requirements-approved-footer dl { grid-template-columns: minmax(0, 1fr); }
+}
 .engineering-mode .stud-assignment-brief-preview > div,
 .engineering-mode .stud-evidence-matrix > div { display: grid; gap: .34vh; }
 .engineering-mode .stud-evidence-matrix article { display: grid; grid-template-columns: minmax(12vh, .32fr) minmax(0, 1fr) max-content; gap: .18vh .48vh; min-width: 0; padding: .46vh; border-left: .16vh solid var(--aegis-accent); background: var(--aegis-surface-muted); }

@@ -18,7 +18,7 @@ repository has advanced, preserve monotonic numbering and document the mapping.
 
 ## Programme groups
 
-- **A — Foundations:** M1–M4
+- **A — Foundations:** M1, Electron Trust-Boundary Hardening, M2–M4
 - **B — Contextual Assignment UX:** M5–M6
 - **C — Research and evidence:** M7–M9
 - **D — Composition and quality:** M10–M12
@@ -29,20 +29,27 @@ repository has advanced, preserve monotonic numbering and document the mapping.
 
 - **Objective:** replace the transient regex readout as authority with a reviewed,
   revisioned Requirements Contract for manual and Moodle Assignments.
-- **Exact scope:** schema/model/store/service/IPC for contracts, items and exact
-  source references; candidate extraction may reuse `assignmentRequirements()`;
-  Assignment UI can create, edit, approve and supersede a contract.
-- **Components:** `StudAcademicModel`, `StudAcademicStore`, new
-  `StudRequirementsContractService`, `studAcademicIpc`, `StudCommandCenter`, STUD
-  CSS and focused documentation.
-- **Schema/migration:** v14 → v15; add contract/item/source tables and indexes.
+- **Exact scope:** schema/model/repository/service/IPC for immutable revisions,
+  independent lifecycle/completeness/freshness, persistent candidate review,
+  explicit Assignment current-contract pointer and exact source snapshots;
+  candidate extraction may reuse `assignmentRequirements()` only as a bounded
+  non-authoritative input; Assignment UI can create, review, approve (including
+  explicit incomplete approval) and supersede a contract.
+- **Components:** `StudAcademicModel`, the existing SQLite migration owner, new
+  bounded Requirements Contract model/repository/service, `studAcademicIpc`,
+  `StudCommandCenter`, STUD CSS and focused documentation.
+- **Schema/migration:** v14 → v15; add contract/revision, Assignment pointer,
+  candidate/run, item/source and freshness tables with indexes.
   Existing Assignments remain untouched and show `CONTRACT NOT CREATED`.
 - **Dependencies:** v2.7.0 canonical Assignments, provenance, document chunks.
 - **Non-goals:** no workflow run, DAG, automatic research, model drafting or
   Moodle write; regex output is not auto-approved.
 - **Acceptance criteria:** manual and Moodle Assignment can produce candidates;
+  extraction coverage/limits are inspectable; exclusion remains review history;
   student reviews and approves; unknown/conflicting requirements remain visible;
-  editing an approved contract creates a new revision; restart preserves history.
+  stale writes fail; approved content is immutable; editing creates a new draft;
+  current pointer updates transactionally; source drift never mutates history;
+  restart preserves exact source resolution and revision history.
 - **Automated tests:** fresh v15, v14 upgrade, representative older upgrade,
   validation/limits, source page/chunk trace, approval/supersession, no destructive
   Assignment/provider changes, no provider/model side effects.
@@ -52,6 +59,21 @@ repository has advanced, preserve monotonic numbering and document the mapping.
   Packages, privacy, release health and broad aggregator.
 - **User-visible result:** an inspectable `REQUIREMENTS CONTRACT` gate inside the
   Assignment, not a generated checklist pretending certainty.
+
+## Electron Trust-Boundary Hardening intervention
+
+- **Objective:** incrementally move the primary renderer to a typed preload trust
+  boundary before more powerful Workflow Engine surfaces are added.
+- **Exact scope:** `nodeIntegration: false`, `contextIsolation: true`, remove
+  renderer direct Node dependencies, remove/reduce `@electron/remote`, expose
+  narrowly typed preload APIs and preserve existing capability behaviour.
+- **Dependencies:** completed M1 and its preload-ready APIs.
+- **Non-goals:** no M2 working-context redesign, workflow DAG, new provider,
+  feature expansion or unrelated Electron rewrite.
+- **Acceptance criteria:** existing Aegis workspaces remain functional through
+  typed boundaries; no renderer receives generic Node/filesystem/network/shell
+  authority; Calendar, node-pty, Moodle SSO and packaging guard remain green.
+- **User-visible result:** no intended UX change; a smaller renderer trust surface.
 
 ## M2 — Academic organisation and working context
 
@@ -104,8 +126,10 @@ repository has advanced, preserve monotonic numbering and document the mapping.
 
 - **Objective:** represent honest external dependencies and resumable execution
   state without running expensive work yet.
-- **Exact scope:** blocker taxonomy, dependency impact, human-input transitions,
-  checkpoint/event contracts, interrupted-run recovery and branch continuation.
+- **Exact scope:** blocker taxonomy, dependency impact, workflow-state journal,
+  human checkpoints/transitions, durable checkpoint/event contracts and branch
+  continuation. Runtime worker crash/resume payloads are deferred to M13 where
+  the execution coordinator exists.
 - **Components:** workflow service/store/model/IPC, recovery bootstrap and UI.
 - **Schema/migration:** expected v18; blocker, checkpoint and meaningful-event
   tables with bounded payloads and integrity hashes.
@@ -114,7 +138,7 @@ repository has advanced, preserve monotonic numbering and document the mapping.
   execution.
 - **Acceptance criteria:** a missing team geometry artifact blocks only dependent
   nodes; independent nodes remain READY; resolve/reopen blocker with provenance;
-  restart converts unsafe RUNNING state to INTERRUPTED and restores checkpoint.
+  journal/checkpoint contracts persist without pretending a worker can resume.
 - **Automated tests:** blocker taxonomy, dependency propagation, checkpoint hash,
   crash/restart, retry/skip policy and secret/raw-payload rejection.
 - **Live/visual validation:** partial, blocked, waiting and human-input cases; status
@@ -149,15 +173,17 @@ repository has advanced, preserve monotonic numbering and document the mapping.
 
 - **Objective:** expose real workflow artifacts and events without yet adding the
   full automated research/composition pipeline.
-- **Exact scope:** artifact-reference index; Mission Control milestone strip,
-  Artifact Bay, live-work slot, event feed and real task telemetry contract.
+- **Exact scope:** Artifact Registry/reference index, bounded event-feed contract,
+  Mission Control milestone strip, Artifact Bay and a minimal live-work shell fed
+  only by real current/historical events.
 - **Components:** artifact service, workflow coordinator events, typed IPC,
   Assignment Workspace operational mode and CSS.
 - **Schema/migration:** expected v19; artifact reference and availability metadata
   if not included in v18.
 - **Dependencies:** M3–M5.
 - **Non-goals:** no fake logs, synthetic CPU values, arbitrary filesystem browser,
-  high-resource scheduler or provider chaining.
+  worker execution, heartbeats, pause/resume, resource profiles, watchdog,
+  high-resource scheduler or provider chaining. Full operations belong to M13.
 - **Acceptance criteria:** only actual canonical/managed artifacts appear; event
   sequence is real and bounded; historical run inspectable; idle Assignment hides
   operational complexity.
@@ -309,9 +335,10 @@ repository has advanced, preserve monotonic numbering and document the mapping.
 
 - **Objective:** execute approved workflow tasks manually with honest resource and
   progress control.
-- **Exact scope:** launch consent summary, bounded task coordinator, local model
-  capability tiers, ECO/BALANCED/MAXIMUM/CUSTOM policies, heartbeat/watchdog,
-  pause/resume/retry/give-Mac-back/cancel.
+- **Exact scope:** launch consent summary, bounded task coordinator, runtime worker
+  recovery/checkpoint payloads, local model capability tiers,
+  ECO/BALANCED/MAXIMUM/CUSTOM policies, heartbeat/watchdog,
+  pause/resume/retry/give-Mac-back/cancel and full Mission Control operation.
 - **Components:** workflow runtime, existing provider/model/compute/document
   services, ModelCapabilityRouter, ResourcePolicy, Watchdog and Mission Control.
 - **Schema/migration:** expected v25; run consent/profile metadata and durable task
@@ -333,8 +360,10 @@ repository has advanced, preserve monotonic numbering and document the mapping.
 
 ## M14 — External academic storage and portable mode
 
-- **Objective:** support user-selected external models/artifacts while preserving
-  lightweight local Assignment state and safe offline travel.
+- **Objective:** complete external academic storage and portable travel support.
+- **Ordering note:** deliver Storage Profile Core before the first earlier
+  milestone that genuinely requires large local academic model/external model
+  storage; M14 completes full artifact migration, cleanup and Portable Mode.
 - **Exact scope:** storage profiles/volume identity, managed relative references,
   availability/usage, verified move, cache cleanup classes and portable manifests.
 - **Components:** main-process StorageProfileService, store/IPC, file picker,
@@ -408,8 +437,7 @@ repository has advanced, preserve monotonic numbering and document the mapping.
 
 ## Exact next milestone
 
-The next implementation session must execute **M1 — Reviewed Requirements
-Contract** only. It must start from a clean branch based on the integration commit
-containing these documents, inspect the then-current schema before assigning the
-migration number, and finish migration, tests, regression, live visual validation,
-commit and push before stopping.
+After M1 is complete, the next implementation session must execute the dedicated
+**Electron Trust-Boundary Hardening intervention** only. **M2 — Academic
+organisation and working context** follows only after that intervention is
+complete and its regressions are clean.

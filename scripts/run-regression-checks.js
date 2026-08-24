@@ -31,6 +31,8 @@ const CHECKS = [
     "scripts/test-stud-v270-reality-pass.js",
     "scripts/test-stud-workspace.js",
     "scripts/test-stud-command-center.js",
+    "scripts/test-stud-requirements-contract.js",
+    "scripts/test-stud-requirements-contract-ipc.js",
     "scripts/test-stud-tool-catalog.js",
     "scripts/test-stud-academic-ai.js",
     "scripts/test-osint-workspace.js",

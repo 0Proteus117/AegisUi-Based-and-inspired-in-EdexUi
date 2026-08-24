@@ -10,6 +10,7 @@ const {StudDocumentRuntime} = require("./studDocumentRuntime.class.js");
 const {StudAcademicAssistantRuntime} = require("./studAcademicAssistantRuntime.class.js");
 const {StudNotebookRuntime, normalizeGitHub} = require("./studNotebookRuntime.class.js");
 const {StudToolCatalog} = require("./studToolCatalog.class.js");
+const {StudRequirementsContractService} = require("./studRequirementsContractService.class.js");
 
 const CHANNELS = Object.freeze([
     "stud-core-status",
@@ -27,6 +28,15 @@ const CHANNELS = Object.freeze([
     "stud-search",
     "stud-command-center",
     "stud-assignment-requirements",
+    "stud-requirements-state",
+    "stud-requirements-create-draft",
+    "stud-requirements-review-candidate",
+    "stud-requirements-add-manual",
+    "stud-requirements-update-item",
+    "stud-requirements-remove-item",
+    "stud-requirements-create-revision",
+    "stud-requirements-approve",
+    "stud-requirements-source-preview",
     "stud-progress-overview",
     "stud-progress-assessments",
     "stud-progress-revision",
@@ -187,6 +197,10 @@ function registerStudAcademicIpc(options = {}) {
     // configured loopback Ollama endpoint after an explicit user request.
     const academicAiRuntime = options.academicAiRuntime || new StudAcademicAssistantRuntime({store, userDataRoot: options.app && options.app.getPath ? options.app.getPath("userData") : ""});
     const toolCatalog = options.toolCatalog || new StudToolCatalog(store);
+    // Requirements Contract mutations remain main-process authoritative and
+    // use the existing canonical SQLite connection through a bounded domain
+    // repository/service. The renderer never receives SQL or filesystem access.
+    const requirements = options.requirementsService || new StudRequirementsContractService({store});
     let shell = options.shell || null;
     if (!shell) { try { shell = require("electron").shell; } catch (error) {} }
     const handlers = new Map();
@@ -220,6 +234,15 @@ function registerStudAcademicIpc(options = {}) {
     add("stud-search", ["query", "options"], payload => store.search(payload.query, payload.options || {}));
     add("stud-command-center", ["now", "limit"], payload => store.getCommandCenter(payload));
     add("stud-assignment-requirements", ["assignmentId"], payload => store.assignmentRequirements(payload.assignmentId));
+    add("stud-requirements-state", ["assignmentId"], payload => requirements.state(payload.assignmentId));
+    add("stud-requirements-create-draft", ["assignmentId"], payload => requirements.createDraft(payload.assignmentId));
+    add("stud-requirements-review-candidate", ["contractId", "candidateId", "disposition", "expectedVersion"], payload => requirements.reviewCandidate(payload));
+    add("stud-requirements-add-manual", ["contractId", "expectedVersion", "requirement"], payload => requirements.addManualRequirement(payload));
+    add("stud-requirements-update-item", ["contractId", "itemId", "expectedVersion", "requirement"], payload => requirements.updateRequirement(payload));
+    add("stud-requirements-remove-item", ["contractId", "itemId", "expectedVersion"], payload => requirements.removeRequirement(payload));
+    add("stud-requirements-create-revision", ["contractId", "expectedVersion"], payload => requirements.createRevision(payload));
+    add("stud-requirements-approve", ["contractId", "expectedVersion", "approveAsIncomplete"], payload => requirements.approve(payload));
+    add("stud-requirements-source-preview", ["sourceId"], payload => requirements.sourcePreview(payload));
     // Progress Analytics is a strictly derived local read surface. These
     // handlers cannot write, invoke providers, inspect Calendar/Email, or
     // create a background history.
