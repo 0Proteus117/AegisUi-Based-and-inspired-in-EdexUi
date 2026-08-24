@@ -115,6 +115,14 @@ function main() {
     const studFinalAcceptance = exists("scripts/test-stud-phase14-reproducibility.js")
         && exists("scripts/test-stud-phase14-acceptance.js")
         && exists("STUD_FINAL_ACCEPTANCE.md");
+    const studWorkflowDag = exists("src/classes/workspaces/studWorkflowModel.class.js")
+        && exists("src/classes/workspaces/studWorkflowRepository.class.js")
+        && exists("src/classes/workspaces/studWorkflowService.class.js")
+        && exists("src/classes/workspaces/studWorkflowTemplateRegistry.class.js")
+        && exists("src/classes/workspaces/studWorkflowWorkspace.class.js")
+        && exists("scripts/test-stud-workflow-dag.js")
+        && exists("scripts/test-stud-workflow-ipc.js")
+        && exists("docs/product/stud/STUD_M3_WORKFLOW_TEMPLATES_PERSISTENT_DAG_VALIDATION.md");
     const osintFoundation = exists("src/classes/workspaces/osintTools.registry.js")
         && exists("src/classes/workspaces/osintProviderSchema.class.js")
         && exists("src/classes/workspaces/osintProviderPolicy.class.js")
@@ -185,6 +193,7 @@ function main() {
     if (!studAcademicAi) failures.push("STUD local academic AI files missing");
     if (!studToolCatalog) failures.push("STUD tool catalog files missing");
     if (!studFinalAcceptance) failures.push("STUD final acceptance safeguards missing");
+    if (!studWorkflowDag) failures.push("STUD workflow DAG foundation missing");
     if (!osintFoundation) failures.push("OSINT native access foundation files missing");
     if (!osintCaseWorkspace) failures.push("OSINT investigation case workspace files missing");
     if (!osintGeospatialVerification) failures.push("OSINT geospatial verification files missing");
@@ -215,6 +224,7 @@ function main() {
     print("STUD_LOCAL_ACADEMIC_AI", studAcademicAi ? "PRESENT" : "MISSING");
     print("STUD_TOOL_CATALOG", studToolCatalog ? "PRESENT" : "MISSING");
     print("STUD_FINAL_ACCEPTANCE", studFinalAcceptance ? "PRESENT" : "MISSING");
+    print("STUD_WORKFLOW_DAG", studWorkflowDag ? "PRESENT" : "MISSING");
     print("OSINT_NATIVE_ACCESS", osintFoundation ? "PRESENT" : "MISSING");
     print("OSINT_PROVIDER_REGISTRY", exists("src/classes/workspaces/osintProviderSchema.class.js") && exists("src/classes/workspaces/osintProviderPolicy.class.js") && exists("src/classes/workspaces/osintToolAccessPanel.class.js") ? "PRESENT" : "MISSING");
     print("OSINT_CASE_WORKSPACE", osintCaseWorkspace ? "PRESENT" : "MISSING");

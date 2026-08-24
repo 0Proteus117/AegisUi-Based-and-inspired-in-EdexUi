@@ -1,5 +1,25 @@
 # Changelog
 
+## 2.7.1 - 2026-08-24
+
+### STUD Assignment Workflow Engine Foundation
+
+- Added SQLite schema v17 with immutable versioned workflow templates,
+  assignment-owned workflow instances, stable nodes, validated DAG edges and a
+  durable state-event journal; existing Assignments receive no fabricated
+  workflow state.
+- Added five discipline-neutral templates and explicit deterministic selection,
+  Requirements Contract revision/fingerprint linkage and honest no-contract
+  creation paths.
+- Added main-process DAG, transition and optimistic-concurrency enforcement with
+  derived readiness, branch/convergence support, safe skip/reopen behaviour and
+  historical workflow replacement/inspection.
+- Integrated the active workflow/node with M2 Working Context without triggering
+  Moodle, research providers, Ollama or any other automatic action.
+- Added the calm Assignment Workflow workspace, compact responsive validation,
+  M1–M3 integration audit and focused domain, IPC, scale and security regression
+  coverage.
+
 ## 2.6.14 - 2026-08-13
 
 ### STUD Final Acceptance / Academic Workflow

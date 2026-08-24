@@ -175,30 +175,35 @@ reference the exact approved contract revision and hash used.
 
 ### Persistent workflow and DAG
 
-Workflow templates are versioned application metadata. Instances are canonical
-local records:
+M3 implements versioned application templates separately from canonical local
+instances. The normalized schema is:
 
-- `stud_assignment_workflows`: assignment, template version, contract ID and
-  overall state.
-- `stud_workflow_milestones`: M0–M14 instance, state, attempt, timestamps and
-  output contract.
-- `stud_workflow_dependencies`: normalized directed edges plus dependency policy.
-- `stud_workflow_tasks`: bounded executable units owned by one milestone.
+- `stud_workflow_templates` and `stud_workflow_template_versions`;
+- `stud_workflow_template_nodes` and `stud_workflow_template_edges`;
+- `stud_workflow_instances`, linked to one Assignment and an exact approved
+  Requirements Contract ID/revision/hash or an explicit no-Contract reason;
+- `stud_workflow_nodes` and `stud_workflow_edges`;
+- `stud_workflow_events`, a bounded meaningful event journal.
 
-The DAG validator rejects cycles, missing nodes, incompatible output contracts
-and unsafe skip policies before a run exists. Renderer code never computes the
-authoritative next task.
+`StudWorkflowTemplateRegistry`, `StudWorkflowRepository` and
+`StudWorkflowService` own the domain boundary over the existing SQLite
+connection. Five version-1 starting templates are registered: standard written,
+technical/engineering, exam preparation, group/project and generic/manual. A
+published version's canonical JSON and SHA-256 fingerprint cannot change under
+the same version number.
 
-Shared workflow states:
+M3 persists only `NOT_STARTED`, `IN_PROGRESS`, `COMPLETE` and `SKIPPED`.
+`READY` is derived from predecessor terminal state and is never persisted as
+user truth. Branching and convergence are supported. Main-process validation
+rejects self, duplicate, missing, cross-workflow and cyclic edges. Existing
+instances never change when a template or Requirements Contract changes.
+Explicit replacement preserves the prior instance as `HISTORICAL`; it does not
+copy activity or reset history silently.
 
-- `READY`, `RUNNING`, `COMPLETE`, `PARTIAL`, `WAITING`, `BLOCKED`,
-  `HUMAN_INPUT`, `NEEDS_REVIEW`, `PAUSED`, `FAILED`, `CANCELLED`.
-
-Domain-specific provider/document/model states remain intact and are mapped to a
-workflow state with the original code retained in details. `BLOCKED` means a
-required dependency prevents progress. `WAITING` means a known external event or
-resource is expected. `HUMAN_INPUT` means the next transition requires an
-explicit student decision or artifact.
+The broader execution states in the target architecture (`WAITING`, `BLOCKED`,
+`HUMAN_INPUT` and recovery state) remain reserved for M4/M13. M3 nodes can carry
+human/external semantic types but do not pretend that blocker or worker runtime
+semantics exist.
 
 ### Blockers, checkpoints and recovery
 

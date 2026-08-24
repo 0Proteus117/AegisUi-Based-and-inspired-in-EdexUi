@@ -18,7 +18,7 @@ const screenshots = fs.readdirSync(screenshotRoot).filter(name => name.endsWith(
 
 const checks = {
     PRIMARY_NAVIGATION_REDUCED: ["HOME", "COURSES", "WORK", "LIBRARY", "STUDY", "TOOLS"].every(label => commandCenter.includes(`label: "${label}"`)),
-    OBJECT_CENTRIC_ASSIGNMENT: commandCenter.includes("ASSIGNMENT DETAIL") && commandCenter.includes("WORK CONTEXT") && commandCenter.includes("BRIEF &amp; MARKING DOCUMENTS"),
+    OBJECT_CENTRIC_ASSIGNMENT: commandCenter.includes("ASSIGNMENT DETAIL") && commandCenter.includes("RELATED WORK") && commandCenter.includes("BRIEF &amp; MARKING DOCUMENTS") && commandCenter.includes("this.workflow.render()"),
     REQUIREMENTS_EXPLAINABLE: commandCenter.includes("this.requirements.render()") && requirementsWorkspace.includes("SOURCE PREVIEW") && requirementsWorkspace.includes("EXTRACTION COVERAGE") && requirementsWorkspace.includes("APPROVE AS INCOMPLETE"),
     PROGRESSIVE_DISCLOSURE: commandCenter.includes("ADVANCED / EDIT LOCAL DETAILS") && moodle.includes("CONNECTION &amp; SYNC OPTIONS") && moodle.includes("CAPABILITY REPORT / READ ONLY"),
     MOODLE_ACTIONS_CLEAR: moodle.includes("SYNC NOW") && moodle.includes("INDEX COURSE MATERIAL") && moodle.includes("FORGET ACCOUNT"),

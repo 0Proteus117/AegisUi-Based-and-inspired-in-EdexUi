@@ -18,6 +18,8 @@ documents translate that intent into the audited v2.7.0 implementation:
 - [implementation roadmap](STUD_ASSIGNMENT_WORKFLOW_ENGINE_ROADMAP.md)
 - [M1 Requirements Contract implementation and validation](STUD_M1_REQUIREMENTS_CONTRACT_VALIDATION.md)
 - [M2 Academic Organisation / Working Context implementation and validation](STUD_M2_ACADEMIC_ORGANISATION_WORKING_CONTEXT_VALIDATION.md)
+- [M3 Workflow Templates / Persistent DAG implementation and validation](STUD_M3_WORKFLOW_TEMPLATES_PERSISTENT_DAG_VALIDATION.md)
+- [M1-M3 integration and final technical audit](STUD_M1_M3_INTEGRATION_AUDIT.md)
 - [Electron trust-boundary hardening](../../security/ELECTRON_TRUST_BOUNDARY_HARDENING_2026-08-24.md)
 
 When documents disagree, use this order:
@@ -36,7 +38,8 @@ described in the architecture document.
 M1 advances the canonical STUD schema from v14 to v15 and replaces the transient
 requirements readout as product authority with a reviewed, revisioned
 Requirements Contract. M2 advances schema v15 to v16 with explicit academic
-organisation and one validated, persistent Working Context. The dedicated
-Electron Trust-Boundary Hardening intervention is also complete. The exact next
-product milestone is M3 — Workflow Templates and Persistent DAG; it has not
-started.
+organisation and one validated, persistent Working Context. M3 advances schema
+v16 to v17 with immutable versioned templates and Assignment-owned persistent
+DAG instances. The dedicated Electron Trust-Boundary Hardening intervention is
+also complete. The exact next product milestone is M4 — Blockers, Checkpoints
+and Recovery; M4 is not implemented by the M1-M3 foundation.

@@ -482,6 +482,122 @@ class StudAcademicStore {
                 FOREIGN KEY(active_assignment_id) REFERENCES stud_assignments(id),
                 FOREIGN KEY(active_requirement_contract_id) REFERENCES stud_requirement_contracts(id)
             );
+        `}, {version: 17, sql: `
+            CREATE TABLE stud_workflow_templates (
+                id TEXT PRIMARY KEY,
+                template_key TEXT NOT NULL UNIQUE,
+                title TEXT NOT NULL,
+                description TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+            CREATE TABLE stud_workflow_template_versions (
+                id TEXT PRIMARY KEY,
+                template_id TEXT NOT NULL,
+                version INTEGER NOT NULL CHECK(version >= 1),
+                fingerprint TEXT NOT NULL,
+                canonical_json TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY(template_id) REFERENCES stud_workflow_templates(id),
+                UNIQUE(template_id, version),
+                UNIQUE(template_id, fingerprint)
+            );
+            CREATE INDEX stud_workflow_template_versions_template_index ON stud_workflow_template_versions(template_id, version DESC);
+            CREATE TABLE stud_workflow_template_nodes (
+                id TEXT PRIMARY KEY,
+                template_version_id TEXT NOT NULL,
+                node_key TEXT NOT NULL,
+                semantic_type TEXT NOT NULL CHECK(semantic_type IN ('RESEARCH','WRITING','TECHNICAL','HUMAN_TASK','EXTERNAL_TASK','REVIEW','FINALISATION','OTHER')),
+                title TEXT NOT NULL,
+                description TEXT,
+                node_order INTEGER NOT NULL DEFAULT 0,
+                FOREIGN KEY(template_version_id) REFERENCES stud_workflow_template_versions(id),
+                UNIQUE(template_version_id, node_key)
+            );
+            CREATE INDEX stud_workflow_template_nodes_version_index ON stud_workflow_template_nodes(template_version_id, node_order, node_key);
+            CREATE TABLE stud_workflow_template_edges (
+                id TEXT PRIMARY KEY,
+                template_version_id TEXT NOT NULL,
+                from_node_key TEXT NOT NULL,
+                to_node_key TEXT NOT NULL,
+                FOREIGN KEY(template_version_id) REFERENCES stud_workflow_template_versions(id),
+                UNIQUE(template_version_id, from_node_key, to_node_key),
+                CHECK(from_node_key <> to_node_key)
+            );
+            CREATE INDEX stud_workflow_template_edges_version_index ON stud_workflow_template_edges(template_version_id, from_node_key, to_node_key);
+            CREATE TABLE stud_workflow_instances (
+                id TEXT PRIMARY KEY,
+                assignment_id TEXT NOT NULL,
+                template_version_id TEXT NOT NULL,
+                template_fingerprint TEXT NOT NULL,
+                contract_id TEXT,
+                contract_revision INTEGER,
+                contract_hash TEXT,
+                no_contract_reason TEXT,
+                lifecycle TEXT NOT NULL CHECK(lifecycle IN ('ACTIVE','HISTORICAL','ARCHIVED')),
+                is_current INTEGER NOT NULL DEFAULT 1 CHECK(is_current IN (0,1)),
+                row_version INTEGER NOT NULL DEFAULT 1 CHECK(row_version >= 1),
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                archived_at TEXT,
+                FOREIGN KEY(assignment_id) REFERENCES stud_assignments(id),
+                FOREIGN KEY(template_version_id) REFERENCES stud_workflow_template_versions(id),
+                FOREIGN KEY(contract_id) REFERENCES stud_requirement_contracts(id),
+                CHECK((lifecycle='ACTIVE' AND is_current=1) OR (lifecycle IN ('HISTORICAL','ARCHIVED') AND is_current=0)),
+                CHECK((contract_id IS NOT NULL AND contract_revision IS NOT NULL AND contract_hash IS NOT NULL AND no_contract_reason IS NULL) OR
+                      (contract_id IS NULL AND contract_revision IS NULL AND contract_hash IS NULL AND no_contract_reason IS NOT NULL))
+            );
+            CREATE UNIQUE INDEX stud_workflow_instances_current_index ON stud_workflow_instances(assignment_id) WHERE is_current=1;
+            CREATE INDEX stud_workflow_instances_assignment_index ON stud_workflow_instances(assignment_id, created_at DESC);
+            CREATE TABLE stud_workflow_nodes (
+                id TEXT PRIMARY KEY,
+                workflow_id TEXT NOT NULL,
+                template_node_key TEXT,
+                semantic_type TEXT NOT NULL CHECK(semantic_type IN ('RESEARCH','WRITING','TECHNICAL','HUMAN_TASK','EXTERNAL_TASK','REVIEW','FINALISATION','OTHER')),
+                title TEXT NOT NULL,
+                description TEXT,
+                node_order INTEGER NOT NULL DEFAULT 0,
+                state TEXT NOT NULL CHECK(state IN ('NOT_STARTED','IN_PROGRESS','COMPLETE','SKIPPED')),
+                origin TEXT NOT NULL CHECK(origin IN ('TEMPLATE','USER')),
+                row_version INTEGER NOT NULL DEFAULT 1 CHECK(row_version >= 1),
+                started_at TEXT,
+                completed_at TEXT,
+                skipped_at TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY(workflow_id) REFERENCES stud_workflow_instances(id),
+                UNIQUE(workflow_id, template_node_key)
+            );
+            CREATE INDEX stud_workflow_nodes_workflow_index ON stud_workflow_nodes(workflow_id, node_order, id);
+            CREATE TABLE stud_workflow_edges (
+                id TEXT PRIMARY KEY,
+                workflow_id TEXT NOT NULL,
+                from_node_id TEXT NOT NULL,
+                to_node_id TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY(workflow_id) REFERENCES stud_workflow_instances(id),
+                FOREIGN KEY(from_node_id) REFERENCES stud_workflow_nodes(id),
+                FOREIGN KEY(to_node_id) REFERENCES stud_workflow_nodes(id),
+                UNIQUE(workflow_id, from_node_id, to_node_id),
+                CHECK(from_node_id <> to_node_id)
+            );
+            CREATE INDEX stud_workflow_edges_workflow_index ON stud_workflow_edges(workflow_id, from_node_id, to_node_id);
+            CREATE TABLE stud_workflow_events (
+                id TEXT PRIMARY KEY,
+                workflow_id TEXT NOT NULL,
+                event_sequence INTEGER NOT NULL CHECK(event_sequence >= 1),
+                event_type TEXT NOT NULL CHECK(event_type IN ('TEMPLATE_SELECTED','WORKFLOW_CREATED','NODE_STARTED','NODE_COMPLETED','NODE_SKIPPED','NODE_REOPENED','NODE_RENAMED','NODE_ADDED','EDGE_ADDED','EDGE_REMOVED','WORKFLOW_REPLACED')),
+                node_id TEXT,
+                actor TEXT NOT NULL,
+                details_json TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY(workflow_id) REFERENCES stud_workflow_instances(id),
+                FOREIGN KEY(node_id) REFERENCES stud_workflow_nodes(id),
+                UNIQUE(workflow_id, event_sequence)
+            );
+            CREATE INDEX stud_workflow_events_workflow_index ON stud_workflow_events(workflow_id, event_sequence DESC);
+            ALTER TABLE stud_working_context ADD COLUMN active_workflow_id TEXT REFERENCES stud_workflow_instances(id);
+            ALTER TABLE stud_working_context ADD COLUMN active_workflow_node_id TEXT REFERENCES stud_workflow_nodes(id);
         `}];
         for (const migration of migrations) {
             if (applied.has(migration.version)) continue;

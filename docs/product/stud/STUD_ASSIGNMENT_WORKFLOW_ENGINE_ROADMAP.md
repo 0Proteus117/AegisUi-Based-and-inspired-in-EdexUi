@@ -108,14 +108,21 @@ repository has advanced, preserve monotonic numbering and document the mapping.
 
 ## M3 — Workflow templates and persistent DAG
 
+- **Status:** COMPLETE — schema v17 and the M3 validation record implement the
+  persistent planning/state foundation without beginning M4.
 - **Objective:** create the real persistent Assignment workflow beneath the UI.
-- **Exact scope:** versioned M0–M14 template registry; workflow/milestone/task/
-  dependency records; DAG and output-contract validation; read-only workflow view.
+- **Exact scope:** five versioned starting templates; Assignment workflow
+  instances; normalized nodes/edges; derived readiness; explicit state
+  transitions; bounded meaningful history; pre-work topology editing; explicit
+  historical replacement; calm Assignment workflow view.
 - **Components:** new `StudWorkflowTemplateRegistry`,
-  `StudAssignmentWorkflowService`, store/model/typed IPC and tests.
-- **Schema/migration:** expected v17; workflow, milestone, task and dependency
-  tables. No backfill marks existing work complete.
-- **Dependencies:** approved or explicitly incomplete M1 contract.
+  `StudWorkflowRepository`, `StudWorkflowService`, `StudWorkflowModel`, typed
+  IPC/preload, renderer workspace and tests.
+- **Schema/migration:** v17; template/version/node/edge, instance/node/edge/event
+  tables and optional Working Context workflow references. No backfill creates
+  a workflow or marks work complete.
+- **Dependencies:** approved or explicitly incomplete M1 Contract, or a recorded
+  explicit no-Contract reason.
 - **Non-goals:** no task execution, Mission Control animation, research automation
   or model use.
 - **Acceptance criteria:** create workflow from template; reject cycles/missing
@@ -443,6 +450,6 @@ repository has advanced, preserve monotonic numbering and document the mapping.
 
 ## Exact next milestone
 
-M1, the dedicated Electron Trust-Boundary Hardening intervention and M2 are
-complete. The exact next product milestone is **M3 — Workflow Templates and
-Persistent DAG**. No M3 implementation is included in M2.
+M1, the dedicated Electron Trust-Boundary Hardening intervention, M2 and M3 are
+complete. The exact next product milestone is **M4 — Blockers, Checkpoints and
+Recovery**. No M4 implementation is included in M3.
