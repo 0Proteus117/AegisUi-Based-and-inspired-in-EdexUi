@@ -1,6 +1,7 @@
-const {BaseMapProvider} = require("./baseProvider.js");
-const {MAP_LAYER_STATES, isOffline} = require("../utils/mapLayerState.js");
-const satellite = require("satellite.js");
+(function celestrakProviderModule() {
+const {BaseMapProvider} = typeof window !== "undefined" ? window.AegisBaseMapProvider : require("./baseProvider.js");
+const {MAP_LAYER_STATES, isOffline} = typeof window !== "undefined" ? window.AegisMapLayerState : require("../utils/mapLayerState.js");
+const satellite = typeof window !== "undefined" ? window.satellite : require("satellite.js");
 
 const CELESTRAK_GP_URL = "https://celestrak.org/NORAD/elements/gp.php";
 const CELESTRAK_GROUPS = Object.freeze({
@@ -359,4 +360,6 @@ class CelesTrakProvider extends BaseMapProvider {
     }
 }
 
-module.exports = {CelesTrakProvider};
+if (typeof module !== "undefined" && module.exports) module.exports = {CelesTrakProvider};
+if (typeof window !== "undefined") window.AegisCelesTrakProvider = {CelesTrakProvider};
+})();

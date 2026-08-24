@@ -1,8 +1,9 @@
+(function baseMapProviderModule() {
 const {
     MAP_LAYER_STATES,
     normalizeProviderError,
     sanitizeErrorMessage
-} = require("../utils/mapLayerState.js");
+} = typeof window !== "undefined" ? window.AegisMapLayerState : require("../utils/mapLayerState.js");
 
 function escapeHtml(value) {
     if (typeof window !== "undefined" && typeof window._escapeHtml === "function") {
@@ -266,4 +267,6 @@ class BaseMapProvider {
     }
 }
 
-module.exports = {BaseMapProvider, escapeHtml};
+if (typeof module !== "undefined" && module.exports) module.exports = {BaseMapProvider, escapeHtml};
+if (typeof window !== "undefined") window.AegisBaseMapProvider = {BaseMapProvider, escapeHtml};
+})();

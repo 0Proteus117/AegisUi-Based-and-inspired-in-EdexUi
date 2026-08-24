@@ -39,10 +39,6 @@
         }
 
         resolveElectronApp() {
-            try {
-                const remote = optionalRequire("@electron/remote");
-                if (remote && remote.app) return remote.app;
-            } catch (error) {}
             return null;
         }
 

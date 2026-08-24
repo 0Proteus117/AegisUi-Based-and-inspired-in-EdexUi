@@ -1,5 +1,6 @@
-const {BaseMapProvider} = require("./baseProvider.js");
-const {MAP_LAYER_STATES, isOffline} = require("../utils/mapLayerState.js");
+(function weatherRadarProviderModule() {
+const {BaseMapProvider} = typeof window !== "undefined" ? window.AegisBaseMapProvider : require("./baseProvider.js");
+const {MAP_LAYER_STATES, isOffline} = typeof window !== "undefined" ? window.AegisMapLayerState : require("../utils/mapLayerState.js");
 
 class WeatherRadarProvider extends BaseMapProvider {
     async start(context) {
@@ -84,4 +85,6 @@ class WeatherRadarProvider extends BaseMapProvider {
     }
 }
 
-module.exports = {WeatherRadarProvider};
+if (typeof module !== "undefined" && module.exports) module.exports = {WeatherRadarProvider};
+if (typeof window !== "undefined") window.AegisWeatherRadarProvider = {WeatherRadarProvider};
+})();

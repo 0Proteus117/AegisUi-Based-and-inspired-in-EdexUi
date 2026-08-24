@@ -1,5 +1,5 @@
 // Disable eval()
-window.eval = global.eval = function () {
+window.eval = function () {
     throw new Error("eval() is disabled for security reasons.");
 };
 // Security helper :)
@@ -34,24 +34,11 @@ window.onerror = (msg, path, line, col, error) => {
     document.getElementById("boot_screen").innerHTML += `${error} :  ${msg}<br/>==> at ${path}  ${line}:${col}`;
 };
 
-const path = require("path");
-const fs = require("fs");
-const electron = require("electron");
-const remote = require("@electron/remote");
-const ipc = electron.ipcRenderer;
-
-const settingsDir = remote.app.getPath("userData");
-const themesDir = path.join(settingsDir, "themes");
-const keyboardsDir = path.join(settingsDir, "keyboards");
-const fontsDir = path.join(settingsDir, "fonts");
-const settingsFile = path.join(settingsDir, "settings.json");
-const shortcutsFile = path.join(settingsDir, "shortcuts.json");
-const lastWindowStateFile = path.join(settingsDir, "lastWindowState.json");
-
-// Load config
-window.settings = require(settingsFile);
-window.shortcuts = require(shortcutsFile);
-window.lastWindowState = require(lastWindowStateFile);
+const ipc = window.aegisIpc;
+const bootstrap = window.aegis.runtime.bootstrap;
+window.settings = {...bootstrap.settings};
+window.shortcuts = [...bootstrap.shortcuts];
+window.lastWindowState = {...bootstrap.lastWindowState};
 
 /*
  * Aegis appearance is deliberately separate from the legacy terminal-theme
@@ -95,7 +82,7 @@ window.setAegisAppearance = preference => {
     const normalized = String(preference || "").toLowerCase();
     if (!AEGIS_APPEARANCE_MODES.has(normalized)) return false;
     window.settings.aegisAppearance = normalized;
-    fs.writeFileSync(settingsFile, JSON.stringify(window.settings, "", 4));
+    window.aegis.runtime.saveSettings(window.settings).catch(error => console.warn(error));
     window.applyAegisAppearance(normalized);
     return true;
 };
@@ -114,36 +101,16 @@ if (aegisAppearanceMedia) {
 window.applyAegisAppearance();
 
 // Load CLI parameters
-if (remote.process.argv.includes("--nointro")) {
+if (bootstrap.runtime.nointro) {
     window.settings.nointroOverride = true;
 } else {
     window.settings.nointroOverride = false;
 }
-if (remote.process.argv.includes("--nocursor")) {
+if (bootstrap.runtime.nocursor) {
     window.settings.nocursorOverride = true;
 } else {
     window.settings.nocursorOverride = false;
 }
-
-// Retrieve theme override (hotswitch)
-ipc.once("getThemeOverride", (e, theme) => {
-    if (theme !== null) {
-        window.settings.theme = theme;
-        window.settings.nointroOverride = true;
-        _loadTheme(require(path.join(themesDir, window.settings.theme+".json")));
-    } else {
-        _loadTheme(require(path.join(themesDir, window.settings.theme+".json")));
-    }
-});
-ipc.send("getThemeOverride");
-// Same for keyboard override/hotswitch
-ipc.once("getKbOverride", (e, layout) => {
-    if (layout !== null) {
-        window.settings.keyboard = layout;
-        window.settings.nointroOverride = true;
-    }
-});
-ipc.send("getKbOverride");
 
 // Load UI theme
 window._loadTheme = theme => {
@@ -153,9 +120,9 @@ window._loadTheme = theme => {
     }
 
     // Load fonts
-    let mainFont = new FontFace(theme.cssvars.font_main, `url("${path.join(fontsDir, theme.cssvars.font_main.toLowerCase().replace(/ /g, '_')+'.woff2').replace(/\\/g, '/')}")`);
-    let lightFont = new FontFace(theme.cssvars.font_main_light, `url("${path.join(fontsDir, theme.cssvars.font_main_light.toLowerCase().replace(/ /g, '_')+'.woff2').replace(/\\/g, '/')}")`);
-    let termFont = new FontFace(theme.terminal.fontFamily, `url("${path.join(fontsDir, theme.terminal.fontFamily.toLowerCase().replace(/ /g, '_')+'.woff2').replace(/\\/g, '/')}")`);
+    let mainFont = new FontFace(theme.cssvars.font_main, `url("${bootstrap.fonts.main}")`);
+    let lightFont = new FontFace(theme.cssvars.font_main_light, `url("${bootstrap.fonts.light}")`);
+    let termFont = new FontFace(theme.terminal.fontFamily, `url("${bootstrap.fonts.terminal}")`);
 
     document.fonts.add(mainFont);
     document.fonts.load("12px "+theme.cssvars.font_main);
@@ -199,6 +166,8 @@ window._loadTheme = theme => {
     window.theme.b = theme.colors.b;
 };
 
+window._loadTheme(bootstrap.theme);
+
 function initGraphicalErrorHandling() {
     window.edexErrorsModals = [];
     window.onerror = (msg, path, line, col, error) => {
@@ -236,8 +205,6 @@ function waitForFonts() {
 
 // A proxy function used to add multithreading to systeminformation calls - see backend process manager @ _multithread.js
 function initSystemInformationProxy() {
-    const { nanoid } = require("nanoid/non-secure");
-
     window.si = new Proxy({}, {
         apply: () => {throw new Error("Cannot use sysinfo proxy directly as a function")},
         set: () => {throw new Error("Cannot set a property on the sysinfo proxy")},
@@ -245,15 +212,10 @@ function initSystemInformationProxy() {
             return function(...args) {
                 let callback = (typeof args[args.length - 1] === "function") ? true : false;
 
-                return new Promise((resolve, reject) => {
-                    let id = nanoid();
-                    ipc.once("systeminformation-reply-"+id, (e, res) => {
-                        if (callback) {
-                            args[args.length - 1](res);
-                        }
-                        resolve(res);
-                    });
-                    ipc.send("systeminformation-call", prop, id, ...args);
+                const callArgs = callback ? args.slice(0, -1) : args;
+                return window.aegis.system.call(prop, callArgs).then(res => {
+                    if (callback) args[args.length - 1](res);
+                    return res;
                 });
             };
         }
@@ -264,7 +226,7 @@ function initSystemInformationProxy() {
 window.audioManager = new AudioManager();
 
 // See #223
-remote.app.focus();
+window.aegis.window.action("FOCUS").catch(() => {});
 
 let i = 0;
 let aegisBootSequence = null;
@@ -334,12 +296,10 @@ function displayLine() {
         startAegisBootSequence(bootSplash);
         return;
     }
-    let log = fs.readFileSync(path.join(__dirname, "assets", "misc", "boot_log.txt")).toString().split('\n');
+    let log = bootstrap.bootLog;
 
     function isArchUser() {
-        return require("os").platform() === "linux"
-                && fs.existsSync("/etc/os-release")
-                && fs.readFileSync("/etc/os-release").toString().includes("arch");
+        return false;
     }
 
     if (typeof log[i] === "undefined") {
@@ -363,8 +323,8 @@ function displayLine() {
 
     switch(true) {
         case i === 2:
-            const os = require("os");
-            const kernelLine = `AegisUi Kernel version ${remote.app.getVersion()} boot at ${Date().toString()}; root:${os.type().toLowerCase()}-${os.release()}/${os.arch().toUpperCase()}`;
+            const runtime = bootstrap.runtime;
+            const kernelLine = `AegisUi Kernel version ${runtime.appVersion} boot at ${Date().toString()}; root:${runtime.osType.toLowerCase()}-${runtime.osRelease}/${runtime.arch.toUpperCase()}`;
             if (bootSplash) {
                 bootSplash.appendRawLine(kernelLine);
             } else {
@@ -482,25 +442,7 @@ async function displayTitleScreen() {
 
 // Returns the user's desired display name
 async function getDisplayName() {
-    let user = settings.username || null;
-    if (user)
-        return user;
-
-    try {
-        if (process.platform === "darwin") {
-            user = require("child_process")
-                .execFileSync("/usr/bin/id", ["-F"], { encoding: "utf8", timeout: 1000 })
-                .trim();
-            if (user)
-                return user;
-        }
-    } catch (e) {}
-
-    try {
-        user = await require("username")();
-    } catch (e) {}
-
-    return user;
+    return settings.username || bootstrap.runtime.displayName || null;
 }
 
 // Create the engineering dashboard and its compact terminal.
@@ -525,7 +467,8 @@ async function initUI(options = {}) {
     // Keep the keyboard engine hidden for backwards compatibility with
     // shortcuts and settings, while removing the on-screen keyboard itself.
     window.keyboard = new Keyboard({
-        layout: path.join(keyboardsDir, settings.keyboard+".json"),
+        layoutName: settings.keyboard,
+        layoutData: bootstrap.keyboard,
         container: "keyboard"
     });
 
@@ -573,8 +516,7 @@ async function initUI(options = {}) {
             <pre id="terminal4"></pre>
         </div>`;
     window.term = {
-        0: new Terminal({
-            role: "client",
+        0: new TerminalClient({
             parentId: "terminal0",
             port: window.settings.port || 3000
         })
@@ -590,6 +532,8 @@ async function initUI(options = {}) {
     });
 
     window.fsDisp = {
+        cwd: [],
+        followTab: () => {},
         toggleHidedotfiles: () => {},
         toggleListview: () => {}
     };
@@ -608,20 +552,19 @@ async function initUI(options = {}) {
     window.updateCheck = new UpdateChecker();
 }
 
-window.themeChanger = theme => {
-    ipc.send("setThemeOverride", theme);
-    setTimeout(() => {
-        window.location.reload(true);
-    }, 100);
+window.themeChanger = async theme => {
+    await window.aegis.runtime.saveSettings({theme});
+    window.location.reload(true);
 };
 
-window.remakeKeyboard = layout => {
+window.remakeKeyboard = async layout => {
     document.getElementById("keyboard").innerHTML = "";
     window.keyboard = new Keyboard({
-        layout: path.join(keyboardsDir, layout+".json" || settings.keyboard+".json"),
+        layoutName: layout || settings.keyboard,
+        layoutData: window.aegis.runtime.keyboardLayout(layout || settings.keyboard),
         container: "keyboard"
     });
-    ipc.send("setKbOverride", layout);
+    await window.aegis.runtime.saveSettings({keyboard: layout});
 };
 
 window.focusShellTab = number => {
@@ -656,8 +599,7 @@ window.focusShellTab = number => {
             } else if (r.startsWith("SUCCESS")) {
                 let port = Number(r.substr(9));
 
-                window.term[number] = new Terminal({
-                    role: "client",
+                window.term[number] = new TerminalClient({
                     parentId: "terminal"+number,
                     port
                 });
@@ -690,20 +632,16 @@ window.openSettings = async () => {
     if (document.getElementById("settingsEditor")) return;
 
     // Build lists of available keyboards, themes, monitors
-    let keyboards, themes, monitors, ifaces;
-    fs.readdirSync(keyboardsDir).forEach(kb => {
-        if (!kb.endsWith(".json")) return;
-        kb = kb.replace(".json", "");
+    let keyboards = "", themes = "", monitors = "", ifaces = "";
+    bootstrap.keyboards.forEach(kb => {
         if (kb === window.settings.keyboard) return;
         keyboards += `<option>${kb}</option>`;
     });
-    fs.readdirSync(themesDir).forEach(th => {
-        if (!th.endsWith(".json")) return;
-        th = th.replace(".json", "");
+    bootstrap.themes.forEach(th => {
         if (th === window.settings.theme) return;
         themes += `<option>${th}</option>`;
     });
-    for (let i = 0; i < remote.screen.getAllDisplays().length; i++) {
+    for (let i = 0; i < bootstrap.runtime.displayCount; i++) {
         if (i !== window.settings.monitor) monitors += `<option>${i}</option>`;
     }
     let nets = await window.si.networkInterfaces();
@@ -716,7 +654,7 @@ window.openSettings = async () => {
 
     new Modal({
         type: "custom",
-        title: `Settings <i>(v${remote.app.getVersion()})</i>`,
+        title: `Settings <i>(v${bootstrap.runtime.appVersion})</i>`,
         html: `<table id="settingsEditor">
                     <tr>
                         <th>Key</th>
@@ -737,11 +675,6 @@ window.openSettings = async () => {
                         <td>cwd</td>
                         <td>Working Directory to start in</td>
                         <td><input type="text" id="settingsEditor-cwd" value="${window.settings.cwd}"></td>
-                    </tr>
-                    <tr>
-                        <td>env</td>
-                        <td>Custom shell environment override</td>
-                        <td><input type="text" id="settingsEditor-env" value="${window.settings.env}"></td>
                     </tr>
                     <tr>
                         <td>username</td>
@@ -907,10 +840,10 @@ window.openSettings = async () => {
                 <h6 id="settingsEditorStatus">Loaded values from memory</h6>
                 <br>`,
         buttons: [
-            {label: "Open in External Editor", action:`electron.shell.openPath('${settingsFile}');electronWin.minimize();`},
+            {label: "Open in External Editor", action:"window.openSettingsFile()"},
             {label: "Save to Disk", action: "window.writeSettingsFile()"},
             {label: "Reload UI", action: "window.location.reload(true);"},
-            {label: "Restart eDEX", action: "remote.app.relaunch();remote.app.quit();"}
+            {label: "Restart eDEX", action: "window.aegis.window.action('RELAUNCH')"}
         ]
     }, () => {
         // Link the keyboard back to the terminal
@@ -921,18 +854,13 @@ window.openSettings = async () => {
     });
 };
 
-window.writeFile = (path) => {
-    fs.writeFile(path, document.getElementById("fileEdit").value, "utf-8", () => {
-        document.getElementById("fedit-status").innerHTML = "<i>File saved.</i>";
-    });
-};
+window.openSettingsFile = () => window.aegis.runtime.openSettings().then(() => window.aegis.window.action("MINIMIZE"));
 
 window.writeSettingsFile = () => {
     window.settings = {
         shell: document.getElementById("settingsEditor-shell").value,
         shellArgs: document.getElementById("settingsEditor-shellArgs").value,
         cwd: document.getElementById("settingsEditor-cwd").value,
-        env: document.getElementById("settingsEditor-env").value,
         username: document.getElementById("settingsEditor-username").value,
         keyboard: document.getElementById("settingsEditor-keyboard").value,
         theme: document.getElementById("settingsEditor-theme").value,
@@ -964,19 +892,19 @@ window.writeSettingsFile = () => {
         }
     });
 
-    fs.writeFileSync(settingsFile, JSON.stringify(window.settings, "", 4));
-    window.applyAegisAppearance(window.settings.aegisAppearance);
-    document.getElementById("settingsEditorStatus").innerText = "New values written to settings.json file at "+new Date().toTimeString();
+    window.aegis.runtime.saveSettings(window.settings).then(saved => {
+        window.settings = {...window.settings, ...saved};
+        window.applyAegisAppearance(window.settings.aegisAppearance);
+        document.getElementById("settingsEditorStatus").innerText = "New values written securely at "+new Date().toTimeString();
+    }).catch(error => {
+        document.getElementById("settingsEditorStatus").innerText = `Settings rejected: ${error.message || error}`;
+    });
 };
 
-window.toggleFullScreen = () => {
-    let useFullscreen = (electronWin.isFullScreen() ? false : true);
-    electronWin.setFullScreen(useFullscreen);
-
-    //Update settings
-    window.lastWindowState["useFullscreen"] = useFullscreen;
-
-    fs.writeFileSync(lastWindowStateFile, JSON.stringify(window.lastWindowState, "", 4));
+window.toggleFullScreen = async () => {
+    const state = await window.aegis.window.action("TOGGLE_FULLSCREEN");
+    window.lastWindowState.useFullscreen = Boolean(state.fullScreen);
+    await window.aegis.window.saveState(window.lastWindowState);
 };
 
 // Display available keyboard shortcuts and custom shortcuts helper
@@ -1026,7 +954,7 @@ window.openShortcutsHelp = () => {
     window.keyboard.detach();
     new Modal({
         type: "custom",
-        title: `Available Keyboard Shortcuts <i>(v${remote.app.getVersion()})</i>`,
+        title: `Available Keyboard Shortcuts <i>(v${bootstrap.runtime.appVersion})</i>`,
         html: `<h5>Using either the on-screen or a physical keyboard, you can use the following shortcuts:</h5>
                 <details open id="shortcutsHelpAccordeon1">
                     <summary>Emulator shortcuts</summary>
@@ -1053,7 +981,7 @@ window.openShortcutsHelp = () => {
                 </details>
                 <br>`,
         buttons: [
-            {label: "Open Shortcuts File", action:`electron.shell.openPath('${shortcutsFile}');electronWin.minimize();`},
+            {label: "Open Shortcuts File", action:"window.aegis.runtime.openShortcuts().then(() => window.aegis.window.action('MINIMIZE'))"},
             {label: "Reload UI", action: "window.location.reload(true);"},
         ]
     }, () => {
@@ -1142,7 +1070,7 @@ window.useAppShortcut = action => {
             window.keyboard.togglePasswordMode();
             return true;
         case "DEV_DEBUG":
-            remote.getCurrentWindow().webContents.toggleDevTools();
+            window.aegis.window.action("DEVTOOLS");
             return true;
         case "DEV_RELOAD":
             window.location.reload(true);
@@ -1154,35 +1082,15 @@ window.useAppShortcut = action => {
 };
 
 // Global keyboard shortcuts
-const globalShortcut = remote.globalShortcut;
-globalShortcut.unregisterAll();
-
 window.registerKeyboardShortcuts = () => {
-    window.shortcuts.forEach(cut => {
-        if (!cut.enabled) return;
-
-        if (cut.type === "app") {
-            if (cut.action === "TAB_X") {
-                for (let i = 1; i <= 5; i++) {
-                    let trigger = cut.trigger.replace("X", i);
-                    let dfn = () => { window.useAppShortcut(`TAB_${i}`) };
-                    globalShortcut.register(trigger, dfn);
-                }
-            } else {
-                globalShortcut.register(cut.trigger, () => {
-                    window.useAppShortcut(cut.action);
-                });
-            }
-        } else if (cut.type === "shell") {
-            globalShortcut.register(cut.trigger, () => {
-                let fn = (cut.linebreak) ? "writelr" : "write";
-                window.term[window.currentTerm][fn](cut.action);
-            });
-        } else {
-            console.warn(`${cut.trigger} has unknown type`);
-        }
-    });
+    window.aegis.shortcuts.register();
 };
+window.aegis.shortcuts.onTriggered(action => {
+    if (action.type === "app") window.useAppShortcut(action.action);
+    else if (action.type === "shell" && window.term && window.term[window.currentTerm]) {
+        window.term[window.currentTerm][action.linebreak ? "writelr" : "write"](action.action);
+    }
+});
 window.registerKeyboardShortcuts();
 
 // See #361
@@ -1191,7 +1099,7 @@ window.addEventListener("focus", () => {
 });
 
 window.addEventListener("blur", () => {
-    globalShortcut.unregisterAll();
+    window.aegis.shortcuts.unregister();
 });
 
 // Prevent showing menu, exiting fullscreen or app with keyboard shortcuts
@@ -1215,14 +1123,12 @@ document.addEventListener("keydown", e => {
 
 // Fix #265
 window.addEventListener("keyup", e => {
-    if (require("os").platform() === "win32" && e.key === "F4" && e.altKey === true) {
-        remote.app.quit();
+    if (bootstrap.runtime.platform === "win32" && e.key === "F4" && e.altKey === true) {
+        window.aegis.window.action("QUIT");
     }
 });
 
 // Fix double-tap zoom on touchscreens
-electron.webFrame.setVisualZoomLevelLimits(1, 1);
-
 // Resize terminal with window
 window.onresize = () => {
     if (typeof window.currentTerm !== "undefined") {
@@ -1234,29 +1140,12 @@ window.onresize = () => {
 
 // See #413
 window.resizeTimeout = null;
-let electronWin = remote.getCurrentWindow();
-electronWin.on("resize", () => {
+window.aegis.window.onResize(() => {
     if (settings.keepGeometry === false) return;
     clearTimeout(window.resizeTimeout);
     window.resizeTimeout = setTimeout(() => {
-        let win = remote.getCurrentWindow();
-        if (win.isFullScreen()) return false;
-        if (win.isMaximized()) {
-            win.unmaximize();
-            win.setFullScreen(true);
-            return false;
-        }
-
-        let size = win.getSize();
-
-        if (size[0] >= size[1]) {
-            win.setSize(size[0], parseInt(size[0] * 9 / 16));
-        } else {
-            win.setSize(size[1], parseInt(size[1] * 9 / 16));
-        }
+        window.aegis.window.action("NORMALIZE_GEOMETRY");
     }, 100);
 });
 
-electronWin.on("leave-full-screen", () => {
-    remote.getCurrentWindow().setSize(960, 540);
-});
+window.aegis.window.onLeaveFullscreen(() => window.aegis.window.action("SET_COMPACT"));

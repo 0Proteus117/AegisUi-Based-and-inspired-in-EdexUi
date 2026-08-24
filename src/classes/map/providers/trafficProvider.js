@@ -1,5 +1,6 @@
-const {BaseMapProvider} = require("./baseProvider.js");
-const {MAP_LAYER_STATES, isOffline} = require("../utils/mapLayerState.js");
+(function trafficProviderModule() {
+const {BaseMapProvider} = typeof window !== "undefined" ? window.AegisBaseMapProvider : require("./baseProvider.js");
+const {MAP_LAYER_STATES, isOffline} = typeof window !== "undefined" ? window.AegisMapLayerState : require("../utils/mapLayerState.js");
 
 const TRAFFIC_TILE_TESTS = Object.freeze([
     {
@@ -37,6 +38,7 @@ const TRAFFIC_PRESETS = Object.freeze({
         {label: "A4", lat: 48.8299, lon: 2.4932}
     ]
 });
+const MAIN_PROCESS_TOMTOM_CREDENTIAL = "__AEGIS_MAIN_TOMTOM__";
 
 function clampTrafficRatio(currentSpeed, freeFlowSpeed) {
     const current = Number(currentSpeed);
@@ -285,6 +287,23 @@ class TrafficProvider extends BaseMapProvider {
     }
 
     async runTomTomTrafficDiagnostics(context, trafficKey) {
+        if (trafficKey === MAIN_PROCESS_TOMTOM_CREDENTIAL) {
+            const result = await context.ipc.invoke("tomtom-traffic-diagnostic", "");
+            if (result && result.ok) {
+                return {
+                    mode: "TOMTOM_FLOW_TILES",
+                    status: MAP_LAYER_STATES.ONLINE,
+                    tileStyle: "relative0-dark",
+                    tileTemplate: "aegis-tomtom://traffic/traffic/map/4/tile/flow/relative0-dark/{z}/{x}/{y}.png?tileSize=256",
+                    summary: result.summary || "TomTom traffic endpoint reachable"
+                };
+            }
+            return {
+                mode: "OFFLINE",
+                status: this.statusFromHttpError({status: result && result.httpStatus}),
+                summary: result && result.summary || "TomTom traffic unavailable"
+            };
+        }
         const forcedProvider = String(this.definition.provider || "auto").toLowerCase();
         const tileTests = forcedProvider === "tomtom-segments" || forcedProvider === "segments"
             ? []
@@ -395,4 +414,6 @@ class TrafficProvider extends BaseMapProvider {
     }
 }
 
-module.exports = {TrafficProvider};
+if (typeof module !== "undefined" && module.exports) module.exports = {TrafficProvider};
+if (typeof window !== "undefined") window.AegisTrafficProvider = {TrafficProvider};
+})();

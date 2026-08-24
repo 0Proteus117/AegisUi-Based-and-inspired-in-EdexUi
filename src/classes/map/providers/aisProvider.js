@@ -1,5 +1,6 @@
-const {BaseMapProvider} = require("./baseProvider.js");
-const {MAP_LAYER_STATES, isOffline} = require("../utils/mapLayerState.js");
+(function aisProviderModule() {
+const {BaseMapProvider} = typeof window !== "undefined" ? window.AegisBaseMapProvider : require("./baseProvider.js");
+const {MAP_LAYER_STATES, isOffline} = typeof window !== "undefined" ? window.AegisMapLayerState : require("../utils/mapLayerState.js");
 
 const AISSTREAM_URL = "wss://stream.aisstream.io/v0/stream";
 const AIS_BUFFER_CAP = 1000;
@@ -32,15 +33,6 @@ const WORLD_SAMPLE_BOXES = Object.freeze([
 function finiteNumber(value) {
     const number = Number(value);
     return Number.isFinite(number) ? number : null;
-}
-
-function loadNodeWebSocket() {
-    if (typeof require !== "function") return null;
-    try {
-        return require("ws");
-    } catch (error) {
-        return null;
-    }
 }
 
 function vesselIdentity(payload) {
@@ -246,8 +238,7 @@ class AISProvider extends BaseMapProvider {
             summary: `AISStream reconnecting · ${this.areaModeLabel(mode)}`
         });
 
-        const WebSocketClient = loadNodeWebSocket()
-            || (typeof WebSocket !== "undefined" ? WebSocket : null);
+        const WebSocketClient = typeof WebSocket !== "undefined" ? WebSocket : null;
         if (!WebSocketClient) {
             this.setStatus(MAP_LAYER_STATES.ERROR, {
                 error: "No WebSocket implementation available",
@@ -544,4 +535,6 @@ class AISProvider extends BaseMapProvider {
     }
 }
 
-module.exports = {AISProvider};
+if (typeof module !== "undefined" && module.exports) module.exports = {AISProvider};
+if (typeof window !== "undefined") window.AegisAISProvider = {AISProvider};
+})();

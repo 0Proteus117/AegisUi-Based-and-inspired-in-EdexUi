@@ -1,10 +1,11 @@
-const {MapLayerRegistry} = require(require("path").join(__dirname, "classes/map/mapLayerRegistry.js"));
+const {MapLayerRegistry} = window.AegisMapLayerRegistry;
 const {
     MAP_LAYER_STATES,
     formatMapTimestamp,
     statusNeedsAttention,
     statusIsInformative
-} = require(require("path").join(__dirname, "classes/map/utils/mapLayerState.js"));
+} = window.AegisMapLayerState;
+const MAIN_TOMTOM_CREDENTIAL = "__AEGIS_MAIN_TOMTOM__";
 
 const MAP_SATELLITE_GROUPS = Object.freeze({
     "stations": {
@@ -129,7 +130,7 @@ class EngineeringDashboard {
 
 class EngineeringMapPanel {
     constructor() {
-        this.ipc = require("electron").ipcRenderer;
+        this.ipc = window.aegisIpc;
         this.panel = document.getElementById("eng_map_panel");
         this.status = document.getElementById("eng_map_status");
         this.controls = document.getElementById("eng_map_layer_controls");
@@ -457,9 +458,11 @@ class EngineeringMapPanel {
 
     useTomTomBaseMap(key) {
         this.removeBaseLayer();
-        const encodedKey = encodeURIComponent(key);
+        const tileTemplate = key === MAIN_TOMTOM_CREDENTIAL
+            ? "aegis-tomtom://map/1/tile/basic/main/{z}/{x}/{y}.png?tileSize=256"
+            : `https://api.tomtom.com/map/1/tile/basic/main/{z}/{x}/{y}.png?tileSize=256&key=${encodeURIComponent(key)}`;
         const layer = L.tileLayer(
-            `https://api.tomtom.com/map/1/tile/basic/main/{z}/{x}/{y}.png?tileSize=256&key=${encodedKey}`,
+            tileTemplate,
             {
                 maxZoom: 22,
                 attribution: "© TomTom",
@@ -505,7 +508,7 @@ class EngineeringMapPanel {
     async runTomTomDiagnostic(key = this.getTomTomKey()) {
         if (!key || !this.ipc || !this.ipc.invoke) return;
         try {
-            const result = await this.ipc.invoke("tomtom-diagnostic", key);
+            const result = await this.ipc.invoke("tomtom-diagnostic", key === MAIN_TOMTOM_CREDENTIAL ? "" : key);
             this.tomTomDiagnostic = {
                 keyStatus: result.keyStatus || "CONFIGURED",
                 serviceStatus: result.serviceStatus || (result.ok ? "ONLINE" : "ERROR"),
@@ -1511,12 +1514,11 @@ class EngineeringMapPanel {
     async loadRuntimeConfig() {
         try {
             const config = await this.ipc.invoke("runtime-config");
-            if (config && config.tomtomApiKey) {
-                this.trafficKey = config.tomtomApiKey;
+            if (config && config.tomtomConfigured) {
                 this.tomTomDiagnostic = {
                     keyStatus: config.tomtomKeyStatus || "CONFIGURED",
                     serviceStatus: "UNKNOWN",
-                    last4: config.tomtomKeyLast4 || maskMapSecret(config.tomtomApiKey),
+                    last4: config.tomtomKeyLast4 || "CONFIGURED",
                     summary: "TomTom key loaded from runtime config"
                 };
                 this.applyBaseMapProvider();
@@ -1549,55 +1551,18 @@ class EngineeringMapPanel {
             || this.getEnv("REACT_APP_TOMTOM_API_KEY")
             || this.trafficKey
             || window.settings.tomtomApiKey
+            || (this.tomTomDiagnostic && this.tomTomDiagnostic.keyStatus === "CONFIGURED" ? MAIN_TOMTOM_CREDENTIAL : "")
             || "";
     }
 
     getEnv(name) {
         if (!name) return "";
-        if (typeof process !== "undefined" && process.env && process.env[name]) return process.env[name];
         if (this.localEnv && this.localEnv[name]) return this.localEnv[name];
         return "";
     }
 
     loadLocalEnvSnapshot() {
-        try {
-            const fs = require("fs");
-            const path = require("path");
-            let userDataDir = "";
-            try {
-                userDataDir = require("@electron/remote").app.getPath("userData");
-            } catch (error) {}
-            const roots = Array.from(new Set([
-                typeof process !== "undefined" && process.cwd ? process.cwd() : "",
-                userDataDir,
-                __dirname,
-                path.join(__dirname, ".."),
-                path.join(__dirname, "..", "..")
-            ].filter(Boolean)));
-            const candidates = roots.flatMap(root => [
-                path.join(root, ".env.local"),
-                path.join(root, ".env")
-            ]);
-            const values = {};
-            candidates.forEach(file => {
-                if (!fs.existsSync(file)) return;
-                fs.readFileSync(file, "utf8").split(/\r?\n/).forEach(raw => {
-                    const line = raw.trim();
-                    if (!line || line.startsWith("#") || !line.includes("=")) return;
-                    const index = line.indexOf("=");
-                    const key = line.slice(0, index).trim();
-                    let value = line.slice(index + 1).trim();
-                    if ((value.startsWith("\"") && value.endsWith("\""))
-                        || (value.startsWith("'") && value.endsWith("'"))) {
-                        value = value.slice(1, -1);
-                    }
-                    if (key && value && !values[key]) values[key] = value;
-                });
-            });
-            return values;
-        } catch (error) {
-            return {};
-        }
+        return {};
     }
 
     layerDisplayStatus(layer) {
@@ -1817,7 +1782,8 @@ class EngineeringMapPanel {
     }
 
     showTrafficForm() {
-        document.getElementById("eng_traffic_key").value = this.getTrafficKey();
+        const current = this.getTrafficKey();
+        document.getElementById("eng_traffic_key").value = current === MAIN_TOMTOM_CREDENTIAL ? "" : current;
         document.getElementById("eng_traffic_form").classList.add("visible");
         document.getElementById("eng_traffic_key").focus();
     }
@@ -1827,19 +1793,19 @@ class EngineeringMapPanel {
     }
 
     saveTrafficKey() {
-        this.trafficKey = document.getElementById("eng_traffic_key").value.trim();
-        window.settings.tomtomApiKey = this.trafficKey;
-        const settingsPath = require("path").join(
-            require("@electron/remote").app.getPath("userData"),
-            "settings.json"
-        );
-        require("fs").writeFileSync(settingsPath, JSON.stringify(window.settings, null, 4));
+        const candidate = document.getElementById("eng_traffic_key").value.trim();
+        window.aegis.runtime.saveSettings({tomtomApiKey: candidate}).catch(error => {
+            this.status.innerText = "TRAFFIC KEY SAVE FAILED";
+            console.warn(error);
+        });
+        this.trafficKey = candidate ? MAIN_TOMTOM_CREDENTIAL : "";
+        delete window.settings.tomtomApiKey;
         this.hideTrafficForm();
         this.tomTomDiagnostic = {
-            keyStatus: this.trafficKey ? "CONFIGURED" : "MISSING",
+            keyStatus: candidate ? "CONFIGURED" : "MISSING",
             serviceStatus: "UNKNOWN",
-            last4: maskMapSecret(this.trafficKey),
-            summary: this.trafficKey ? "TomTom key saved locally" : "TomTom key removed"
+            last4: maskMapSecret(candidate),
+            summary: candidate ? "TomTom key saved locally" : "TomTom key removed"
         };
         this.applyBaseMapProvider();
         const layer = this.layers.get("ROAD_TRAFFIC");
@@ -1854,7 +1820,7 @@ class EngineeringMapPanel {
 
 class EngineeringCalendarPanel {
     constructor() {
-        this.ipc = require("electron").ipcRenderer;
+        this.ipc = window.aegisIpc;
         this.content = document.getElementById("eng_calendar_content");
         this.status = document.getElementById("eng_calendar_status");
         this.viewMode = localStorage.getItem("edexui-eng-calendar-view") === "month" ? "month" : "week";
@@ -2182,7 +2148,7 @@ class EngineeringCalendarPanel {
 
 class EngineeringProjectsPanel {
     constructor() {
-        this.ipc = require("electron").ipcRenderer;
+        this.ipc = window.aegisIpc;
         this.content = document.getElementById("eng_projects_content");
         this.projects = [];
         this.selectedProject = 0;
@@ -2648,7 +2614,7 @@ class EngineeringProjectsPanel {
 
 class EngineeringMusicPanel {
     constructor() {
-        this.ipc = require("electron").ipcRenderer;
+        this.ipc = window.aegisIpc;
         this.content = document.getElementById("eng_music_content");
         this.stateLabel = document.getElementById("eng_music_state");
         this.playing = false;

@@ -1,13 +1,10 @@
 class UpdateChecker {
     constructor() {
-        const https = require("https");
-        const electron = require("electron");
-        const remote = require("@electron/remote");
-        const current = remote.app.getVersion();
+        const current = window.AegisRendererRuntime.version;
         const tagPrefix = "edexui-eng-v";
 
         if (window.settings && (window.settings.disableUpdateCheck || window.settings.offlineMode)) {
-            electron.ipcRenderer.send("log", "info", "UpdateChecker: Disabled by local settings.");
+            window.aegis.runtime.log("info", "UpdateChecker: Disabled by local settings.");
             return;
         }
 
@@ -27,56 +24,35 @@ class UpdateChecker {
             return 0;
         };
         const fail = error => {
-            electron.ipcRenderer.send("log", "note", "UpdateChecker: Could not fetch AegisUi releases.");
-            electron.ipcRenderer.send("log", "debug", `Error: ${error}`);
+            window.aegis.runtime.log("note", "UpdateChecker: Could not fetch AegisUi releases.");
+            window.aegis.runtime.log("debug", `Error: ${error}`);
         };
 
-        const request = https.get({
-            protocol: "https:",
-            host: "api.github.com",
-            path: "/repos/0Proteus117/AegisUi-Based-and-inspired-in-EdexUi/releases?per_page=10",
-            headers: {
-                "User-Agent": "AegisUi UpdateChecker"
-            }
-        }, response => {
-            let rawData = "";
-            response.on("data", chunk => rawData += chunk);
-            response.on("end", () => {
-                if (response.statusCode !== 200) {
-                    fail(`GitHub returned ${response.statusCode}`);
-                    return;
-                }
+        window.aegis.updates.check().then(release => {
                 try {
-                    const releases = JSON.parse(rawData);
-                    const release = releases.find(item => {
-                        return !item.draft && String(item.tag_name).startsWith(tagPrefix);
-                    });
-                    if (!release) {
-                        electron.ipcRenderer.send("log", "info", "UpdateChecker: No AegisUi release found.");
+                    if (!release || !release.tag) {
+                        window.aegis.runtime.log("info", "UpdateChecker: No AegisUi release found.");
                         return;
                     }
-
-                    const comparison = compareVersions(current, release.tag_name);
+                    const comparison = compareVersions(current, release.tag);
                     if (comparison === 0) {
-                        electron.ipcRenderer.send("log", "info", "UpdateChecker: Running latest AegisUi version.");
+                        window.aegis.runtime.log("info", "UpdateChecker: Running latest AegisUi version.");
                     } else if (comparison > 0) {
-                        electron.ipcRenderer.send("log", "info", "UpdateChecker: Running an AegisUi development version.");
+                        window.aegis.runtime.log("info", "UpdateChecker: Running an AegisUi development version.");
                     } else {
-                        new Modal({
+                        const modal = new Modal({
                             type: "info",
                             title: "New AegisUi version available",
-                            message: `AegisUi <strong>${release.tag_name.replace(tagPrefix, "")}</strong> is available.<br/>Open the <a href="#" onclick="require('electron').shell.openExternal('${release.html_url}')">GitHub release</a> to download it.`
+                            message: `AegisUi <strong>${release.tag.replace(tagPrefix, "")}</strong> is available.<br/><button type="button" data-aegis-open-release>OPEN GITHUB RELEASE</button>`
                         });
-                        electron.ipcRenderer.send("log", "info", `UpdateChecker: New AegisUi version ${release.tag_name} available.`);
+                        const button = document.querySelector(`#modal_${modal.id} [data-aegis-open-release]`);
+                        if (button) button.addEventListener("click", () => window.aegis.updates.open(release.url));
+                        window.aegis.runtime.log("info", `UpdateChecker: New AegisUi version ${release.tag} available.`);
                     }
                 } catch (error) {
                     fail(error);
                 }
-            });
-        }).on("error", fail);
-        request.setTimeout(5000, () => {
-            request.destroy(new Error("GitHub update check timeout"));
-        });
+        }).catch(fail);
     }
 }
 

@@ -1,5 +1,6 @@
-const {BaseMapProvider} = require("./baseProvider.js");
-const {MAP_LAYER_STATES, isOffline} = require("../utils/mapLayerState.js");
+(function openSkyProviderModule() {
+const {BaseMapProvider} = typeof window !== "undefined" ? window.AegisBaseMapProvider : require("./baseProvider.js");
+const {MAP_LAYER_STATES, isOffline} = typeof window !== "undefined" ? window.AegisMapLayerState : require("../utils/mapLayerState.js");
 
 const OPEN_SKY_URL = "https://opensky-network.org/api/states/all";
 const OPEN_SKY_TOKEN_URL = "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token";
@@ -218,4 +219,6 @@ class OpenSkyProvider extends BaseMapProvider {
     }
 }
 
-module.exports = {OpenSkyProvider};
+if (typeof module !== "undefined" && module.exports) module.exports = {OpenSkyProvider};
+if (typeof window !== "undefined") window.AegisOpenSkyProvider = {OpenSkyProvider};
+})();

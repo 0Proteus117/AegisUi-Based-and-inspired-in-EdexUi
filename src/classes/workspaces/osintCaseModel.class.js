@@ -30,6 +30,7 @@
 
     function bytesOf(value) {
         const text = typeof value === "string" ? value : JSON.stringify(value);
+        if (typeof window !== "undefined" && window.AegisRendererRuntime) return window.AegisRendererRuntime.utf8Bytes(text);
         if (typeof Buffer !== "undefined") return Buffer.byteLength(text, "utf8");
         return new TextEncoder().encode(text).length;
     }
@@ -131,6 +132,9 @@
     function canonicalStringify(value) { return JSON.stringify(canonicalize(value)); }
 
     function requireCrypto() {
+        if (typeof window !== "undefined" && window.AegisRendererRuntime) {
+            return {createHash: () => ({_value: "", update(value) { this._value = value; return this; }, digest() { return window.AegisRendererRuntime.sha256Text(this._value); }})};
+        }
         if (typeof require !== "function") throw new CaseError("STORAGE_UNAVAILABLE", "Integrity hashing is available only in the trusted process.");
         return require("crypto");
     }

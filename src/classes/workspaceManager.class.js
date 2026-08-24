@@ -1,6 +1,6 @@
 class WorkspaceManager {
     constructor(options = {}) {
-        this.ipc = require("electron").ipcRenderer;
+        this.ipc = window.aegisIpc;
         this.definitions = Array.isArray(options.definitions) ? options.definitions : [];
         this.byId = new Map(this.definitions.map(definition => [definition.id, definition]));
         this.hub = document.getElementById(options.hubElementId);
@@ -800,37 +800,22 @@ class WorkspaceManager {
     }
 
     gearLabLocalRoot() {
-        try {
-            const fs = require("fs");
-            const path = require("path");
-            const candidates = [
-                path.resolve(process.cwd(), "tools/aegis-gearlab"),
-                path.resolve(__dirname, "../../tools/aegis-gearlab"),
-                process.resourcesPath ? path.join(process.resourcesPath, "aegis-gearlab") : ""
-            ].filter(Boolean);
-            return candidates.find(candidate => fs.existsSync(path.join(candidate, "run_api.sh"))) || null;
-        } catch (error) {
-            return null;
-        }
+        return "MANAGED_BY_MAIN";
     }
 
     async startGearLabApi(consoleNode) {
-        const root = this.gearLabLocalRoot();
-        if (!root) {
-            this.setGearLabStatus("ERROR", consoleNode, "GearLab module path is unavailable. Open DOCS for setup.");
-            return;
-        }
         try {
-            const fs = require("fs");
-            const path = require("path");
-            const {spawn} = require("child_process");
-            if (!fs.existsSync(path.join(root, ".venv/bin/python"))) {
+            const status = await window.aegis.gearlab.status();
+            if (!status.installed) {
+                this.setGearLabStatus("ERROR", consoleNode, "GearLab module path is unavailable. Open DOCS for setup.");
+                return;
+            }
+            if (!status.backendReady) {
                 this.setGearLabStatus("CAD BACKEND MISSING", consoleNode, "Local venv is not installed. Run setup_mac.sh once.");
                 return;
             }
             this.setGearLabStatus("API STARTING", consoleNode, "Starting fixed local GearLab service.");
-            const child = spawn("/bin/zsh", [path.join(root, "run_api.sh")], {cwd: root, detached: true, stdio: "ignore"});
-            child.unref();
+            await window.aegis.gearlab.start();
             for (let attempt = 0; attempt < 12; attempt += 1) {
                 await new Promise(resolve => setTimeout(resolve, 650));
                 const health = await this.checkGearLabHealth({consoleNode, silent: true});
@@ -843,29 +828,19 @@ class WorkspaceManager {
     }
 
     openGearLabUrl(target, consoleNode) {
-        try {
-            const {spawn} = require("child_process");
-            if (!/^http:\/\/127\.0\.0\.1:8765\//.test(String(target))) throw new Error("Rejected non-local GearLab URL.");
-            spawn("/usr/bin/open", [target], {detached: true, stdio: "ignore"}).unref();
-        } catch (error) {
-            this.setGearLabStatus("ERROR", consoleNode, error.message || "Cannot open GearLab URL.");
+        if (!/^http:\/\/127\.0\.0\.1:8765\//.test(String(target))) {
+            this.setGearLabStatus("ERROR", consoleNode, "Rejected non-local GearLab URL.");
+            return;
         }
+        window.aegis.gearlab.open("app").catch(error => {
+            this.setGearLabStatus("ERROR", consoleNode, error.message || "Cannot open GearLab URL.");
+        });
     }
 
     openGearLabLocalTarget(target, consoleNode) {
-        const root = this.gearLabLocalRoot();
-        if (!root) {
-            this.setGearLabStatus("ERROR", consoleNode, "GearLab module path is unavailable.");
-            return;
-        }
-        try {
-            const path = require("path");
-            const {spawn} = require("child_process");
-            const destination = target === "docs" ? path.join(root, "README.md") : path.join(root, "exports");
-            spawn("/usr/bin/open", [destination], {detached: true, stdio: "ignore"}).unref();
-        } catch (error) {
+        window.aegis.gearlab.open(target === "docs" ? "docs" : "exports").catch(error => {
             this.setGearLabStatus("ERROR", consoleNode, error.message || "Cannot open local GearLab target.");
-        }
+        });
     }
 
     engineeringInternalToolBody(tool) {

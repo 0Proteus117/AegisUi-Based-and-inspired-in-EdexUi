@@ -17,6 +17,7 @@ documents translate that intent into the audited v2.7.0 implementation:
 - [target architecture](STUD_ASSIGNMENT_WORKFLOW_ENGINE_ARCHITECTURE.md)
 - [implementation roadmap](STUD_ASSIGNMENT_WORKFLOW_ENGINE_ROADMAP.md)
 - [M1 Requirements Contract implementation and validation](STUD_M1_REQUIREMENTS_CONTRACT_VALIDATION.md)
+- [Electron trust-boundary hardening](../../security/ELECTRON_TRUST_BOUNDARY_HARDENING_2026-08-24.md)
 
 When documents disagree, use this order:
 
@@ -33,6 +34,6 @@ described in the architecture document.
 
 The first implemented programme milestone is M1. It advances the canonical STUD
 schema from v14 to v15 and replaces the transient requirements readout as product
-authority with a reviewed, revisioned Requirements Contract. The next task is the
-dedicated Electron Trust-Boundary Hardening intervention recorded in the roadmap;
-M2 has not started.
+authority with a reviewed, revisioned Requirements Contract. The dedicated
+Electron Trust-Boundary Hardening intervention is also complete. The exact next
+product milestone is M2; M2 has not started.

@@ -1,5 +1,6 @@
-const {BaseMapProvider} = require("./baseProvider.js");
-const {MAP_LAYER_STATES, isOffline} = require("../utils/mapLayerState.js");
+(function marineWeatherProviderModule() {
+const {BaseMapProvider} = typeof window !== "undefined" ? window.AegisBaseMapProvider : require("./baseProvider.js");
+const {MAP_LAYER_STATES, isOffline} = typeof window !== "undefined" ? window.AegisMapLayerState : require("../utils/mapLayerState.js");
 
 const OPEN_METEO_MARINE_URL = "https://marine-api.open-meteo.com/v1/marine";
 const MARINE_HOURLY_FIELDS = [
@@ -313,4 +314,6 @@ class MarineWeatherProvider extends BaseMapProvider {
     }
 }
 
-module.exports = {MarineWeatherProvider};
+if (typeof module !== "undefined" && module.exports) module.exports = {MarineWeatherProvider};
+if (typeof window !== "undefined") window.AegisMarineWeatherProvider = {MarineWeatherProvider};
+})();

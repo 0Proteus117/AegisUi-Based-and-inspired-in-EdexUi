@@ -3,6 +3,99 @@
 const RESEARCH_TABS = Object.freeze(["SEARCH", "LIBRARY", "CITATIONS"]);
 const NOTE_EMPTY_DOCUMENT = Object.freeze({type: "doc", content: [{type: "paragraph"}]});
 
+class StudBrowserStructuredEditor {
+    constructor(host, content) {
+        this.host = host;
+        this.host.contentEditable = "true";
+        this.host.classList.add("stud-editor-fallback");
+        this.host.replaceChildren(this.renderNode(content || NOTE_EMPTY_DOCUMENT));
+    }
+
+    renderNode(node = {}) {
+        if (node.type === "doc") {
+            const fragment = document.createDocumentFragment();
+            (node.content || []).forEach(child => fragment.appendChild(this.renderNode(child)));
+            return fragment;
+        }
+        if (node.type === "text") {
+            let value = document.createTextNode(String(node.text || ""));
+            (node.marks || []).forEach(mark => {
+                const wrapper = document.createElement(mark.type === "bold" ? "strong" : mark.type === "italic" ? "em" : mark.type === "link" ? "a" : "span");
+                if (mark.type === "link" && /^https:\/\//i.test(String(mark.attrs && mark.attrs.href || ""))) wrapper.href = mark.attrs.href;
+                wrapper.appendChild(value); value = wrapper;
+            });
+            return value;
+        }
+        const tags = {paragraph: "p", heading: `h${Math.max(1, Math.min(6, Number(node.attrs && node.attrs.level || 2)))}`, blockquote: "blockquote", bulletList: "ul", orderedList: "ol", listItem: "li", codeBlock: "pre", hardBreak: "br", table: "table", tableRow: "tr", tableHeader: "th", tableCell: "td"};
+        const element = document.createElement(tags[node.type] || "p");
+        if (["inlineMath", "blockMath"].includes(node.type)) {
+            element.dataset.studMath = node.type;
+            element.textContent = String(node.attrs && node.attrs.latex || "");
+        } else (node.content || []).forEach(child => element.appendChild(this.renderNode(child)));
+        return element;
+    }
+
+    serializeInline(node) {
+        if (node.nodeType === Node.TEXT_NODE) return node.nodeValue ? [{type: "text", text: node.nodeValue}] : [];
+        if (node.nodeType !== Node.ELEMENT_NODE) return [];
+        if (node.tagName === "BR") return [{type: "hardBreak"}];
+        const content = [...node.childNodes].flatMap(child => this.serializeInline(child));
+        const mark = node.tagName === "STRONG" || node.tagName === "B" ? {type: "bold"}
+            : node.tagName === "EM" || node.tagName === "I" ? {type: "italic"}
+            : node.tagName === "A" && /^https:\/\//i.test(node.href) ? {type: "link", attrs: {href: node.href}}
+            : null;
+        return mark ? content.map(item => item.type === "text" ? {...item, marks: [...(item.marks || []), mark]} : item) : content;
+    }
+
+    serializeBlock(element) {
+        const tag = element.tagName;
+        if (tag === "UL" || tag === "OL") return {type: tag === "UL" ? "bulletList" : "orderedList", content: [...element.children].map(child => this.serializeBlock(child))};
+        if (tag === "LI") return {type: "listItem", content: [{type: "paragraph", content: [...element.childNodes].flatMap(child => this.serializeInline(child))}]};
+        if (tag === "BLOCKQUOTE") return {type: "blockquote", content: [{type: "paragraph", content: [...element.childNodes].flatMap(child => this.serializeInline(child))}]};
+        if (tag === "PRE") return {type: "codeBlock", content: this.serializeInline(element)};
+        if (/^H[1-6]$/.test(tag)) return {type: "heading", attrs: {level: Number(tag.slice(1))}, content: this.serializeInline(element)};
+        if (tag === "TABLE") return {type: "table", content: [...element.rows].map(row => ({type: "tableRow", content: [...row.cells].map(cell => ({type: cell.tagName === "TH" ? "tableHeader" : "tableCell", content: [{type: "paragraph", content: this.serializeInline(cell)}]}))}))};
+        return {type: "paragraph", content: this.serializeInline(element)};
+    }
+
+    getJSON() {
+        const children = [...this.host.children];
+        if (!children.length) return {type: "doc", content: [{type: "paragraph", content: this.serializeInline(this.host)}]};
+        return {type: "doc", content: children.map(child => this.serializeBlock(child))};
+    }
+
+    getAttributes(name) {
+        if (name !== "link") return {};
+        const anchor = window.getSelection && window.getSelection().anchorNode;
+        const element = anchor && (anchor.nodeType === Node.ELEMENT_NODE ? anchor : anchor.parentElement);
+        const link = element && element.closest ? element.closest("a") : null;
+        return {href: link && link.href || ""};
+    }
+
+    chain() {
+        const editor = this;
+        const api = {
+            focus() { editor.host.focus(); return api; },
+            toggleBold() { document.execCommand("bold"); return api; },
+            toggleItalic() { document.execCommand("italic"); return api; },
+            toggleHeading() { document.execCommand("formatBlock", false, "h2"); return api; },
+            toggleBulletList() { document.execCommand("insertUnorderedList"); return api; },
+            toggleBlockquote() { document.execCommand("formatBlock", false, "blockquote"); return api; },
+            toggleCodeBlock() { document.execCommand("formatBlock", false, "pre"); return api; },
+            extendMarkRange() { return api; },
+            setLink(attrs = {}) { document.execCommand("createLink", false, attrs.href); return api; },
+            insertInlineMath(attrs = {}) { document.execCommand("insertText", false, `$${attrs.latex || ""}$`); return api; },
+            insertBlockMath(attrs = {}) { document.execCommand("insertText", false, `\n$$${attrs.latex || ""}$$\n`); return api; },
+            insertTable() { document.execCommand("insertHTML", false, "<table><tr><th></th><th></th><th></th></tr><tr><td></td><td></td><td></td></tr><tr><td></td><td></td><td></td></tr></table>"); return api; },
+            insertContent(value) { document.execCommand("insertText", false, String(value || "")); return api; },
+            run() { return true; }
+        };
+        return api;
+    }
+
+    destroy() { this.host.removeAttribute("contenteditable"); }
+}
+
 class StudResearchWorkspace {
     constructor(options = {}) {
         this.request = options.request;
@@ -148,7 +241,7 @@ class StudResearchWorkspace {
         if (note && note.documentJson) { try { document = JSON.parse(note.documentJson); } catch (error) {} }
         if (!note && this.state.noteSelection) document = {type: "doc", content: [{type: "blockquote", content: [{type: "paragraph", content: [{type: "text", text: this.state.noteSelection.excerpt}]}]}, {type: "paragraph", content: [{type: "text", text: "Analyst / student note: "}]}]};
         const selectedPaperId = this.state.notePaperId || "";
-        return `<section class="stud-notes-shell"><header class="stud-section-title"><div><small>STUD / NOTES</small><h2>STRUCTURED ACADEMIC NOTES</h2><p>Local ProseMirror document model with explicit paper, module and assignment relationships.</p></div><span>LOCAL / EXPLICIT SAVE</span></header><div class="stud-notes-grid"><article class="workspace-panel"><header><h2>NOTES</h2><span>${this.state.notes.length} LOCAL</span></header><div class="workspace-panel-content"><button type="button" data-stud-new-note>NEW NOTE</button><div class="stud-note-list">${this.state.notes.map(item => `<button type="button" class="${item.id === this.state.selectedNoteId ? "selected" : ""}" data-stud-note-id="${this.escape(item.id)}"><strong>${this.escape(item.title)}</strong><small>${this.escape(item.content || "EMPTY NOTE")}</small></button>`).join("") || `<div class="stud-empty-inline">NO NOTES YET.</div>`}</div></div></article><article class="workspace-panel stud-note-editor-panel"><header><h2>NOTE EDITOR</h2><span>TIPTAP / PROSEMIRROR JSON V1</span></header><div class="workspace-panel-content"><form data-stud-research-form="NOTE" data-stud-note-id="${this.escape(note && note.id || "")}" class="stud-note-form"><div class="stud-editor-fields"><label>TITLE<input class="aegis-input" name="title" maxlength="240" required value="${this.escape(note && note.title || (this.state.noteSelection ? "Quoted document observation" : "New academic note"))}"></label><label>MODULE<select class="aegis-select" name="courseId"><option value="">NO MODULE</option>${this.parent.state.courses.map(item => `<option value="${this.escape(item.id)}"${note && note.courseId === item.id ? " selected" : ""}>${this.escape(item.code || item.title)}</option>`).join("")}</select></label><label>ASSIGNMENT<select class="aegis-select" name="assignmentId"><option value="">NO ASSIGNMENT</option>${this.parent.state.assignments.map(item => `<option value="${this.escape(item.id)}"${note && note.assignmentId === item.id ? " selected" : ""}>${this.escape(item.title)}</option>`).join("")}</select></label><label>PAPER<select class="aegis-select" name="paperId"><option value="">NO PAPER LINK</option>${this.state.library.map(item => `<option value="${this.escape(item.id)}"${selectedPaperId === item.id ? " selected" : ""}>${this.escape(item.title)}</option>`).join("")}</select></label></div><div class="stud-note-toolbar" role="toolbar" aria-label="Note formatting"><button type="button" data-stud-editor-command="bold">BOLD</button><button type="button" data-stud-editor-command="italic">ITALIC</button><button type="button" data-stud-editor-command="heading">HEADING</button><button type="button" data-stud-editor-command="bulletList">LIST</button><button type="button" data-stud-editor-command="blockquote">QUOTE</button><button type="button" data-stud-editor-command="codeBlock">CODE</button><button type="button" data-stud-editor-command="link">LINK</button><button type="button" data-stud-editor-command="inlineMath">MATH</button><button type="button" data-stud-editor-command="blockMath">DISPLAY MATH</button><button type="button" data-stud-editor-command="table">TABLE</button><button type="button" data-stud-insert-citation>CITATION</button></div>${this.state.noteSelection ? `<div class="stud-selection-provenance">QUOTE · PAGE ${this.state.noteSelection.page} · SHA-256 ${this.escape(this.state.noteSelection.selectionTextHash.slice(0, 16))}… · SOURCE TEXT REMAINS DISTINCT FROM STUDENT NOTE</div>` : ""}<div class="stud-tiptap-editor" data-stud-editor aria-label="Structured note editor"></div><script type="application/json" data-stud-note-document>${this.scriptJson(document)}</script><div class="stud-detail-actions"><button type="submit">SAVE STRUCTURED NOTE</button>${note ? `<button type="button" data-stud-note-revision="${this.escape(note.id)}">CREATE REVISION</button>` : ""}</div></form></div></article></div></section>`;
+        return `<section class="stud-notes-shell"><header class="stud-section-title"><div><small>STUD / NOTES</small><h2>STRUCTURED ACADEMIC NOTES</h2><p>Local ProseMirror-compatible document model with explicit paper, module and assignment relationships.</p></div><span>LOCAL / EXPLICIT SAVE</span></header><div class="stud-notes-grid"><article class="workspace-panel"><header><h2>NOTES</h2><span>${this.state.notes.length} LOCAL</span></header><div class="workspace-panel-content"><button type="button" data-stud-new-note>NEW NOTE</button><div class="stud-note-list">${this.state.notes.map(item => `<button type="button" class="${item.id === this.state.selectedNoteId ? "selected" : ""}" data-stud-note-id="${this.escape(item.id)}"><strong>${this.escape(item.title)}</strong><small>${this.escape(item.content || "EMPTY NOTE")}</small></button>`).join("") || `<div class="stud-empty-inline">NO NOTES YET.</div>`}</div></div></article><article class="workspace-panel stud-note-editor-panel"><header><h2>NOTE EDITOR</h2><span>BROWSER STRUCTURED / JSON V1</span></header><div class="workspace-panel-content"><form data-stud-research-form="NOTE" data-stud-note-id="${this.escape(note && note.id || "")}" class="stud-note-form"><div class="stud-editor-fields"><label>TITLE<input class="aegis-input" name="title" maxlength="240" required value="${this.escape(note && note.title || (this.state.noteSelection ? "Quoted document observation" : "New academic note"))}"></label><label>MODULE<select class="aegis-select" name="courseId"><option value="">NO MODULE</option>${this.parent.state.courses.map(item => `<option value="${this.escape(item.id)}"${note && note.courseId === item.id ? " selected" : ""}>${this.escape(item.code || item.title)}</option>`).join("")}</select></label><label>ASSIGNMENT<select class="aegis-select" name="assignmentId"><option value="">NO ASSIGNMENT</option>${this.parent.state.assignments.map(item => `<option value="${this.escape(item.id)}"${note && note.assignmentId === item.id ? " selected" : ""}>${this.escape(item.title)}</option>`).join("")}</select></label><label>PAPER<select class="aegis-select" name="paperId"><option value="">NO PAPER LINK</option>${this.state.library.map(item => `<option value="${this.escape(item.id)}"${selectedPaperId === item.id ? " selected" : ""}>${this.escape(item.title)}</option>`).join("")}</select></label></div><div class="stud-note-toolbar" role="toolbar" aria-label="Note formatting"><button type="button" data-stud-editor-command="bold">BOLD</button><button type="button" data-stud-editor-command="italic">ITALIC</button><button type="button" data-stud-editor-command="heading">HEADING</button><button type="button" data-stud-editor-command="bulletList">LIST</button><button type="button" data-stud-editor-command="blockquote">QUOTE</button><button type="button" data-stud-editor-command="codeBlock">CODE</button><button type="button" data-stud-editor-command="link">LINK</button><button type="button" data-stud-editor-command="inlineMath">MATH</button><button type="button" data-stud-editor-command="blockMath">DISPLAY MATH</button><button type="button" data-stud-editor-command="table">TABLE</button><button type="button" data-stud-insert-citation>CITATION</button></div>${this.state.noteSelection ? `<div class="stud-selection-provenance">QUOTE · PAGE ${this.state.noteSelection.page} · SHA-256 ${this.escape(this.state.noteSelection.selectionTextHash.slice(0, 16))}… · SOURCE TEXT REMAINS DISTINCT FROM STUDENT NOTE</div>` : ""}<div class="stud-tiptap-editor" data-stud-editor aria-label="Structured note editor"></div><script type="application/json" data-stud-note-document>${this.scriptJson(document)}</script><div class="stud-detail-actions"><button type="submit">SAVE STRUCTURED NOTE</button>${note ? `<button type="button" data-stud-note-revision="${this.escape(note.id)}">CREATE REVISION</button>` : ""}</div></form></div></article></div></section>`;
     }
 
     renderServices() {
@@ -166,20 +259,10 @@ class StudResearchWorkspace {
         if (!host || !payload) return;
         let content = NOTE_EMPTY_DOCUMENT;
         try { content = JSON.parse(payload.textContent); } catch (error) {}
-        try {
-            const {Editor} = require("@tiptap/core");
-            const StarterKit = require("@tiptap/starter-kit").default;
-            const {TableKit} = require("@tiptap/extension-table");
-            const {Mathematics} = require("@tiptap/extension-mathematics");
-            const Link = require("@tiptap/extension-link").default;
-            if (!document.contains(host)) return;
-            this.editor = new Editor({element: host, extensions: [StarterKit, Link.configure({openOnClick: false, autolink: true, defaultProtocol: "https"}), TableKit, Mathematics.configure({katexOptions: {throwOnError: false}})], content, editorProps: {attributes: {class: "stud-prosemirror", spellcheck: "true"}}});
-        } catch (error) {
-            host.contentEditable = "true";
-            host.classList.add("stud-editor-fallback");
-            host.textContent = this.state.notes.find(item => item.id === this.state.selectedNoteId)?.content || "";
-            this.toast(this.parent.view, "STRUCTURED EDITOR FALLBACK ACTIVE");
-        }
+        // TipTap's CommonJS entry point previously depended on renderer Node.
+        // This browser-native adapter preserves the bounded structured-document
+        // contract and toolbar without reintroducing module or filesystem access.
+        this.editor = new StudBrowserStructuredEditor(host, content);
     }
 
     async handleClick(event) {
@@ -273,9 +356,8 @@ class StudResearchWorkspace {
         const selectionAction = context && context.paperId ? `<button type="button" data-stud-pdf-action="NOTE_SELECTION">CREATE NOTE FROM SELECTION</button>` : "";
         dialog.querySelector("[data-stud-dialog-body]").innerHTML = `<div class="stud-pdf-viewer"><nav><button type="button" data-stud-pdf-action="PREV">PREV</button><span data-stud-pdf-state>LOADING</span><button type="button" data-stud-pdf-action="NEXT">NEXT</button><button type="button" data-stud-pdf-action="ZOOM_OUT">−</button><button type="button" data-stud-pdf-action="ZOOM_IN">+</button><label>SEARCH<input class="aegis-input" data-stud-pdf-search maxlength="120"></label><button type="button" data-stud-pdf-action="SEARCH">FIND</button>${selectionAction}</nav><div class="stud-pdf-stage"><canvas data-stud-pdf-canvas></canvas><div class="stud-pdf-text" data-stud-pdf-text aria-label="Selectable PDF text layer"></div></div></div>`;
         if (!dialog.open) dialog.showModal();
-        const {pathToFileURL} = require("url");
-        const pdfjs = await import(pathToFileURL(require.resolve("pdfjs-dist/legacy/build/pdf.mjs")).href);
-        pdfjs.GlobalWorkerOptions.workerSrc = pathToFileURL(require.resolve("pdfjs-dist/legacy/build/pdf.worker.mjs")).href;
+        const pdfjs = await import("../../node_modules/pdfjs-dist/legacy/build/pdf.mjs");
+        pdfjs.GlobalWorkerOptions.workerSrc = new URL("../../node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs", window.location.href).href;
         const bytes = Uint8Array.from(atob(data.bytesBase64), char => char.charCodeAt(0));
         this.pdf = await pdfjs.getDocument({data: bytes, isEvalSupported: false, useSystemFonts: true}).promise;
         this.pdfContext = {...context, sha256: data.sha256 || ""};
@@ -309,14 +391,13 @@ class StudResearchWorkspace {
             const anchor = selection && selection.anchorNode;
             const excerpt = String(selection && selection.toString() || "").trim().slice(0, 4000);
             if (!excerpt || !textHost || !anchor || !textHost.contains(anchor)) return this.toast(this.parent.view, "SELECT TEXT IN THE PDF TEXT LAYER FIRST");
-            const crypto = require("crypto");
             this.state.notePaperId = this.pdfContext && this.pdfContext.paperId || "";
             this.state.noteSelection = {
                 sourceType: this.pdfContext && this.pdfContext.sourceType || "LOCAL_DOCUMENT",
                 paperId: this.state.notePaperId,
                 documentReference: this.pdfContext && this.pdfContext.documentReference || null,
                 page: this.pdfPage,
-                selectionTextHash: crypto.createHash("sha256").update(excerpt, "utf8").digest("hex"),
+                selectionTextHash: window.AegisRendererRuntime.sha256Text(excerpt),
                 excerpt,
                 createdAt: new Date().toISOString()
             };

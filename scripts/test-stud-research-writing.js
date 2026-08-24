@@ -151,7 +151,13 @@ function syntheticTextPdf(text = "Synthetic academic PDF text") {
         });
         await check("RENDERER_PDF_AND_EDITOR_BOUNDARIES", () => {
             const renderer = fs.readFileSync(path.join(ROOT, "src/classes/workspaces/studResearchWorkspace.class.js"), "utf8");
-            assert.ok(renderer.includes("pdfjs-dist/legacy/build/pdf.mjs")); assert.ok(renderer.includes("isEvalSupported: false")); assert.ok(renderer.includes("@tiptap/core")); assert.ok(!renderer.includes("fetch("));
+            assert.ok(renderer.includes("pdfjs-dist/legacy/build/pdf.mjs"));
+            assert.ok(renderer.includes("isEvalSupported: false"));
+            assert.ok(renderer.includes("class StudBrowserStructuredEditor"));
+            assert.ok(renderer.includes("getJSON()"));
+            assert.ok(!renderer.includes("@tiptap/core"));
+            assert.ok(!renderer.includes("require("));
+            assert.ok(!renderer.includes("fetch("));
         });
         await check("LAYOUT_THEME_RESPONSIVE", () => {
             const css = fs.readFileSync(path.join(ROOT, "src/assets/css/workspaces.css"), "utf8"); assert.ok(css.includes("STUD Phase 3 research/writing")); assert.ok(css.includes("var(--aegis-surface)")); assert.ok(css.includes("stud-pdf-viewer")); assert.ok(css.includes("@media (max-width: 1230px)"));

@@ -1,3 +1,4 @@
+(function mapLayerCacheModule() {
 class MapLayerCache {
     constructor() {
         this.entries = new Map();
@@ -41,4 +42,6 @@ class MapLayerCache {
     }
 }
 
-module.exports = {MapLayerCache};
+if (typeof module !== "undefined" && module.exports) module.exports = {MapLayerCache};
+if (typeof window !== "undefined") window.AegisMapLayerCache = {MapLayerCache};
+})();

@@ -1,3 +1,4 @@
+(function mapLayerStateModule() {
 const MAP_LAYER_STATES = Object.freeze({
     OFF: "OFF",
     LOADING: "LOADING",
@@ -99,7 +100,7 @@ function statusIsInformative(status) {
     return INFORMATIVE_STATES.has(status);
 }
 
-module.exports = {
+const AegisMapLayerState = {
     MAP_LAYER_STATES,
     isOffline,
     normalizeProviderError,
@@ -108,3 +109,6 @@ module.exports = {
     statusNeedsAttention,
     statusIsInformative
 };
+if (typeof module !== "undefined" && module.exports) module.exports = AegisMapLayerState;
+if (typeof window !== "undefined") window.AegisMapLayerState = AegisMapLayerState;
+})();

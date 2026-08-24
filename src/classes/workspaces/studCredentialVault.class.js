@@ -12,7 +12,14 @@ class StudCredentialVault {
         this.file = path.join(this.root, "secure-provider-credentials.json");
     }
 
-    available() { return Boolean(this.safeStorage && typeof this.safeStorage.isEncryptionAvailable === "function" && this.safeStorage.isEncryptionAvailable() && typeof this.safeStorage.encryptString === "function" && typeof this.safeStorage.decryptString === "function"); }
+    supported() {
+        return Boolean(this.safeStorage
+            && typeof this.safeStorage.isEncryptionAvailable === "function"
+            && typeof this.safeStorage.encryptString === "function"
+            && typeof this.safeStorage.decryptString === "function");
+    }
+
+    available() { return this.supported() && this.safeStorage.isEncryptionAvailable(); }
 
     read() {
         if (!fs.existsSync(this.file)) return {};
@@ -68,7 +75,12 @@ class StudCredentialVault {
     status(providerId) {
         const id = safeId(providerId);
         const value = this.read()[id] || {};
-        return Object.freeze({secureStorageAvailable: this.available(), tokenConfigured: Boolean(value.token), icsConfigured: Boolean(value.icsUrl)});
+        // Status is a metadata-only operation and must not synchronously touch
+        // Keychain. Mounted/ad-hoc validation builds can otherwise block on a
+        // macOS keychain authorisation dialog merely by opening STUD. Actual
+        // credential reads and writes still require available() and therefore
+        // fail closed at the point a secret is used.
+        return Object.freeze({secureStorageAvailable: this.supported(), tokenConfigured: Boolean(value.token), icsConfigured: Boolean(value.icsUrl)});
     }
 }
 

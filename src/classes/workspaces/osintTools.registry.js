@@ -5,13 +5,8 @@
 })(typeof window !== "undefined" ? window : null, function() {
     "use strict";
 
-    // Electron's legacy renderer exposes CommonJS `require`, but resolves it
-    // relative to ui.html for normal <script> tags. Prefer the already-loaded
-    // browser globals so the same registry works in Electron and Node tests.
-    const ProviderSchema = (typeof window !== "undefined" && window.OSINTProviderSchema)
-        || (typeof require === "function" ? require("./osintProviderSchema.class.js") : null);
-    const ProviderPolicy = (typeof window !== "undefined" && window.OSINTProviderPolicy)
-        || (typeof require === "function" ? require("./osintProviderPolicy.class.js") : null);
+    const ProviderSchema = typeof window !== "undefined" ? window.OSINTProviderSchema : require("./osintProviderSchema.class.js");
+    const ProviderPolicy = typeof window !== "undefined" ? window.OSINTProviderPolicy : require("./osintProviderPolicy.class.js");
 
     if (!ProviderSchema || !ProviderPolicy) throw new Error("OSINT provider schema and policy must load before the registry.");
 

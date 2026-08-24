@@ -4,7 +4,7 @@ class Sysinfo {
 
         // See #255
         let os;
-        switch (require("os").platform()) {
+        switch (window.AegisRendererRuntime.platform) {
             case "darwin":
                 os = "macOS";
                 break;
@@ -12,7 +12,7 @@ class Sysinfo {
                 os = "win";
                 break;
             default:
-                os = require("os").platform();
+                os = window.AegisRendererRuntime.platform;
         }
 
         // Create DOM
@@ -99,7 +99,7 @@ class Sysinfo {
     }
     updateUptime() {
         let uptime = {
-            raw: Math.floor(require("os").uptime()),
+            raw: Math.floor(window.aegis.runtime.bootstrap.runtime.uptime),
             days: 0,
             hours: 0,
             minutes: 0

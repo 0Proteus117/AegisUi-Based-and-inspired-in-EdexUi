@@ -56,6 +56,17 @@ The workflow service orchestrates domain operations; it does not absorb or
 duplicate their stores. Provider and local-model services keep their current
 fixed security boundaries.
 
+### Implemented Electron trust boundary
+
+The pre-M2 hardening intervention is complete. The primary renderer now runs
+with `nodeIntegration: false` and `contextIsolation: true` through the typed
+`window.aegis` preload contract. Renderer code has no direct Node, raw Electron,
+raw IPC, generic filesystem, generic shell or generic network authority. Main
+process sender and domain validation remain authoritative. `@electron/remote` is
+removed. The primary preload is not yet sandboxed; this residual and the full
+migration inventory are recorded in
+[`ELECTRON_TRUST_BOUNDARY_HARDENING_2026-08-24.md`](../../security/ELECTRON_TRUST_BOUNDARY_HARDENING_2026-08-24.md).
+
 ## Core decisions
 
 ### Assignment ownership and organisation

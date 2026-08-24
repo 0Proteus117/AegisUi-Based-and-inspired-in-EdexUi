@@ -2,7 +2,9 @@ const cluster = require("cluster");
 
 if (cluster.isMaster) {
     const electron = require("electron");
-    const ipc = electron.ipcMain;
+    const path = require("path");
+    const {createTrustedIpcMain} = require("./classes/ipcSecurity.class.js");
+    const ipc = createTrustedIpcMain(electron.ipcMain, path.join(__dirname, "ui.html"));
     const signale = require("signale");
     const {registerOsintCaseIpc} = require("./classes/workspaces/osintCaseIpc.class.js");
     const {registerStudAcademicIpc} = require("./classes/workspaces/studAcademicIpc.class.js");
@@ -20,6 +22,21 @@ if (cluster.isMaster) {
     // STUD persistence is a bounded main-process service. The renderer only
     // receives validated academic-domain responses; it never opens SQLite.
     registerStudAcademicIpc({ipc, app: electron.app});
+
+    const ALLOWED_SYSTEM_INFORMATION = new Set([
+        "battery", "blockDevices", "chassis", "cpu", "cpuTemperature", "currentLoad", "fsSize", "mem", "networkConnections",
+        "networkInterfaces", "networkStats", "osInfo", "processes", "system", "time"
+    ]);
+    ipc.handle("aegis-systeminformation-call", async (_event, payload = {}) => {
+        const type = String(payload.type || "");
+        const args = Array.isArray(payload.args) ? payload.args.slice(0, 1) : [];
+        if (!ALLOWED_SYSTEM_INFORMATION.has(type) || typeof si[type] !== "function") {
+            const error = new Error("System information operation is not allowed.");
+            error.code = "SYSTEM_INFORMATION_NOT_ALLOWED";
+            throw error;
+        }
+        return si[type](...args);
+    });
 
     cluster.setupMaster({
         exec: require("path").join(__dirname, "_multithread.js")

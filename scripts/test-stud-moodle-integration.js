@@ -53,6 +53,15 @@ function fullFetch(url, options = {}) {
         assert.throws(() => Lms.normalizeBaseUrl("https://user:pass@moodle.example.test"), error => error.code === "INVALID_INPUT");
         check("MOODLE_BASE_URL_STRICT", true);
 
+        let keychainAvailabilityChecks = 0;
+        const metadataOnlyVault = new StudCredentialVault({root, safeStorage: {
+            isEncryptionAvailable: () => { keychainAvailabilityChecks += 1; return true; },
+            encryptString: value => Buffer.from(value),
+            decryptString: value => Buffer.from(value).toString("utf8")
+        }});
+        const metadataStatus = metadataOnlyVault.status("stud_moodle_default");
+        check("MOODLE_STATUS_DOES_NOT_TOUCH_KEYCHAIN", metadataStatus.secureStorageAvailable && keychainAvailabilityChecks === 0);
+
         const initial = runtime.status();
         check("MOODLE_CONFIG_REQUIRED_INITIAL", initial.status === "CONFIG_REQUIRED" && initial.tokenConfigured === false);
         let openedAuthUrl = null; const openedAuthUrls = []; let protocol = null; let openUrlHandler = null; let secondInstanceHandler = null; let prevented = false;
