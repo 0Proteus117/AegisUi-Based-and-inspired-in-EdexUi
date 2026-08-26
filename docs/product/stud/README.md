@@ -40,6 +40,7 @@ requirements readout as product authority with a reviewed, revisioned
 Requirements Contract. M2 advances schema v15 to v16 with explicit academic
 organisation and one validated, persistent Working Context. M3 advances schema
 v16 to v17 with immutable versioned templates and Assignment-owned persistent
-DAG instances. The dedicated Electron Trust-Boundary Hardening intervention is
-also complete. The exact next product milestone is M4 — Blockers, Checkpoints
-and Recovery; M4 is not implemented by the M1-M3 foundation.
+DAG instances. M4 advances schema v17 to v18 with explicit blockers, human
+checkpoints, meaningful journal events and derived dependency propagation. The
+dedicated Electron Trust-Boundary Hardening intervention is also complete. The
+exact next product milestone is M5 — Assignment Workspace.

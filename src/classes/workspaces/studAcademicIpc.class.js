@@ -157,7 +157,15 @@ const CHANNELS = Object.freeze([
     "stud-workflow-node-add",
     "stud-workflow-edge-add",
     "stud-workflow-edge-remove",
-    "stud-workflow-history"
+    "stud-workflow-history",
+    "stud-workflow-conditions",
+    "stud-workflow-blocker-impact",
+    "stud-workflow-blocker-create",
+    "stud-workflow-blocker-update",
+    "stud-workflow-blocker-resolve",
+    "stud-workflow-blocker-cancel",
+    "stud-workflow-checkpoint-create",
+    "stud-workflow-checkpoint-decide"
 ]);
 
 function senderIsTrusted(event) {
@@ -276,6 +284,14 @@ function registerStudAcademicIpc(options = {}) {
     add("stud-workflow-edge-add", ["workflowId", "fromNodeId", "toNodeId", "expectedWorkflowVersion"], payload => workflow.addEdge(payload));
     add("stud-workflow-edge-remove", ["workflowId", "edgeId", "expectedWorkflowVersion"], payload => workflow.removeEdge(payload));
     add("stud-workflow-history", ["workflowId", "limit"], payload => workflow.history(payload));
+    add("stud-workflow-conditions", ["workflowId"], payload => workflow.conditionState(payload));
+    add("stud-workflow-blocker-impact", ["workflowId", "blockerId"], payload => workflow.blockerImpact(payload));
+    add("stud-workflow-blocker-create", ["workflowId", "nodeId", "blockerType", "title", "description", "reason", "expectedResolutionAt", "owner", "requiredInput", "requirementItemId", "relatedEntityType", "relatedEntityId", "provenanceId", "expectedWorkflowVersion"], payload => workflow.createBlocker(payload));
+    add("stud-workflow-blocker-update", ["workflowId", "blockerId", "blockerType", "title", "description", "reason", "expectedResolutionAt", "owner", "requiredInput", "expectedWorkflowVersion", "expectedBlockerVersion"], payload => workflow.updateBlocker(payload));
+    add("stud-workflow-blocker-resolve", ["workflowId", "blockerId", "note", "expectedWorkflowVersion", "expectedBlockerVersion"], payload => workflow.resolveBlocker(payload));
+    add("stud-workflow-blocker-cancel", ["workflowId", "blockerId", "note", "expectedWorkflowVersion", "expectedBlockerVersion"], payload => workflow.cancelBlocker(payload));
+    add("stud-workflow-checkpoint-create", ["workflowId", "nodeId", "title", "instructions", "requiredDecision", "requirementItemId", "relatedEntityType", "relatedEntityId", "provenanceId", "replacesCheckpointId", "expectedWorkflowVersion"], payload => workflow.createCheckpoint(payload));
+    add("stud-workflow-checkpoint-decide", ["workflowId", "checkpointId", "decision", "note", "expectedWorkflowVersion", "expectedCheckpointVersion"], payload => workflow.decideCheckpoint(payload));
     add("stud-requirements-state", ["assignmentId"], payload => requirements.state(payload.assignmentId));
     add("stud-requirements-create-draft", ["assignmentId"], payload => requirements.createDraft(payload.assignmentId));
     add("stud-requirements-review-candidate", ["contractId", "candidateId", "disposition", "expectedVersion"], payload => requirements.reviewCandidate(payload));

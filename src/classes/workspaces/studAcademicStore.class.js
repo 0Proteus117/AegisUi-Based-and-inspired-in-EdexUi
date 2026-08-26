@@ -598,6 +598,97 @@ class StudAcademicStore {
             CREATE INDEX stud_workflow_events_workflow_index ON stud_workflow_events(workflow_id, event_sequence DESC);
             ALTER TABLE stud_working_context ADD COLUMN active_workflow_id TEXT REFERENCES stud_workflow_instances(id);
             ALTER TABLE stud_working_context ADD COLUMN active_workflow_node_id TEXT REFERENCES stud_workflow_nodes(id);
+        `}, {version: 18, sql: `
+            CREATE TABLE stud_workflow_blockers (
+                id TEXT PRIMARY KEY,
+                workflow_id TEXT NOT NULL,
+                node_id TEXT NOT NULL,
+                blocker_type TEXT NOT NULL CHECK(blocker_type IN ('WAITING_LAB','WAITING_TEAM_MEMBER','WAITING_DATA','WAITING_FEEDBACK','WAITING_SUPERVISOR','WAITING_APPROVAL','WAITING_RESOURCE','WAITING_EVENT','WAITING_INTERVIEW','WAITING_SURVEY','WAITING_FIELDWORK','WAITING_EQUIPMENT','WAITING_EXTERNAL_RESULT','CUSTOM')),
+                status TEXT NOT NULL CHECK(status IN ('OPEN','RESOLVED','CANCELLED')),
+                title TEXT NOT NULL,
+                description TEXT,
+                reason TEXT,
+                expected_resolution_at TEXT,
+                owner TEXT,
+                required_input TEXT,
+                requirement_item_id TEXT,
+                source_contract_id TEXT,
+                source_contract_revision INTEGER,
+                source_contract_hash TEXT,
+                source_snapshot_hash TEXT,
+                related_entity_type TEXT,
+                related_entity_id TEXT,
+                provenance_id TEXT,
+                origin TEXT NOT NULL CHECK(origin IN ('USER','REQUIREMENT','TEMPLATE','CANONICAL','EXTERNAL')),
+                row_version INTEGER NOT NULL DEFAULT 1 CHECK(row_version >= 1),
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                resolved_at TEXT,
+                cancelled_at TEXT,
+                resolution_note TEXT,
+                FOREIGN KEY(workflow_id) REFERENCES stud_workflow_instances(id),
+                FOREIGN KEY(node_id) REFERENCES stud_workflow_nodes(id),
+                FOREIGN KEY(requirement_item_id) REFERENCES stud_requirement_items(id),
+                FOREIGN KEY(source_contract_id) REFERENCES stud_requirement_contracts(id),
+                FOREIGN KEY(provenance_id) REFERENCES stud_provenance_records(id),
+                CHECK((related_entity_type IS NULL AND related_entity_id IS NULL) OR (related_entity_type IS NOT NULL AND related_entity_id IS NOT NULL))
+            );
+            CREATE INDEX stud_workflow_blockers_workflow_index ON stud_workflow_blockers(workflow_id, status, node_id, created_at DESC);
+            CREATE INDEX stud_workflow_blockers_node_index ON stud_workflow_blockers(node_id, status, created_at DESC);
+            CREATE TABLE stud_workflow_checkpoints (
+                id TEXT PRIMARY KEY,
+                workflow_id TEXT NOT NULL,
+                node_id TEXT NOT NULL,
+                title TEXT NOT NULL,
+                instructions TEXT,
+                required_decision TEXT,
+                status TEXT NOT NULL CHECK(status IN ('PENDING','APPROVED','REJECTED','CANCELLED')),
+                decision TEXT,
+                decision_note TEXT,
+                requirement_item_id TEXT,
+                source_contract_id TEXT,
+                source_contract_revision INTEGER,
+                source_contract_hash TEXT,
+                source_snapshot_hash TEXT,
+                related_entity_type TEXT,
+                related_entity_id TEXT,
+                provenance_id TEXT,
+                origin TEXT NOT NULL CHECK(origin IN ('USER','REQUIREMENT','TEMPLATE','CANONICAL','EXTERNAL')),
+                replaces_checkpoint_id TEXT,
+                row_version INTEGER NOT NULL DEFAULT 1 CHECK(row_version >= 1),
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                decided_at TEXT,
+                cancelled_at TEXT,
+                FOREIGN KEY(workflow_id) REFERENCES stud_workflow_instances(id),
+                FOREIGN KEY(node_id) REFERENCES stud_workflow_nodes(id),
+                FOREIGN KEY(requirement_item_id) REFERENCES stud_requirement_items(id),
+                FOREIGN KEY(source_contract_id) REFERENCES stud_requirement_contracts(id),
+                FOREIGN KEY(provenance_id) REFERENCES stud_provenance_records(id),
+                FOREIGN KEY(replaces_checkpoint_id) REFERENCES stud_workflow_checkpoints(id),
+                CHECK((related_entity_type IS NULL AND related_entity_id IS NULL) OR (related_entity_type IS NOT NULL AND related_entity_id IS NOT NULL))
+            );
+            CREATE INDEX stud_workflow_checkpoints_workflow_index ON stud_workflow_checkpoints(workflow_id, status, node_id, created_at DESC);
+            CREATE INDEX stud_workflow_checkpoints_node_index ON stud_workflow_checkpoints(node_id, status, created_at DESC);
+            DROP INDEX stud_workflow_events_workflow_index;
+            ALTER TABLE stud_workflow_events RENAME TO stud_workflow_events_v17;
+            CREATE TABLE stud_workflow_events (
+                id TEXT PRIMARY KEY,
+                workflow_id TEXT NOT NULL,
+                event_sequence INTEGER NOT NULL CHECK(event_sequence >= 1),
+                event_type TEXT NOT NULL CHECK(event_type IN ('TEMPLATE_SELECTED','WORKFLOW_CREATED','NODE_STARTED','NODE_COMPLETED','NODE_SKIPPED','NODE_REOPENED','NODE_RENAMED','NODE_ADDED','EDGE_ADDED','EDGE_REMOVED','WORKFLOW_REPLACED','BLOCKER_CREATED','BLOCKER_UPDATED','BLOCKER_RESOLVED','BLOCKER_CANCELLED','CHECKPOINT_CREATED','CHECKPOINT_APPROVED','CHECKPOINT_REJECTED','CHECKPOINT_CANCELLED')),
+                node_id TEXT,
+                actor TEXT NOT NULL,
+                details_json TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY(workflow_id) REFERENCES stud_workflow_instances(id),
+                FOREIGN KEY(node_id) REFERENCES stud_workflow_nodes(id),
+                UNIQUE(workflow_id, event_sequence)
+            );
+            INSERT INTO stud_workflow_events (id,workflow_id,event_sequence,event_type,node_id,actor,details_json,created_at)
+                SELECT id,workflow_id,event_sequence,event_type,node_id,actor,details_json,created_at FROM stud_workflow_events_v17;
+            DROP TABLE stud_workflow_events_v17;
+            CREATE INDEX stud_workflow_events_workflow_index ON stud_workflow_events(workflow_id, event_sequence DESC);
         `}];
         for (const migration of migrations) {
             if (applied.has(migration.version)) continue;

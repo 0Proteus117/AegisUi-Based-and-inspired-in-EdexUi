@@ -137,13 +137,17 @@ repository has advanced, preserve monotonic numbering and document the mapping.
 
 ## M4 — Blockers, checkpoints and recovery
 
+- **Status:** COMPLETE — schema v18 and the M4 validation record implement
+  blockers, explicit human gates, scoped propagation and restart recomputation;
+  runtime worker recovery remains deferred to M13.
 - **Objective:** represent honest external dependencies and resumable execution
   state without running expensive work yet.
 - **Exact scope:** blocker taxonomy, dependency impact, workflow-state journal,
-  human checkpoints/transitions, durable checkpoint/event contracts and branch
-  continuation. Runtime worker crash/resume payloads are deferred to M13 where
-  the execution coordinator exists.
-- **Components:** workflow service/store/model/IPC, recovery bootstrap and UI.
+  human checkpoints/transitions, durable human-decision/event contracts and
+  branch continuation. Runtime worker crash/resume payloads are deferred to M13
+  where the execution coordinator exists.
+- **Components:** bounded conditions repository/service/model, workflow DAG
+  derivation, typed IPC/preload, Assignment workflow inspector and UI.
 - **Schema/migration:** expected v18; blocker, checkpoint and meaningful-event
   tables with bounded payloads and integrity hashes.
 - **Dependencies:** M3.
@@ -152,8 +156,9 @@ repository has advanced, preserve monotonic numbering and document the mapping.
 - **Acceptance criteria:** a missing team geometry artifact blocks only dependent
   nodes; independent nodes remain READY; resolve/reopen blocker with provenance;
   journal/checkpoint contracts persist without pretending a worker can resume.
-- **Automated tests:** blocker taxonomy, dependency propagation, checkpoint hash,
-  crash/restart, retry/skip policy and secret/raw-payload rejection.
+- **Automated tests:** blocker taxonomy/lifecycle, dependency propagation, human
+  decisions/follow-ups, optimistic concurrency, restart recomputation,
+  provenance, bounds and fail-closed payload rejection.
 - **Live/visual validation:** partial, blocked, waiting and human-input cases; status
   meaning does not rely only on colour.
 - **Regression:** Assignment conflicts, Revision sessions, persistence/privacy.
@@ -450,6 +455,6 @@ repository has advanced, preserve monotonic numbering and document the mapping.
 
 ## Exact next milestone
 
-M1, the dedicated Electron Trust-Boundary Hardening intervention, M2 and M3 are
-complete. The exact next product milestone is **M4 — Blockers, Checkpoints and
-Recovery**. No M4 implementation is included in M3.
+M1, the dedicated Electron Trust-Boundary Hardening intervention, M2, M3 and M4
+are complete. The exact next product milestone is **M5 — Assignment Workspace**.
+M4 does not include M5 or autonomous runtime-worker recovery.
