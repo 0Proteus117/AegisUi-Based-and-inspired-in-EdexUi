@@ -98,6 +98,15 @@ on preview, stage selection, navigation or restore.
 Focused M5 test: `scripts/test-stud-assignment-workspace.js` (**8 checks
 passed**).
 
+Scale test: `scripts/test-stud-assignment-workspace-scale.js`. It creates 100
+Courses, 1,000 Assignments, 220 material records scoped to one Assignment, 24
+Notes and 24 Papers. It verifies the Assignment/Course query caps, no automatic
+FTS call, canonical object/note switch and scoped Working Context preview restoration within the
+bounded local test budget. The separate M3/M4 scale suites cover the 300
+Workflow/condition scenario used by the Workspace rail. The recorded M5 run
+measured 3.6 ms Assignment hydration, 2.1 ms Course context read, 0.3 ms object
+switch, 0.2 ms Note switch and 0.6 ms Working Context restoration.
+
 It verifies the adapter allowlist, direct/course material deduplication,
 brief classification, rejection of invalid/cross-assignment workspace objects,
 no title matching, no automatic provider/model action, Working Context reuse,
@@ -111,6 +120,12 @@ AI, Compute, Notebook/Data, Progress, Moodle, CodeQL hardening, Electron trust
 boundary, prebuild integrity and release health all passed in the M5 regression
 run. The pre-existing PDF.js standard-font-data warning was emitted during a
 passing Research test; it did not affect M5 or cause a test failure.
+
+The full cross-Aegis regression runner reached its inherited Map-provider
+environment failure: TomTom returned HTTP 401 and `AISSTREAM_API_KEY` was not
+present. RainViewer and Open-Meteo Marine passed; SAT/Celestrak was skipped by
+its existing environment policy. These results are outside M5 and were not
+relabeled as passing.
 
 ## Live visual validation
 
