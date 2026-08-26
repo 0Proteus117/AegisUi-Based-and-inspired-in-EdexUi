@@ -13,6 +13,7 @@ const {StudToolCatalog} = require("./studToolCatalog.class.js");
 const {StudRequirementsContractService} = require("./studRequirementsContractService.class.js");
 const {StudWorkingContextService} = require("./studWorkingContextService.class.js");
 const {StudWorkflowService} = require("./studWorkflowService.class.js");
+const {StudArtifactOperationsService} = require("./studArtifactOperationsService.class.js");
 
 const CHANNELS = Object.freeze([
     "stud-core-status",
@@ -165,7 +166,18 @@ const CHANNELS = Object.freeze([
     "stud-workflow-blocker-resolve",
     "stud-workflow-blocker-cancel",
     "stud-workflow-checkpoint-create",
-    "stud-workflow-checkpoint-decide"
+    "stud-workflow-checkpoint-decide",
+    "stud-artifact-list",
+    "stud-artifact-read",
+    "stud-artifact-register",
+    "stud-artifact-update",
+    "stud-artifact-relate",
+    "stud-artifact-relationships",
+    "stud-mission-control-state",
+    "stud-operation-list",
+    "stud-operation-read",
+    "stud-operation-events",
+    "stud-operation-artifacts"
 ]);
 
 function senderIsTrusted(event) {
@@ -235,6 +247,10 @@ function registerStudAcademicIpc(options = {}) {
     // main-process authoritative; this service has no provider, AI or tool
     // execution capability.
     const workflow = options.workflowService || new StudWorkflowService({store, requirementsService: requirements, workingContextService: workingContext});
+    // M6 indexes canonical objects and exposes bounded operational reads. It
+    // deliberately exposes no renderer event-append or Run-creation channel:
+    // only main-process domain producers may record operational history.
+    const artifactOperations = options.artifactOperationsService || new StudArtifactOperationsService({store, workflowService: workflow, workingContextService: workingContext});
     let shell = options.shell || null;
     if (!shell) { try { shell = require("electron").shell; } catch (error) {} }
     const handlers = new Map();
@@ -292,6 +308,17 @@ function registerStudAcademicIpc(options = {}) {
     add("stud-workflow-blocker-cancel", ["workflowId", "blockerId", "note", "expectedWorkflowVersion", "expectedBlockerVersion"], payload => workflow.cancelBlocker(payload));
     add("stud-workflow-checkpoint-create", ["workflowId", "nodeId", "title", "instructions", "requiredDecision", "requirementItemId", "relatedEntityType", "relatedEntityId", "provenanceId", "replacesCheckpointId", "expectedWorkflowVersion"], payload => workflow.createCheckpoint(payload));
     add("stud-workflow-checkpoint-decide", ["workflowId", "checkpointId", "decision", "note", "expectedWorkflowVersion", "expectedCheckpointVersion"], payload => workflow.decideCheckpoint(payload));
+    add("stud-artifact-list", ["assignmentId", "artifactType", "origin", "workflowNodeId", "availabilityState", "beforeCreatedAt", "limit"], payload => artifactOperations.listArtifacts(payload));
+    add("stud-artifact-read", ["assignmentId", "artifactId"], payload => artifactOperations.artifact(payload));
+    add("stud-artifact-register", ["assignmentId", "canonicalObjectType", "canonicalObjectId", "artifactType", "label", "workflowId", "workflowNodeId", "parentArtifactId", "metadata"], payload => artifactOperations.registerArtifact({...payload, origin: "UNKNOWN", producer: "USER"}));
+    add("stud-artifact-update", ["assignmentId", "artifactId", "expectedVersion", "label", "lifecycle", "metadata"], payload => artifactOperations.updateArtifact(payload));
+    add("stud-artifact-relate", ["assignmentId", "fromArtifactId", "relationshipType", "toArtifactId", "metadata"], payload => artifactOperations.relateArtifacts({...payload, producer: "USER"}));
+    add("stud-artifact-relationships", ["assignmentId", "artifactId", "limit"], payload => artifactOperations.relationships(payload));
+    add("stud-mission-control-state", ["assignmentId", "historyLimit", "artifactLimit"], payload => artifactOperations.missionState(payload));
+    add("stud-operation-list", ["assignmentId", "state", "beforeCreatedAt", "limit"], payload => artifactOperations.runs(payload));
+    add("stud-operation-read", ["assignmentId", "runId"], payload => artifactOperations.run(payload));
+    add("stud-operation-events", ["assignmentId", "runId", "beforeSequence", "limit"], payload => artifactOperations.events(payload));
+    add("stud-operation-artifacts", ["assignmentId", "runId", "limit"], payload => artifactOperations.runArtifacts(payload));
     add("stud-requirements-state", ["assignmentId"], payload => requirements.state(payload.assignmentId));
     add("stud-requirements-create-draft", ["assignmentId"], payload => requirements.createDraft(payload.assignmentId));
     add("stud-requirements-review-candidate", ["contractId", "candidateId", "disposition", "expectedVersion"], payload => requirements.reviewCandidate(payload));

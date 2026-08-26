@@ -194,6 +194,13 @@ Context and M3/M4 Workflow state. The validation record is
 
 ## M6 — Artifact Bay and truthful Mission Control shell
 
+**Status: complete.** Implemented in schema v19. Artifact Bay indexes canonical
+objects without duplicating contents; structured Runs and Events provide bounded
+restart-persistent history; Mission Control composes real M3/M4/Run/Event state.
+No renderer Run/event append channel, worker engine, fake progress or automated
+operation was introduced. See
+`STUD_M6_ARTIFACT_BAY_MISSION_CONTROL_VALIDATION.md`.
+
 - **Objective:** expose real workflow artifacts and events without yet adding the
   full automated research/composition pipeline.
 - **Exact scope:** Artifact Registry/reference index, bounded event-feed contract,
@@ -460,7 +467,7 @@ Context and M3/M4 Workflow state. The validation record is
 
 ## Exact next milestone
 
-M1, the dedicated Electron Trust-Boundary Hardening intervention, M2, M3, M4
-and M5 are complete. The exact next product milestone is **M6 — Artifact Bay
-and truthful Mission Control shell**. M5 does not include Artifact Bay, a
-Mission Control event feed or autonomous runtime-worker recovery.
+M1, the dedicated Electron Trust-Boundary Hardening intervention, and M2–M6 are
+complete. The exact next product milestone is **M7 — Research Plan and Topic
+Dossiers**. M6 does not include autonomous research, Topic Dossiers, workers,
+heartbeats, resource profiles, watchdog operation or automatic execution.

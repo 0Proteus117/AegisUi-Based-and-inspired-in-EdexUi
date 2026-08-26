@@ -21,6 +21,7 @@ documents translate that intent into the audited v2.7.0 implementation:
 - [M3 Workflow Templates / Persistent DAG implementation and validation](STUD_M3_WORKFLOW_TEMPLATES_PERSISTENT_DAG_VALIDATION.md)
 - [M4 Blockers / Human Checkpoints implementation and validation](STUD_M4_BLOCKERS_CHECKPOINTS_RECOVERY_VALIDATION.md)
 - [M5 Assignment Workspace implementation and validation](STUD_M5_ASSIGNMENT_WORKSPACE_VALIDATION.md)
+- [M6 Artifact Bay / Mission Control implementation and validation](STUD_M6_ARTIFACT_BAY_MISSION_CONTROL_VALIDATION.md)
 - [M1-M3 integration and final technical audit](STUD_M1_M3_INTEGRATION_AUDIT.md)
 - [Electron trust-boundary hardening](../../security/ELECTRON_TRUST_BOUNDARY_HARDENING_2026-08-24.md)
 
@@ -45,6 +46,9 @@ v16 to v17 with immutable versioned templates and Assignment-owned persistent
 DAG instances. M4 advances schema v17 to v18 with explicit blockers, human
 checkpoints, meaningful journal events and derived dependency propagation. The
 dedicated Electron Trust-Boundary Hardening intervention is also complete. M5
-adds the Assignment Workspace as a renderer composition over those records; it
-does not create a second academic store or begin Mission Control. The exact next
-product milestone is M6 — Artifact Bay and truthful Mission Control shell.
+adds the Assignment Workspace as a renderer composition over those records. M6
+advances schema v18 to v19 with an Assignment-scoped Artifact Registry, bounded
+Operation Runs and a structured operational Event Journal. Artifact Bay indexes
+canonical objects without copying their contents, while Mission Control renders
+only persisted Runs, events and authoritative M3/M4 state. The exact next product
+milestone is M7 — Research Plan and Topic Dossiers.

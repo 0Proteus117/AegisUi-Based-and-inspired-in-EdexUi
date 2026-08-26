@@ -689,6 +689,130 @@ class StudAcademicStore {
                 SELECT id,workflow_id,event_sequence,event_type,node_id,actor,details_json,created_at FROM stud_workflow_events_v17;
             DROP TABLE stud_workflow_events_v17;
             CREATE INDEX stud_workflow_events_workflow_index ON stud_workflow_events(workflow_id, event_sequence DESC);
+        `}, {version: 19, sql: `
+            CREATE TABLE stud_assignment_artifacts (
+                id TEXT PRIMARY KEY,
+                assignment_id TEXT NOT NULL,
+                course_id TEXT,
+                workflow_id TEXT,
+                workflow_node_id TEXT,
+                canonical_object_type TEXT NOT NULL,
+                canonical_object_id TEXT NOT NULL,
+                artifact_type TEXT NOT NULL CHECK(artifact_type IN ('ACADEMIC_DOCUMENT','SOURCE_DOCUMENT','RESEARCH_PAPER','WEB_REFERENCE','NOTE','DATASET','NOTEBOOK','REPOSITORY_CODE','COMPUTE_INPUT','COMPUTE_RESULT','FIGURE','IMAGE','TABLE','CHART','CALCULATION','SIMULATION_RESULT','REVISION_ITEM','DRAFT_VERSION','CITATION_REFERENCE','EXPORT_PACKAGE','GENERIC_MANUAL')),
+                label TEXT NOT NULL,
+                lifecycle TEXT NOT NULL CHECK(lifecycle IN ('ACTIVE','HISTORICAL','ARCHIVED')),
+                origin TEXT NOT NULL CHECK(origin IN ('USER_CREATED','USER_IMPORTED','MOODLE_SYNC','RESEARCH_ACQUISITION','COMPUTE','MODEL_GENERATED','SYSTEM_GENERATED','EXTERNAL_REFERENCE','UNKNOWN')),
+                producer TEXT NOT NULL,
+                parent_artifact_id TEXT,
+                metadata_json TEXT,
+                integrity_hash TEXT,
+                availability_state TEXT NOT NULL CHECK(availability_state IN ('AVAILABLE','OFFLINE','MISSING','UNAVAILABLE')),
+                row_version INTEGER NOT NULL DEFAULT 1 CHECK(row_version >= 1),
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY(assignment_id) REFERENCES stud_assignments(id),
+                FOREIGN KEY(course_id) REFERENCES stud_courses(id),
+                FOREIGN KEY(workflow_id) REFERENCES stud_workflow_instances(id),
+                FOREIGN KEY(workflow_node_id) REFERENCES stud_workflow_nodes(id),
+                FOREIGN KEY(parent_artifact_id) REFERENCES stud_assignment_artifacts(id),
+                UNIQUE(assignment_id,canonical_object_type,canonical_object_id,artifact_type),
+                CHECK(length(label) BETWEEN 1 AND 240),
+                CHECK((workflow_node_id IS NULL) OR (workflow_id IS NOT NULL))
+            );
+            CREATE INDEX stud_assignment_artifacts_assignment_index ON stud_assignment_artifacts(assignment_id,created_at DESC,id DESC);
+            CREATE INDEX stud_assignment_artifacts_filter_index ON stud_assignment_artifacts(assignment_id,artifact_type,origin,availability_state,created_at DESC);
+            CREATE INDEX stud_assignment_artifacts_workflow_index ON stud_assignment_artifacts(workflow_id,workflow_node_id,created_at DESC);
+
+            CREATE TABLE stud_artifact_relationships (
+                id TEXT PRIMARY KEY,
+                assignment_id TEXT NOT NULL,
+                from_artifact_id TEXT NOT NULL,
+                relationship_type TEXT NOT NULL CHECK(relationship_type IN ('DERIVED_FROM','USES','REFERENCES','SUPERSEDES','EXPORT_OF','GENERATED_FROM')),
+                to_artifact_id TEXT NOT NULL,
+                producer TEXT NOT NULL,
+                metadata_json TEXT,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY(assignment_id) REFERENCES stud_assignments(id),
+                FOREIGN KEY(from_artifact_id) REFERENCES stud_assignment_artifacts(id),
+                FOREIGN KEY(to_artifact_id) REFERENCES stud_assignment_artifacts(id),
+                UNIQUE(from_artifact_id,relationship_type,to_artifact_id),
+                CHECK(from_artifact_id <> to_artifact_id)
+            );
+            CREATE INDEX stud_artifact_relationships_assignment_index ON stud_artifact_relationships(assignment_id,created_at DESC);
+            CREATE INDEX stud_artifact_relationships_from_index ON stud_artifact_relationships(from_artifact_id,relationship_type);
+            CREATE INDEX stud_artifact_relationships_to_index ON stud_artifact_relationships(to_artifact_id,relationship_type);
+
+            CREATE TABLE stud_operation_runs (
+                id TEXT PRIMARY KEY,
+                assignment_id TEXT NOT NULL,
+                workflow_id TEXT,
+                workflow_node_id TEXT,
+                operation_type TEXT NOT NULL,
+                state TEXT NOT NULL CHECK(state IN ('CREATED','RUNNING','PAUSED','COMPLETED','FAILED','CANCELLED')),
+                actor TEXT NOT NULL CHECK(actor IN ('USER','SYSTEM','MOODLE','RESEARCH','COMPUTE','MODEL','WORKFLOW','UNKNOWN')),
+                progress_mode TEXT NOT NULL CHECK(progress_mode IN ('NONE','INDETERMINATE','DETERMINATE')),
+                progress_current INTEGER,
+                progress_total INTEGER,
+                progress_unit TEXT,
+                status_summary TEXT,
+                error_summary TEXT,
+                parent_run_id TEXT,
+                can_pause INTEGER NOT NULL DEFAULT 0 CHECK(can_pause IN (0,1)),
+                can_cancel INTEGER NOT NULL DEFAULT 0 CHECK(can_cancel IN (0,1)),
+                row_version INTEGER NOT NULL DEFAULT 1 CHECK(row_version >= 1),
+                created_at TEXT NOT NULL,
+                started_at TEXT,
+                finished_at TEXT,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY(assignment_id) REFERENCES stud_assignments(id),
+                FOREIGN KEY(workflow_id) REFERENCES stud_workflow_instances(id),
+                FOREIGN KEY(workflow_node_id) REFERENCES stud_workflow_nodes(id),
+                FOREIGN KEY(parent_run_id) REFERENCES stud_operation_runs(id),
+                CHECK((workflow_node_id IS NULL) OR (workflow_id IS NOT NULL)),
+                CHECK((progress_mode='DETERMINATE' AND progress_current IS NOT NULL AND progress_total IS NOT NULL AND progress_current>=0 AND progress_total>0 AND progress_current<=progress_total) OR (progress_mode IN ('NONE','INDETERMINATE') AND progress_current IS NULL AND progress_total IS NULL))
+            );
+            CREATE INDEX stud_operation_runs_assignment_index ON stud_operation_runs(assignment_id,created_at DESC,id DESC);
+            CREATE INDEX stud_operation_runs_active_index ON stud_operation_runs(assignment_id,state,updated_at DESC);
+            CREATE INDEX stud_operation_runs_workflow_index ON stud_operation_runs(workflow_id,workflow_node_id,created_at DESC);
+
+            CREATE TABLE stud_operation_events (
+                id TEXT PRIMARY KEY,
+                assignment_id TEXT NOT NULL,
+                workflow_id TEXT,
+                workflow_node_id TEXT,
+                run_id TEXT,
+                event_sequence INTEGER NOT NULL CHECK(event_sequence >= 1),
+                event_type TEXT NOT NULL CHECK(event_type IN ('OPERATION_CREATED','OPERATION_STARTED','OPERATION_PAUSED','OPERATION_RESUMED','OPERATION_COMPLETED','OPERATION_FAILED','OPERATION_CANCELLED','STAGE_ENTERED','STAGE_LEFT','ARTIFACT_REGISTERED','ARTIFACT_UPDATED','ARTIFACT_SUPERSEDED','SOURCE_ACQUIRED','DOCUMENT_INDEXED','EXTRACTION_COMPLETED','MODEL_REQUEST_STARTED','MODEL_REQUEST_COMPLETED','MODEL_REQUEST_FAILED','COMPUTE_STARTED','COMPUTE_COMPLETED','COMPUTE_FAILED','CHECKPOINT_REQUESTED','CHECKPOINT_DECIDED','BLOCKER_CREATED','BLOCKER_RESOLVED','HUMAN_INPUT_REQUESTED','HUMAN_INPUT_RECEIVED')),
+                actor TEXT NOT NULL CHECK(actor IN ('USER','SYSTEM','MOODLE','RESEARCH','COMPUTE','MODEL','WORKFLOW','UNKNOWN')),
+                severity TEXT NOT NULL CHECK(severity IN ('INFO','NOTICE','WARNING','ERROR')),
+                payload_json TEXT,
+                canonical_object_type TEXT,
+                canonical_object_id TEXT,
+                source_workflow_event_id TEXT,
+                summary TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY(assignment_id) REFERENCES stud_assignments(id),
+                FOREIGN KEY(workflow_id) REFERENCES stud_workflow_instances(id),
+                FOREIGN KEY(workflow_node_id) REFERENCES stud_workflow_nodes(id),
+                FOREIGN KEY(run_id) REFERENCES stud_operation_runs(id),
+                FOREIGN KEY(source_workflow_event_id) REFERENCES stud_workflow_events(id),
+                UNIQUE(assignment_id,event_sequence),
+                CHECK(length(summary) BETWEEN 1 AND 1000),
+                CHECK((workflow_node_id IS NULL) OR (workflow_id IS NOT NULL)),
+                CHECK((canonical_object_type IS NULL AND canonical_object_id IS NULL) OR (canonical_object_type IS NOT NULL AND canonical_object_id IS NOT NULL))
+            );
+            CREATE INDEX stud_operation_events_assignment_index ON stud_operation_events(assignment_id,event_sequence DESC);
+            CREATE INDEX stud_operation_events_run_index ON stud_operation_events(run_id,event_sequence DESC);
+            CREATE INDEX stud_operation_events_workflow_index ON stud_operation_events(workflow_id,workflow_node_id,event_sequence DESC);
+
+            CREATE TABLE stud_operation_event_artifacts (
+                event_id TEXT NOT NULL,
+                artifact_id TEXT NOT NULL,
+                PRIMARY KEY(event_id,artifact_id),
+                FOREIGN KEY(event_id) REFERENCES stud_operation_events(id) ON DELETE CASCADE,
+                FOREIGN KEY(artifact_id) REFERENCES stud_assignment_artifacts(id)
+            );
+            CREATE INDEX stud_operation_event_artifacts_artifact_index ON stud_operation_event_artifacts(artifact_id,event_id);
         `}];
         for (const migration of migrations) {
             if (applied.has(migration.version)) continue;

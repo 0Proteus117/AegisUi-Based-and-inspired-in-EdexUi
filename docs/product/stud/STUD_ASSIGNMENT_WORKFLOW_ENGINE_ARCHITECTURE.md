@@ -267,13 +267,31 @@ an explicit Workbench operation; it is never queried by the Workspace.
 
 ### Artifact Bay
 
-`stud_workflow_artifacts` is an index, not a payload database. Each record points
-to an existing canonical entity, managed relative asset or versioned workflow
-document and records role, milestone, provenance, integrity and availability.
-The same PDF, Note or ResearchPaper is not copied merely to appear in Artifact
-Bay. Disconnected external storage yields `OFFLINE`, not deletion or duplication.
-M6 also defines the bounded event-feed contract and a minimal Mission Control
-shell for real historical/current events. Full operational controls, workers,
+Schema v19 implements Artifact Bay and the Mission Control observational
+foundation in the existing canonical SQLite database:
+
+- `stud_assignment_artifacts` is an Assignment-scoped index over an existing
+  canonical entity. It stores identity, type, origin, Workflow/Node placement,
+  availability and bounded metadata, but never copies source text, PDFs, Notes,
+  datasets or provider payloads.
+- `stud_artifact_relationships` records explicit Artifact-to-Artifact relations.
+  Derivation, supersession and export lineage are cycle checked and cannot cross
+  Assignments.
+- `stud_operation_runs` records an explicitly initiated bounded operation and
+  its truthful lifecycle/progress contract.
+- `stud_operation_events` plus `stud_operation_event_artifacts` form a structured,
+  bounded operational journal. This is not a renderer-controlled log sink.
+
+M3 `stud_workflow_events` remains authoritative for DAG/history changes and M4
+blocker/checkpoint tables remain authoritative for conditions. M6 may reference
+an exact M3 event and composes current M3/M4 state for display; it does not copy
+or rewrite either source of truth. Artifact-to-Run association is represented by
+an exact operational Event link, not by shared labels or merely sharing a stage.
+
+Progress is `NONE`, `INDETERMINATE` or `DETERMINATE`. Determinate progress requires
+a real non-zero total and a bounded current count no greater than that total.
+Mission Control derives elapsed time from persisted timestamps and supplies no
+ETA, simulated telemetry or animation. Full operational controls, workers,
 heartbeats, resource profiles and watchdog remain M13 responsibilities.
 
 ### Research, Topic Dossiers and Faculty Gems
