@@ -167,6 +167,11 @@ repository has advanced, preserve monotonic numbering and document the mapping.
 
 ## M5 — Contextual Assignment Workspace
 
+**Status: complete.** Implemented without a schema migration in
+`StudAssignmentWorkspace`, composed from M1 Requirements Contract, M2 Working
+Context and M3/M4 Workflow state. The validation record is
+[`STUD_M5_ASSIGNMENT_WORKSPACE_VALIDATION.md`](STUD_M5_ASSIGNMENT_WORKSPACE_VALIDATION.md).
+
 - **Objective:** turn Assignment Detail into a calm, contextual workspace.
 - **Exact scope:** workspace shell, progressive disclosure, summary/contract/
   blockers/next action, typed preview adapters and adjacent canonical Notes.
@@ -455,6 +460,7 @@ repository has advanced, preserve monotonic numbering and document the mapping.
 
 ## Exact next milestone
 
-M1, the dedicated Electron Trust-Boundary Hardening intervention, M2, M3 and M4
-are complete. The exact next product milestone is **M5 — Assignment Workspace**.
-M4 does not include M5 or autonomous runtime-worker recovery.
+M1, the dedicated Electron Trust-Boundary Hardening intervention, M2, M3, M4
+and M5 are complete. The exact next product milestone is **M6 — Artifact Bay
+and truthful Mission Control shell**. M5 does not include Artifact Bay, a
+Mission Control event feed or autonomous runtime-worker recovery.

@@ -19,6 +19,8 @@ documents translate that intent into the audited v2.7.0 implementation:
 - [M1 Requirements Contract implementation and validation](STUD_M1_REQUIREMENTS_CONTRACT_VALIDATION.md)
 - [M2 Academic Organisation / Working Context implementation and validation](STUD_M2_ACADEMIC_ORGANISATION_WORKING_CONTEXT_VALIDATION.md)
 - [M3 Workflow Templates / Persistent DAG implementation and validation](STUD_M3_WORKFLOW_TEMPLATES_PERSISTENT_DAG_VALIDATION.md)
+- [M4 Blockers / Human Checkpoints implementation and validation](STUD_M4_BLOCKERS_CHECKPOINTS_RECOVERY_VALIDATION.md)
+- [M5 Assignment Workspace implementation and validation](STUD_M5_ASSIGNMENT_WORKSPACE_VALIDATION.md)
 - [M1-M3 integration and final technical audit](STUD_M1_M3_INTEGRATION_AUDIT.md)
 - [Electron trust-boundary hardening](../../security/ELECTRON_TRUST_BOUNDARY_HARDENING_2026-08-24.md)
 
@@ -42,5 +44,7 @@ organisation and one validated, persistent Working Context. M3 advances schema
 v16 to v17 with immutable versioned templates and Assignment-owned persistent
 DAG instances. M4 advances schema v17 to v18 with explicit blockers, human
 checkpoints, meaningful journal events and derived dependency propagation. The
-dedicated Electron Trust-Boundary Hardening intervention is also complete. The
-exact next product milestone is M5 — Assignment Workspace.
+dedicated Electron Trust-Boundary Hardening intervention is also complete. M5
+adds the Assignment Workspace as a renderer composition over those records; it
+does not create a second academic store or begin Mission Control. The exact next
+product milestone is M6 — Artifact Bay and truthful Mission Control shell.

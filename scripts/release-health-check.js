@@ -96,6 +96,8 @@ function main() {
         && exists("scripts/test-stud-academic-core.js")
         && exists("scripts/test-stud-workspace.js")
         && exists("scripts/test-stud-command-center.js")
+        && exists("scripts/test-stud-assignment-workspace.js")
+        && exists("src/classes/workspaces/studAssignmentWorkspace.class.js")
         && exists("src/classes/workspaces/studCommandCenter.class.js")
         && exists("STUD_ARCHITECTURE.md")
         && exists("STUD_PHASE1_VALIDATION.md")

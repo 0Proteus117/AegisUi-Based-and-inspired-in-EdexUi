@@ -230,25 +230,40 @@ URLs or raw provider responses.
 
 ### Working context and Assignment Workspace
 
-`StudWorkingContext` is a renderer coordinator containing selected Course,
-Assignment, canonical object and originating surface. It is ephemeral by default;
-opening a surface pre-fills context but performs no query or save. Context changes
-are visible and correctable.
+`StudWorkingContext` persists one meaningful, validated Course/Assignment/object
+selection through the canonical SQLite store. It deliberately excludes hover,
+modal and provider-operation state. Opening a compatible surface pre-fills
+context but performs no provider, model or save operation. Context changes are
+visible, correctable and validated against canonical object relationships.
 
-The Assignment Workspace progressively discloses:
+M5 implements the first two layers of the Assignment Workspace:
 
-1. calm summary, deadline, contract status, blockers and next valid action;
-2. contextual Preview and persistent Notes;
-3. Research, Evidence, Citations, Composition and Review surfaces;
-4. Mission Control only while a real run or inspectable historical run is open.
+1. a calm header, compact workflow-stage rail, Requirements Contract state and
+   explicit blocker/checkpoint attention;
+2. a primary bounded local Preview alongside a contextual structured Note editor;
+3. related canonical materials grouped as brief/marking, course material,
+   research, notes, data, repository/code or other; and
+4. explicit prefill-only handoffs to existing Research, Knowledge, Citation,
+   Documents, Revision, Compute and Notebook/Data surfaces.
+
+No M5 selection starts a Workflow node, provider request, model request, external
+browser request or persistence mutation. A contextual Note is persisted only by
+the existing explicit save action. An unavailable adapter says `PREVIEW NOT
+AVAILABLE`; it never exposes a source path or arbitrary embedded browser.
 
 Preview uses a typed adapter registry:
 
-- PDF/AcademicDocument: reuse managed PDF.js reader;
-- Note/draft: sanitized ProseMirror document;
-- dataset/compute/repository/media: reuse normalized existing detail surfaces;
-- web source: fixed approved external-open behaviour, never a generic embedded
-  authenticated browser or renderer-controlled URL fetch.
+- PDF/AcademicDocument: bounded existing document context and the managed PDF.js
+  reader; a chunk can create a Note with exact existing provenance;
+- Research Paper: existing canonical metadata/provenance and local-PDF reader
+  when one is managed;
+- Note: existing sanitized browser structured-document editor;
+- Dataset/Notebook: existing bounded managed-data/cell reads;
+- Resource, Compute, Revision and Repository Reference: normalized local detail
+  or an honest unavailable state, with an explicit handoff to the owning surface.
+
+M5 does not embed arbitrary web content. Existing public GitHub metadata remains
+an explicit Workbench operation; it is never queried by the Workspace.
 
 ### Artifact Bay
 

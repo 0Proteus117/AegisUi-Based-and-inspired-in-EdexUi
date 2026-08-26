@@ -57,6 +57,7 @@ class StudCommandCenter {
         this.requirements = null;
         this.workingContext = null;
         this.workflow = null;
+        this.assignmentWorkspace = null;
     }
 
     mount(view) {
@@ -84,6 +85,7 @@ class StudCommandCenter {
         this.requirements = new StudRequirementsContractWorkspace({request: (channel, payload) => this.request(channel, payload), escape: value => this.escape(value), showToast: (target, message) => this.showToast(target, message), parent: this});
         this.workingContext = new StudWorkingContext({request: (channel, payload) => this.request(channel, payload)});
         this.workflow = new StudWorkflowWorkspace({request: (channel, payload) => this.request(channel, payload), escape: value => this.escape(value), showToast: (target, message) => this.showToast(target, message), parent: this});
+        this.assignmentWorkspace = new StudAssignmentWorkspace({request: (channel, payload) => this.request(channel, payload), escape: value => this.escape(value), showToast: (target, message) => this.showToast(target, message), parent: this});
         grid.innerHTML = `
             <section class="stud-command-header workspace-panel">
                 <div><small>STUD / LOCAL ACADEMIC CONTEXT</small><h2>STUDENT COMMAND CENTER</h2><p>Courses, assignments and local work context remain explicit, offline and provenance-aware.</p></div>
@@ -148,6 +150,7 @@ class StudCommandCenter {
         if (this.state.selectedAssignmentId) tasks.push(this.loadAssignmentContext(this.state.selectedAssignmentId));
         else this.state.assignmentContext = null;
         await Promise.all(tasks);
+        if (this.assignmentWorkspace) this.assignmentWorkspace.setState(this.state.assignmentContext, this.state.workingContext, this.state.courseContext);
         this.render();
     }
 
@@ -252,6 +255,11 @@ class StudCommandCenter {
         else if (this.state.activeView === "MOODLE") main.innerHTML = `${contextStrip}${this.moodle.render()}`;
         else main.innerHTML = `${contextStrip}${this.renderServices()}`;
         this.research.afterRender(this.state.activeView).catch(() => {});
+        if (this.state.activeView === "ASSIGNMENTS" && this.assignmentWorkspace) {
+            this.assignmentWorkspace.restore().then(restored => {
+                if (restored && this.state.activeView === "ASSIGNMENTS") this.render();
+            }).catch(() => {});
+        }
     }
 
     renderNavigation() {
@@ -310,6 +318,8 @@ class StudCommandCenter {
         return course ? (course.code || course.shortName || course.title) : "NO MODULE";
     }
 
+    dateText(value) { return dateText(value); }
+
     renderModules() {
         const context = this.state.courseContext;
         const organisation = this.state.organisation || {years: [], unassignedAssignments: []};
@@ -337,6 +347,10 @@ class StudCommandCenter {
     }
 
     renderAssignments() {
+        return this.assignmentWorkspace ? this.assignmentWorkspace.render() : `<section class="stud-empty-inline">ASSIGNMENT WORKSPACE UNAVAILABLE.</section>`;
+    }
+
+    renderAssignmentsLegacy() {
         const filtered = this.filteredAssignments();
         const context = this.state.assignmentContext;
         const courseOptions = `<option value="">ALL MODULES</option>${this.state.courses.map(course => `<option value="${this.escape(course.id)}"${this.state.assignmentFilters.courseId === course.id ? " selected" : ""}>${this.escape(this.courseLabel(course.id))}</option>`).join("")}`;
@@ -444,8 +458,9 @@ class StudCommandCenter {
         if (this.view.dataset.studPhase2Bound) return;
         this.view.dataset.studPhase2Bound = "true";
         this.view.addEventListener("click", async event => {
-            if (await this.requirements.handleClick(event)) return;
             if (await this.workflow.handleClick(event)) return;
+            if (await this.assignmentWorkspace.handleClick(event)) return;
+            if (await this.requirements.handleClick(event)) return;
             if (await this.research.handleClick(event)) return;
             if (await this.moodle.handleClick(event)) return;
             if (await this.revision.handleClick(event)) return;
@@ -482,7 +497,7 @@ class StudCommandCenter {
             else if (assignmentKnowledge) { await this.selectAssignment(assignmentKnowledge.dataset.studAssignmentKnowledge, "KNOWLEDGE"); }
             else if (event.target.closest("[data-stud-close-dialog]")) this.closeDialog();
         });
-        this.view.addEventListener("submit", async event => { if (await this.requirements.handleSubmit(event)) return; if (await this.workflow.handleSubmit(event)) return; if (await this.research.handleSubmit(event)) return; if (await this.moodle.handleSubmit(event)) return; if (await this.revision.handleSubmit(event)) return; if (await this.compute.handleSubmit(event)) return; if (await this.documents.handleSubmit(event)) return; if (await this.knowledge.handleSubmit(event)) return; if (await this.academicAssistant.handleSubmit(event)) return; if (await this.notebook.handleSubmit(event)) return; if (await this.progress.handleSubmit(event)) return; if (await this.toolCatalog.handleSubmit(event)) return; this.handleForm(event); });
+        this.view.addEventListener("submit", async event => { if (await this.requirements.handleSubmit(event)) return; if (await this.workflow.handleSubmit(event)) return; if (await this.assignmentWorkspace.handleSubmit(event)) return; if (await this.research.handleSubmit(event)) return; if (await this.moodle.handleSubmit(event)) return; if (await this.revision.handleSubmit(event)) return; if (await this.compute.handleSubmit(event)) return; if (await this.documents.handleSubmit(event)) return; if (await this.knowledge.handleSubmit(event)) return; if (await this.academicAssistant.handleSubmit(event)) return; if (await this.notebook.handleSubmit(event)) return; if (await this.progress.handleSubmit(event)) return; if (await this.toolCatalog.handleSubmit(event)) return; this.handleForm(event); });
         this.view.addEventListener("change", event => { this.compute.handleChange(event).catch(() => {}); this.documents.handleChange(event).catch(() => {}); this.knowledge.handleChange(event).catch(() => {}); this.academicAssistant.handleChange(event).catch(() => {}); });
         const dialog = this.view.querySelector("[data-stud-dialog-element]");
         dialog.addEventListener("close", () => { const target = this.state.dialogReturnFocus; this.state.dialogReturnFocus = null; if (target && document.contains(target)) target.focus(); });
