@@ -7123,3 +7123,198 @@ button.eng-thread-row.active {
     .engineering-mode .stud-workflow-condition dl,
     .engineering-mode .stud-workflow-condition-create form > div { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* STUD M5 — Assignment Workspace. This is deliberately a composition layer:
+ * the primary reading/working area earns the space and supporting controls
+ * progressively disclose canonical details instead of adding another dashboard. */
+.engineering-mode .stud-assignment-workspace,
+.engineering-mode .stud-assignment-workspace-detail,
+.engineering-mode .stud-assignment-workspace-empty { display: grid; gap: 1.05vh; min-width: 0; }
+.engineering-mode .stud-assignment-workspace-header { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(13rem, .72fr) minmax(13rem, .72fr); gap: 1px; border: .08vh solid var(--aegis-border); background: var(--aegis-border); }
+.engineering-mode .stud-assignment-workspace-header > div { display: grid; align-content: start; gap: .28vh; min-width: 0; padding: 1.2vh 1.35vh; background: var(--aegis-surface); }
+.engineering-mode .stud-assignment-workspace-header small,
+.engineering-mode .stud-assignment-workspace-context small,
+.engineering-mode .stud-assignment-workspace-status small { color: var(--aegis-text-faint); font: .44vh/1.25 var(--font_mono); letter-spacing: .075vh; }
+.engineering-mode .stud-assignment-workspace-identity h2 { margin: 0; color: var(--aegis-text-primary); font: 1.15vh/1.2 var(--font_main); letter-spacing: .025vh; overflow-wrap: anywhere; }
+.engineering-mode .stud-assignment-workspace-identity p,
+.engineering-mode .stud-assignment-workspace-context span,
+.engineering-mode .stud-assignment-workspace-status span { margin: 0; color: var(--aegis-text-muted); font: .52vh/1.45 var(--font_main_light); overflow-wrap: anywhere; }
+.engineering-mode .stud-assignment-workspace-context strong,
+.engineering-mode .stud-assignment-workspace-status strong { color: var(--aegis-text-primary); font: .62vh/1.35 var(--font_main); overflow-wrap: anywhere; }
+.engineering-mode .stud-assignment-workspace-status.has-attention { border-left: .22vh solid var(--aegis-warning); }
+.engineering-mode .stud-assignment-workspace-rail { display: grid; gap: .5vh; padding: .75vh .9vh; border: .08vh solid var(--aegis-border); background: var(--aegis-surface-muted); min-width: 0; }
+.engineering-mode .stud-assignment-workspace-rail > header { display: flex; align-items: center; justify-content: space-between; gap: 1vh; }
+.engineering-mode .stud-assignment-workspace-rail > header small { color: var(--aegis-text-faint); font: .44vh var(--font_mono); letter-spacing: .08vh; }
+.engineering-mode .stud-assignment-workspace-rail > header button,
+.engineering-mode .stud-assignment-workspace-actions button,
+.engineering-mode .stud-assignment-workspace-rail.is-empty button { min-height: 2.45vh; padding: .35vh .7vh; color: var(--aegis-accent-soft); border: .08vh solid var(--aegis-border); background: transparent; font: .43vh var(--font_mono); letter-spacing: .06vh; }
+.engineering-mode .stud-assignment-workspace-rail > ol { display: flex; gap: .45vh; margin: 0; padding: 0; overflow-x: auto; list-style: none; scrollbar-color: var(--aegis-border) transparent; }
+.engineering-mode .stud-assignment-workspace-rail li { flex: 0 1 15rem; min-width: 10.8rem; border-left: .16vh solid var(--aegis-border); }
+.engineering-mode .stud-assignment-workspace-rail li.is-current { border-left-color: var(--aegis-accent-soft); background: var(--aegis-surface); }
+.engineering-mode .stud-assignment-workspace-rail li.is-direct-blocker { border-left-color: #c86f52; }
+.engineering-mode .stud-assignment-workspace-rail li.is-human-input-required { border-left-color: var(--aegis-warning); }
+.engineering-mode .stud-assignment-workspace-rail button { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: .5vh; width: 100%; min-width: 0; padding: .5vh .6vh; color: var(--aegis-text-primary); border: 0; background: transparent; text-align: left; cursor: pointer; }
+.engineering-mode .stud-assignment-workspace-rail button > span:first-child { color: var(--aegis-accent-soft); font: .65vh/1 var(--font_mono); }
+.engineering-mode .stud-assignment-workspace-rail button strong { display: block; color: inherit; font: .52vh/1.3 var(--font_main); overflow-wrap: anywhere; }
+.engineering-mode .stud-assignment-workspace-rail button small { display: block; color: var(--aegis-text-faint); font: .39vh/1.35 var(--font_mono); overflow-wrap: anywhere; }
+.engineering-mode .stud-assignment-workspace-rail.is-empty { grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
+.engineering-mode .stud-assignment-workspace-rail.is-empty > div { display: grid; gap: .2vh; }
+.engineering-mode .stud-assignment-workspace-rail.is-empty strong { color: var(--aegis-text-primary); font: .62vh var(--font_main); }
+.engineering-mode .stud-assignment-workspace-rail.is-empty span { color: var(--aegis-text-muted); font: .48vh/1.4 var(--font_main_light); }
+.engineering-mode .stud-assignment-workspace-attention { display: flex; align-items: center; justify-content: space-between; gap: 1vh; padding: .75vh .9vh; border-left: .22vh solid var(--aegis-warning); background: var(--aegis-surface-muted); }
+.engineering-mode .stud-assignment-workspace-attention > div { display: grid; gap: .2vh; min-width: 0; }
+.engineering-mode .stud-assignment-workspace-attention strong { color: var(--aegis-text-primary); font: .53vh var(--font_main); }
+.engineering-mode .stud-assignment-workspace-attention span { color: var(--aegis-text-muted); font: .48vh/1.4 var(--font_main_light); overflow-wrap: anywhere; }
+.engineering-mode .stud-assignment-workspace-attention button,
+.engineering-mode .stud-assignment-workspace-requirements button { flex: 0 0 auto; min-height: 2.5vh; padding: .38vh .7vh; color: var(--aegis-accent-soft); border: .08vh solid var(--aegis-border); background: transparent; font: .42vh var(--font_mono); letter-spacing: .06vh; }
+.engineering-mode .stud-assignment-workspace-body { display: grid; grid-template-columns: minmax(0, 1.68fr) minmax(19rem, .82fr); gap: 1.05vh; min-width: 0; align-items: start; }
+.engineering-mode .stud-assignment-workspace-preview,
+.engineering-mode .stud-assignment-workspace-notes { min-width: 0; border: .08vh solid var(--aegis-border); background: var(--aegis-surface); }
+.engineering-mode .stud-assignment-workspace-preview { min-height: 42vh; padding: 1.2vh 1.35vh; }
+.engineering-mode .stud-assignment-preview-empty,
+.engineering-mode .stud-assignment-preview-unavailable { display: grid; place-content: center; min-height: 35vh; gap: .65vh; max-width: 48rem; margin: 0 auto; text-align: center; }
+.engineering-mode .stud-assignment-preview-empty small,
+.engineering-mode .stud-assignment-preview-document small,
+.engineering-mode .stud-assignment-preview-paper small,
+.engineering-mode .stud-assignment-preview-dataset small,
+.engineering-mode .stud-assignment-preview-notebook small,
+.engineering-mode .stud-assignment-preview-generic small { color: var(--aegis-text-faint); font: .42vh var(--font_mono); letter-spacing: .07vh; }
+.engineering-mode .stud-assignment-preview-empty h3,
+.engineering-mode .stud-assignment-preview-document h3,
+.engineering-mode .stud-assignment-preview-paper h3,
+.engineering-mode .stud-assignment-preview-dataset h3,
+.engineering-mode .stud-assignment-preview-notebook h3,
+.engineering-mode .stud-assignment-preview-generic h3,
+.engineering-mode .stud-assignment-preview-note h3 { margin: 0; color: var(--aegis-text-primary); font: .95vh/1.25 var(--font_main); overflow-wrap: anywhere; }
+.engineering-mode .stud-assignment-preview-empty p,
+.engineering-mode .stud-assignment-preview-unavailable p,
+.engineering-mode .stud-assignment-preview-document p,
+.engineering-mode .stud-assignment-preview-paper p,
+.engineering-mode .stud-assignment-preview-dataset p,
+.engineering-mode .stud-assignment-preview-notebook p,
+.engineering-mode .stud-assignment-preview-generic p,
+.engineering-mode .stud-assignment-preview-note p { margin: 0; color: var(--aegis-text-muted); font: .53vh/1.52 var(--font_main_light); overflow-wrap: anywhere; }
+.engineering-mode .stud-assignment-preview-empty > div,
+.engineering-mode .stud-assignment-preview-actions,
+.engineering-mode .stud-assignment-workspace-notes > header > div:last-child,
+.engineering-mode .stud-assignment-workspace-actions > div:last-child { display: flex; flex-wrap: wrap; gap: .45vh; }
+.engineering-mode .stud-assignment-workspace-preview button,
+.engineering-mode .stud-assignment-workspace-notes button,
+.engineering-mode .stud-assignment-workspace-actions button { min-height: 2.5vh; padding: .4vh .7vh; color: var(--aegis-accent-soft); border: .08vh solid var(--aegis-border); background: transparent; font: .42vh/1.25 var(--font_mono); letter-spacing: .045vh; }
+.engineering-mode .stud-assignment-preview button:disabled { opacity: .52; cursor: not-allowed; }
+.engineering-mode .stud-assignment-preview-document,
+.engineering-mode .stud-assignment-preview-paper,
+.engineering-mode .stud-assignment-preview-dataset,
+.engineering-mode .stud-assignment-preview-notebook,
+.engineering-mode .stud-assignment-preview-generic,
+.engineering-mode .stud-assignment-preview-note { display: grid; gap: 1vh; }
+.engineering-mode .stud-assignment-preview-document > header,
+.engineering-mode .stud-assignment-preview-paper > header,
+.engineering-mode .stud-assignment-preview-dataset > header,
+.engineering-mode .stud-assignment-preview-notebook > header,
+.engineering-mode .stud-assignment-preview-generic > header,
+.engineering-mode .stud-assignment-preview-note > header { display: flex; justify-content: space-between; align-items: start; gap: 1vh; min-width: 0; }
+.engineering-mode .stud-assignment-preview-document > header > div,
+.engineering-mode .stud-assignment-preview-paper > header > div,
+.engineering-mode .stud-assignment-preview-dataset > header > div,
+.engineering-mode .stud-assignment-preview-notebook > header > div,
+.engineering-mode .stud-assignment-preview-generic > header > div,
+.engineering-mode .stud-assignment-preview-note > header > div { display: grid; gap: .28vh; min-width: 0; }
+.engineering-mode .stud-assignment-document-pages { display: flex; align-items: center; justify-content: space-between; gap: .75vh; padding: .55vh 0; border-block: .06vh solid var(--aegis-border-subtle); }
+.engineering-mode .stud-assignment-document-pages span { color: var(--aegis-text-faint); font: .42vh var(--font_mono); }
+.engineering-mode .stud-assignment-document-page { display: grid; gap: .55vh; min-width: 0; }
+.engineering-mode .stud-assignment-document-page > header,
+.engineering-mode .stud-assignment-document-chunks > header { display: flex; justify-content: space-between; gap: 1vh; }
+.engineering-mode .stud-assignment-document-page > header span,
+.engineering-mode .stud-assignment-document-chunks > header span { color: var(--aegis-text-faint); font: .4vh var(--font_mono); }
+.engineering-mode .stud-assignment-document-page pre,
+.engineering-mode .stud-assignment-preview-note pre,
+.engineering-mode .stud-assignment-preview-generic pre,
+.engineering-mode .stud-assignment-preview-notebook pre { max-height: 32vh; margin: 0; padding: .85vh; overflow: auto; color: var(--aegis-text-primary); border: .06vh solid var(--aegis-border-subtle); background: var(--aegis-input-bg); font: .51vh/1.55 var(--font_mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+.engineering-mode .stud-assignment-document-chunks { display: grid; gap: .65vh; }
+.engineering-mode .stud-assignment-document-chunks article { display: grid; gap: .35vh; padding: .7vh; border-left: .14vh solid var(--aegis-border); background: var(--aegis-surface-muted); }
+.engineering-mode .stud-assignment-preview-paper dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; margin: 0; background: var(--aegis-border); }
+.engineering-mode .stud-assignment-preview-paper dl > div { min-width: 0; padding: .62vh; background: var(--aegis-surface-muted); }
+.engineering-mode .stud-assignment-preview-paper dt { color: var(--aegis-text-faint); font: .39vh var(--font_mono); }
+.engineering-mode .stud-assignment-preview-paper dd { margin: .2vh 0 0; color: var(--aegis-text-primary); font: .48vh/1.35 var(--font_main_light); overflow-wrap: anywhere; }
+.engineering-mode .stud-assignment-dataset-table { max-width: 100%; overflow: auto; border: .06vh solid var(--aegis-border-subtle); }
+.engineering-mode .stud-assignment-dataset-table table { width: 100%; border-collapse: collapse; color: var(--aegis-text-primary); font: .45vh var(--font_mono); }
+.engineering-mode .stud-assignment-dataset-table :is(th,td) { min-width: 8rem; padding: .52vh .6vh; border-right: .06vh solid var(--aegis-border-subtle); border-bottom: .06vh solid var(--aegis-border-subtle); text-align: left; overflow-wrap: anywhere; }
+.engineering-mode .stud-assignment-preview-notebook ol { display: grid; gap: .55vh; margin: 0; padding: 0; list-style: none; }
+.engineering-mode .stud-assignment-preview-notebook li { display: grid; gap: .3vh; min-width: 0; }
+.engineering-mode .stud-assignment-workspace-materials { display: grid; gap: .65vh; margin-top: 1.1vh; padding-top: .9vh; border-top: .06vh solid var(--aegis-border-subtle); }
+.engineering-mode .stud-assignment-workspace-materials > summary { cursor: pointer; color: var(--aegis-text-primary); font: .52vh var(--font_main); }
+.engineering-mode .stud-assignment-workspace-materials > p { margin: 0; color: var(--aegis-text-faint); font: .43vh/1.4 var(--font_main_light); }
+.engineering-mode .stud-assignment-workspace-materials > div { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8vh; }
+.engineering-mode .stud-assignment-workspace-materials section { display: grid; align-content: start; gap: .3vh; min-width: 0; }
+.engineering-mode .stud-assignment-workspace-materials section > header { display: flex; justify-content: space-between; gap: .5vh; }
+.engineering-mode .stud-assignment-workspace-materials section > header strong { color: var(--aegis-text-faint); font: .4vh var(--font_mono); letter-spacing: .06vh; }
+.engineering-mode .stud-assignment-workspace-materials section > header span { color: var(--aegis-text-faint); font: .4vh var(--font_mono); }
+.engineering-mode .stud-assignment-workspace-materials section > p { margin: 0; color: var(--aegis-text-faint); font: .43vh var(--font_main_light); }
+.engineering-mode .stud-assignment-workspace-materials section > button { display: grid; gap: .12vh; min-width: 0; padding: .45vh .55vh; color: var(--aegis-text-primary); border: 0; border-left: .12vh solid var(--aegis-border); text-align: left; }
+.engineering-mode .stud-assignment-workspace-materials section > button.is-current { border-left-color: var(--aegis-accent-soft); background: var(--aegis-surface-muted); }
+.engineering-mode .stud-assignment-workspace-materials section > button strong { font: .49vh/1.3 var(--font_main); overflow-wrap: anywhere; }
+.engineering-mode .stud-assignment-workspace-materials section > button small { color: var(--aegis-text-faint); font: .38vh var(--font_mono); overflow-wrap: anywhere; }
+.engineering-mode .stud-assignment-workspace-notes { display: grid; align-content: start; min-height: 42vh; }
+.engineering-mode .stud-assignment-workspace-notes > header { display: flex; justify-content: space-between; gap: .75vh; padding: .95vh 1vh .7vh; border-bottom: .06vh solid var(--aegis-border-subtle); }
+.engineering-mode .stud-assignment-workspace-notes > header > div:first-child { display: grid; gap: .2vh; min-width: 0; }
+.engineering-mode .stud-assignment-workspace-notes h3 { margin: 0; color: var(--aegis-text-primary); font: .63vh/1.25 var(--font_main); overflow-wrap: anywhere; }
+.engineering-mode .stud-assignment-note-tabs { display: flex; gap: .35vh; padding: .6vh .8vh; overflow-x: auto; border-bottom: .06vh solid var(--aegis-border-subtle); }
+.engineering-mode .stud-assignment-note-tabs button { flex: 0 0 auto; max-width: 13rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.engineering-mode .stud-assignment-note-tabs button.is-current { color: var(--aegis-text-primary); border-color: var(--aegis-accent-soft); }
+.engineering-mode .stud-assignment-workspace-notes .stud-note-form { display: grid; gap: .65vh; padding: .8vh; }
+.engineering-mode .stud-assignment-workspace-notes .stud-editor-fields { grid-template-columns: minmax(0, 1fr); }
+.engineering-mode .stud-assignment-workspace-notes .stud-editor-fields label { font-size: .4vh; }
+.engineering-mode .stud-contextual-note-link { margin: 0; color: var(--aegis-text-faint); font: .42vh/1.35 var(--font_mono); overflow-wrap: anywhere; }
+.engineering-mode .stud-assignment-workspace-notes .stud-note-toolbar { gap: .3vh; }
+.engineering-mode .stud-assignment-workspace-notes .stud-note-toolbar button { min-height: 2.25vh; padding: .28vh .45vh; font-size: .38vh; }
+.engineering-mode .stud-assignment-workspace-notes .stud-tiptap-editor { min-height: 19vh; max-height: 36vh; overflow: auto; }
+.engineering-mode .stud-assignment-notes-empty { display: grid; gap: .7vh; place-content: center; min-height: 24vh; padding: 1.5vh; text-align: center; }
+.engineering-mode .stud-assignment-notes-empty p { margin: 0; color: var(--aegis-text-muted); font: .5vh/1.45 var(--font_main_light); }
+.engineering-mode .stud-assignment-workspace-requirements { display: grid; }
+.engineering-mode .stud-assignment-workspace-requirements button { display: grid; grid-template-columns: minmax(10rem, .55fr) minmax(0, 1fr) minmax(0, 1.5fr); align-items: center; gap: .9vh; width: 100%; text-align: left; }
+.engineering-mode .stud-assignment-workspace-requirements button span { color: var(--aegis-text-faint); font: .43vh var(--font_mono); letter-spacing: .07vh; }
+.engineering-mode .stud-assignment-workspace-requirements button strong { color: var(--aegis-text-primary); font: .53vh var(--font_main); overflow-wrap: anywhere; }
+.engineering-mode .stud-assignment-workspace-requirements button small { color: var(--aegis-text-muted); font: .46vh/1.35 var(--font_main_light); overflow-wrap: anywhere; }
+.engineering-mode .stud-assignment-workspace-actions { display: flex; justify-content: space-between; align-items: center; gap: 1vh; padding: .8vh .9vh; border-top: .06vh solid var(--aegis-border-subtle); }
+.engineering-mode .stud-assignment-workspace-actions > div:first-child { display: grid; gap: .15vh; min-width: 0; }
+.engineering-mode .stud-assignment-workspace-actions small { color: var(--aegis-text-faint); font: .4vh var(--font_mono); letter-spacing: .06vh; }
+.engineering-mode .stud-assignment-workspace-actions span { color: var(--aegis-text-muted); font: .47vh/1.35 var(--font_main_light); overflow-wrap: anywhere; }
+.engineering-mode .stud-assignment-workspace-detail > header { display: flex; align-items: center; gap: .85vh; padding: .9vh 1vh; border-bottom: .08vh solid var(--aegis-border); }
+.engineering-mode .stud-assignment-workspace-detail > header > div { display: grid; gap: .15vh; min-width: 0; }
+.engineering-mode .stud-assignment-workspace-detail h2 { margin: 0; color: var(--aegis-text-primary); font: .8vh var(--font_main); overflow-wrap: anywhere; }
+.engineering-mode .stud-assignment-workspace-detail header small { color: var(--aegis-text-faint); font: .4vh var(--font_mono); }
+.engineering-mode .stud-assignment-workspace-empty { place-items: center; min-height: 40vh; padding: 3vh; border: .08vh solid var(--aegis-border); text-align: center; }
+.engineering-mode .stud-assignment-workspace-empty h2 { margin: 0; color: var(--aegis-text-primary); font: 1.05vh var(--font_main); }
+.engineering-mode .stud-assignment-workspace-empty p { max-width: 48rem; margin: 0; color: var(--aegis-text-muted); font: .54vh/1.5 var(--font_main_light); }
+.engineering-mode .stud-assignment-workspace-empty > div { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: .65vh; width: min(100%, 60rem); }
+.engineering-mode .stud-assignment-workspace-empty > div button { display: grid; gap: .25vh; padding: .8vh; color: var(--aegis-text-primary); border: .08vh solid var(--aegis-border); background: var(--aegis-surface-muted); text-align: left; }
+.engineering-mode .stud-assignment-workspace-empty > div small { color: var(--aegis-text-faint); font: .4vh var(--font_mono); }
+.engineering-mode .stud-assignment-workspace :is(button, summary):focus-visible,
+.engineering-mode .stud-assignment-workspace-detail :is(button, summary):focus-visible { outline: .14vh solid var(--aegis-accent-soft); outline-offset: .12vh; }
+@media (max-width: 1400px) {
+    .engineering-mode .stud-assignment-workspace-header { grid-template-columns: minmax(0, 1fr) minmax(13rem, .75fr); }
+    .engineering-mode .stud-assignment-workspace-identity { grid-column: 1 / -1; }
+    .engineering-mode .stud-assignment-workspace-body { grid-template-columns: minmax(0, 1fr); }
+    .engineering-mode .stud-assignment-workspace-preview { min-height: 34vh; }
+    .engineering-mode .stud-assignment-workspace-notes { min-height: 0; }
+    .engineering-mode .stud-assignment-workspace-notes .stud-tiptap-editor { min-height: 14vh; }
+}
+@media (max-width: 900px) {
+    .engineering-mode .stud-assignment-workspace-header { grid-template-columns: minmax(0, 1fr); }
+    .engineering-mode .stud-assignment-workspace-identity { grid-column: auto; }
+    .engineering-mode .stud-assignment-workspace-rail.is-empty,
+    .engineering-mode .stud-assignment-workspace-attention,
+    .engineering-mode .stud-assignment-workspace-actions,
+    .engineering-mode .stud-assignment-preview-document > header,
+    .engineering-mode .stud-assignment-preview-paper > header,
+    .engineering-mode .stud-assignment-preview-dataset > header,
+    .engineering-mode .stud-assignment-preview-notebook > header,
+    .engineering-mode .stud-assignment-preview-generic > header,
+    .engineering-mode .stud-assignment-preview-note > header { align-items: stretch; flex-direction: column; }
+    .engineering-mode .stud-assignment-preview-paper dl,
+    .engineering-mode .stud-assignment-workspace-materials > div,
+    .engineering-mode .stud-assignment-workspace-requirements button { grid-template-columns: minmax(0, 1fr); }
+    .engineering-mode .stud-assignment-workspace-requirements button { justify-items: start; }
+    .engineering-mode .stud-assignment-workspace-actions > div:last-child { width: 100%; }
+}

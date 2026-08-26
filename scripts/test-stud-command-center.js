@@ -19,6 +19,7 @@ const revision = fs.readFileSync(path.join(ROOT, "src/classes/workspaces/studRev
 const documents = fs.readFileSync(path.join(ROOT, "src/classes/workspaces/studDocumentWorkspace.class.js"), "utf8");
 const requirementsContract = fs.readFileSync(path.join(ROOT, "src/classes/workspaces/studRequirementsContractWorkspace.class.js"), "utf8");
 const workflowWorkspace = fs.readFileSync(path.join(ROOT, "src/classes/workspaces/studWorkflowWorkspace.class.js"), "utf8");
+const assignmentWorkspace = fs.readFileSync(path.join(ROOT, "src/classes/workspaces/studAssignmentWorkspace.class.js"), "utf8");
 const root = fs.mkdtempSync(path.join(os.tmpdir(), "aegis-stud-phase2-"));
 const store = new StudAcademicStore({root, applicationVersion: "test"});
 const checks = [];
@@ -86,6 +87,12 @@ try {
         assert.ok(commandCenter.includes("STUD DOES NOT SCAN, OPEN OR COPY EXTERNAL CONTENT"));
         assert.ok(commandCenter.includes("RELATED WORK"));
         assert.ok(commandCenter.includes("StudWorkflowWorkspace"));
+        assert.ok(commandCenter.includes("StudAssignmentWorkspace"));
+        assert.ok(assignmentWorkspace.includes("PRIMARY WORK SURFACE"));
+        assert.ok(assignmentWorkspace.includes("PREVIEW NOT AVAILABLE"));
+        assert.ok(assignmentWorkspace.includes("NO WORK EXECUTES AUTOMATICALLY"));
+        assert.ok(!assignmentWorkspace.includes("fetch("));
+        assert.ok(!assignmentWorkspace.includes("localStorage"));
         assert.ok(workflowWorkspace.includes("CREATE WORKFLOW"));
         assert.ok(workflowWorkspace.includes("NO WORK EXECUTED"));
         assert.ok(commandCenter.includes("BRIEF &amp; MARKING DOCUMENTS"));
@@ -134,6 +141,7 @@ try {
         assert.ok(css.includes("stud-dialog"));
         assert.ok(css.includes("stud-revision-overview-grid"));
         assert.ok(css.includes("stud-tool-catalog-grid"));
+        assert.ok(css.includes("stud-assignment-workspace"));
         assert.ok(css.includes("--stud-copy-size: clamp(11px"));
         assert.ok(css.includes("stud-document-library-actions"));
         assert.ok(css.includes(".stud-command-main { grid-row: 4; }"));
