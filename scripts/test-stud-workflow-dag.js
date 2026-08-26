@@ -36,6 +36,11 @@ function approvedContract(requirements, assignmentId, incomplete = false) {
 function stripV17(dbPath) {
     const db = new DatabaseSync(dbPath);
     db.exec(`PRAGMA foreign_keys=OFF;
+        DROP TABLE IF EXISTS stud_operation_event_artifacts;
+        DROP TABLE IF EXISTS stud_operation_events;
+        DROP TABLE IF EXISTS stud_operation_runs;
+        DROP TABLE IF EXISTS stud_artifact_relationships;
+        DROP TABLE IF EXISTS stud_assignment_artifacts;
         DROP TABLE IF EXISTS stud_workflow_blockers;
         DROP TABLE IF EXISTS stud_workflow_checkpoints;
         DROP TABLE IF EXISTS stud_workflow_events;
@@ -48,7 +53,7 @@ function stripV17(dbPath) {
         DROP TABLE IF EXISTS stud_workflow_templates;
         ALTER TABLE stud_working_context DROP COLUMN active_workflow_node_id;
         ALTER TABLE stud_working_context DROP COLUMN active_workflow_id;
-        DELETE FROM stud_schema_migrations WHERE version IN (17,18);
+        DELETE FROM stud_schema_migrations WHERE version IN (17,18,19);
         PRAGMA foreign_keys=ON;`);
     db.close();
 }
@@ -59,8 +64,8 @@ try {
     const store = storeAt(root);
     const {requirements, context, workflow} = services(store);
 
-    check("SCHEMA_V18_AND_NO_FABRICATED_WORKFLOW", () => {
-        assert.strictEqual(store.schemaInfo().version, 18);
+    check("CURRENT_SCHEMA_AND_NO_FABRICATED_WORKFLOW", () => {
+        assert.strictEqual(store.schemaInfo().version, 19);
         assert.strictEqual(store.db.prepare("SELECT COUNT(*) count FROM stud_workflow_instances").get().count, 0);
     });
     check("NORMALIZED_WORKFLOW_TABLES", () => {
@@ -302,8 +307,8 @@ try {
     let legacy = storeAt(migrationRoot); const legacyAssignment = legacy.createEntity("ASSIGNMENT", {title: "Existing v16 assignment"}); legacy.close();
     stripV17(path.join(migrationRoot, "academic.sqlite"));
     legacy = storeAt(migrationRoot);
-    check("V16_TO_V18_MIGRATION_HAS_NO_FABRICATED_STATE", () => {
-        assert.strictEqual(legacy.schemaInfo().version, 18);
+    check("V16_TO_CURRENT_MIGRATION_HAS_NO_FABRICATED_STATE", () => {
+        assert.strictEqual(legacy.schemaInfo().version, 19);
         assert.ok(legacy.getEntity("ASSIGNMENT", legacyAssignment.id));
         assert.strictEqual(legacy.db.prepare("SELECT COUNT(*) count FROM stud_workflow_instances").get().count, 0);
         assert.strictEqual(new StudWorkingContextService({store: legacy}).read().status, "EMPTY");

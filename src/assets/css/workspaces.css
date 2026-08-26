@@ -6915,6 +6915,109 @@ button.eng-thread-row.active {
     .engineering-mode .stud-requirements-source-preview dl,
     .engineering-mode .stud-requirements-approved-footer dl { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* STUD M6 — Artifact Bay and truthful Mission Control. Operational density is
+ * disclosed only inside the explicit ARTIFACTS / ACTIVITY modes. */
+.engineering-mode .stud-assignment-workspace-detail.is-operational > header { justify-content: space-between; }
+.engineering-mode .stud-assignment-workspace-detail.is-operational > header > nav { display: flex; gap: .4vh; margin-left: auto; }
+.engineering-mode .stud-assignment-workspace-detail.is-operational > header > nav button,
+.engineering-mode .stud-operational-heading button,
+.engineering-mode .stud-artifact-bay button,
+.engineering-mode .stud-mission-control button { min-height: 2.45vh; padding: .36vh .68vh; color: var(--aegis-accent-soft); border: .08vh solid var(--aegis-border); background: transparent; font: max(10px, .41vh)/1.25 var(--font_mono); letter-spacing: .045vh; }
+.engineering-mode .stud-assignment-workspace-detail.is-operational > header > nav button.is-current,
+.engineering-mode .stud-artifact-filter button.is-current { color: var(--aegis-text-primary); border-color: var(--aegis-accent-soft); background: var(--aegis-surface-muted); }
+.engineering-mode .stud-artifact-bay,
+.engineering-mode .stud-mission-control { display: grid; gap: 1vh; min-width: 0; padding: 1vh; border: .08vh solid var(--aegis-border); background: var(--aegis-surface); }
+.engineering-mode .stud-operational-heading { display: flex; justify-content: space-between; align-items: start; gap: 1.2vh; padding: .3vh .25vh .9vh; border-bottom: .06vh solid var(--aegis-border-subtle); }
+.engineering-mode .stud-operational-heading > div { display: grid; gap: .2vh; min-width: 0; }
+.engineering-mode .stud-operational-heading > div:last-child { justify-items: end; text-align: right; }
+.engineering-mode .stud-operational-heading small,
+.engineering-mode .stud-artifact-detail small,
+.engineering-mode .stud-mission-current > small { color: var(--aegis-text-faint); font: max(10px, .42vh) var(--font_mono); letter-spacing: .07vh; }
+.engineering-mode .stud-operational-heading h2,
+.engineering-mode .stud-artifact-detail h3,
+.engineering-mode .stud-mission-current h3 { margin: 0; color: var(--aegis-text-primary); font: max(14px, .9vh)/1.25 var(--font_main); overflow-wrap: anywhere; }
+.engineering-mode .stud-operational-heading p,
+.engineering-mode .stud-operational-heading span,
+.engineering-mode .stud-operational-empty p { margin: 0; color: var(--aegis-text-muted); font: max(11px, .5vh)/1.45 var(--font_main_light); overflow-wrap: anywhere; }
+.engineering-mode .stud-artifact-filter { display: flex; gap: .35vh; max-width: 100%; overflow-x: auto; padding-bottom: .25vh; }
+.engineering-mode .stud-artifact-filter button { flex: 0 0 auto; }
+.engineering-mode .stud-artifact-bay-body { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(17rem, .7fr); gap: 1vh; min-width: 0; align-items: start; }
+.engineering-mode .stud-artifact-bay-body > main { display: grid; gap: .9vh; min-width: 0; }
+.engineering-mode .stud-artifact-group { display: grid; gap: .25vh; min-width: 0; }
+.engineering-mode .stud-artifact-group > header,
+.engineering-mode .stud-mission-artifacts > header,
+.engineering-mode .stud-mission-events > header { display: flex; justify-content: space-between; gap: .6vh; padding: .45vh .55vh; border-bottom: .06vh solid var(--aegis-border-subtle); }
+.engineering-mode .stud-artifact-group > header :is(strong,span),
+.engineering-mode .stud-mission-artifacts > header :is(strong,span),
+.engineering-mode .stud-mission-events > header :is(strong,span) { color: var(--aegis-text-faint); font: max(10px, .41vh) var(--font_mono); letter-spacing: .05vh; }
+.engineering-mode .stud-artifact-row { display: grid; grid-template-columns: minmax(7rem, .35fr) minmax(0, 1fr); gap: .15vh .7vh; width: 100%; min-width: 0; text-align: left; border: 0; border-left: .13vh solid var(--aegis-border); }
+.engineering-mode .stud-artifact-row.is-selected { border-left-color: var(--aegis-accent-soft); background: var(--aegis-surface-muted); }
+.engineering-mode .stud-artifact-row .stud-artifact-kind { grid-row: 1 / span 2; color: var(--aegis-text-faint); font: .38vh var(--font_mono); overflow-wrap: anywhere; }
+.engineering-mode .stud-artifact-row strong { color: var(--aegis-text-primary); font: max(11px, .5vh)/1.3 var(--font_main); overflow-wrap: anywhere; }
+.engineering-mode .stud-artifact-row small { color: var(--aegis-text-faint); font: max(9px, .37vh)/1.35 var(--font_mono); overflow-wrap: anywhere; }
+.engineering-mode .stud-artifact-detail { display: grid; gap: .75vh; position: sticky; top: 0; min-width: 0; padding: .9vh; border-left: .14vh solid var(--aegis-border); background: var(--aegis-surface-muted); }
+.engineering-mode .stud-artifact-detail > header { display: grid; gap: .2vh; }
+.engineering-mode .stud-artifact-detail > header span,
+.engineering-mode .stud-artifact-detail p { margin: 0; color: var(--aegis-text-muted); font: .44vh/1.4 var(--font_main_light); overflow-wrap: anywhere; }
+.engineering-mode .stud-artifact-detail dl { display: grid; gap: 1px; margin: 0; background: var(--aegis-border); }
+.engineering-mode .stud-artifact-detail dl > div { display: grid; grid-template-columns: minmax(7rem,.65fr) minmax(0,1fr); gap: .6vh; padding: .48vh; background: var(--aegis-surface); }
+.engineering-mode .stud-artifact-detail dt { color: var(--aegis-text-faint); font: .37vh var(--font_mono); }
+.engineering-mode .stud-artifact-detail dd { margin: 0; color: var(--aegis-text-primary); font: .43vh var(--font_main_light); overflow-wrap: anywhere; }
+.engineering-mode .stud-artifact-detail ul { display: grid; gap: .3vh; margin: .4vh 0 0; padding: 0; list-style: none; }
+.engineering-mode .stud-artifact-detail li { display: grid; gap: .15vh; padding-left: .5vh; border-left: .1vh solid var(--aegis-border); color: var(--aegis-text-muted); font: .39vh var(--font_mono); overflow-wrap: anywhere; }
+.engineering-mode .stud-operational-empty { display: grid; place-content: center; gap: .55vh; min-height: 28vh; padding: 2vh; text-align: center; }
+.engineering-mode .stud-operational-empty strong { color: var(--aegis-text-primary); font: .7vh var(--font_main); }
+.engineering-mode .stud-mission-stage-rail { display: flex; gap: .38vh; max-width: 100%; margin: 0; padding: .65vh; overflow-x: auto; border: .06vh solid var(--aegis-border-subtle); background: var(--aegis-surface-muted); list-style: none; }
+.engineering-mode .stud-mission-stage-rail li { display: grid; grid-template-columns: auto minmax(8rem,1fr); gap: .4vh; flex: 0 1 13rem; min-width: 9.5rem; padding: .48vh; border-left: .13vh solid var(--aegis-border); }
+.engineering-mode .stud-mission-stage-rail li.is-current { border-left-color: var(--aegis-accent-soft); background: var(--aegis-surface); }
+.engineering-mode .stud-mission-stage-rail li.is-direct-blocker { border-left-color: #c86f52; }
+.engineering-mode .stud-mission-stage-rail strong { display: block; color: var(--aegis-text-primary); font: max(10px, .45vh)/1.25 var(--font_main); overflow-wrap: anywhere; }
+.engineering-mode .stud-mission-stage-rail small { display: block; color: var(--aegis-text-faint); font: max(9px, .36vh) var(--font_mono); }
+.engineering-mode .stud-mission-stage-empty { padding: .7vh; color: var(--aegis-text-faint); border: .06vh solid var(--aegis-border-subtle); font: .41vh var(--font_mono); }
+.engineering-mode .stud-mission-body { display: grid; grid-template-columns: minmax(15rem,.65fr) minmax(0,1.35fr); gap: 1vh; min-width: 0; }
+.engineering-mode .stud-mission-artifacts { display: grid; align-content: start; gap: .25vh; min-width: 0; border: .06vh solid var(--aegis-border-subtle); }
+.engineering-mode .stud-mission-artifacts > p { margin: .7vh; color: var(--aegis-text-muted); font: .44vh/1.4 var(--font_main_light); }
+.engineering-mode .stud-mission-inspection { display: grid; gap: .8vh; min-width: 0; }
+.engineering-mode .stud-mission-current { display: grid; gap: .45vh; padding: .85vh; border-left: .18vh solid var(--aegis-accent-soft); background: var(--aegis-surface-muted); }
+.engineering-mode .stud-mission-current > small:last-child { color: var(--aegis-text-faint); font: max(9px, .38vh)/1.35 var(--font_main_light); }
+.engineering-mode .stud-mission-progress { color: var(--aegis-text-muted); font: max(10px, .42vh) var(--font_mono); }
+.engineering-mode .stud-mission-progress.is-determinate { display: grid; grid-template-columns: auto minmax(0,1fr); align-items: center; gap: .65vh; }
+.engineering-mode .stud-mission-progress progress { width: 100%; height: .6vh; accent-color: var(--aegis-accent-soft); }
+.engineering-mode .stud-mission-progress.is-indeterminate { border-left: .12vh solid var(--aegis-warning); padding-left: .45vh; }
+.engineering-mode .stud-mission-conditions { display: grid; gap: .25vh; padding: .55vh; border-left: .14vh solid var(--aegis-warning); }
+.engineering-mode .stud-mission-conditions :is(strong,p),
+.engineering-mode .stud-mission-error { margin: 0; color: var(--aegis-text-muted); font: .43vh/1.4 var(--font_main_light); overflow-wrap: anywhere; }
+.engineering-mode .stud-mission-error { color: var(--aegis-danger); }
+.engineering-mode .stud-mission-events { min-width: 0; border: .06vh solid var(--aegis-border-subtle); }
+.engineering-mode .stud-mission-events ol { display: grid; gap: 0; max-height: 34vh; margin: 0; padding: 0; overflow: auto; list-style: none; }
+.engineering-mode .stud-mission-events li { display: grid; grid-template-columns: minmax(9rem,.32fr) minmax(0,1fr); gap: .6vh; padding: .55vh .65vh; border-left: .12vh solid var(--aegis-border); border-bottom: .05vh solid var(--aegis-border-subtle); }
+.engineering-mode .stud-mission-events li.is-warning { border-left-color: var(--aegis-warning); }
+.engineering-mode .stud-mission-events li.is-error { border-left-color: var(--aegis-danger); }
+.engineering-mode .stud-mission-events time,
+.engineering-mode .stud-mission-events small { color: var(--aegis-text-faint); font: max(9px, .37vh) var(--font_mono); }
+.engineering-mode .stud-mission-events li > div { display: grid; gap: .15vh; min-width: 0; }
+.engineering-mode .stud-mission-events strong { color: var(--aegis-text-primary); font: max(10px, .43vh) var(--font_main); }
+.engineering-mode .stud-mission-events p { margin: 0; color: var(--aegis-text-muted); font: max(10px, .44vh)/1.35 var(--font_main_light); overflow-wrap: anywhere; }
+.engineering-mode .stud-mission-history { display: grid; gap: .35vh; padding-top: .6vh; border-top: .06vh solid var(--aegis-border-subtle); }
+.engineering-mode .stud-mission-history summary { color: var(--aegis-text-primary); font: .45vh var(--font_main); cursor: pointer; }
+.engineering-mode .stud-mission-history button { display: flex; justify-content: space-between; gap: .7vh; width: 100%; text-align: left; }
+.engineering-mode .stud-mission-history button.is-current { border-color: var(--aegis-accent-soft); color: var(--aegis-text-primary); }
+@media (max-width: 1400px) {
+    .engineering-mode .stud-artifact-bay-body,
+    .engineering-mode .stud-mission-body { grid-template-columns: minmax(0,1fr); }
+    .engineering-mode .stud-artifact-detail { position: static; }
+}
+@media (max-width: 900px) {
+    .engineering-mode .stud-assignment-workspace-detail.is-operational > header,
+    .engineering-mode .stud-operational-heading { align-items: stretch; flex-direction: column; }
+    .engineering-mode .stud-assignment-workspace-detail.is-operational > header > nav { width: 100%; margin-left: 0; }
+    .engineering-mode .stud-operational-heading > div:last-child { justify-items: start; text-align: left; }
+    .engineering-mode .stud-artifact-row,
+    .engineering-mode .stud-mission-events li,
+    .engineering-mode .stud-mission-progress.is-determinate { grid-template-columns: minmax(0,1fr); }
+    .engineering-mode .stud-artifact-row .stud-artifact-kind { grid-row: auto; }
+}
 .engineering-mode .stud-assignment-brief-preview > div,
 .engineering-mode .stud-evidence-matrix > div { display: grid; gap: .34vh; }
 .engineering-mode .stud-evidence-matrix article { display: grid; grid-template-columns: minmax(12vh, .32fr) minmax(0, 1fr) max-content; gap: .18vh .48vh; min-width: 0; padding: .46vh; border-left: .16vh solid var(--aegis-accent); background: var(--aegis-surface-muted); }
