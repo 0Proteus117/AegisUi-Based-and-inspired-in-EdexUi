@@ -14,6 +14,7 @@ const {StudAcademicStore} = require(path.join(SRC, "classes/workspaces/studAcade
 const {SCHEMA_VERSION} = require(path.join(SRC, "classes/workspaces/studAcademicModel.class.js"));
 const REQUIREMENTS_TABLES = ["stud_requirement_contract_freshness", "stud_requirement_sources", "stud_requirement_items", "stud_requirement_candidates", "stud_requirement_candidate_runs", "stud_assignment_requirement_contracts", "stud_requirement_contracts"];
 const M2_TABLES = ["stud_working_context", "stud_assignment_classifications"];
+const WORKFLOW_CONDITION_TABLES = ["stud_workflow_blockers", "stud_workflow_checkpoints"];
 const WORKFLOW_TABLES = ["stud_workflow_events", "stud_workflow_edges", "stud_workflow_nodes", "stud_workflow_instances", "stud_workflow_template_edges", "stud_workflow_template_nodes", "stud_workflow_template_versions", "stud_workflow_templates"];
 
 let passed = 0;
@@ -47,11 +48,12 @@ const root = fs.mkdtempSync(path.join(os.tmpdir(), "aegis-stud-phase14-repro-"))
 try {
     const manifest = JSON.parse(fs.readFileSync(path.join(SRC, "package.json"), "utf8"));
     const lock = JSON.parse(fs.readFileSync(path.join(SRC, "package-lock.json"), "utf8"));
+    const applicationLock = JSON.parse(fs.readFileSync(path.join(ROOT, "package-lock.json"), "utf8"));
     const requiredCitationPackages = ["@citation-js/core", "@citation-js/plugin-bibtex", "@citation-js/plugin-csl"];
 
     check("CITATION_DEPENDENCIES_DECLARED", () => requiredCitationPackages.forEach(name => assert.ok(manifest.dependencies[name], `${name} is missing from src/package.json`)));
     check("CITATION_DEPENDENCIES_LOCKED", () => requiredCitationPackages.forEach(name => assert.ok(lock.packages[`node_modules/${name}`], `${name} is missing from src/package-lock.json`)));
-    check("ELECTRON_OPTIONAL_UNDICI_LOCKED", () => assert.ok(lock.packages["node_modules/undici"], "Electron optional undici dependency is absent from the lockfile"));
+    check("ELECTRON_OPTIONAL_UNDICI_LOCKED", () => assert.ok(applicationLock.packages["node_modules/undici"], "Electron optional undici dependency is absent from the application lockfile"));
     check("CITATION_CORE_RESOLVES_FROM_SRC", () => {
         const resolved = require.resolve("@citation-js/core", {paths: [SRC]});
         assert.ok(resolved.includes("@citation-js/core"));
@@ -69,7 +71,7 @@ try {
 
     const v12Root = path.join(root, "legacy-v12");
     const v12 = freshStore(v12Root);
-    removeTables(v12, [...WORKFLOW_TABLES, ...REQUIREMENTS_TABLES, "stud_provider_sync_preferences", "stud_discipline_profile", "stud_tool_preferences"]);
+    removeTables(v12, [...WORKFLOW_CONDITION_TABLES, ...WORKFLOW_TABLES, ...REQUIREMENTS_TABLES, "stud_provider_sync_preferences", "stud_discipline_profile", "stud_tool_preferences"]);
     removeM2Schema(v12);
     v12.db.prepare("DELETE FROM stud_schema_migrations WHERE version>=13").run();
     v12.close();
@@ -85,7 +87,7 @@ try {
     const v9 = freshStore(v9Root);
     const legacyCourse = v9.createEntity("COURSE", {title: "Legacy course retained across migration"});
     const legacyAssignment = v9.createEntity("ASSIGNMENT", {courseId: legacyCourse.id, title: "Legacy assignment retained across migration"});
-    removeTables(v9, [...WORKFLOW_TABLES, ...REQUIREMENTS_TABLES, "stud_provider_sync_preferences", "stud_discipline_profile", "stud_tool_preferences", "stud_repository_references", "stud_datasets", "stud_notebook_outputs", "stud_notebook_cells", "stud_notebooks", "stud_context_packages", "stud_context_decisions", "stud_concept_observations", "stud_academic_concepts"]);
+    removeTables(v9, [...WORKFLOW_CONDITION_TABLES, ...WORKFLOW_TABLES, ...REQUIREMENTS_TABLES, "stud_provider_sync_preferences", "stud_discipline_profile", "stud_tool_preferences", "stud_repository_references", "stud_datasets", "stud_notebook_outputs", "stud_notebook_cells", "stud_notebooks", "stud_context_packages", "stud_context_decisions", "stud_concept_observations", "stud_academic_concepts"]);
     removeM2Schema(v9);
     v9.db.exec("DROP INDEX IF EXISTS stud_assignments_grade_context_index; ALTER TABLE stud_assignments DROP COLUMN grade_scheme; ALTER TABLE stud_assignments DROP COLUMN grade_text;");
     v9.db.prepare("DELETE FROM stud_schema_migrations WHERE version >= 10").run();

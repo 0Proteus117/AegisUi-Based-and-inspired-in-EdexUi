@@ -4,6 +4,7 @@ const Academic = require("./studAcademicModel.class.js");
 const Workflow = require("./studWorkflowModel.class.js");
 const {StudWorkflowTemplateRegistry} = require("./studWorkflowTemplateRegistry.class.js");
 const {StudWorkflowRepository} = require("./studWorkflowRepository.class.js");
+const {StudWorkflowConditionsService} = require("./studWorkflowConditionsService.class.js");
 const {deterministicClassification} = require("./studWorkingContextService.class.js");
 
 class StudWorkflowService {
@@ -15,6 +16,8 @@ class StudWorkflowService {
         this.requirements = options.requirementsService || null;
         this.workingContext = options.workingContextService || null;
         this.registry.list().forEach(template => this.repository.seedTemplate(template));
+        this.conditions = options.conditionsService || new StudWorkflowConditionsService({store: this.store, workflowRepository: this.repository, requirementsService: this.requirements, workingContextService: this.workingContext});
+        this.repository.setConditionsRepository(this.conditions.repository);
     }
 
     assignmentContractState(assignmentId) {
@@ -146,6 +149,15 @@ class StudWorkflowService {
         Academic.assertAllowedKeys(input, ["workflowId", "limit"], "Workflow history request");
         return this.repository.events(input.workflowId, input.limit);
     }
+
+    conditionState(input = {}) { return this.conditions.state(input); }
+    blockerImpact(input = {}) { return this.conditions.impact(input); }
+    createBlocker(input = {}) { return this.conditions.createBlocker(input); }
+    updateBlocker(input = {}) { return this.conditions.updateBlocker(input); }
+    resolveBlocker(input = {}) { return this.conditions.resolveBlocker(input); }
+    cancelBlocker(input = {}) { return this.conditions.cancelBlocker(input); }
+    createCheckpoint(input = {}) { return this.conditions.createCheckpoint(input); }
+    decideCheckpoint(input = {}) { return this.conditions.decideCheckpoint(input); }
 }
 
 module.exports = Object.freeze({StudWorkflowService});

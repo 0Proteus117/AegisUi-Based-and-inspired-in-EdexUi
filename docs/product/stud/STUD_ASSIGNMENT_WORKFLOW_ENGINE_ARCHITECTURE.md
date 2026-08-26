@@ -200,27 +200,28 @@ instances never change when a template or Requirements Contract changes.
 Explicit replacement preserves the prior instance as `HISTORICAL`; it does not
 copy activity or reset history silently.
 
-The broader execution states in the target architecture (`WAITING`, `BLOCKED`,
-`HUMAN_INPUT` and recovery state) remain reserved for M4/M13. M3 nodes can carry
-human/external semantic types but do not pretend that blocker or worker runtime
-semantics exist.
+M4 adds derived `DIRECT_BLOCKER`, `HUMAN_INPUT_REQUIRED` and `DEPENDENCY_WAIT`
+availability without changing the four persisted M3 work states. Runtime worker
+state and autonomous recovery remain reserved for M13. Human/external semantic
+node types do not themselves fabricate a blocker or checkpoint.
 
 ### Blockers, checkpoints and recovery
 
 - `stud_workflow_blockers`: taxonomy, affected node, expected input/artifact,
-  responsible party when explicitly supplied, downstream impact, state and
-  resolution provenance.
-- `stud_workflow_checkpoints`: immutable bounded state snapshot, completed task
-  cursor, artifact references, runtime/model profile, source/context package IDs
-  and integrity hash.
+  responsible party when explicitly supplied, exact optional Contract/
+  provenance references, lifecycle and resolution history. Downstream impact is
+  derived from the DAG rather than copied into descendant rows.
+- `stud_workflow_checkpoints`: explicit student review gate with instructions,
+  required decision, exact optional source references, decision history and
+  controlled follow-up chain. It is not a runtime worker cursor.
 - `stud_workflow_events`: append-only meaningful events, bounded payload and
   sequence. It is an audit feed, not developer logs or every click.
 
-M4 introduces blocker propagation, the workflow-state journal, human checkpoints
-and dependency semantics. It defines durable checkpoint/event contracts but does
-not speculate about process-worker crash payloads before an execution coordinator
-exists. Runtime worker recovery, heartbeat and resumable execution payloads belong
-with M13.
+M4 implements blocker propagation, meaningful journal events, human checkpoints
+and dependency semantics in schema v18. Restart recovery means restoring those
+canonical facts and deterministically recomputing availability. Runtime worker
+recovery, heartbeat, cursor snapshots and resumable execution payloads belong
+with M13 and are not represented by M4's human checkpoints.
 
 Once M13 exists, any interrupted `RUNNING` task becomes `INTERRUPTED` until its
 coordinator proves it can resume from a valid checkpoint. Completed expensive

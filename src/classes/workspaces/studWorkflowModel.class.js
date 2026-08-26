@@ -17,7 +17,9 @@ const WORKFLOW_LIFECYCLES = Object.freeze(["ACTIVE", "HISTORICAL", "ARCHIVED"]);
 const EVENT_TYPES = Object.freeze([
     "TEMPLATE_SELECTED", "WORKFLOW_CREATED", "NODE_STARTED", "NODE_COMPLETED",
     "NODE_SKIPPED", "NODE_REOPENED", "NODE_RENAMED", "NODE_ADDED",
-    "EDGE_ADDED", "EDGE_REMOVED", "WORKFLOW_REPLACED"
+    "EDGE_ADDED", "EDGE_REMOVED", "WORKFLOW_REPLACED",
+    "BLOCKER_CREATED", "BLOCKER_UPDATED", "BLOCKER_RESOLVED", "BLOCKER_CANCELLED",
+    "CHECKPOINT_CREATED", "CHECKPOINT_APPROVED", "CHECKPOINT_REJECTED", "CHECKPOINT_CANCELLED"
 ]);
 const ACTIONS = Object.freeze(["START", "COMPLETE", "SKIP", "REOPEN"]);
 const LIMITS = Object.freeze({templates: 20, nodes: 40, edges: 160, history: 500, title: 240, description: 4000, reason: 1000, eventBytes: 8192});
@@ -132,7 +134,7 @@ function normalizeNodeMutation(input = {}) {
     });
 }
 
-function deriveGraph(nodes, edges) {
+function deriveGraph(nodes, edges, conditions = {}) {
     if (!Array.isArray(nodes) || nodes.length > LIMITS.nodes) throw new Academic.StudError("INVALID_INPUT", "Workflow node collection is invalid.");
     if (!Array.isArray(edges) || edges.length > LIMITS.edges) throw new Academic.StudError("INVALID_INPUT", "Workflow edge collection is invalid.");
     assertAcyclic(nodes.map(node => node.id), edges);
@@ -140,6 +142,13 @@ function deriveGraph(nodes, edges) {
     const outgoing = new Map(nodes.map(node => [node.id, []]));
     edges.forEach(edge => { incoming.get(edge.toNodeId).push(edge.fromNodeId); outgoing.get(edge.fromNodeId).push(edge.toNodeId); });
     const byId = new Map(nodes.map(node => [node.id, node]));
+    const blockers = Array.isArray(conditions.blockers) ? conditions.blockers : [];
+    const checkpoints = Array.isArray(conditions.checkpoints) ? conditions.checkpoints : [];
+    const blockersByNode = new Map(nodes.map(node => [node.id, []]));
+    const checkpointsByNode = new Map(nodes.map(node => [node.id, []]));
+    const replacedCheckpointIds = new Set(checkpoints.map(item => item.replacesCheckpointId).filter(Boolean));
+    blockers.forEach(blocker => { if (blockersByNode.has(blocker.nodeId)) blockersByNode.get(blocker.nodeId).push(blocker); });
+    checkpoints.forEach(checkpoint => { if (checkpointsByNode.has(checkpoint.nodeId)) checkpointsByNode.get(checkpoint.nodeId).push(checkpoint); });
     const terminal = node => ["COMPLETE", "SKIPPED"].includes(node.state);
     const hasProgressedDescendant = nodeId => {
         const seen = new Set(); const queue = [...outgoing.get(nodeId)];
@@ -152,16 +161,50 @@ function deriveGraph(nodes, edges) {
         }
         return false;
     };
+    const topological = assertAcyclic(nodes.map(node => node.id), edges);
+    const computed = new Map();
+    topological.forEach(nodeId => {
+        const node = byId.get(nodeId);
+        const directBlockers = blockersByNode.get(node.id).filter(item => item.status === "OPEN");
+        const gateCheckpoints = checkpointsByNode.get(node.id).filter(item => item.status === "PENDING" || (item.status === "REJECTED" && !replacedCheckpointIds.has(item.id)));
+        const predecessors = incoming.get(node.id).map(id => computed.get(id));
+        const predecessorSatisfied = predecessor => terminal(predecessor) && predecessor.availability === "AVAILABLE";
+        const dependencyReady = predecessors.every(predecessorSatisfied);
+        const impactSources = [];
+        predecessors.filter(predecessor => !predecessorSatisfied(predecessor)).forEach(predecessor => {
+            predecessor.directBlockers.forEach(item => impactSources.push({kind: "BLOCKER", id: item.id, nodeId: predecessor.id, title: item.title, status: item.status}));
+            predecessor.gateCheckpoints.forEach(item => impactSources.push({kind: "CHECKPOINT", id: item.id, nodeId: predecessor.id, title: item.title, status: item.status}));
+            predecessor.impactSources.forEach(item => impactSources.push(item));
+        });
+        const uniqueImpacts = [...new Map(impactSources.map(item => [`${item.kind}:${item.id}`, item])).values()];
+        let availability = "AVAILABLE";
+        if (directBlockers.length) availability = "DIRECT_BLOCKER";
+        else if (gateCheckpoints.length) availability = "HUMAN_INPUT_REQUIRED";
+        else if (node.state === "NOT_STARTED" && !dependencyReady) availability = "DEPENDENCY_WAIT";
+        computed.set(node.id, {...node, directBlockers, gateCheckpoints, impactSources: uniqueImpacts, dependencyReady, availability});
+    });
     const hydrated = nodes.map(node => {
+        const condition = computed.get(node.id);
         const predecessorIds = incoming.get(node.id).slice().sort();
         const predecessorStates = predecessorIds.map(id => byId.get(id));
-        const ready = node.state === "NOT_STARTED" && predecessorStates.every(terminal);
+        const ready = node.state === "NOT_STARTED" && condition.availability === "AVAILABLE" && predecessorStates.every(terminal);
         const displayState = ready ? "READY" : node.state;
         const availableActions = [];
         if (ready) availableActions.push("START", "SKIP");
-        if (node.state === "IN_PROGRESS") availableActions.push("COMPLETE", "SKIP");
+        if (node.state === "IN_PROGRESS" && condition.availability === "AVAILABLE") availableActions.push("COMPLETE", "SKIP");
         if (["COMPLETE", "SKIPPED"].includes(node.state) && !hasProgressedDescendant(node.id)) availableActions.push("REOPEN");
-        return Object.freeze({...node, readiness: ready ? "READY" : node.state === "NOT_STARTED" ? "DEPENDENCIES_PENDING" : "NOT_APPLICABLE", displayState, predecessorIds: Object.freeze(predecessorIds), successorIds: Object.freeze(outgoing.get(node.id).slice().sort()), availableActions: Object.freeze(availableActions)});
+        return Object.freeze({...node,
+            readiness: ready ? "READY" : node.state === "NOT_STARTED" ? "DEPENDENCIES_PENDING" : "NOT_APPLICABLE",
+            dependencyReady: condition.dependencyReady,
+            availability: condition.availability,
+            displayState,
+            predecessorIds: Object.freeze(predecessorIds),
+            successorIds: Object.freeze(outgoing.get(node.id).slice().sort()),
+            directBlockers: Object.freeze(condition.directBlockers),
+            gateCheckpoints: Object.freeze(condition.gateCheckpoints),
+            impactSources: Object.freeze(condition.impactSources),
+            availableActions: Object.freeze(availableActions)
+        });
     });
     const complete = hydrated.filter(node => node.state === "COMPLETE").length;
     const skipped = hydrated.filter(node => node.state === "SKIPPED").length;
@@ -169,7 +212,17 @@ function deriveGraph(nodes, edges) {
     return Object.freeze({
         nodes: Object.freeze(hydrated),
         edges: Object.freeze(edges),
-        summary: Object.freeze({total: hydrated.length, complete, skipped, terminal: terminalCount, inProgress: hydrated.filter(node => node.state === "IN_PROGRESS").length, ready: hydrated.filter(node => node.displayState === "READY").length, workflowComplete: hydrated.length > 0 && terminalCount === hydrated.length})
+        summary: Object.freeze({
+            total: hydrated.length, complete, skipped, terminal: terminalCount,
+            inProgress: hydrated.filter(node => node.state === "IN_PROGRESS").length,
+            ready: hydrated.filter(node => node.displayState === "READY").length,
+            blocked: hydrated.filter(node => node.availability === "DIRECT_BLOCKER").length,
+            humanInput: hydrated.filter(node => node.availability === "HUMAN_INPUT_REQUIRED").length,
+            dependencyWait: hydrated.filter(node => node.availability === "DEPENDENCY_WAIT").length,
+            openBlockers: blockers.filter(item => item.status === "OPEN").length,
+            pendingCheckpoints: checkpoints.filter(item => item.status === "PENDING" || (item.status === "REJECTED" && !replacedCheckpointIds.has(item.id))).length,
+            workflowComplete: hydrated.length > 0 && terminalCount === hydrated.length
+        })
     });
 }
 

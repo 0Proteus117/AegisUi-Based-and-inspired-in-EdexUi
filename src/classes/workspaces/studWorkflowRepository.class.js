@@ -23,7 +23,10 @@ class StudWorkflowRepository {
         this.store = store;
         this.store.initialize();
         this.db = store.db;
+        this.conditionsRepository = null;
     }
+
+    setConditionsRepository(repository) { this.conditionsRepository = repository || null; return this; }
 
     transaction(work) { return this.store.transaction(work); }
 
@@ -121,8 +124,9 @@ class StudWorkflowRepository {
         const workflow = this.workflowRow(workflowId);
         const nodes = this.db.prepare("SELECT * FROM stud_workflow_nodes WHERE workflow_id=? ORDER BY node_order,id").all(workflow.id).map(rowToCamel);
         const edges = this.db.prepare("SELECT * FROM stud_workflow_edges WHERE workflow_id=? ORDER BY from_node_id,to_node_id").all(workflow.id).map(rowToCamel);
-        const graph = Workflow.deriveGraph(nodes, edges);
-        return {workflow, graph};
+        const conditions = this.conditionsRepository ? this.conditionsRepository.listForWorkflow(workflow.id) : Object.freeze({blockers: Object.freeze([]), checkpoints: Object.freeze([])});
+        const graph = Workflow.deriveGraph(nodes, edges, conditions);
+        return {workflow, graph, conditions};
     }
 
     events(workflowId, limit = Workflow.LIMITS.history) {
@@ -135,11 +139,11 @@ class StudWorkflowRepository {
     }
 
     hydrate(workflowId, historyLimit = 100) {
-        const {workflow, graph} = this.rowsFor(workflowId);
+        const {workflow, graph, conditions} = this.rowsFor(workflowId);
         const template = this.hydrateTemplateVersion(workflow.templateVersionId);
         let contract = null;
         if (workflow.contractId) contract = rowToCamel(this.db.prepare("SELECT id,assignment_id,revision,lifecycle,completeness,approved_as_incomplete,contract_hash FROM stud_requirement_contracts WHERE id=?").get(workflow.contractId));
-        return Object.freeze({...workflow, template, contract: contract && Object.freeze(contract), graph, history: this.events(workflow.id, historyLimit)});
+        return Object.freeze({...workflow, template, contract: contract && Object.freeze(contract), graph, conditions, history: this.events(workflow.id, historyLimit)});
     }
 
     currentForAssignment(assignmentId) {
@@ -236,8 +240,8 @@ class StudWorkflowRepository {
             const timestamp = Academic.now();
             let nextState; let eventType;
             if (action === "START" && graphNode.displayState === "READY") { nextState = "IN_PROGRESS"; eventType = "NODE_STARTED"; }
-            else if (action === "COMPLETE" && graphNode.state === "IN_PROGRESS") { nextState = "COMPLETE"; eventType = "NODE_COMPLETED"; }
-            else if (action === "SKIP" && ["READY", "IN_PROGRESS"].includes(graphNode.displayState)) { nextState = "SKIPPED"; eventType = "NODE_SKIPPED"; }
+            else if (action === "COMPLETE" && graphNode.state === "IN_PROGRESS" && graphNode.availability === "AVAILABLE") { nextState = "COMPLETE"; eventType = "NODE_COMPLETED"; }
+            else if (action === "SKIP" && ["READY", "IN_PROGRESS"].includes(graphNode.displayState) && graphNode.availability === "AVAILABLE") { nextState = "SKIPPED"; eventType = "NODE_SKIPPED"; }
             else if (action === "REOPEN" && ["COMPLETE", "SKIPPED"].includes(graphNode.state)) {
                 const progressed = this.descendants(graph, graphNode.id).filter(node => node.state !== "NOT_STARTED");
                 if (progressed.length) throw new Academic.StudError("DOWNSTREAM_PROGRESS_EXISTS", "Reopen downstream completed or active work first.", {nodeIds: progressed.map(node => node.id)});
