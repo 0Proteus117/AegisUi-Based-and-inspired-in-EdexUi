@@ -40,6 +40,16 @@ function approvedDependency(requirements, assignmentId) {
 function stripV18(dbPath) {
     const db = new DatabaseSync(dbPath);
     db.exec(`PRAGMA foreign_keys=OFF;
+        DROP TABLE IF EXISTS stud_research_gaps;
+        DROP TABLE IF EXISTS stud_topic_dossier_items;
+        DROP TABLE IF EXISTS stud_research_question_requirements;
+        DROP TABLE IF EXISTS stud_research_questions;
+        DROP TABLE IF EXISTS stud_research_topic_requirements;
+        DROP TABLE IF EXISTS stud_research_topics;
+        DROP TABLE IF EXISTS stud_assignment_research_plans;
+        DROP TABLE IF EXISTS stud_research_plans;
+        ALTER TABLE stud_working_context DROP COLUMN active_research_topic_id;
+        ALTER TABLE stud_working_context DROP COLUMN active_research_plan_id;
         DROP TABLE IF EXISTS stud_operation_event_artifacts;
         DROP TABLE IF EXISTS stud_operation_events;
         DROP TABLE IF EXISTS stud_operation_runs;
@@ -58,7 +68,7 @@ function stripV18(dbPath) {
         INSERT INTO stud_workflow_events SELECT * FROM stud_workflow_events_v18 WHERE event_type NOT LIKE 'BLOCKER_%' AND event_type NOT LIKE 'CHECKPOINT_%';
         DROP TABLE stud_workflow_events_v18;
         CREATE INDEX stud_workflow_events_workflow_index ON stud_workflow_events(workflow_id,event_sequence DESC);
-        DELETE FROM stud_schema_migrations WHERE version IN (18,19);
+        DELETE FROM stud_schema_migrations WHERE version IN (18,19,20);
         PRAGMA foreign_keys=ON;`);
     db.close();
 }
@@ -68,7 +78,7 @@ try {
     const root = path.join(temp, "domain");
     const {store, requirements, context, workflow} = open(root);
     check("CURRENT_SCHEMA_AND_NO_FABRICATED_CONDITIONS", () => {
-        assert.strictEqual(store.schemaInfo().version, 19);
+        assert.strictEqual(store.schemaInfo().version, 20);
         assert.strictEqual(store.db.prepare("SELECT COUNT(*) count FROM stud_workflow_blockers").get().count, 0);
         assert.strictEqual(store.db.prepare("SELECT COUNT(*) count FROM stud_workflow_checkpoints").get().count, 0);
     });
@@ -261,7 +271,7 @@ try {
     stripV18(path.join(migrationRoot, "academic.sqlite"));
     const migrated = open(migrationRoot);
     check("V17_TO_CURRENT_MIGRATION_PRESERVES_WORKFLOW_WITHOUT_FABRICATION", () => {
-        assert.strictEqual(migrated.store.schemaInfo().version, 19);
+        assert.strictEqual(migrated.store.schemaInfo().version, 20);
         assert.ok(migrated.workflow.read({workflowId: oldWorkflowId}));
         assert.strictEqual(migrated.store.db.prepare("SELECT COUNT(*) count FROM stud_workflow_blockers").get().count, 0);
         assert.strictEqual(migrated.store.db.prepare("SELECT COUNT(*) count FROM stud_workflow_checkpoints").get().count, 0);

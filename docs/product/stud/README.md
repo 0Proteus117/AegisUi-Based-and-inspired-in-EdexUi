@@ -22,6 +22,7 @@ documents translate that intent into the audited v2.7.0 implementation:
 - [M4 Blockers / Human Checkpoints implementation and validation](STUD_M4_BLOCKERS_CHECKPOINTS_RECOVERY_VALIDATION.md)
 - [M5 Assignment Workspace implementation and validation](STUD_M5_ASSIGNMENT_WORKSPACE_VALIDATION.md)
 - [M6 Artifact Bay / Mission Control implementation and validation](STUD_M6_ARTIFACT_BAY_MISSION_CONTROL_VALIDATION.md)
+- [M7 Research Plan / Topic Dossiers implementation and validation](STUD_M7_RESEARCH_PLAN_TOPIC_DOSSIERS_VALIDATION.md)
 - [M1-M3 integration and final technical audit](STUD_M1_M3_INTEGRATION_AUDIT.md)
 - [Electron trust-boundary hardening](../../security/ELECTRON_TRUST_BOUNDARY_HARDENING_2026-08-24.md)
 
@@ -50,5 +51,8 @@ adds the Assignment Workspace as a renderer composition over those records. M6
 advances schema v18 to v19 with an Assignment-scoped Artifact Registry, bounded
 Operation Runs and a structured operational Event Journal. Artifact Bay indexes
 canonical objects without copying their contents, while Mission Control renders
-only persisted Runs, events and authoritative M3/M4 state. The exact next product
-milestone is M7 — Research Plan and Topic Dossiers.
+only persisted Runs, events and authoritative M3/M4 state. M7 advances schema
+v19 to v20 with reviewed Assignment Research Plans, requirement-linked Topics
+and Questions, reference-only Topic Dossiers, explicit Research Gaps and
+explainable research-preparation coverage. The exact next product milestone is
+M8 — Claims, Evidence Map and Citation Integrity.

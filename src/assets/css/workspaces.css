@@ -7018,6 +7018,125 @@ button.eng-thread-row.active {
     .engineering-mode .stud-mission-progress.is-determinate { grid-template-columns: minmax(0,1fr); }
     .engineering-mode .stud-artifact-row .stud-artifact-kind { grid-row: auto; }
 }
+
+/* STUD M7 — Research Plan and Topic Dossiers. The surface remains quiet until
+   explicitly opened from one Assignment and never represents provider/model activity. */
+.engineering-mode .stud-assignment-workspace-detail.is-research-plan { min-width: 0; }
+.engineering-mode .stud-research-plan-workspace { display: grid; gap: .9vh; min-width: 0; padding: 1vh; }
+.engineering-mode .stud-research-plan-heading { display: flex; justify-content: space-between; align-items: start; gap: 1vh; padding: .9vh; border-left: .16vh solid var(--aegis-accent-soft); background: var(--aegis-surface-muted); }
+.engineering-mode .stud-research-plan-heading > div { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: .45vh; min-width: 0; }
+.engineering-mode .stud-research-plan-heading > div:first-child { display: grid; justify-content: start; gap: .18vh; }
+.engineering-mode .stud-research-plan-history { position: relative; }
+.engineering-mode .stud-research-plan-history ol { display: grid; position: absolute; z-index: 5; top: calc(100% + .2vh); right: 0; width: min(22rem,80vw); max-height: 32vh; margin: 0; padding: .5vh; overflow: auto; border: .07vh solid var(--aegis-border); background: var(--aegis-surface); box-shadow: 0 .6vh 1.6vh rgba(0,0,0,.18); list-style: none; }
+.engineering-mode .stud-research-plan-history li { display: grid; gap: .15vh; padding: .45vh; border-bottom: .05vh solid var(--aegis-border-subtle); }
+.engineering-mode .stud-research-plan-history li strong { color: var(--aegis-text-primary); font: max(10px,.42vh) var(--font_main); }
+.engineering-mode .stud-research-plan-heading small,
+.engineering-mode .stud-research-plan-heading span,
+.engineering-mode .stud-research-topics header small,
+.engineering-mode .stud-topic-dossier header small,
+.engineering-mode .stud-research-inspection header small { color: var(--aegis-text-faint); font: max(9px,.4vh)/1.3 var(--font_mono); letter-spacing: .055vh; }
+.engineering-mode .stud-research-plan-heading h2,
+.engineering-mode .stud-topic-dossier h3 { margin: 0; color: var(--aegis-text-primary); font: max(15px,.82vh)/1.25 var(--font_main); overflow-wrap: anywhere; }
+.engineering-mode .stud-research-plan-heading p,
+.engineering-mode .stud-topic-dossier header p { margin: 0; color: var(--aegis-text-muted); font: max(10px,.45vh)/1.4 var(--font_main_light); overflow-wrap: anywhere; }
+.engineering-mode .stud-research-plan-workspace button,
+.engineering-mode .stud-research-plan-workspace summary { min-height: 2.35vh; padding: .35vh .65vh; color: var(--aegis-accent-soft); border: .07vh solid var(--aegis-border); background: transparent; font: max(9px,.4vh)/1.25 var(--font_mono); letter-spacing: .035vh; cursor: pointer; }
+.engineering-mode .stud-research-plan-workspace button:disabled { color: var(--aegis-text-faint); cursor: not-allowed; opacity: .65; }
+.engineering-mode .stud-research-plan-workspace summary { display: flex; align-items: center; list-style: none; }
+.engineering-mode .stud-research-plan-workspace summary::-webkit-details-marker { display: none; }
+.engineering-mode .stud-research-plan-workspace details:not([open]) > :not(summary) { display: none !important; }
+.engineering-mode .stud-research-plan-notice { margin: 0; padding: .55vh .7vh; color: var(--aegis-text-muted); border-left: .14vh solid var(--aegis-warning); background: var(--aegis-surface-muted); font: max(10px,.43vh)/1.4 var(--font_main_light); }
+.engineering-mode .stud-research-plan-body { display: grid; grid-template-columns: minmax(13rem,.52fr) minmax(20rem,1.25fr) minmax(16rem,.72fr); gap: .9vh; min-width: 0; align-items: start; }
+.engineering-mode .stud-research-topics,
+.engineering-mode .stud-topic-dossier,
+.engineering-mode .stud-research-inspection > section { min-width: 0; border: .07vh solid var(--aegis-border-subtle); background: var(--aegis-surface); }
+.engineering-mode .stud-research-topics { display: grid; align-content: start; gap: .35vh; }
+.engineering-mode .stud-research-topics > header,
+.engineering-mode .stud-research-questions > header,
+.engineering-mode .stud-research-gaps > header,
+.engineering-mode .stud-research-coverage > header { display: flex; justify-content: space-between; align-items: center; gap: .5vh; padding: .55vh .65vh; border-bottom: .06vh solid var(--aegis-border-subtle); }
+.engineering-mode .stud-research-topics > header > div { display: flex; align-items: center; gap: .5vh; }
+.engineering-mode .stud-research-topics details { position: relative; }
+.engineering-mode .stud-research-topics details > form { position: absolute; z-index: 3; top: calc(100% + .2vh); right: 0; width: min(24rem,80vw); box-shadow: 0 .6vh 1.6vh rgba(0,0,0,.18); }
+.engineering-mode .stud-research-plan-workspace form { display: grid; gap: .5vh; padding: .7vh; background: var(--aegis-surface-elevated,var(--aegis-surface)); border: .07vh solid var(--aegis-border); }
+.engineering-mode .stud-research-plan-workspace form label { display: grid; gap: .2vh; color: var(--aegis-text-faint); font: max(9px,.37vh)/1.3 var(--font_mono); }
+.engineering-mode .stud-research-plan-workspace form fieldset { display: grid; gap: .25vh; min-width: 0; margin: 0; padding: .45vh; border: .06vh solid var(--aegis-border-subtle); }
+.engineering-mode .stud-research-plan-workspace form fieldset legend { color: var(--aegis-text-faint); font: max(8px,.34vh) var(--font_mono); }
+.engineering-mode .stud-research-plan-workspace form fieldset label { display: grid; grid-template-columns: auto minmax(0,1fr); align-items: start; gap: .35vh; color: var(--aegis-text-muted); font-family: var(--font_main_light); }
+.engineering-mode .stud-research-plan-workspace form fieldset input { width: auto; }
+.engineering-mode .stud-research-plan-workspace :is(input,textarea,select) { width: 100%; min-width: 0; padding: .45vh .55vh; color: var(--aegis-text-primary); border: .07vh solid var(--aegis-border); background: var(--aegis-input-bg,var(--aegis-surface-muted)); font: max(10px,.44vh)/1.35 var(--font_main_light); box-sizing: border-box; }
+.engineering-mode .stud-research-topic-row { display: grid; gap: .25vh; border-left: .13vh solid var(--aegis-border); }
+.engineering-mode .stud-research-topic-row.is-current { border-left-color: var(--aegis-accent-soft); background: var(--aegis-surface-muted); }
+.engineering-mode .stud-research-topic-row.is-rejected { opacity: .62; }
+.engineering-mode .stud-research-topic-row > button { display: grid; gap: .18vh; width: 100%; text-align: left; border: 0; }
+.engineering-mode .stud-research-topic-row > button span,
+.engineering-mode .stud-dossier-item > button span { color: var(--aegis-text-faint); font: max(8px,.34vh) var(--font_mono); }
+.engineering-mode .stud-research-topic-row > button strong,
+.engineering-mode .stud-dossier-item > button strong { color: var(--aegis-text-primary); font: max(11px,.48vh)/1.32 var(--font_main); overflow-wrap: anywhere; }
+.engineering-mode .stud-research-topic-row > button small,
+.engineering-mode .stud-dossier-item > button small { color: var(--aegis-text-muted); font: max(9px,.36vh)/1.35 var(--font_main_light); overflow-wrap: anywhere; }
+.engineering-mode .stud-research-topic-row > div { display: flex; flex-wrap: wrap; gap: .25vh; padding: 0 .45vh .45vh; }
+.engineering-mode .stud-research-topic-why { min-width: 0; }
+.engineering-mode .stud-research-topic-why p { width: min(23rem,72vw); margin: .35vh 0 0; padding: .45vh; color: var(--aegis-text-muted); background: var(--aegis-surface); font: max(9px,.38vh)/1.4 var(--font_main_light); overflow-wrap: anywhere; }
+.engineering-mode .stud-research-topic-why ul { display: grid; gap: .2vh; width: min(23rem,72vw); margin: .35vh 0 0; padding: .4vh; background: var(--aegis-surface); list-style: none; }
+.engineering-mode .stud-research-topic-why li { display: grid; gap: .1vh; padding-left: .4vh; border-left: .1vh solid var(--aegis-border); }
+.engineering-mode .stud-research-topic-why li strong { color: var(--aegis-text-primary); font: max(9px,.39vh) var(--font_main); }
+.engineering-mode .stud-research-topic-why li span { color: var(--aegis-text-faint); font: max(8px,.33vh) var(--font_mono); }
+.engineering-mode .stud-topic-dossier { display: grid; align-content: start; gap: .55vh; }
+.engineering-mode .stud-topic-dossier > header { display: flex; justify-content: space-between; align-items: start; gap: .7vh; padding: .75vh; border-bottom: .06vh solid var(--aegis-border-subtle); }
+.engineering-mode .stud-topic-dossier > header > div { display: grid; gap: .16vh; min-width: 0; }
+.engineering-mode .stud-topic-dossier > header details { flex: 0 0 auto; }
+.engineering-mode .stud-dossier-candidates { display: grid; position: absolute; z-index: 3; right: 1vh; width: min(32rem,80vw); max-height: 42vh; overflow: auto; padding: .45vh; border: .07vh solid var(--aegis-border); background: var(--aegis-surface-elevated,var(--aegis-surface)); box-shadow: 0 .6vh 1.6vh rgba(0,0,0,.18); }
+.engineering-mode .stud-dossier-candidates button { display: grid; gap: .15vh; width: 100%; text-align: left; }
+.engineering-mode .stud-dossier-list { display: grid; gap: .3vh; min-width: 0; padding: .45vh; }
+.engineering-mode .stud-dossier-item { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: .35vh; align-items: start; border-left: .13vh solid var(--aegis-border); }
+.engineering-mode .stud-dossier-item.is-rejected { opacity: .62; }
+.engineering-mode .stud-dossier-item > button { display: grid; gap: .14vh; width: 100%; text-align: left; border: 0; }
+.engineering-mode .stud-dossier-item details { min-width: 0; }
+.engineering-mode .stud-dossier-item details form { position: absolute; z-index: 4; right: 1vh; width: min(31rem,82vw); grid-template-columns: repeat(2,minmax(0,1fr)); box-shadow: 0 .6vh 1.6vh rgba(0,0,0,.18); }
+.engineering-mode .stud-dossier-item details form label:last-of-type,
+.engineering-mode .stud-dossier-item details form button { grid-column: 1 / -1; }
+.engineering-mode .stud-topic-dossier-empty,
+.engineering-mode .stud-research-plan-empty { display: grid; place-items: start; gap: .55vh; min-height: 22vh; padding: 1.3vh; color: var(--aegis-text-muted); border: .07vh solid var(--aegis-border); background: var(--aegis-surface); font: max(10px,.46vh)/1.45 var(--font_main_light); }
+.engineering-mode .stud-research-plan-empty h2 { margin: 0; color: var(--aegis-text-primary); font: max(16px,.9vh) var(--font_main); }
+.engineering-mode .stud-research-plan-empty > div { display: grid; gap: .2vh; padding-left: .6vh; border-left: .14vh solid var(--aegis-warning); }
+.engineering-mode .stud-research-inspection { display: grid; gap: .7vh; min-width: 0; }
+.engineering-mode .stud-research-coverage,
+.engineering-mode .stud-research-questions,
+.engineering-mode .stud-research-gaps { display: grid; gap: .45vh; padding-bottom: .55vh; }
+.engineering-mode .stud-research-coverage dl { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 1px; margin: 0 .55vh; background: var(--aegis-border-subtle); }
+.engineering-mode .stud-research-coverage dl div { display: flex; justify-content: space-between; gap: .5vh; padding: .42vh; background: var(--aegis-surface-muted); }
+.engineering-mode .stud-research-coverage dt,
+.engineering-mode .stud-research-coverage dd { margin: 0; color: var(--aegis-text-muted); font: max(8px,.34vh) var(--font_mono); }
+.engineering-mode .stud-research-coverage ul,
+.engineering-mode .stud-research-questions ol,
+.engineering-mode .stud-research-gaps ul { display: grid; gap: .3vh; margin: 0; padding: 0 .65vh; list-style: none; }
+.engineering-mode .stud-research-coverage li,
+.engineering-mode .stud-research-questions li,
+.engineering-mode .stud-research-gaps li { padding: .42vh .5vh; color: var(--aegis-text-muted); border-left: .12vh solid var(--aegis-border); background: var(--aegis-surface-muted); font: max(9px,.39vh)/1.4 var(--font_main_light); overflow-wrap: anywhere; }
+.engineering-mode .stud-research-questions li span,
+.engineering-mode .stud-research-gaps li span { color: var(--aegis-text-faint); font: max(8px,.33vh) var(--font_mono); }
+.engineering-mode .stud-research-questions li p,
+.engineering-mode .stud-research-gaps li p,
+.engineering-mode .stud-research-inspection > section > p { margin: .2vh .6vh; color: var(--aegis-text-muted); font: max(9px,.4vh)/1.4 var(--font_main_light); }
+.engineering-mode .stud-research-questions form,
+.engineering-mode .stud-research-gaps details { margin: 0 .55vh; }
+.engineering-mode .stud-research-coverage > small { padding: 0 .65vh; color: var(--aegis-text-faint); font: max(8px,.33vh) var(--font_mono); }
+@media (max-width: 1450px) {
+    .engineering-mode .stud-research-plan-body { grid-template-columns: minmax(12rem,.48fr) minmax(0,1.3fr); }
+    .engineering-mode .stud-research-inspection { grid-column: 1 / -1; grid-template-columns: repeat(3,minmax(0,1fr)); }
+}
+@media (max-width: 960px) {
+    .engineering-mode .stud-research-plan-heading,
+    .engineering-mode .stud-topic-dossier > header { flex-direction: column; align-items: stretch; }
+    .engineering-mode .stud-research-plan-heading > div { justify-content: flex-start; }
+    .engineering-mode .stud-research-plan-body,
+    .engineering-mode .stud-research-inspection { grid-template-columns: minmax(0,1fr); }
+    .engineering-mode .stud-research-inspection { grid-column: auto; }
+    .engineering-mode .stud-dossier-item { grid-template-columns: minmax(0,1fr); }
+    .engineering-mode .stud-dossier-item details form { right: 2vw; left: 2vw; width: 96vw; grid-template-columns: minmax(0,1fr); }
+    .engineering-mode .stud-dossier-item details form :is(label,button) { grid-column: auto; }
+}
 .engineering-mode .stud-assignment-brief-preview > div,
 .engineering-mode .stud-evidence-matrix > div { display: grid; gap: .34vh; }
 .engineering-mode .stud-evidence-matrix article { display: grid; grid-template-columns: minmax(12vh, .32fr) minmax(0, 1fr) max-content; gap: .18vh .48vh; min-width: 0; padding: .46vh; border-left: .16vh solid var(--aegis-accent); background: var(--aegis-surface-muted); }

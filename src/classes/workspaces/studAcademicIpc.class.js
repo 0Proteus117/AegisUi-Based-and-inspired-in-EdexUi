@@ -14,6 +14,7 @@ const {StudRequirementsContractService} = require("./studRequirementsContractSer
 const {StudWorkingContextService} = require("./studWorkingContextService.class.js");
 const {StudWorkflowService} = require("./studWorkflowService.class.js");
 const {StudArtifactOperationsService} = require("./studArtifactOperationsService.class.js");
+const {StudResearchPlanService} = require("./studResearchPlanService.class.js");
 
 const CHANNELS = Object.freeze([
     "stud-core-status",
@@ -177,7 +178,22 @@ const CHANNELS = Object.freeze([
     "stud-operation-list",
     "stud-operation-read",
     "stud-operation-events",
-    "stud-operation-artifacts"
+    "stud-operation-artifacts",
+    "stud-research-plan-state",
+    "stud-research-plan-create-draft",
+    "stud-research-plan-update",
+    "stud-research-plan-add-topic",
+    "stud-research-plan-update-topic",
+    "stud-research-plan-add-question",
+    "stud-research-plan-update-question",
+    "stud-research-plan-review",
+    "stud-research-plan-create-revision",
+    "stud-topic-dossier-list",
+    "stud-topic-dossier-add",
+    "stud-topic-dossier-update",
+    "stud-research-gap-add",
+    "stud-research-gap-resolve",
+    "stud-research-coverage"
 ]);
 
 function senderIsTrusted(event) {
@@ -251,6 +267,10 @@ function registerStudAcademicIpc(options = {}) {
     // deliberately exposes no renderer event-append or Run-creation channel:
     // only main-process domain producers may record operational history.
     const artifactOperations = options.artifactOperationsService || new StudArtifactOperationsService({store, workflowService: workflow, workingContextService: workingContext});
+    // M7 structures reviewed Assignment research over exact M1 Contract
+    // revisions and existing canonical material. It has no provider/model
+    // execution capability and never duplicates Papers, Documents or Artifacts.
+    const researchPlans = options.researchPlanService || new StudResearchPlanService({store, workingContextService: workingContext, artifactOperationsService: artifactOperations});
     let shell = options.shell || null;
     if (!shell) { try { shell = require("electron").shell; } catch (error) {} }
     const handlers = new Map();
@@ -288,7 +308,7 @@ function registerStudAcademicIpc(options = {}) {
     add("stud-assessment-classification-set", ["assignmentId", "classification", "reason"], payload => workingContext.setClassification(payload));
     add("stud-course-organisation", ["limit"], payload => workingContext.courseOrganisation(payload));
     add("stud-working-context-read", [], () => workingContext.read());
-    add("stud-working-context-update", ["courseId", "assignmentId", "objectType", "objectId", "workflowId", "workflowNodeId", "originSurface", "userPinned"], payload => workingContext.update(payload));
+    add("stud-working-context-update", ["courseId", "assignmentId", "objectType", "objectId", "workflowId", "workflowNodeId", "researchPlanId", "researchTopicId", "originSurface", "userPinned"], payload => workingContext.update(payload));
     add("stud-working-context-clear", [], () => workingContext.clear());
     add("stud-workflow-templates", ["assignmentId"], payload => workflow.templates(payload));
     add("stud-workflow-assignment-state", ["assignmentId", "historyLimit"], payload => workflow.assignmentState(payload));
@@ -319,6 +339,21 @@ function registerStudAcademicIpc(options = {}) {
     add("stud-operation-read", ["assignmentId", "runId"], payload => artifactOperations.run(payload));
     add("stud-operation-events", ["assignmentId", "runId", "beforeSequence", "limit"], payload => artifactOperations.events(payload));
     add("stud-operation-artifacts", ["assignmentId", "runId", "limit"], payload => artifactOperations.runArtifacts(payload));
+    add("stud-research-plan-state", ["assignmentId"], payload => researchPlans.state(payload));
+    add("stud-research-plan-create-draft", ["assignmentId", "contractId", "workflowId", "userNotes", "seedProposals"], payload => researchPlans.createDraft({...payload, origin: "USER"}));
+    add("stud-research-plan-update", ["planId", "expectedVersion", "userNotes"], payload => researchPlans.updatePlan(payload));
+    add("stud-research-plan-add-topic", ["planId", "expectedVersion", "topic"], payload => researchPlans.addTopic({...payload, topic: {...payload.topic, origin: "USER"}}));
+    add("stud-research-plan-update-topic", ["planId", "topicId", "expectedPlanVersion", "expectedTopicVersion", "topic"], payload => researchPlans.updateTopic(payload));
+    add("stud-research-plan-add-question", ["planId", "topicId", "expectedVersion", "question"], payload => researchPlans.addQuestion({...payload, question: {...payload.question, origin: "USER"}}));
+    add("stud-research-plan-update-question", ["planId", "questionId", "expectedPlanVersion", "expectedQuestionVersion", "question"], payload => researchPlans.updateQuestion(payload));
+    add("stud-research-plan-review", ["planId", "expectedVersion"], payload => researchPlans.review(payload));
+    add("stud-research-plan-create-revision", ["planId", "expectedVersion"], payload => researchPlans.createRevision(payload));
+    add("stud-topic-dossier-list", ["assignmentId", "topicId", "disposition", "reviewState", "beforeUpdatedAt", "limit"], payload => researchPlans.dossier(payload));
+    add("stud-topic-dossier-add", ["planId", "topicId", "canonicalObjectType", "canonicalObjectId", "artifactId", "disposition", "reviewState", "sourceSuitability", "stance", "rationale", "userNotes"], payload => researchPlans.addDossierItem({...payload, membershipOrigin: "USER_ADDED"}));
+    add("stud-topic-dossier-update", ["assignmentId", "itemId", "expectedVersion", "disposition", "reviewState", "sourceSuitability", "stance", "rationale", "userNotes"], payload => researchPlans.updateDossierItem(payload));
+    add("stud-research-gap-add", ["planId", "topicId", "gapType", "title", "description", "questionId", "requirementItemId", "blockerId"], payload => researchPlans.addGap(payload));
+    add("stud-research-gap-resolve", ["assignmentId", "gapId", "expectedVersion", "action", "note"], payload => researchPlans.resolveGap(payload));
+    add("stud-research-coverage", ["assignmentId", "topicId"], payload => researchPlans.coverage(payload));
     add("stud-requirements-state", ["assignmentId"], payload => requirements.state(payload.assignmentId));
     add("stud-requirements-create-draft", ["assignmentId"], payload => requirements.createDraft(payload.assignmentId));
     add("stud-requirements-review-candidate", ["contractId", "candidateId", "disposition", "expectedVersion"], payload => requirements.reviewCandidate(payload));
