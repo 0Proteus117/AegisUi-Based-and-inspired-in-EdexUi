@@ -188,6 +188,21 @@ represented as green and require a separately controlled dependency/runtime
 upgrade with Document Intelligence and packaged-runtime regression; they are not
 silently force-upgraded inside this isolated domain milestone.
 
+## Packaged validation
+
+The preload change required a private ARM64 validation package. Runtime commit
+`0e548f931970a6b3af2455b9a9610c80aa055d64` produced
+`AegisUi-2.7.1-arm64.dmg` with SHA-256
+`838eb4cd4e19e6ed9539a5b80a7d5f03e87b6fb3c8c995d69891e9c9d6f32d9b`.
+The image mounted successfully and AegisUi launched from the mounted volume.
+The mounted `app.asar` physically contained all four M8 domain/workspace
+modules and the fixed M8 preload channels. Runtime validation confirmed the
+typed academic APIs, M8 Evidence Map geometry, Citation.js, Moodle boundary,
+Document and Compute capabilities, Ollama bridge and authenticated terminal.
+The packaged Calendar helper and ARM64 `node-pty` module were present;
+`nodeIntegration` remained disabled and `contextIsolation` enabled. The DMG is
+a local validation artifact only and is not a public release.
+
 ## Known limitations and M9 boundary
 
 M8 does not automatically extract Claims, decide source quality, infer an
