@@ -51,7 +51,7 @@ class StudWorkingContextService {
     }
 
     assertPayload(input = {}) {
-        Model.assertAllowedKeys(input, ["courseId", "assignmentId", "objectType", "objectId", "workflowId", "workflowNodeId", "researchPlanId", "researchTopicId", "originSurface", "userPinned"], "Working context");
+        Model.assertAllowedKeys(input, ["courseId", "assignmentId", "objectType", "objectId", "workflowId", "workflowNodeId", "researchPlanId", "researchTopicId", "claimId", "evidenceId", "originSurface", "userPinned"], "Working context");
         return input;
     }
 
@@ -205,13 +205,31 @@ class StudWorkingContextService {
             researchTopic = this.db.prepare("SELECT id,plan_id,assignment_id,title,disposition,row_version FROM stud_research_topics WHERE id=? AND plan_id=?").get(researchTopicId, researchPlanId);
             if (!researchTopic || researchTopic.assignment_id !== assignmentId) throw new Model.StudError("INVALID_CONTEXT", "The selected Topic does not belong to the active Research Plan.");
         }
+        const claimId = input.claimId ? Model.safeId(input.claimId, "Claim ID") : null;
+        let claim = null;
+        if (claimId) {
+            if (!assignmentId) throw new Model.StudError("INVALID_CONTEXT", "A Claim context requires an active Assignment.");
+            claim = this.db.prepare("SELECT id,assignment_id,plan_id,topic_id,claim_text,claim_type,lifecycle,revision,row_version FROM stud_claims WHERE id=?").get(claimId);
+            if (!claim || claim.assignment_id !== assignmentId) throw new Model.StudError("INVALID_CONTEXT", "The selected Claim does not belong to the active Assignment.");
+            if (researchPlanId && claim.plan_id && claim.plan_id !== researchPlanId) throw new Model.StudError("INVALID_CONTEXT", "The selected Claim belongs to a different Research Plan.");
+            if (researchTopicId && claim.topic_id && claim.topic_id !== researchTopicId) throw new Model.StudError("INVALID_CONTEXT", "The selected Claim belongs to a different Research Topic.");
+        }
+        const evidenceId = input.evidenceId ? Model.safeId(input.evidenceId, "Evidence ID") : null;
+        let evidence = null;
+        if (evidenceId) {
+            if (!assignmentId) throw new Model.StudError("INVALID_CONTEXT", "Evidence context requires an active Assignment.");
+            evidence = this.db.prepare("SELECT id,assignment_id,plan_id,topic_id,source_object_type,source_object_id,location_type,review_state,row_version FROM stud_evidence_records WHERE id=?").get(evidenceId);
+            if (!evidence || evidence.assignment_id !== assignmentId) throw new Model.StudError("INVALID_CONTEXT", "The selected Evidence does not belong to the active Assignment.");
+            if (researchPlanId && evidence.plan_id && evidence.plan_id !== researchPlanId) throw new Model.StudError("INVALID_CONTEXT", "The selected Evidence belongs to a different Research Plan.");
+            if (researchTopicId && evidence.topic_id && evidence.topic_id !== researchTopicId) throw new Model.StudError("INVALID_CONTEXT", "The selected Evidence belongs to a different Research Topic.");
+        }
         const originSurface = input.originSurface === undefined ? null : Model.optionalText(input.originSurface, "Context origin surface", 80);
         if (input.userPinned !== undefined && typeof input.userPinned !== "boolean") throw new Model.StudError("INVALID_INPUT", "Working context pin must be boolean.");
-        return {course, courseId, assignment, assignmentId, object, objectType, objectId, objectScope, workflow, workflowId, workflowNode, workflowNodeId, researchPlan, researchPlanId, researchTopic, researchTopicId, originSurface, userPinned: input.userPinned === true};
+        return {course, courseId, assignment, assignmentId, object, objectType, objectId, objectScope, workflow, workflowId, workflowNode, workflowNodeId, researchPlan, researchPlanId, researchTopic, researchTopicId, claim, claimId, evidence, evidenceId, originSurface, userPinned: input.userPinned === true};
     }
 
     hydrate(row) {
-        if (!row) return Object.freeze({status: "EMPTY", activeCourse: null, activeAssignment: null, activeRequirementContract: null, activeObject: null, activeWorkflow: null, activeWorkflowNode: null, activeResearchPlan: null, activeResearchTopic: null, originSurface: null, userPinned: false, updatedAt: null});
+        if (!row) return Object.freeze({status: "EMPTY", activeCourse: null, activeAssignment: null, activeRequirementContract: null, activeObject: null, activeWorkflow: null, activeWorkflowNode: null, activeResearchPlan: null, activeResearchTopic: null, activeClaim: null, activeEvidence: null, originSurface: null, userPinned: false, updatedAt: null});
         const course = row.active_course_id ? this.store.getEntity("COURSE", row.active_course_id) : null;
         const assignment = row.active_assignment_id ? this.store.getEntity("ASSIGNMENT", row.active_assignment_id) : null;
         const object = row.active_object_type && row.active_object_id ? this.store.getEntity(row.active_object_type, row.active_object_id) : null;
@@ -219,18 +237,22 @@ class StudWorkingContextService {
         const workflowNode = row.active_workflow_node_id ? this.db.prepare("SELECT id,workflow_id,title,semantic_type,state,row_version FROM stud_workflow_nodes WHERE id=?").get(row.active_workflow_node_id) : null;
         const researchPlan = row.active_research_plan_id ? this.db.prepare("SELECT id,assignment_id,workflow_id,lifecycle,revision,row_version FROM stud_research_plans WHERE id=?").get(row.active_research_plan_id) : null;
         const researchTopic = row.active_research_topic_id ? this.db.prepare("SELECT id,plan_id,assignment_id,title,disposition,row_version FROM stud_research_topics WHERE id=?").get(row.active_research_topic_id) : null;
+        const claim = row.active_claim_id ? this.db.prepare("SELECT id,assignment_id,plan_id,topic_id,claim_text,claim_type,lifecycle,revision,row_version FROM stud_claims WHERE id=?").get(row.active_claim_id) : null;
+        const evidence = row.active_evidence_id ? this.db.prepare("SELECT id,assignment_id,plan_id,topic_id,source_object_type,source_object_id,location_type,review_state,row_version FROM stud_evidence_records WHERE id=?").get(row.active_evidence_id) : null;
         if ((row.active_course_id && !course) || (row.active_assignment_id && !assignment) || (row.active_object_id && !object) ||
             (row.active_workflow_id && (!workflow || !workflow.is_current || workflow.lifecycle !== "ACTIVE" || workflow.assignment_id !== row.active_assignment_id)) ||
             (row.active_workflow_node_id && (!workflowNode || workflowNode.workflow_id !== row.active_workflow_id)) ||
             (row.active_research_plan_id && (!researchPlan || researchPlan.assignment_id !== row.active_assignment_id)) ||
-            (row.active_research_topic_id && (!researchTopic || researchTopic.plan_id !== row.active_research_plan_id || researchTopic.assignment_id !== row.active_assignment_id))) {
+            (row.active_research_topic_id && (!researchTopic || researchTopic.plan_id !== row.active_research_plan_id || researchTopic.assignment_id !== row.active_assignment_id)) ||
+            (row.active_claim_id && (!claim || claim.assignment_id !== row.active_assignment_id || (row.active_research_plan_id && claim.plan_id && claim.plan_id !== row.active_research_plan_id) || (row.active_research_topic_id && claim.topic_id && claim.topic_id !== row.active_research_topic_id))) ||
+            (row.active_evidence_id && (!evidence || evidence.assignment_id !== row.active_assignment_id || (row.active_research_plan_id && evidence.plan_id && evidence.plan_id !== row.active_research_plan_id) || (row.active_research_topic_id && evidence.topic_id && evidence.topic_id !== row.active_research_topic_id)))) {
             // Canonical objects may be archived externally. A stale context is
             // never resurrected or silently rebound to a different object.
             this.db.prepare("DELETE FROM stud_working_context WHERE id='current'").run();
-            return Object.freeze({status: "MISSING_REFERENCE", activeCourse: null, activeAssignment: null, activeRequirementContract: null, activeObject: null, activeWorkflow: null, activeWorkflowNode: null, activeResearchPlan: null, activeResearchTopic: null, originSurface: null, userPinned: false, updatedAt: null});
+            return Object.freeze({status: "MISSING_REFERENCE", activeCourse: null, activeAssignment: null, activeRequirementContract: null, activeObject: null, activeWorkflow: null, activeWorkflowNode: null, activeResearchPlan: null, activeResearchTopic: null, activeClaim: null, activeEvidence: null, originSurface: null, userPinned: false, updatedAt: null});
         }
         const contract = row.active_requirement_contract_id ? this.db.prepare("SELECT id,revision,lifecycle,completeness FROM stud_requirement_contracts WHERE id=?").get(row.active_requirement_contract_id) : null;
-        return Object.freeze({status: "READY", activeCourse: course, activeAssignment: assignment, activeRequirementContract: contract ? Object.freeze({id: contract.id, revision: contract.revision, lifecycle: contract.lifecycle, completeness: contract.completeness}) : null, activeObject: object ? Object.freeze({...object, entityType: row.active_object_type}) : null, activeWorkflow: workflow ? Object.freeze({id: workflow.id, assignmentId: workflow.assignment_id, templateVersionId: workflow.template_version_id, rowVersion: workflow.row_version}) : null, activeWorkflowNode: workflowNode ? Object.freeze({id: workflowNode.id, workflowId: workflowNode.workflow_id, title: workflowNode.title, semanticType: workflowNode.semantic_type, state: workflowNode.state, rowVersion: workflowNode.row_version}) : null, activeResearchPlan: researchPlan ? Object.freeze({id:researchPlan.id,assignmentId:researchPlan.assignment_id,workflowId:researchPlan.workflow_id,lifecycle:researchPlan.lifecycle,revision:researchPlan.revision,rowVersion:researchPlan.row_version}) : null, activeResearchTopic: researchTopic ? Object.freeze({id:researchTopic.id,planId:researchTopic.plan_id,assignmentId:researchTopic.assignment_id,title:researchTopic.title,disposition:researchTopic.disposition,rowVersion:researchTopic.row_version}) : null, originSurface: row.origin_surface || null, userPinned: Boolean(row.user_pinned), updatedAt: row.updated_at || null, assessmentClassification: assignment ? this.assignmentClassification(assignment.id) : null});
+        return Object.freeze({status: "READY", activeCourse: course, activeAssignment: assignment, activeRequirementContract: contract ? Object.freeze({id: contract.id, revision: contract.revision, lifecycle: contract.lifecycle, completeness: contract.completeness}) : null, activeObject: object ? Object.freeze({...object, entityType: row.active_object_type}) : null, activeWorkflow: workflow ? Object.freeze({id: workflow.id, assignmentId: workflow.assignment_id, templateVersionId: workflow.template_version_id, rowVersion: workflow.row_version}) : null, activeWorkflowNode: workflowNode ? Object.freeze({id: workflowNode.id, workflowId: workflowNode.workflow_id, title: workflowNode.title, semanticType: workflowNode.semantic_type, state: workflowNode.state, rowVersion: workflowNode.row_version}) : null, activeResearchPlan: researchPlan ? Object.freeze({id:researchPlan.id,assignmentId:researchPlan.assignment_id,workflowId:researchPlan.workflow_id,lifecycle:researchPlan.lifecycle,revision:researchPlan.revision,rowVersion:researchPlan.row_version}) : null, activeResearchTopic: researchTopic ? Object.freeze({id:researchTopic.id,planId:researchTopic.plan_id,assignmentId:researchTopic.assignment_id,title:researchTopic.title,disposition:researchTopic.disposition,rowVersion:researchTopic.row_version}) : null, activeClaim: claim ? Object.freeze({id:claim.id,assignmentId:claim.assignment_id,planId:claim.plan_id,topicId:claim.topic_id,text:claim.claim_text,type:claim.claim_type,lifecycle:claim.lifecycle,revision:claim.revision,rowVersion:claim.row_version}) : null, activeEvidence: evidence ? Object.freeze({id:evidence.id,assignmentId:evidence.assignment_id,planId:evidence.plan_id,topicId:evidence.topic_id,sourceObjectType:evidence.source_object_type,sourceObjectId:evidence.source_object_id,locationType:evidence.location_type,reviewState:evidence.review_state,rowVersion:evidence.row_version}) : null, originSurface: row.origin_surface || null, userPinned: Boolean(row.user_pinned), updatedAt: row.updated_at || null, assessmentClassification: assignment ? this.assignmentClassification(assignment.id) : null});
     }
 
     read() {
@@ -243,10 +265,10 @@ class StudWorkingContextService {
         const contract = value.assignmentId ? this.activeContract(value.assignmentId) : null;
         const timestamp = Model.now();
         this.store.transaction(() => {
-            this.db.prepare(`INSERT INTO stud_working_context (id,active_course_id,active_assignment_id,active_requirement_contract_id,active_object_type,active_object_id,active_workflow_id,active_workflow_node_id,active_research_plan_id,active_research_topic_id,origin_surface,user_pinned,updated_at)
-                VALUES ('current',?,?,?,?,?,?,?,?,?,?,?,?)
-                ON CONFLICT(id) DO UPDATE SET active_course_id=excluded.active_course_id,active_assignment_id=excluded.active_assignment_id,active_requirement_contract_id=excluded.active_requirement_contract_id,active_object_type=excluded.active_object_type,active_object_id=excluded.active_object_id,active_workflow_id=excluded.active_workflow_id,active_workflow_node_id=excluded.active_workflow_node_id,active_research_plan_id=excluded.active_research_plan_id,active_research_topic_id=excluded.active_research_topic_id,origin_surface=excluded.origin_surface,user_pinned=excluded.user_pinned,updated_at=excluded.updated_at`)
-                .run(value.courseId, value.assignmentId, contract && contract.id || null, value.objectType, value.objectId, value.workflowId, value.workflowNodeId, value.researchPlanId, value.researchTopicId, value.originSurface, value.userPinned ? 1 : 0, timestamp);
+            this.db.prepare(`INSERT INTO stud_working_context (id,active_course_id,active_assignment_id,active_requirement_contract_id,active_object_type,active_object_id,active_workflow_id,active_workflow_node_id,active_research_plan_id,active_research_topic_id,active_claim_id,active_evidence_id,origin_surface,user_pinned,updated_at)
+                VALUES ('current',?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                ON CONFLICT(id) DO UPDATE SET active_course_id=excluded.active_course_id,active_assignment_id=excluded.active_assignment_id,active_requirement_contract_id=excluded.active_requirement_contract_id,active_object_type=excluded.active_object_type,active_object_id=excluded.active_object_id,active_workflow_id=excluded.active_workflow_id,active_workflow_node_id=excluded.active_workflow_node_id,active_research_plan_id=excluded.active_research_plan_id,active_research_topic_id=excluded.active_research_topic_id,active_claim_id=excluded.active_claim_id,active_evidence_id=excluded.active_evidence_id,origin_surface=excluded.origin_surface,user_pinned=excluded.user_pinned,updated_at=excluded.updated_at`)
+                .run(value.courseId, value.assignmentId, contract && contract.id || null, value.objectType, value.objectId, value.workflowId, value.workflowNodeId, value.researchPlanId, value.researchTopicId, value.claimId, value.evidenceId, value.originSurface, value.userPinned ? 1 : 0, timestamp);
         });
         return this.read();
     }

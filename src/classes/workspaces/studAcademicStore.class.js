@@ -982,6 +982,142 @@ class StudAcademicStore {
 
             ALTER TABLE stud_working_context ADD COLUMN active_research_plan_id TEXT REFERENCES stud_research_plans(id);
             ALTER TABLE stud_working_context ADD COLUMN active_research_topic_id TEXT REFERENCES stud_research_topics(id);
+        `}, {version: 21, sql: `
+            CREATE TABLE stud_claims (
+                id TEXT PRIMARY KEY,
+                claim_key TEXT NOT NULL,
+                assignment_id TEXT NOT NULL,
+                plan_id TEXT,
+                topic_id TEXT,
+                research_question_id TEXT,
+                workflow_node_id TEXT,
+                claim_text TEXT NOT NULL CHECK(length(claim_text) BETWEEN 1 AND 12000),
+                claim_type TEXT NOT NULL CHECK(claim_type IN ('FACTUAL','ANALYTICAL','INTERPRETIVE','METHODOLOGICAL','DESIGN_ENGINEERING','QUANTITATIVE','COMPARATIVE','EVALUATIVE','CONCLUSION','RECOMMENDATION','LIMITATION','ASSUMPTION','OTHER','UNKNOWN')),
+                origin TEXT NOT NULL CHECK(origin IN ('USER','DETERMINISTIC','AI_ASSISTED','IMPORTED','UNKNOWN')),
+                lifecycle TEXT NOT NULL CHECK(lifecycle IN ('DRAFT','REVIEWED','SUPERSEDED','REJECTED','RETIRED')),
+                revision INTEGER NOT NULL CHECK(revision >= 1),
+                parent_claim_id TEXT,
+                parent_semantic_claim_id TEXT,
+                rationale TEXT,
+                user_notes TEXT,
+                claim_hash TEXT,
+                row_version INTEGER NOT NULL DEFAULT 1 CHECK(row_version >= 1),
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                reviewed_at TEXT,
+                FOREIGN KEY(assignment_id) REFERENCES stud_assignments(id),
+                FOREIGN KEY(plan_id) REFERENCES stud_research_plans(id),
+                FOREIGN KEY(topic_id) REFERENCES stud_research_topics(id),
+                FOREIGN KEY(research_question_id) REFERENCES stud_research_questions(id),
+                FOREIGN KEY(workflow_node_id) REFERENCES stud_workflow_nodes(id),
+                FOREIGN KEY(parent_claim_id) REFERENCES stud_claims(id),
+                FOREIGN KEY(parent_semantic_claim_id) REFERENCES stud_claims(id),
+                UNIQUE(claim_key, revision),
+                CHECK((topic_id IS NULL) OR (plan_id IS NOT NULL)),
+                CHECK((research_question_id IS NULL) OR (topic_id IS NOT NULL)),
+                CHECK(parent_semantic_claim_id IS NULL OR parent_semantic_claim_id <> id)
+            );
+            CREATE UNIQUE INDEX stud_claims_draft_index ON stud_claims(claim_key) WHERE lifecycle='DRAFT';
+            CREATE INDEX stud_claims_assignment_index ON stud_claims(assignment_id,lifecycle,updated_at DESC,id DESC);
+            CREATE INDEX stud_claims_topic_index ON stud_claims(topic_id,lifecycle,updated_at DESC,id DESC);
+            CREATE INDEX stud_claims_semantic_parent_index ON stud_claims(parent_semantic_claim_id,lifecycle,updated_at DESC);
+
+            CREATE TABLE stud_claim_pointers (
+                claim_key TEXT PRIMARY KEY,
+                assignment_id TEXT NOT NULL,
+                current_reviewed_claim_id TEXT,
+                current_draft_claim_id TEXT,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY(assignment_id) REFERENCES stud_assignments(id),
+                FOREIGN KEY(current_reviewed_claim_id) REFERENCES stud_claims(id),
+                FOREIGN KEY(current_draft_claim_id) REFERENCES stud_claims(id),
+                CHECK(current_reviewed_claim_id IS NOT NULL OR current_draft_claim_id IS NOT NULL)
+            );
+            CREATE INDEX stud_claim_pointers_assignment_index ON stud_claim_pointers(assignment_id,updated_at DESC);
+
+            CREATE TABLE stud_claim_requirements (
+                claim_id TEXT NOT NULL,
+                requirement_item_id TEXT NOT NULL,
+                requirement_snapshot_hash TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                PRIMARY KEY(claim_id, requirement_item_id),
+                FOREIGN KEY(claim_id) REFERENCES stud_claims(id) ON DELETE CASCADE,
+                FOREIGN KEY(requirement_item_id) REFERENCES stud_requirement_items(id)
+            );
+            CREATE INDEX stud_claim_requirements_item_index ON stud_claim_requirements(requirement_item_id,claim_id);
+
+            CREATE TABLE stud_evidence_records (
+                id TEXT PRIMARY KEY,
+                assignment_id TEXT NOT NULL,
+                plan_id TEXT,
+                topic_id TEXT,
+                dossier_item_id TEXT,
+                source_object_type TEXT NOT NULL,
+                source_object_id TEXT NOT NULL,
+                artifact_id TEXT,
+                citation_paper_id TEXT,
+                location_type TEXT NOT NULL CHECK(location_type IN ('DOCUMENT_CHUNK','DOCUMENT_PAGE','DATASET_RANGE','NOTEBOOK_CELL','COMPUTE_RESULT','ARTIFACT_VERSION','SOURCE_RECORD','NOTE_SECTION','OTHER')),
+                document_id TEXT,
+                extraction_id TEXT,
+                chunk_id TEXT,
+                page_start INTEGER,
+                page_end INTEGER,
+                locator_json TEXT,
+                excerpt TEXT,
+                source_snapshot_hash TEXT NOT NULL,
+                extraction_method TEXT,
+                review_state TEXT NOT NULL CHECK(review_state IN ('UNREVIEWED','REVIEWED','REJECTED')),
+                reviewer_note TEXT,
+                origin TEXT NOT NULL CHECK(origin IN ('USER','IMPORTED','UNKNOWN')),
+                evidence_hash TEXT,
+                row_version INTEGER NOT NULL DEFAULT 1 CHECK(row_version >= 1),
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                reviewed_at TEXT,
+                FOREIGN KEY(assignment_id) REFERENCES stud_assignments(id),
+                FOREIGN KEY(plan_id) REFERENCES stud_research_plans(id),
+                FOREIGN KEY(topic_id) REFERENCES stud_research_topics(id),
+                FOREIGN KEY(dossier_item_id) REFERENCES stud_topic_dossier_items(id),
+                FOREIGN KEY(artifact_id) REFERENCES stud_assignment_artifacts(id),
+                FOREIGN KEY(citation_paper_id) REFERENCES stud_research_papers(id),
+                FOREIGN KEY(document_id) REFERENCES stud_academic_documents(id),
+                FOREIGN KEY(extraction_id) REFERENCES stud_document_extractions(id),
+                FOREIGN KEY(chunk_id) REFERENCES stud_document_chunks(id),
+                CHECK((topic_id IS NULL) OR (plan_id IS NOT NULL)),
+                CHECK((page_start IS NULL AND page_end IS NULL) OR (page_start >= 1 AND page_end >= page_start))
+            );
+            CREATE INDEX stud_evidence_assignment_index ON stud_evidence_records(assignment_id,review_state,updated_at DESC,id DESC);
+            CREATE INDEX stud_evidence_topic_index ON stud_evidence_records(topic_id,review_state,updated_at DESC,id DESC);
+            CREATE INDEX stud_evidence_source_index ON stud_evidence_records(source_object_type,source_object_id,updated_at DESC);
+            CREATE INDEX stud_evidence_chunk_index ON stud_evidence_records(chunk_id);
+
+            CREATE TABLE stud_claim_evidence_links (
+                id TEXT PRIMARY KEY,
+                assignment_id TEXT NOT NULL,
+                claim_id TEXT NOT NULL,
+                evidence_id TEXT NOT NULL,
+                relationship_type TEXT NOT NULL CHECK(relationship_type IN ('SUPPORTS','CONTRADICTS','QUALIFIES','CONTEXTUALISES','NOT_ASSESSED')),
+                lifecycle TEXT NOT NULL CHECK(lifecycle IN ('DRAFT','REVIEWED','SUPERSEDED','REJECTED')),
+                revision INTEGER NOT NULL CHECK(revision >= 1),
+                parent_link_id TEXT,
+                rationale TEXT,
+                origin TEXT NOT NULL CHECK(origin IN ('USER','IMPORTED','UNKNOWN')),
+                row_version INTEGER NOT NULL DEFAULT 1 CHECK(row_version >= 1),
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                reviewed_at TEXT,
+                FOREIGN KEY(assignment_id) REFERENCES stud_assignments(id),
+                FOREIGN KEY(claim_id) REFERENCES stud_claims(id),
+                FOREIGN KEY(evidence_id) REFERENCES stud_evidence_records(id),
+                FOREIGN KEY(parent_link_id) REFERENCES stud_claim_evidence_links(id),
+                UNIQUE(claim_id,evidence_id,revision)
+            );
+            CREATE UNIQUE INDEX stud_claim_evidence_draft_index ON stud_claim_evidence_links(claim_id,evidence_id) WHERE lifecycle='DRAFT';
+            CREATE INDEX stud_claim_evidence_claim_index ON stud_claim_evidence_links(claim_id,lifecycle,updated_at DESC,id DESC);
+            CREATE INDEX stud_claim_evidence_evidence_index ON stud_claim_evidence_links(evidence_id,lifecycle,updated_at DESC,id DESC);
+
+            ALTER TABLE stud_working_context ADD COLUMN active_claim_id TEXT REFERENCES stud_claims(id);
+            ALTER TABLE stud_working_context ADD COLUMN active_evidence_id TEXT REFERENCES stud_evidence_records(id);
         `}];
         for (const migration of migrations) {
             if (applied.has(migration.version)) continue;

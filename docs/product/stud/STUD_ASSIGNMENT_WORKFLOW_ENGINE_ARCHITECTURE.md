@@ -329,18 +329,27 @@ not prove identity.
 
 ### Evidence and citation integrity
 
-Add canonical `stud_claims` and `stud_claim_evidence_links`. A link identifies:
+Schema v21 implements canonical Claims, exact Evidence and reviewed intellectual
+assessments without duplicating source contents. `stud_claims` separates semantic
+parent decomposition from immutable revision lineage and has explicit current
+Draft/reviewed pointers. Reviewed Claim meaning is immutable and fingerprinted.
+`stud_claim_requirements` references exact M1 Requirement Item snapshots.
 
-- claim and optional draft span/version;
-- evidence role (`SUPPORTS`, `CONTRADICTS`, `CONTEXT`, `LIMITATION`);
-- canonical source entity;
-- exact document extraction/chunk/page or data/result reference;
-- source and decision provenance.
+`stud_evidence_records` references canonical AcademicDocument chunks/pages,
+Research Papers, datasets/ranges, Notebook cells/outputs, Compute results or M6
+Artifacts. It retains an exact location and source snapshot hash. Source drift,
+missing material and OCR-blocked replacement are states over immutable Evidence,
+not destructive edits. `stud_claim_evidence_links` records explicit reviewed
+`SUPPORTS`, `CONTRADICTS`, `QUALIFIES`, `CONTEXTUALISES` or `NOT_ASSESSED`
+relationships with version history. M7 Dossier membership is never Evidence;
+promotion is an explicit user action.
 
-Citation formatting remains Citation.js. Citation integrity is separate: a
-well-formatted bibliography entry does not prove claim support. Audits report
-unsupported claims, missing source locations, contradictory evidence and
-metadata conflicts without inventing corrections.
+Citation formatting remains Citation.js. Citation integrity separately reports
+whether canonical metadata exists/renders and matches the Evidence source. A
+well-formatted bibliography entry does not prove claim support. The bounded
+Evidence Map reports unsupported Claims, contradictory/qualifying Evidence,
+missing exact locations and metadata/source conflicts without inventing truth,
+quality scores, confidence percentages or corrections.
 
 ### Composition, drafting and Humanisation
 

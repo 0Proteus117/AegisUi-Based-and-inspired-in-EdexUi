@@ -151,6 +151,15 @@ function main() {
         && exists("scripts/test-stud-research-plan-ui.js")
         && exists("scripts/test-stud-research-plan-scale.js")
         && exists("docs/product/stud/STUD_M7_RESEARCH_PLAN_TOPIC_DOSSIERS_VALIDATION.md");
+    const studClaimEvidence = exists("src/classes/workspaces/studClaimEvidenceModel.class.js")
+        && exists("src/classes/workspaces/studClaimEvidenceRepository.class.js")
+        && exists("src/classes/workspaces/studClaimEvidenceService.class.js")
+        && exists("src/classes/workspaces/studEvidenceMapWorkspace.class.js")
+        && exists("scripts/test-stud-claims-evidence-citation.js")
+        && exists("scripts/test-stud-claims-evidence-ipc.js")
+        && exists("scripts/test-stud-evidence-map-ui.js")
+        && exists("scripts/test-stud-claims-evidence-scale.js")
+        && exists("docs/product/stud/STUD_M8_CLAIMS_EVIDENCE_CITATION_INTEGRITY_VALIDATION.md");
     const osintFoundation = exists("src/classes/workspaces/osintTools.registry.js")
         && exists("src/classes/workspaces/osintProviderSchema.class.js")
         && exists("src/classes/workspaces/osintProviderPolicy.class.js")
@@ -225,6 +234,7 @@ function main() {
     if (!studWorkflowConditions) failures.push("STUD workflow blockers/checkpoints foundation missing");
     if (!studArtifactMissionControl) failures.push("STUD Artifact Bay / Mission Control foundation missing");
     if (!studResearchPlan) failures.push("STUD Research Plan / Topic Dossiers foundation missing");
+    if (!studClaimEvidence) failures.push("STUD Claims / Evidence Map / Citation Integrity foundation missing");
     if (!osintFoundation) failures.push("OSINT native access foundation files missing");
     if (!osintCaseWorkspace) failures.push("OSINT investigation case workspace files missing");
     if (!osintGeospatialVerification) failures.push("OSINT geospatial verification files missing");
@@ -259,6 +269,7 @@ function main() {
     print("STUD_WORKFLOW_CONDITIONS", studWorkflowConditions ? "PRESENT" : "MISSING");
     print("STUD_ARTIFACT_MISSION_CONTROL", studArtifactMissionControl ? "PRESENT" : "MISSING");
     print("STUD_RESEARCH_PLAN_TOPIC_DOSSIERS", studResearchPlan ? "PRESENT" : "MISSING");
+    print("STUD_CLAIMS_EVIDENCE_CITATION", studClaimEvidence ? "PRESENT" : "MISSING");
     print("OSINT_NATIVE_ACCESS", osintFoundation ? "PRESENT" : "MISSING");
     print("OSINT_PROVIDER_REGISTRY", exists("src/classes/workspaces/osintProviderSchema.class.js") && exists("src/classes/workspaces/osintProviderPolicy.class.js") && exists("src/classes/workspaces/osintToolAccessPanel.class.js") ? "PRESENT" : "MISSING");
     print("OSINT_CASE_WORKSPACE", osintCaseWorkspace ? "PRESENT" : "MISSING");
