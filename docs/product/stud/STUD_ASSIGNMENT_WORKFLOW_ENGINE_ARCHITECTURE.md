@@ -294,18 +294,38 @@ Mission Control derives elapsed time from persisted timestamps and supplies no
 ETA, simulated telemetry or animation. Full operational controls, workers,
 heartbeats, resource profiles and watchdog remain M13 responsibilities.
 
-### Research, Topic Dossiers and Faculty Gems
+### Research Plans and Topic Dossiers
 
-- A Research Plan records reviewed questions, source needs, evidence functions,
-  quality requirements, approved provider capabilities and stopping criteria.
-- Acquisition delegates to existing fixed research providers or explicit local
-  import. No crawler, arbitrary web client or hidden provider chain is introduced.
-- Topic Dossiers group selected canonical sources/chunks, methods, agreements,
-  disagreements, gaps and student decisions. They remain inspectable.
-- Faculty Gems resolve public academic identity only with affiliation and
-  ambiguity evidence. States are `CONFIRMED`, `PROBABLE`, `AMBIGUOUS` or
-  `UNRESOLVED`. A lecturer name alone never proves identity, and a publication
-  still passes the ordinary source-quality gate.
+M7 adds a bounded research-planning domain over the existing canonical STUD
+records. `stud_research_plans` records the exact reviewed M1 Requirements
+Contract ID, revision and hash used by one Assignment. `DRAFT` plans can be
+edited; `REVIEWED` and `SUPERSEDED` semantic structures are immutable and the
+Assignment has one explicit current reviewed-plan pointer. A deterministic
+canonical SHA-256 fingerprint identifies the reviewed Topic/Question structure.
+
+Topics distinguish `REQUIRED_BY_ASSIGNMENT`,
+`PROPOSED_BY_RESEARCH_PLANNING` and `USER_DEFINED`. Requirement links retain an
+exact Requirement Item ID and snapshot hash. Seeded deterministic Topics remain
+`PROPOSED` until the user includes, rejects or marks them unresolved. Questions
+are optional, discipline-neutral and versioned with their Topic.
+
+Topic Dossiers are reference indexes, not a second Research, Document or Artifact
+store. They link existing canonical Assignment/Course objects or M6 Artifacts and
+record membership origin, acceptance disposition, intellectual review state,
+declared source suitability and stance. Missing/archived canonical material is
+reported as unavailable without deleting historical membership. Reads are
+Assignment/Plan/Topic scoped and bounded.
+
+Research Gaps are separate from M4 Blockers. A Gap may reference an exact Blocker,
+but M4 remains authoritative and only an open linked Blocker yields `BLOCKED`
+coverage. Coverage uses explainable conditions (`EMPTY`, `STARTED`, `PARTIAL`,
+`SUPPORTED`, `GAPS_REMAIN`, `BLOCKED`) and never synthesizes a percentage.
+
+M7 performs no acquisition, provider call, FTS scan, model request or Mission
+Control Run when a plan or Topic opens. Acquisition planning, Faculty Gems and
+automated research remain later explicit milestones. Faculty identity must
+eventually retain affiliation and ambiguity evidence; a lecturer name alone will
+not prove identity.
 
 ### Evidence and citation integrity
 

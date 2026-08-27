@@ -813,6 +813,175 @@ class StudAcademicStore {
                 FOREIGN KEY(artifact_id) REFERENCES stud_assignment_artifacts(id)
             );
             CREATE INDEX stud_operation_event_artifacts_artifact_index ON stud_operation_event_artifacts(artifact_id,event_id);
+        `}, {version: 20, sql: `
+            CREATE TABLE stud_research_plans (
+                id TEXT PRIMARY KEY,
+                assignment_id TEXT NOT NULL,
+                course_id TEXT,
+                workflow_id TEXT,
+                requirements_contract_id TEXT NOT NULL,
+                requirements_contract_revision INTEGER NOT NULL CHECK(requirements_contract_revision >= 1),
+                requirements_contract_hash TEXT NOT NULL,
+                lifecycle TEXT NOT NULL CHECK(lifecycle IN ('DRAFT','REVIEWED','SUPERSEDED')),
+                revision INTEGER NOT NULL CHECK(revision >= 1),
+                parent_plan_id TEXT,
+                origin TEXT NOT NULL CHECK(origin IN ('USER','DETERMINISTIC','AI_ASSISTED','IMPORTED','UNKNOWN')),
+                user_notes TEXT,
+                plan_hash TEXT,
+                row_version INTEGER NOT NULL DEFAULT 1 CHECK(row_version >= 1),
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                reviewed_at TEXT,
+                FOREIGN KEY(assignment_id) REFERENCES stud_assignments(id),
+                FOREIGN KEY(course_id) REFERENCES stud_courses(id),
+                FOREIGN KEY(workflow_id) REFERENCES stud_workflow_instances(id),
+                FOREIGN KEY(requirements_contract_id) REFERENCES stud_requirement_contracts(id),
+                FOREIGN KEY(parent_plan_id) REFERENCES stud_research_plans(id),
+                UNIQUE(assignment_id, revision)
+            );
+            CREATE UNIQUE INDEX stud_research_plans_draft_index ON stud_research_plans(assignment_id) WHERE lifecycle='DRAFT';
+            CREATE INDEX stud_research_plans_assignment_index ON stud_research_plans(assignment_id, revision DESC, created_at DESC);
+            CREATE INDEX stud_research_plans_contract_index ON stud_research_plans(requirements_contract_id, requirements_contract_revision);
+
+            CREATE TABLE stud_assignment_research_plans (
+                assignment_id TEXT PRIMARY KEY,
+                current_plan_id TEXT NOT NULL UNIQUE,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY(assignment_id) REFERENCES stud_assignments(id),
+                FOREIGN KEY(current_plan_id) REFERENCES stud_research_plans(id)
+            );
+
+            CREATE TABLE stud_research_topics (
+                id TEXT PRIMARY KEY,
+                plan_id TEXT NOT NULL,
+                assignment_id TEXT NOT NULL,
+                parent_topic_id TEXT,
+                workflow_node_id TEXT,
+                title TEXT NOT NULL,
+                description TEXT,
+                rationale TEXT,
+                priority TEXT NOT NULL CHECK(priority IN ('URGENT','HIGH','NORMAL','LOW')),
+                topic_order INTEGER NOT NULL DEFAULT 0 CHECK(topic_order >= 0),
+                origin TEXT NOT NULL CHECK(origin IN ('USER','DETERMINISTIC','AI_ASSISTED','IMPORTED','UNKNOWN')),
+                basis TEXT NOT NULL CHECK(basis IN ('REQUIRED_BY_ASSIGNMENT','PROPOSED_BY_RESEARCH_PLANNING','USER_DEFINED')),
+                disposition TEXT NOT NULL CHECK(disposition IN ('PROPOSED','INCLUDED','REJECTED','UNRESOLVED')),
+                user_notes TEXT,
+                row_version INTEGER NOT NULL DEFAULT 1 CHECK(row_version >= 1),
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY(plan_id) REFERENCES stud_research_plans(id),
+                FOREIGN KEY(assignment_id) REFERENCES stud_assignments(id),
+                FOREIGN KEY(parent_topic_id) REFERENCES stud_research_topics(id),
+                FOREIGN KEY(workflow_node_id) REFERENCES stud_workflow_nodes(id),
+                CHECK(parent_topic_id IS NULL OR parent_topic_id <> id)
+            );
+            CREATE INDEX stud_research_topics_plan_index ON stud_research_topics(plan_id, topic_order, id);
+            CREATE INDEX stud_research_topics_assignment_index ON stud_research_topics(assignment_id, updated_at DESC);
+
+            CREATE TABLE stud_research_topic_requirements (
+                topic_id TEXT NOT NULL,
+                requirement_item_id TEXT NOT NULL,
+                relationship_basis TEXT NOT NULL CHECK(relationship_basis IN ('REQUIRED_BY_ASSIGNMENT','PROPOSED_BY_RESEARCH_PLANNING')),
+                requirement_snapshot_hash TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                PRIMARY KEY(topic_id, requirement_item_id),
+                FOREIGN KEY(topic_id) REFERENCES stud_research_topics(id) ON DELETE CASCADE,
+                FOREIGN KEY(requirement_item_id) REFERENCES stud_requirement_items(id)
+            );
+            CREATE INDEX stud_research_topic_requirements_item_index ON stud_research_topic_requirements(requirement_item_id, topic_id);
+
+            CREATE TABLE stud_research_questions (
+                id TEXT PRIMARY KEY,
+                plan_id TEXT NOT NULL,
+                topic_id TEXT NOT NULL,
+                assignment_id TEXT NOT NULL,
+                parent_question_id TEXT,
+                question_text TEXT NOT NULL,
+                rationale TEXT,
+                priority TEXT NOT NULL CHECK(priority IN ('URGENT','HIGH','NORMAL','LOW')),
+                state TEXT NOT NULL CHECK(state IN ('OPEN','ANSWERED','UNRESOLVED','DEFERRED')),
+                origin TEXT NOT NULL CHECK(origin IN ('USER','DETERMINISTIC','AI_ASSISTED','IMPORTED','UNKNOWN')),
+                question_order INTEGER NOT NULL DEFAULT 0 CHECK(question_order >= 0),
+                row_version INTEGER NOT NULL DEFAULT 1 CHECK(row_version >= 1),
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY(plan_id) REFERENCES stud_research_plans(id),
+                FOREIGN KEY(topic_id) REFERENCES stud_research_topics(id),
+                FOREIGN KEY(assignment_id) REFERENCES stud_assignments(id),
+                FOREIGN KEY(parent_question_id) REFERENCES stud_research_questions(id),
+                CHECK(parent_question_id IS NULL OR parent_question_id <> id)
+            );
+            CREATE INDEX stud_research_questions_topic_index ON stud_research_questions(topic_id, question_order, id);
+            CREATE INDEX stud_research_questions_plan_index ON stud_research_questions(plan_id, state, question_order);
+
+            CREATE TABLE stud_research_question_requirements (
+                question_id TEXT NOT NULL,
+                requirement_item_id TEXT NOT NULL,
+                requirement_snapshot_hash TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                PRIMARY KEY(question_id, requirement_item_id),
+                FOREIGN KEY(question_id) REFERENCES stud_research_questions(id) ON DELETE CASCADE,
+                FOREIGN KEY(requirement_item_id) REFERENCES stud_requirement_items(id)
+            );
+
+            CREATE TABLE stud_topic_dossier_items (
+                id TEXT PRIMARY KEY,
+                plan_id TEXT NOT NULL,
+                topic_id TEXT NOT NULL,
+                assignment_id TEXT NOT NULL,
+                canonical_object_type TEXT,
+                canonical_object_id TEXT,
+                artifact_id TEXT,
+                membership_origin TEXT NOT NULL CHECK(membership_origin IN ('USER_ADDED','RESEARCH_ACQUIRED','COURSE_MATERIAL','ASSIGNMENT_MATERIAL','SYSTEM_SUGGESTED','IMPORTED','UNKNOWN')),
+                disposition TEXT NOT NULL CHECK(disposition IN ('SUGGESTED','ACCEPTED','REJECTED')),
+                review_state TEXT NOT NULL CHECK(review_state IN ('UNREVIEWED','PARTIALLY_REVIEWED','REVIEWED','NOT_RELEVANT')),
+                source_suitability TEXT NOT NULL CHECK(source_suitability IN ('PEER_REVIEWED','INSTITUTIONAL','STANDARD_REGULATION','TEXTBOOK','COURSE_MATERIAL','MANUFACTURER_TECHNICAL','GOVERNMENT','NEWS','GENERAL_WEB','UNKNOWN')),
+                stance TEXT NOT NULL CHECK(stance IN ('NOT_ASSESSED','AGREES','CONFLICTS','ALTERNATIVE','UNCERTAIN')),
+                rationale TEXT,
+                user_notes TEXT,
+                row_version INTEGER NOT NULL DEFAULT 1 CHECK(row_version >= 1),
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY(plan_id) REFERENCES stud_research_plans(id),
+                FOREIGN KEY(topic_id) REFERENCES stud_research_topics(id),
+                FOREIGN KEY(assignment_id) REFERENCES stud_assignments(id),
+                FOREIGN KEY(artifact_id) REFERENCES stud_assignment_artifacts(id),
+                CHECK((canonical_object_type IS NOT NULL AND canonical_object_id IS NOT NULL) OR artifact_id IS NOT NULL)
+            );
+            CREATE UNIQUE INDEX stud_topic_dossier_canonical_index ON stud_topic_dossier_items(topic_id,canonical_object_type,canonical_object_id) WHERE canonical_object_id IS NOT NULL;
+            CREATE UNIQUE INDEX stud_topic_dossier_artifact_index ON stud_topic_dossier_items(topic_id,artifact_id) WHERE artifact_id IS NOT NULL;
+            CREATE INDEX stud_topic_dossier_topic_index ON stud_topic_dossier_items(topic_id,disposition,review_state,updated_at DESC,id DESC);
+            CREATE INDEX stud_topic_dossier_assignment_index ON stud_topic_dossier_items(assignment_id,updated_at DESC);
+
+            CREATE TABLE stud_research_gaps (
+                id TEXT PRIMARY KEY,
+                plan_id TEXT NOT NULL,
+                topic_id TEXT NOT NULL,
+                assignment_id TEXT NOT NULL,
+                gap_type TEXT NOT NULL CHECK(gap_type IN ('MISSING_SOURCE','UNANSWERED_QUESTION','INSUFFICIENT_PRIMARY_EVIDENCE','MISSING_DATASET','MISSING_EXPERIMENTAL_RESULT','MISSING_STANDARD','CONTRADICTORY_EVIDENCE','INACCESSIBLE_SOURCE','OCR_REQUIRED','HUMAN_CLARIFICATION','TEAM_DEPENDENCY','LABORATORY_DEPENDENCY','CUSTOM')),
+                title TEXT NOT NULL,
+                description TEXT,
+                state TEXT NOT NULL CHECK(state IN ('OPEN','RESOLVED','DISMISSED')),
+                question_id TEXT,
+                requirement_item_id TEXT,
+                blocker_id TEXT,
+                row_version INTEGER NOT NULL DEFAULT 1 CHECK(row_version >= 1),
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                resolved_at TEXT,
+                resolution_note TEXT,
+                FOREIGN KEY(plan_id) REFERENCES stud_research_plans(id),
+                FOREIGN KEY(topic_id) REFERENCES stud_research_topics(id),
+                FOREIGN KEY(assignment_id) REFERENCES stud_assignments(id),
+                FOREIGN KEY(question_id) REFERENCES stud_research_questions(id),
+                FOREIGN KEY(requirement_item_id) REFERENCES stud_requirement_items(id),
+                FOREIGN KEY(blocker_id) REFERENCES stud_workflow_blockers(id)
+            );
+            CREATE INDEX stud_research_gaps_topic_index ON stud_research_gaps(topic_id,state,updated_at DESC,id DESC);
+            CREATE INDEX stud_research_gaps_assignment_index ON stud_research_gaps(assignment_id,state,updated_at DESC);
+
+            ALTER TABLE stud_working_context ADD COLUMN active_research_plan_id TEXT REFERENCES stud_research_plans(id);
+            ALTER TABLE stud_working_context ADD COLUMN active_research_topic_id TEXT REFERENCES stud_research_topics(id);
         `}];
         for (const migration of migrations) {
             if (applied.has(migration.version)) continue;

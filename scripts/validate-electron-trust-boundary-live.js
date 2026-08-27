@@ -29,12 +29,15 @@ async function main() {
             rawIpc:Boolean(window.aegis&&window.aegis.ipcRenderer), rawElectron:Boolean(window.electron),
             genericFiles:Boolean(window.aegis&&window.aegis.files), genericExec:Boolean(window.aegis&&window.aegis.exec),
             bridge:Boolean(window.aegis), workspace:Boolean(window.workspaceManager), terminal:Boolean(window.term&&window.term[0]&&window.term[0].socket),
-            studChannels:Object.keys(window.aegis.stud||{}).length, schema:core&&core.data&&core.data.version
+            studChannels:Object.keys(window.aegis.stud||{}).length,
+            researchPlanChannel:typeof window.aegis?.stud?.["stud-research-plan-state"] === "function",
+            schema:core&&core.data&&core.data.version
         }})()`);
     socket.close();
     const valid = result.requireType === "undefined" && result.processType === "undefined" && result.bufferType === "undefined"
         && !result.rawIpc && !result.rawElectron && !result.genericFiles && !result.genericExec
-        && result.bridge && result.workspace && result.terminal && result.studChannels === 127 && Number(result.schema) >= 15;
+        && result.bridge && result.workspace && result.terminal && result.studChannels >= 127
+        && result.researchPlanChannel && Number(result.schema) >= 20;
     console.log(`ELECTRON_TRUST_BOUNDARY_LIVE: ${valid ? "PASS" : "FAIL"} ${JSON.stringify(result)}`);
     if (!valid) process.exitCode = 1;
 }

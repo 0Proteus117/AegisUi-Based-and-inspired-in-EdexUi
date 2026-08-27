@@ -227,6 +227,9 @@ operation was introduced. See
 
 ## M7 — Research Plan, source gate and Topic Dossiers
 
+**Status: COMPLETE.** Implementation and validation are recorded in
+`STUD_M7_RESEARCH_PLAN_TOPIC_DOSSIERS_VALIDATION.md`.
+
 - **Objective:** convert explicit Research infrastructure into a reviewed,
   bounded Assignment research process.
 - **Exact scope:** research questions, source needs/functions, provider plan,
@@ -467,7 +470,8 @@ operation was introduced. See
 
 ## Exact next milestone
 
-M1, the dedicated Electron Trust-Boundary Hardening intervention, and M2–M6 are
-complete. The exact next product milestone is **M7 — Research Plan and Topic
-Dossiers**. M6 does not include autonomous research, Topic Dossiers, workers,
-heartbeats, resource profiles, watchdog operation or automatic execution.
+M1, the dedicated Electron Trust-Boundary Hardening intervention, and M2–M7 are
+complete. The exact next product milestone is **M8 — Claims, Evidence Map and
+Citation Integrity**. M7 does not include a Claim graph, full Evidence Map,
+citation-integrity engine, Faculty Gems, autonomous acquisition, drafting,
+workers, resource profiles, watchdog operation or automatic submission.
