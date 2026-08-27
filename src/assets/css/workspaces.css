@@ -12,6 +12,98 @@
     overflow: visible;
 }
 
+/* STUD M8 — one inspectable Claim/Evidence workspace. Claims, Evidence,
+ * canonical sources, provenance and citations remain visually and
+ * semantically separate; closed disclosure controls do not retain geometry. */
+.engineering-mode .stud-assignment-workspace-detail.is-evidence-map { min-width: 0; }
+.engineering-mode .stud-evidence-map-workspace { display: grid; gap: .9vh; min-width: 0; padding: 1vh; }
+.engineering-mode .stud-evidence-map-workspace > header { display: flex; align-items: start; justify-content: space-between; gap: 1.2vh; padding: .9vh 1vh; border-bottom: .08vh solid var(--aegis-border); }
+.engineering-mode .stud-evidence-map-workspace > header > div { display: grid; gap: .25vh; min-width: 0; }
+.engineering-mode .stud-evidence-map-workspace > header small,
+.engineering-mode .stud-evidence-map-workspace span { color: var(--aegis-text-faint); font: max(9px,.38vh)/1.35 var(--font_mono); letter-spacing: .045vh; }
+.engineering-mode .stud-evidence-map-workspace > header h2,
+.engineering-mode .stud-evidence-map-workspace h3 { margin: 0; color: var(--aegis-text-primary); font-family: var(--font_main); overflow-wrap: anywhere; }
+.engineering-mode .stud-evidence-map-workspace > header p,
+.engineering-mode .stud-evidence-map-workspace p { margin: 0; color: var(--aegis-text-muted); font: max(10px,.45vh)/1.45 var(--font_main_light); overflow-wrap: anywhere; }
+.engineering-mode .stud-evidence-map-workspace button,
+.engineering-mode .stud-evidence-map-workspace summary { min-height: 2.45vh; padding: .4vh .7vh; color: var(--aegis-accent-soft); border: .07vh solid var(--aegis-border); background: transparent; font: max(9px,.39vh)/1.25 var(--font_mono); letter-spacing: .035vh; cursor: pointer; }
+.engineering-mode .stud-evidence-map-workspace button:disabled { color: var(--aegis-text-faint); opacity: .62; cursor: not-allowed; }
+.engineering-mode .stud-evidence-map-workspace details:not([open]) > :not(summary) { display: none !important; }
+.engineering-mode .stud-evidence-map-layout { display: grid; grid-template-columns: minmax(14rem,.72fr) minmax(23rem,1.55fr) minmax(16rem,.82fr); gap: .9vh; min-width: 0; align-items: start; }
+.engineering-mode .stud-evidence-claims,
+.engineering-mode .stud-evidence-map-main,
+.engineering-mode .stud-evidence-inspector { min-width: 0; border: .08vh solid var(--aegis-border); background: var(--aegis-surface); }
+.engineering-mode .stud-evidence-claims { display: grid; align-content: start; max-height: 68vh; overflow: auto; }
+.engineering-mode .stud-evidence-claims > header { display: flex; align-items: start; justify-content: space-between; gap: .6vh; padding: .8vh; border-bottom: .06vh solid var(--aegis-border-subtle); position: sticky; top: 0; z-index: 1; background: var(--aegis-surface); }
+.engineering-mode .stud-evidence-claims > header > div { display: grid; gap: .12vh; }
+.engineering-mode .stud-evidence-claims > header strong { color: var(--aegis-text-primary); font: max(11px,.54vh) var(--font_main); }
+.engineering-mode .stud-evidence-claims form,
+.engineering-mode .stud-evidence-link form { display: grid; gap: .5vh; min-width: 17rem; margin-top: .5vh; padding: .7vh; border: .06vh solid var(--aegis-border-subtle); background: var(--aegis-surface-elevated,var(--aegis-surface)); }
+.engineering-mode .stud-evidence-map-workspace label { display: grid; gap: .2vh; color: var(--aegis-text-faint); font: max(9px,.36vh)/1.3 var(--font_mono); }
+.engineering-mode .stud-evidence-map-workspace :is(textarea,input,select) { width: 100%; min-width: 0; padding: .45vh .55vh; color: var(--aegis-text-primary); border: .07vh solid var(--aegis-border); background: var(--aegis-input-bg,var(--aegis-surface-muted)); font: max(10px,.44vh)/1.4 var(--font_main_light); box-sizing: border-box; }
+.engineering-mode .stud-evidence-claim { display: grid; gap: .24vh; width: 100%; min-width: 0; padding: .8vh; border: 0; border-left: .18vh solid transparent; border-bottom: .06vh solid var(--aegis-border-subtle); text-align: left; }
+.engineering-mode .stud-evidence-claim:hover,
+.engineering-mode .stud-evidence-claim.is-current { border-left-color: var(--aegis-accent-soft); background: var(--aegis-surface-muted); }
+.engineering-mode .stud-evidence-claim strong { color: var(--aegis-text-primary); font: max(10px,.48vh)/1.42 var(--font_main); overflow-wrap: anywhere; }
+.engineering-mode .stud-evidence-claim small { color: var(--aegis-text-muted); font: max(9px,.39vh)/1.35 var(--font_main_light); }
+.engineering-mode .stud-evidence-map-main { display: grid; align-content: start; gap: .8vh; padding: 1vh; }
+.engineering-mode .stud-evidence-map-main > header { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: .35vh .8vh; align-items: start; }
+.engineering-mode .stud-evidence-map-main > header > span,
+.engineering-mode .stud-evidence-map-main > header > h3 { grid-column: 1; }
+.engineering-mode .stud-evidence-map-main > header > div { grid-column: 2; grid-row: 1 / span 2; }
+.engineering-mode .stud-evidence-map-main > header h3 { font-size: max(14px,.72vh); line-height: 1.42; }
+.engineering-mode .stud-evidence-issues { display: grid; grid-template-columns: auto minmax(0,1fr); gap: .6vh; padding: .65vh .8vh; border-left: .2vh solid var(--aegis-warning); background: var(--aegis-surface-muted); }
+.engineering-mode .stud-evidence-issues strong { color: var(--aegis-text-primary); font: max(9px,.4vh) var(--font_mono); }
+.engineering-mode .stud-evidence-issues ul { display: flex; flex-wrap: wrap; gap: .25vh .8vh; margin: 0; padding: 0; list-style: none; color: var(--aegis-text-muted); font: max(9px,.4vh)/1.4 var(--font_main_light); }
+.engineering-mode .stud-evidence-source-action { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: .35vh .8vh; align-items: center; padding: .75vh .85vh; border: .06vh solid var(--aegis-border-subtle); background: var(--aegis-surface-muted); }
+.engineering-mode .stud-evidence-source-action > div { display: grid; gap: .12vh; min-width: 0; }
+.engineering-mode .stud-evidence-source-action > div strong { color: var(--aegis-text-primary); overflow-wrap: anywhere; }
+.engineering-mode .stud-evidence-source-action > p { grid-column: 1 / -1; color: var(--aegis-text-faint); }
+.engineering-mode .stud-evidence-links { display: grid; gap: .5vh; }
+.engineering-mode .stud-evidence-links > header { display: flex; justify-content: space-between; gap: 1vh; padding-bottom: .45vh; border-bottom: .06vh solid var(--aegis-border-subtle); }
+.engineering-mode .stud-evidence-links > header strong { color: var(--aegis-text-primary); }
+.engineering-mode .stud-evidence-link { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: .5vh; padding: .55vh 0 .55vh .65vh; border-left: .16vh solid var(--aegis-accent-soft); }
+.engineering-mode .stud-evidence-link.is-contradictory { border-left-color: #c86f52; }
+.engineering-mode .stud-evidence-link > button { display: grid; gap: .2vh; width: 100%; min-width: 0; border: 0; text-align: left; }
+.engineering-mode .stud-evidence-link > button strong { color: var(--aegis-text-primary); font: max(10px,.46vh)/1.42 var(--font_main_light); overflow-wrap: anywhere; }
+.engineering-mode .stud-evidence-link > details { min-width: 0; }
+.engineering-mode .stud-evidence-link form > div { display: flex; flex-wrap: wrap; gap: .4vh; }
+.engineering-mode .stud-evidence-unassessed { border-top: .06vh solid var(--aegis-border-subtle); padding-top: .6vh; }
+.engineering-mode .stud-evidence-unassessed > p { margin: .45vh 0; }
+.engineering-mode .stud-evidence-unassessed > article { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: .5vh; padding: .45vh 0; border-bottom: .05vh solid var(--aegis-border-subtle); }
+.engineering-mode .stud-evidence-unassessed > article > button:first-child { display: grid; gap: .15vh; min-width: 0; border: 0; text-align: left; }
+.engineering-mode .stud-evidence-unassessed strong { color: var(--aegis-text-primary); overflow-wrap: anywhere; }
+.engineering-mode .stud-evidence-inspector { display: grid; align-content: start; gap: .8vh; padding: 1vh; max-height: 68vh; overflow: auto; }
+.engineering-mode .stud-evidence-inspector > header { display: grid; gap: .2vh; padding-bottom: .65vh; border-bottom: .06vh solid var(--aegis-border-subtle); }
+.engineering-mode .stud-evidence-inspector > section { display: grid; gap: .18vh; }
+.engineering-mode .stud-evidence-inspector > section strong { color: var(--aegis-text-primary); font: max(10px,.5vh)/1.35 var(--font_main); overflow-wrap: anywhere; }
+.engineering-mode .stud-evidence-inspector blockquote { margin: 0; padding: .75vh .8vh; border-left: .16vh solid var(--aegis-border); color: var(--aegis-text-primary); background: var(--aegis-surface-muted); font: max(10px,.45vh)/1.55 var(--font_main_light); overflow-wrap: anywhere; }
+.engineering-mode .stud-evidence-inspector pre { max-height: 18vh; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--aegis-text-muted); font: max(9px,.38vh)/1.45 var(--font_mono); }
+.engineering-mode .stud-evidence-empty,
+.engineering-mode .stud-evidence-loading { display: grid; gap: .4vh; padding: 1.4vh; color: var(--aegis-text-muted); border: .06vh dashed var(--aegis-border); }
+.engineering-mode .stud-evidence-empty strong { color: var(--aegis-text-primary); }
+.engineering-mode .stud-evidence-empty.is-error,
+.engineering-mode .stud-evidence-inspector .is-error { border-left: .18vh solid #c86f52; }
+
+@media (max-width: 1450px) {
+    .engineering-mode .stud-evidence-map-layout { grid-template-columns: minmax(13rem,.72fr) minmax(22rem,1.5fr); }
+    .engineering-mode .stud-evidence-inspector { grid-column: 1 / -1; max-height: none; grid-template-columns: repeat(3,minmax(0,1fr)); }
+    .engineering-mode .stud-evidence-inspector > header,
+    .engineering-mode .stud-evidence-inspector blockquote,
+    .engineering-mode .stud-evidence-inspector details { grid-column: 1 / -1; }
+}
+@media (max-width: 1220px) {
+    .engineering-mode .stud-evidence-map-workspace > header,
+    .engineering-mode .stud-evidence-map-main > header { grid-template-columns: minmax(0,1fr); }
+    .engineering-mode .stud-evidence-map-layout { grid-template-columns: minmax(0,1fr); }
+    .engineering-mode .stud-evidence-claims { max-height: 24vh; }
+    .engineering-mode .stud-evidence-map-main > header > div { grid-column: 1; grid-row: auto; }
+    .engineering-mode .stud-evidence-inspector { grid-column: auto; grid-template-columns: minmax(0,1fr); max-height: none; }
+    .engineering-mode .stud-evidence-source-action,
+    .engineering-mode .stud-evidence-unassessed > article { grid-template-columns: minmax(0,1fr); }
+    .engineering-mode .stud-evidence-source-action > p { grid-column: 1; }
+}
+
 .engineering-mode .workspace-nav-scroll {
     min-width: 0;
     display: flex;

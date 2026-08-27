@@ -64,12 +64,22 @@ function ipcMock() { const handlers = new Map(); return {handlers, handle: (name
         const runResponse = await ipc.handlers.get("stud-compute-run")(trusted, {tool: "UNITS", operation: "CONVERT", input: {value: 1, fromUnit: "bar", toUnit: "kPa"}});
         check("TYPED_IPC_ONLY", () => assert.strictEqual(runResponse.data.result.value, 100));
         const forged = await ipc.handlers.get("stud-compute-save-result")(trusted, {request: {tool: "UNITS", operation: "CONVERT", input: {value: 1, fromUnit: "m", toUnit: "mm"}}, context: {title: "Recomputed"}});
-        check("SAVE_RECOMPUTES_MAIN_SIDE", () => assert.strictEqual(forged.data.tool, "UNITS") && forged.data.outputJson.includes("1000"));
+        check("SAVE_RECOMPUTES_MAIN_SIDE", () => {
+            assert.strictEqual(forged.data.tool, "UNITS");
+            assert.ok(forged.data.outputJson.includes("1000"));
+        });
         registration.dispose();
         const runtimeSource = fs.readFileSync(path.join(ROOT, "src/classes/workspaces/studComputeRuntime.class.js"), "utf8");
         const ipcSource = fs.readFileSync(path.join(ROOT, "src/classes/workspaces/studAcademicIpc.class.js"), "utf8");
-        check("NO_SHELL_NETWORK_OR_EXTERNAL_INTERPRETER", () => !/child_process|spawn\(|exec\(|fetch\(|https?:\/\//.test(runtimeSource) && !ipcSource.includes("stud-compute-shell"));
-        check("MODEL_SCHEMA_CURRENT", () => Model.SCHEMA_VERSION === 17 && Model.ENTITY_TYPES.includes("COMPUTE_RESULT") && Model.ENTITY_TYPES.includes("ACADEMIC_DOCUMENT"));
+        check("NO_SHELL_NETWORK_OR_EXTERNAL_INTERPRETER", () => {
+            assert.ok(!/child_process|spawn\(|exec\(|fetch\(|https?:\/\//.test(runtimeSource));
+            assert.ok(!ipcSource.includes("stud-compute-shell"));
+        });
+        check("MODEL_SCHEMA_CURRENT", () => {
+            assert.strictEqual(Model.SCHEMA_VERSION, 21);
+            assert.ok(Model.ENTITY_TYPES.includes("COMPUTE_RESULT"));
+            assert.ok(Model.ENTITY_TYPES.includes("ACADEMIC_DOCUMENT"));
+        });
         console.log(`STUD_ENGINEERING_COMPUTE: ${passed} checks passed`);
     } finally { fs.rmSync(root, {recursive: true, force: true}); }
 })().catch(error => { console.error(error && error.stack || error); process.exitCode = 1; });

@@ -24,6 +24,7 @@ const STUD_CHANNELS = Object.freeze([
     "stud-workflow-conditions", "stud-workflow-blocker-impact", "stud-workflow-blocker-create", "stud-workflow-blocker-update", "stud-workflow-blocker-resolve", "stud-workflow-blocker-cancel", "stud-workflow-checkpoint-create", "stud-workflow-checkpoint-decide",
     "stud-artifact-list", "stud-artifact-read", "stud-artifact-register", "stud-artifact-update", "stud-artifact-relate", "stud-artifact-relationships", "stud-mission-control-state", "stud-operation-list", "stud-operation-read", "stud-operation-events", "stud-operation-artifacts",
     "stud-research-plan-state", "stud-research-plan-create-draft", "stud-research-plan-update", "stud-research-plan-add-topic", "stud-research-plan-update-topic", "stud-research-plan-add-question", "stud-research-plan-update-question", "stud-research-plan-review", "stud-research-plan-create-revision", "stud-topic-dossier-list", "stud-topic-dossier-add", "stud-topic-dossier-update", "stud-research-gap-add", "stud-research-gap-resolve", "stud-research-coverage",
+    "stud-claim-list", "stud-claim-read", "stud-claim-create", "stud-claim-update", "stud-claim-review", "stud-claim-create-revision", "stud-evidence-list", "stud-evidence-read", "stud-evidence-create", "stud-evidence-update", "stud-evidence-review", "stud-claim-evidence-link", "stud-claim-evidence-update", "stud-claim-evidence-review", "stud-claim-evidence-revise", "stud-evidence-map", "stud-evidence-source-preview",
     "stud-zotero-import", "stud-zotero-list", "stud-zotero-status"
 ]);
 

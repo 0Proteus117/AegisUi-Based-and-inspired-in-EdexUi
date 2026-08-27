@@ -15,6 +15,7 @@ const {StudWorkingContextService} = require("./studWorkingContextService.class.j
 const {StudWorkflowService} = require("./studWorkflowService.class.js");
 const {StudArtifactOperationsService} = require("./studArtifactOperationsService.class.js");
 const {StudResearchPlanService} = require("./studResearchPlanService.class.js");
+const {StudClaimEvidenceService} = require("./studClaimEvidenceService.class.js");
 
 const CHANNELS = Object.freeze([
     "stud-core-status",
@@ -193,7 +194,24 @@ const CHANNELS = Object.freeze([
     "stud-topic-dossier-update",
     "stud-research-gap-add",
     "stud-research-gap-resolve",
-    "stud-research-coverage"
+    "stud-research-coverage",
+    "stud-claim-list",
+    "stud-claim-read",
+    "stud-claim-create",
+    "stud-claim-update",
+    "stud-claim-review",
+    "stud-claim-create-revision",
+    "stud-evidence-list",
+    "stud-evidence-read",
+    "stud-evidence-create",
+    "stud-evidence-update",
+    "stud-evidence-review",
+    "stud-claim-evidence-link",
+    "stud-claim-evidence-update",
+    "stud-claim-evidence-review",
+    "stud-claim-evidence-revise",
+    "stud-evidence-map",
+    "stud-evidence-source-preview"
 ]);
 
 function senderIsTrusted(event) {
@@ -271,6 +289,10 @@ function registerStudAcademicIpc(options = {}) {
     // revisions and existing canonical material. It has no provider/model
     // execution capability and never duplicates Papers, Documents or Artifacts.
     const researchPlans = options.researchPlanService || new StudResearchPlanService({store, workingContextService: workingContext, artifactOperationsService: artifactOperations});
+    // M8 keeps Claims, Evidence, exact provenance and citation integrity
+    // separate. Renderer input cannot forge reviewed state, privileged origin,
+    // canonical ownership or Evidence provenance.
+    const claimEvidence = options.claimEvidenceService || new StudClaimEvidenceService({store, workingContextService: workingContext, artifactOperationsService: artifactOperations, researchPlanService: researchPlans});
     let shell = options.shell || null;
     if (!shell) { try { shell = require("electron").shell; } catch (error) {} }
     const handlers = new Map();
@@ -308,7 +330,7 @@ function registerStudAcademicIpc(options = {}) {
     add("stud-assessment-classification-set", ["assignmentId", "classification", "reason"], payload => workingContext.setClassification(payload));
     add("stud-course-organisation", ["limit"], payload => workingContext.courseOrganisation(payload));
     add("stud-working-context-read", [], () => workingContext.read());
-    add("stud-working-context-update", ["courseId", "assignmentId", "objectType", "objectId", "workflowId", "workflowNodeId", "researchPlanId", "researchTopicId", "originSurface", "userPinned"], payload => workingContext.update(payload));
+    add("stud-working-context-update", ["courseId", "assignmentId", "objectType", "objectId", "workflowId", "workflowNodeId", "researchPlanId", "researchTopicId", "claimId", "evidenceId", "originSurface", "userPinned"], payload => workingContext.update(payload));
     add("stud-working-context-clear", [], () => workingContext.clear());
     add("stud-workflow-templates", ["assignmentId"], payload => workflow.templates(payload));
     add("stud-workflow-assignment-state", ["assignmentId", "historyLimit"], payload => workflow.assignmentState(payload));
@@ -354,6 +376,23 @@ function registerStudAcademicIpc(options = {}) {
     add("stud-research-gap-add", ["planId", "topicId", "gapType", "title", "description", "questionId", "requirementItemId", "blockerId"], payload => researchPlans.addGap(payload));
     add("stud-research-gap-resolve", ["assignmentId", "gapId", "expectedVersion", "action", "note"], payload => researchPlans.resolveGap(payload));
     add("stud-research-coverage", ["assignmentId", "topicId"], payload => researchPlans.coverage(payload));
+    add("stud-claim-list", ["assignmentId", "planId", "topicId", "lifecycle", "beforeUpdatedAt", "limit"], payload => claimEvidence.claims(payload));
+    add("stud-claim-read", ["assignmentId", "claimId"], payload => claimEvidence.claim(payload));
+    add("stud-claim-create", ["assignmentId", "claim"], payload => claimEvidence.createClaim({...payload, origin: "USER"}));
+    add("stud-claim-update", ["assignmentId", "claimId", "expectedVersion", "claim"], payload => claimEvidence.updateClaim(payload));
+    add("stud-claim-review", ["assignmentId", "claimId", "expectedVersion"], payload => claimEvidence.reviewClaim(payload));
+    add("stud-claim-create-revision", ["assignmentId", "claimId", "expectedVersion"], payload => claimEvidence.createClaimRevision(payload));
+    add("stud-evidence-list", ["assignmentId", "planId", "topicId", "reviewState", "beforeUpdatedAt", "limit"], payload => claimEvidence.evidenceList(payload));
+    add("stud-evidence-read", ["assignmentId", "evidenceId"], payload => claimEvidence.evidence(payload));
+    add("stud-evidence-create", ["assignmentId", "planId", "topicId", "dossierItemId", "sourceObjectType", "sourceObjectId", "locationType", "locator", "excerpt", "citationPaperId", "reviewerNote", "extractionMethod"], payload => claimEvidence.createEvidence({...payload, origin: "USER"}));
+    add("stud-evidence-update", ["assignmentId", "evidenceId", "expectedVersion", "citationPaperId", "locator", "excerpt", "reviewerNote"], payload => claimEvidence.updateEvidence(payload));
+    add("stud-evidence-review", ["assignmentId", "evidenceId", "expectedVersion"], payload => claimEvidence.reviewEvidence(payload));
+    add("stud-claim-evidence-link", ["assignmentId", "claimId", "evidenceId", "relationshipType", "rationale"], payload => claimEvidence.linkEvidence({...payload, origin: "USER"}));
+    add("stud-claim-evidence-update", ["assignmentId", "linkId", "expectedVersion", "relationshipType", "rationale"], payload => claimEvidence.updateLink(payload));
+    add("stud-claim-evidence-review", ["assignmentId", "linkId", "expectedVersion"], payload => claimEvidence.reviewLink(payload));
+    add("stud-claim-evidence-revise", ["assignmentId", "linkId", "expectedVersion"], payload => claimEvidence.reviseLink(payload));
+    add("stud-evidence-map", ["assignmentId", "planId", "topicId", "claimLimit", "evidenceLimit"], payload => claimEvidence.map(payload));
+    add("stud-evidence-source-preview", ["assignmentId", "evidenceId"], payload => claimEvidence.sourcePreview(payload));
     add("stud-requirements-state", ["assignmentId"], payload => requirements.state(payload.assignmentId));
     add("stud-requirements-create-draft", ["assignmentId"], payload => requirements.createDraft(payload.assignmentId));
     add("stud-requirements-review-candidate", ["contractId", "candidateId", "disposition", "expectedVersion"], payload => requirements.reviewCandidate(payload));

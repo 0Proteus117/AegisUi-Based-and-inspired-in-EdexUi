@@ -253,6 +253,9 @@ operation was introduced. See
 
 ## M8 — Claim, Evidence Map and citation integrity
 
+**Status: COMPLETE.** Implementation and validation are recorded in
+`STUD_M8_CLAIMS_EVIDENCE_CITATION_INTEGRITY_VALIDATION.md`.
+
 - **Objective:** provide bidirectional claim-to-source trace and distinguish
   citation formatting from support integrity.
 - **Exact scope:** claim records, evidence roles, exact source/page/chunk/data
@@ -470,8 +473,8 @@ operation was introduced. See
 
 ## Exact next milestone
 
-M1, the dedicated Electron Trust-Boundary Hardening intervention, and M2–M7 are
-complete. The exact next product milestone is **M8 — Claims, Evidence Map and
-Citation Integrity**. M7 does not include a Claim graph, full Evidence Map,
-citation-integrity engine, Faculty Gems, autonomous acquisition, drafting,
-workers, resource profiles, watchdog operation or automatic submission.
+M1, the dedicated Electron Trust-Boundary Hardening intervention, and M2–M8 are
+complete. The exact next product milestone is **M9 — Faculty Literature Scout**.
+M8 does not include Faculty identity resolution, autonomous acquisition,
+provider-driven research, drafting, workers, resource profiles, watchdog
+operation or automatic submission.

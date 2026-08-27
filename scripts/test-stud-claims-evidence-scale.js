@@ -1,0 +1,34 @@
+#!/usr/bin/env node
+"use strict";
+
+const assert=require("assert"),fs=require("fs"),os=require("os"),path=require("path");
+const {StudAcademicStore}=require("../src/classes/workspaces/studAcademicStore.class.js");
+const {StudRequirementsContractService}=require("../src/classes/workspaces/studRequirementsContractService.class.js");
+const {StudWorkingContextService}=require("../src/classes/workspaces/studWorkingContextService.class.js");
+const {StudArtifactOperationsService}=require("../src/classes/workspaces/studArtifactOperationsService.class.js");
+const {StudClaimEvidenceService}=require("../src/classes/workspaces/studClaimEvidenceService.class.js");
+const Domain=require("../src/classes/workspaces/studClaimEvidenceModel.class.js");
+
+const root=fs.mkdtempSync(path.join(os.tmpdir(),"aegis-stud-m8-scale-")),now=new Date().toISOString();
+function elapsed(start){return Number(process.hrtime.bigint()-start)/1e6;}
+try{
+ const store=new StudAcademicStore({root,applicationVersion:"m8-scale"}).initialize(),db=store.db;
+ const course=db.prepare("INSERT INTO stud_courses (id,title,status,created_at,updated_at) VALUES (?,?, 'ACTIVE',?,?)"),assignment=db.prepare("INSERT INTO stud_assignments (id,course_id,title,status,submission_status,created_at,updated_at) VALUES (?,?,?,'NOT_STARTED','UNKNOWN',?,?)"),note=db.prepare("INSERT INTO stud_notes (id,title,content,course_id,assignment_id,created_at,updated_at) VALUES (?,?,?,?,?,?,?)"),contract=db.prepare("INSERT INTO stud_requirement_contracts (id,assignment_id,revision,lifecycle,completeness,approved_as_incomplete,approved_at,approved_by,contract_hash,row_version,created_at,updated_at) VALUES (?,?,1,'APPROVED','COMPLETE',0,?,'USER',?,1,?,?)"),plan=db.prepare("INSERT INTO stud_research_plans (id,assignment_id,course_id,requirements_contract_id,requirements_contract_revision,requirements_contract_hash,lifecycle,revision,origin,plan_hash,row_version,created_at,updated_at,reviewed_at) VALUES (?,?,?,?,1,?,'REVIEWED',1,'USER',?,1,?,?,?)"),claim=db.prepare("INSERT INTO stud_claims (id,claim_key,assignment_id,claim_text,claim_type,origin,lifecycle,revision,claim_hash,row_version,created_at,updated_at,reviewed_at) VALUES (?,?,?,?,'ANALYTICAL','USER','REVIEWED',1,?,1,?,?,?)"),pointer=db.prepare("INSERT INTO stud_claim_pointers (claim_key,assignment_id,current_reviewed_claim_id,updated_at) VALUES (?,?,?,?)"),evidence=db.prepare("INSERT INTO stud_evidence_records (id,assignment_id,source_object_type,source_object_id,location_type,locator_json,excerpt,source_snapshot_hash,extraction_method,review_state,origin,evidence_hash,row_version,created_at,updated_at,reviewed_at) VALUES (?,?, 'NOTE',?,'NOTE_SECTION',?,?,?,?, 'REVIEWED','USER',?,1,?,?,?)"),link=db.prepare("INSERT INTO stud_claim_evidence_links (id,assignment_id,claim_id,evidence_id,relationship_type,lifecycle,revision,rationale,origin,row_version,created_at,updated_at,reviewed_at) VALUES (?,?,?,?,?,'REVIEWED',1,'Synthetic explicit assessment','USER',1,?,?,?)");
+ store.transaction(()=>{
+  for(let c=0;c<100;c+=1)course.run(`scale_course_${c}`,`Scale Course ${c}`,now,now);
+  for(let a=0;a<1000;a+=1){const courseId=`scale_course_${a%100}`,assignmentId=`scale_assignment_${a}`,noteId=`scale_note_${a}`;assignment.run(assignmentId,courseId,`Scale Assignment ${a}`,now,now);note.run(noteId,`Scale source ${a}`,`Synthetic bounded source for Assignment ${a}.`,courseId,assignmentId,now,now);if(a<300){const contractId=`scale_contract_${a}`,hash=Domain.canonicalHash({assignmentId,revision:1});contract.run(contractId,assignmentId,now,hash,now,now);plan.run(`scale_plan_${a}`,assignmentId,courseId,contractId,hash,Domain.canonicalHash({assignmentId,plan:1}),now,now,now);}
+   const sourceHash=Domain.canonicalHash({type:"NOTE",id:noteId,updatedAt:now,checksum:null,title:`Scale source ${a}`});
+   for(let e=0;e<6;e+=1){const evidenceId=`scale_evidence_${a}_${e}`,locator=JSON.stringify({section:e});evidence.run(evidenceId,assignmentId,noteId,locator,`Synthetic evidence ${e} for Assignment ${a}.`,sourceHash,"EXPLICIT_USER_SELECTION",Domain.canonicalHash({evidenceId,sourceHash}),now,now,now);}
+   for(let c=0;c<3;c+=1){const claimId=`scale_claim_${a}_${c}`,claimKey=`scale_lineage_${a}_${c}`;claim.run(claimId,claimKey,assignmentId,`Synthetic Claim ${c} for Assignment ${a}.`,Domain.canonicalHash({claimId}),now,now,now);pointer.run(claimKey,assignmentId,claimId,now);for(let e=0;e<6;e+=1)link.run(`scale_link_${a}_${c}_${e}`,assignmentId,claimId,`scale_evidence_${a}_${e}`,e===0&&c===0?"CONTRADICTS":e===1?"QUALIFIES":"SUPPORTS",now,now,now);}
+  }
+ });
+ assert.strictEqual(db.prepare("SELECT COUNT(*) count FROM stud_courses").get().count,100);assert.strictEqual(db.prepare("SELECT COUNT(*) count FROM stud_assignments").get().count,1000);assert.strictEqual(db.prepare("SELECT COUNT(*) count FROM stud_research_plans").get().count,300);assert.strictEqual(db.prepare("SELECT COUNT(*) count FROM stud_claims").get().count,3000);assert.strictEqual(db.prepare("SELECT COUNT(*) count FROM stud_evidence_records").get().count,6000);assert.strictEqual(db.prepare("SELECT COUNT(*) count FROM stud_claim_evidence_links").get().count,18000);
+ const requirements=new StudRequirementsContractService({store}),context=new StudWorkingContextService({store,requirementsService:requirements}),artifacts=new StudArtifactOperationsService({store,workingContextService:context}),service=new StudClaimEvidenceService({store,workingContextService:context,artifactOperationsService:artifacts});
+ let start=process.hrtime.bigint(),map=service.map({assignmentId:"scale_assignment_999",claimLimit:100,evidenceLimit:500}),mapMs=elapsed(start);assert.strictEqual(map.claims.length,3);assert.strictEqual(map.claims.reduce((n,item)=>n+item.links.length,0),18);
+ start=process.hrtime.bigint();const detail=service.claim({assignmentId:"scale_assignment_999",claimId:"scale_claim_999_0"}),claimMs=elapsed(start);assert.strictEqual(detail.links.length,6);
+ start=process.hrtime.bigint();const conflict=map.claims.filter(item=>item.summary.contradicting>0||item.summary.issues.length).length,filterMs=elapsed(start);assert.ok(conflict>=1);
+ const dbBytes=fs.statSync(path.join(root,"academic.sqlite")).size;store.close();
+ start=process.hrtime.bigint();const reopened=new StudAcademicStore({root,applicationVersion:"m8-scale-restart"}).initialize(),restartMs=elapsed(start);assert.strictEqual(reopened.db.prepare("SELECT COUNT(*) count FROM stud_claims").get().count,3000);reopened.close();
+ console.log(JSON.stringify({courses:100,assignments:1000,researchPlans:300,claims:3000,evidence:6000,relationships:18000,mapMs:Number(mapMs.toFixed(2)),claimMs:Number(claimMs.toFixed(2)),filterMs:Number(filterMs.toFixed(2)),restartMs:Number(restartMs.toFixed(2)),dbBytes},null,2));
+ console.log("STUD M8 CLAIM / EVIDENCE SCALE: PASS");
+}finally{fs.rmSync(root,{recursive:true,force:true});}

@@ -68,8 +68,8 @@ function stripV20(dbPath) {
 const root = fs.mkdtempSync(path.join(os.tmpdir(), "aegis-stud-m7-"));
 try {
     let env = open(path.join(root, "domain"));
-    check("SCHEMA_V20_AND_NO_FABRICATED_RESEARCH_STATE", () => {
-        assert.strictEqual(env.store.schemaInfo().version, 20);
+    check("CURRENT_SCHEMA_AND_NO_FABRICATED_RESEARCH_STATE", () => {
+        assert.strictEqual(env.store.schemaInfo().version, 21);
         ["stud_research_plans", "stud_research_topics", "stud_research_questions", "stud_topic_dossier_items", "stud_research_gaps"].forEach(table => assert.strictEqual(env.store.db.prepare(`SELECT COUNT(*) count FROM ${table}`).get().count, 0));
     });
     const base = fixture(env, "Engineering CFD design report", {type: "DELIVERABLE", label: "Evaluate CFD evidence"});
@@ -206,7 +206,7 @@ try {
     const legacyAssignment = migration.store.createEntity("ASSIGNMENT", {title: "Existing v19 assignment"});
     migration.store.close(); stripV20(path.join(root, "migration", "academic.sqlite")); migration = open(path.join(root, "migration"));
     check("V19_TO_V20_MIGRATION_PRESERVES_ASSIGNMENT_WITHOUT_FABRICATION", () => {
-        assert.strictEqual(migration.store.schemaInfo().version, 20); assert.ok(migration.store.getEntity("ASSIGNMENT", legacyAssignment.id)); assert.strictEqual(migration.research.state({assignmentId: legacyAssignment.id}).current, null); assert.strictEqual(migration.research.state({assignmentId: legacyAssignment.id}).draft, null);
+        assert.strictEqual(migration.store.schemaInfo().version, 21); assert.ok(migration.store.getEntity("ASSIGNMENT", legacyAssignment.id)); assert.strictEqual(migration.research.state({assignmentId: legacyAssignment.id}).current, null); assert.strictEqual(migration.research.state({assignmentId: legacyAssignment.id}).draft, null);
     });
     migration.store.close();
 
