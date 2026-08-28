@@ -203,6 +203,35 @@ Automated geometry checks found no horizontal overflow or escaped controls.
 Broad regression, security/release-health and packaged validation results are
 recorded in the final milestone report and implementation commit evidence.
 
+## Packaged validation
+
+The preload allowlist change required a private ARM64 validation package. The
+integrated M9 runtime produced `AegisUi-2.7.1-arm64.dmg` with SHA-256
+`0d8007f1ed8f50c1d3db13c033e5679e8a136f360e760aaccde652ebdd2ffeb6`.
+The image mounted successfully and AegisUi launched from that mounted volume.
+
+The mounted `app.asar` physically contained all four M9 modules, the M9 preload
+channels and Citation.js. The packaged Calendar helper was present. `node-pty`
+was physically unpacked, executable, ad-hoc signed and ARM64. Runtime validation
+confirmed schema v22, the synthetic Faculty Scout surface, Citation.js
+rendering, Compute/Research/Academic-AI typed boundaries and authenticated
+terminal. Renderer `require` and `process` were absent, raw `ipcRenderer` was not
+exposed, and the preload bridge was available. The final bundle passed strict
+deep signature verification.
+
+The first local pnpm staging attempt was rejected during validation because its
+ASAR contained absolute dependency symlinks back to the worktree. It was not
+accepted or reported as launched. The validation artifact was rebuilt from a
+hoisted physical production dependency tree, `node-pty` was rebuilt for
+Electron ARM64, the ASAR was recreated and the complete mount/signature/launch
+checks were repeated. The validated DMG remains a local artifact only.
+
+The current STUD script inventory passes 47 of 47 suites. The broad Aegis
+aggregator retains two inherited environment outcomes: TomTom returns HTTP 401
+and `AISSTREAM_API_KEY` is absent in Map provider validation; SAT/Celestrak is
+skipped when its environment is unavailable. These are not represented as M9
+passes or M9 regressions.
+
 ## Known limitations and M10 boundary
 
 M9 does not search private/institutional profiles, scrape Google Scholar, infer
