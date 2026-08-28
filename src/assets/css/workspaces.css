@@ -16,6 +16,60 @@
  * canonical sources, provenance and citations remain visually and
  * semantically separate; closed disclosure controls do not retain geometry. */
 .engineering-mode .stud-assignment-workspace-detail.is-evidence-map { min-width: 0; }
+
+/* STUD M9 Faculty Literature Scout: calm explicit identity/relevance review. */
+.engineering-mode .stud-assignment-workspace-detail.is-faculty-scout { min-width: 0; }
+.engineering-mode .stud-faculty-scout { display: grid; gap: .9vh; min-width: 0; padding: 1vh; color: var(--aegis-text-muted); }
+.engineering-mode .stud-faculty-scout > header,
+.engineering-mode .stud-faculty-panel > header,
+.engineering-mode .stud-faculty-publications > header { display: flex; align-items: start; justify-content: space-between; gap: 1vh; }
+.engineering-mode .stud-faculty-scout h2,
+.engineering-mode .stud-faculty-scout h3 { margin: 0; color: var(--aegis-text-primary); font-family: var(--font_main); overflow-wrap: anywhere; }
+.engineering-mode .stud-faculty-scout p { margin: 0; font: max(10px,.45vh)/1.45 var(--font_main_light); overflow-wrap: anywhere; }
+.engineering-mode .stud-faculty-scout small,
+.engineering-mode .stud-faculty-scout span,
+.engineering-mode .stud-faculty-scout em { color: var(--aegis-text-faint); font: max(9px,.37vh)/1.35 var(--font_mono); overflow-wrap: anywhere; }
+.engineering-mode .stud-faculty-scout button,
+.engineering-mode .stud-faculty-scout summary { min-height: 2.4vh; padding: .4vh .68vh; color: var(--aegis-accent-soft); border: .07vh solid var(--aegis-border); background: transparent; font: max(9px,.38vh)/1.25 var(--font_mono); cursor: pointer; }
+.engineering-mode .stud-faculty-scout button:disabled { color: var(--aegis-text-faint); opacity: .58; cursor: not-allowed; }
+.engineering-mode .stud-faculty-layout { display: grid; grid-template-columns: minmax(14rem,.52fr) minmax(0,1.48fr); gap: .9vh; min-width: 0; align-items: start; }
+.engineering-mode .stud-faculty-layout main { display: grid; gap: .9vh; min-width: 0; }
+.engineering-mode .stud-faculty-identities,
+.engineering-mode .stud-faculty-panel,
+.engineering-mode .stud-faculty-publications { display: grid; gap: .65vh; min-width: 0; padding: .9vh; border: .07vh solid var(--aegis-border); background: var(--aegis-surface); }
+.engineering-mode .stud-faculty-identities > header { display: flex; justify-content: space-between; }
+.engineering-mode .stud-faculty-identities ol,
+.engineering-mode .stud-faculty-candidates,
+.engineering-mode .stud-faculty-publications ol { display: grid; gap: .45vh; margin: 0; padding: 0; list-style: none; }
+.engineering-mode .stud-faculty-identities li button { display: grid; width: 100%; gap: .15vh; text-align: left; }
+.engineering-mode .stud-faculty-identities li button.is-current { border-color: var(--aegis-accent-soft); background: var(--aegis-surface-muted); }
+.engineering-mode .stud-faculty-candidates li,
+.engineering-mode .stud-faculty-publications li { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: .7vh; align-items: start; padding: .7vh; border-left: .14vh solid var(--aegis-border); background: var(--aegis-surface-muted); }
+.engineering-mode .stud-faculty-candidates li > div,
+.engineering-mode .stud-faculty-publications li > div { display: grid; gap: .2vh; min-width: 0; }
+.engineering-mode .stud-faculty-candidates nav,
+.engineering-mode .stud-faculty-publications nav { display: flex; flex-wrap: wrap; justify-content: end; gap: .35vh; }
+.engineering-mode .stud-faculty-publications li.is-relevant { border-left-color: var(--aegis-accent-soft); }
+.engineering-mode .stud-faculty-publications li.is-unresolved { border-left-color: var(--aegis-warning); }
+.engineering-mode .stud-faculty-confirmed { display: grid; gap: .2vh; padding: .65vh; border-left: .14vh solid var(--aegis-accent-soft); background: var(--aegis-surface-muted); }
+.engineering-mode .stud-faculty-scout form { display: grid; gap: .5vh; margin-top: .5vh; padding: .65vh; border: .07vh solid var(--aegis-border); }
+.engineering-mode .stud-faculty-scout label { display: grid; gap: .2vh; color: var(--aegis-text-faint); font: max(9px,.36vh)/1.3 var(--font_mono); }
+.engineering-mode .stud-faculty-scout :is(input,select,textarea) { width: 100%; min-width: 0; padding: .42vh .55vh; color: var(--aegis-text-primary); border: .07vh solid var(--aegis-border); background: var(--aegis-input-bg,var(--aegis-surface-muted)); box-sizing: border-box; }
+.engineering-mode .stud-faculty-scout details:not([open]) > :not(summary) { display: none !important; }
+.engineering-mode .stud-faculty-publications footer { padding-top: .55vh; border-top: .05vh solid var(--aegis-border-subtle); font: max(9px,.37vh)/1.4 var(--font_mono); color: var(--aegis-text-faint); }
+@media (max-width: 1220px) {
+    .engineering-mode .stud-faculty-layout { grid-template-columns: minmax(0,1fr); }
+    .engineering-mode .stud-faculty-identities ol { grid-template-columns: repeat(auto-fit,minmax(13rem,1fr)); }
+}
+@media (max-width: 780px) {
+    .engineering-mode .stud-faculty-scout > header,
+    .engineering-mode .stud-faculty-panel > header,
+    .engineering-mode .stud-faculty-publications > header,
+    .engineering-mode .stud-faculty-candidates li,
+    .engineering-mode .stud-faculty-publications li { grid-template-columns: minmax(0,1fr); flex-direction: column; }
+    .engineering-mode .stud-faculty-candidates nav,
+    .engineering-mode .stud-faculty-publications nav { justify-content: start; }
+}
 .engineering-mode .stud-evidence-map-workspace { display: grid; gap: .9vh; min-width: 0; padding: 1vh; }
 .engineering-mode .stud-evidence-map-workspace > header { display: flex; align-items: start; justify-content: space-between; gap: 1.2vh; padding: .9vh 1vh; border-bottom: .08vh solid var(--aegis-border); }
 .engineering-mode .stud-evidence-map-workspace > header > div { display: grid; gap: .25vh; min-width: 0; }

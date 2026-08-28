@@ -9,6 +9,7 @@ const Citations = require("./studCitationService.class.js");
 
 const ENDPOINTS = Object.freeze({
     OPENALEX: "https://api.openalex.org/works",
+    OPENALEX_AUTHORS: "https://api.openalex.org/authors",
     CROSSREF: "https://api.crossref.org/v1/works/",
     DATACITE: "https://api.datacite.org/dois/",
     UNPAYWALL: "https://api.unpaywall.org/v2/",
@@ -19,6 +20,7 @@ const MAX_PDF_BYTES = 40 * 1024 * 1024;
 const DEFAULT_TIMEOUT_MS = 12000;
 const PDF_CANDIDATE_TTL_MS = 15 * 60 * 1000;
 const MAX_PDF_CANDIDATES = 25;
+const MAX_CONCURRENT_REQUESTS = 8;
 
 function runtimeError(code, message, details = {}) { return new Academic.StudError(code, message, details); }
 
@@ -62,6 +64,7 @@ class StudResearchRuntime {
     begin(requestId, provider) {
         const id = Academic.requiredText(requestId, "Request ID", 100);
         if (this.controllers.has(id)) this.controllers.get(id).abort();
+        if (!this.controllers.has(id) && this.controllers.size >= MAX_CONCURRENT_REQUESTS) throw runtimeError("BUSY", "The bounded academic provider request limit is active. Wait for an existing request to finish.");
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
         this.controllers.set(id, controller);
@@ -123,6 +126,35 @@ class StudResearchRuntime {
         const raw = await this.requestJson("OpenAlex", url, input.requestId);
         const works = (Array.isArray(raw.results) ? raw.results : []).slice(0, limit).map(Research.normalizeOpenAlexWork);
         return Object.freeze(works.map(work => Object.freeze({token: this.retain("OPENALEX", work), work})));
+    }
+
+    openAlexKey(url) {
+        const key=String(this.env.AEGISUI_OPENALEX_API_KEY||"").trim();
+        if(key) url.searchParams.set("api_key",key);
+        return url;
+    }
+
+    async searchOpenAlexAuthors(input = {}) {
+        const query=Academic.requiredText(input.name,"Faculty name",300);
+        const limit=Math.max(1,Math.min(Number(input.limit)||10,20));
+        const url=this.openAlexKey(new URL(ENDPOINTS.OPENALEX_AUTHORS));
+        url.searchParams.set("search",query);
+        url.searchParams.set("per_page",String(limit));
+        url.searchParams.set("select","id,display_name,orcid,works_count,affiliations,last_known_institutions,topics");
+        const raw=await this.requestJson("OpenAlex",url,input.requestId);
+        return Object.freeze((Array.isArray(raw.results)?raw.results:[]).slice(0,limit));
+    }
+
+    async worksByOpenAlexAuthor(input = {}) {
+        const authorId=String(input.authorId||"").trim().toUpperCase();
+        if(!/^A\d+$/.test(authorId)) throw runtimeError("INVALID_INPUT","A valid OpenAlex Author ID is required.");
+        const limit=Math.max(1,Math.min(Number(input.limit)||25,Research.MAX_RESULTS));
+        const url=this.openAlexKey(new URL(ENDPOINTS.OPENALEX));
+        url.searchParams.set("filter",`authorships.author.id:${authorId}`);
+        url.searchParams.set("per_page",String(limit));
+        url.searchParams.set("sort","publication_date:desc");
+        const raw=await this.requestJson("OpenAlex",url,input.requestId);
+        return Object.freeze((Array.isArray(raw.results)?raw.results:[]).slice(0,limit));
     }
 
     async resolveCrossref(input = {}) {
@@ -279,4 +311,4 @@ class StudResearchRuntime {
     }
 }
 
-module.exports = {StudResearchRuntime, ENDPOINTS, MAX_RESPONSE_BYTES, MAX_PDF_BYTES, DEFAULT_TIMEOUT_MS, PDF_CANDIDATE_TTL_MS, MAX_PDF_CANDIDATES, boundedJsonText};
+module.exports = {StudResearchRuntime, ENDPOINTS, MAX_RESPONSE_BYTES, MAX_PDF_BYTES, DEFAULT_TIMEOUT_MS, PDF_CANDIDATE_TTL_MS, MAX_PDF_CANDIDATES, MAX_CONCURRENT_REQUESTS, boundedJsonText};

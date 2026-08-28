@@ -351,6 +351,29 @@ Evidence Map reports unsupported Claims, contradictory/qualifying Evidence,
 missing exact locations and metadata/source conflicts without inventing truth,
 quality scores, confidence percentages or corrections.
 
+### Faculty Literature Scout
+
+Schema v22 adds an Assignment-scoped observation and public-identity resolution
+layer without creating a people-search service or a second Research library.
+`stud_faculty_observations` binds an observed teaching-team identity to exact
+user, Course/Assignment, Moodle provenance or AcademicDocument chunk evidence.
+`stud_faculty_identities` separates observed metadata from an explicitly
+confirmed OpenAlex Author identity. Candidate records preserve explainable
+name, affiliation and ORCID match reasons; name alone remains ambiguous.
+
+Public discovery is an explicit bounded main-process operation through the
+existing Research Runtime's fixed OpenAlex Authors and Works endpoints. A
+confirmed Author ID is required before works discovery, and every persisted work
+must contain that exact Author ID. Topic relevance is deterministic and exposes
+matched local terms and reasons rather than a score or quality judgement.
+
+`stud_faculty_publication_candidates` is review state, not another publication
+store. Explicit Gem import creates or updates the canonical Research Paper and
+adds one M7 Topic Dossier reference. It never creates M8 Evidence, Claim support,
+a Citation integrity result, an M6 Run or automatic provider chain. Faculty
+Scout state is Assignment/Topic scoped, bounded and restart-persistent; opening
+it performs no network operation.
+
 ### Composition, drafting and Humanisation
 
 - Composition Plans contain versioned sections, purpose, requirement/learning-
