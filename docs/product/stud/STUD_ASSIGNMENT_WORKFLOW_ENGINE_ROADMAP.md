@@ -278,6 +278,9 @@ operation was introduced. See
 
 ## M9 — Faculty Literature Scout
 
+**Status: COMPLETE.** Implementation and validation are recorded in
+`STUD_M9_FACULTY_LITERATURE_SCOUT_VALIDATION.md`.
+
 - **Objective:** add a bounded, ambiguity-aware Faculty Gems workflow.
 - **Exact scope:** explicit lecturer identity candidate, affiliation/department
   evidence, public academic identifiers and ordinary source-quality evaluation.
@@ -473,8 +476,8 @@ operation was introduced. See
 
 ## Exact next milestone
 
-M1, the dedicated Electron Trust-Boundary Hardening intervention, and M2–M8 are
-complete. The exact next product milestone is **M9 — Faculty Literature Scout**.
-M8 does not include Faculty identity resolution, autonomous acquisition,
-provider-driven research, drafting, workers, resource profiles, watchdog
+M1, the dedicated Electron Trust-Boundary Hardening intervention, and M2–M9 are
+complete. The exact next product milestone is **M10 — Composition Plan and Draft
+Versions**. M9 does not include automatic source acquisition, source-quality
+judgement, Evidence creation, drafting, workers, resource profiles, watchdog
 operation or automatic submission.

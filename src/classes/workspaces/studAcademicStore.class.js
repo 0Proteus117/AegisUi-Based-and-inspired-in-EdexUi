@@ -1118,6 +1118,124 @@ class StudAcademicStore {
 
             ALTER TABLE stud_working_context ADD COLUMN active_claim_id TEXT REFERENCES stud_claims(id);
             ALTER TABLE stud_working_context ADD COLUMN active_evidence_id TEXT REFERENCES stud_evidence_records(id);
+        `}, {version: 22, sql: `
+            CREATE TABLE stud_faculty_identities (
+                id TEXT PRIMARY KEY,
+                assignment_id TEXT NOT NULL,
+                course_id TEXT,
+                display_name TEXT NOT NULL CHECK(length(display_name) BETWEEN 1 AND 300),
+                institution TEXT,
+                department TEXT,
+                observed_orcid TEXT,
+                resolution_state TEXT NOT NULL CHECK(resolution_state IN ('CONFIRMED','PROBABLE','AMBIGUOUS','UNRESOLVED')),
+                confirmed_provider TEXT,
+                confirmed_provider_author_id TEXT,
+                confirmed_orcid TEXT,
+                confirmed_candidate_id TEXT,
+                confirmation_note TEXT,
+                row_version INTEGER NOT NULL DEFAULT 1 CHECK(row_version >= 1),
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                confirmed_at TEXT,
+                FOREIGN KEY(assignment_id) REFERENCES stud_assignments(id),
+                FOREIGN KEY(course_id) REFERENCES stud_courses(id),
+                FOREIGN KEY(confirmed_candidate_id) REFERENCES stud_faculty_identity_candidates(id),
+                UNIQUE(assignment_id, display_name, institution)
+            );
+            CREATE INDEX stud_faculty_identities_assignment_index ON stud_faculty_identities(assignment_id,resolution_state,updated_at DESC,id DESC);
+
+            CREATE TABLE stud_faculty_observations (
+                id TEXT PRIMARY KEY,
+                faculty_id TEXT NOT NULL,
+                assignment_id TEXT NOT NULL,
+                course_id TEXT,
+                role TEXT NOT NULL CHECK(role IN ('COURSE_LECTURER','MODULE_LEADER','ASSIGNMENT_AUTHOR','SUPERVISOR','TUTOR','TEACHING_TEAM','OTHER','UNKNOWN')),
+                observed_name TEXT NOT NULL CHECK(length(observed_name) BETWEEN 1 AND 300),
+                observed_institution TEXT,
+                observed_department TEXT,
+                source_type TEXT NOT NULL CHECK(source_type IN ('USER','COURSE_METADATA','ASSIGNMENT_METADATA','ACADEMIC_DOCUMENT','MOODLE_PROVENANCE')),
+                source_object_type TEXT NOT NULL,
+                source_object_id TEXT NOT NULL,
+                document_id TEXT,
+                extraction_id TEXT,
+                chunk_id TEXT,
+                page_start INTEGER,
+                page_end INTEGER,
+                excerpt TEXT,
+                source_snapshot_hash TEXT NOT NULL,
+                observed_at TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY(faculty_id) REFERENCES stud_faculty_identities(id) ON DELETE CASCADE,
+                FOREIGN KEY(assignment_id) REFERENCES stud_assignments(id),
+                FOREIGN KEY(course_id) REFERENCES stud_courses(id),
+                FOREIGN KEY(document_id) REFERENCES stud_academic_documents(id),
+                FOREIGN KEY(extraction_id) REFERENCES stud_document_extractions(id),
+                FOREIGN KEY(chunk_id) REFERENCES stud_document_chunks(id),
+                CHECK((page_start IS NULL AND page_end IS NULL) OR (page_start >= 1 AND page_end >= page_start))
+            );
+            CREATE INDEX stud_faculty_observations_faculty_index ON stud_faculty_observations(faculty_id,observed_at DESC,id DESC);
+            CREATE INDEX stud_faculty_observations_source_index ON stud_faculty_observations(source_object_type,source_object_id);
+
+            CREATE TABLE stud_faculty_identity_candidates (
+                id TEXT PRIMARY KEY,
+                faculty_id TEXT NOT NULL,
+                provider TEXT NOT NULL CHECK(provider IN ('OPENALEX')),
+                provider_author_id TEXT NOT NULL,
+                display_name TEXT NOT NULL,
+                orcid TEXT,
+                institutions_json TEXT NOT NULL,
+                departments_json TEXT NOT NULL,
+                topics_json TEXT NOT NULL,
+                works_count INTEGER NOT NULL DEFAULT 0 CHECK(works_count >= 0),
+                assessment TEXT NOT NULL CHECK(assessment IN ('PROBABLE','AMBIGUOUS','UNRESOLVED')),
+                disposition TEXT NOT NULL CHECK(disposition IN ('PENDING','CONFIRMED','REJECTED','NO_MATCH')),
+                reasons_json TEXT NOT NULL,
+                provider_snapshot_hash TEXT NOT NULL,
+                row_version INTEGER NOT NULL DEFAULT 1 CHECK(row_version >= 1),
+                observed_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY(faculty_id) REFERENCES stud_faculty_identities(id) ON DELETE CASCADE,
+                UNIQUE(faculty_id,provider,provider_author_id)
+            );
+            CREATE INDEX stud_faculty_candidates_faculty_index ON stud_faculty_identity_candidates(faculty_id,disposition,assessment,updated_at DESC);
+
+            CREATE TABLE stud_faculty_publication_candidates (
+                id TEXT PRIMARY KEY,
+                assignment_id TEXT NOT NULL,
+                plan_id TEXT NOT NULL,
+                topic_id TEXT NOT NULL,
+                faculty_id TEXT NOT NULL,
+                identity_candidate_id TEXT NOT NULL,
+                provider TEXT NOT NULL CHECK(provider IN ('OPENALEX')),
+                provider_work_id TEXT NOT NULL,
+                doi TEXT,
+                title TEXT NOT NULL,
+                authors_json TEXT NOT NULL,
+                publication_year INTEGER,
+                venue TEXT,
+                source_url TEXT,
+                normalized_work_json TEXT NOT NULL,
+                relevance_state TEXT NOT NULL CHECK(relevance_state IN ('RELEVANT','IRRELEVANT','UNRESOLVED')),
+                disposition TEXT NOT NULL CHECK(disposition IN ('SUGGESTED','IMPORTED','DISMISSED')),
+                matched_terms_json TEXT NOT NULL,
+                reasons_json TEXT NOT NULL,
+                provider_snapshot_hash TEXT NOT NULL,
+                canonical_paper_id TEXT,
+                dossier_item_id TEXT,
+                row_version INTEGER NOT NULL DEFAULT 1 CHECK(row_version >= 1),
+                observed_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY(assignment_id) REFERENCES stud_assignments(id),
+                FOREIGN KEY(plan_id) REFERENCES stud_research_plans(id),
+                FOREIGN KEY(topic_id) REFERENCES stud_research_topics(id),
+                FOREIGN KEY(faculty_id) REFERENCES stud_faculty_identities(id),
+                FOREIGN KEY(identity_candidate_id) REFERENCES stud_faculty_identity_candidates(id),
+                FOREIGN KEY(canonical_paper_id) REFERENCES stud_research_papers(id),
+                FOREIGN KEY(dossier_item_id) REFERENCES stud_topic_dossier_items(id),
+                UNIQUE(topic_id,faculty_id,provider,provider_work_id)
+            );
+            CREATE INDEX stud_faculty_publications_topic_index ON stud_faculty_publication_candidates(topic_id,relevance_state,disposition,updated_at DESC,id DESC);
+            CREATE INDEX stud_faculty_publications_faculty_index ON stud_faculty_publication_candidates(faculty_id,updated_at DESC,id DESC);
         `}];
         for (const migration of migrations) {
             if (applied.has(migration.version)) continue;

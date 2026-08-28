@@ -41,9 +41,11 @@ function normalizeOpenAlexId(value) {
 function normalizeAuthors(values) {
     if (!Array.isArray(values)) return [];
     return values.slice(0, MAX_AUTHORS).map(value => {
-        if (typeof value === "string") return {displayName: text(value, 240)};
+        if (typeof value === "string") return {displayName: text(value, 240), openAlexId: null, orcid: null};
         const name = value && (value.displayName || value.display_name || value.name || [value.given, value.family].filter(Boolean).join(" "));
-        return {displayName: text(name, 240), orcid: text(value && (value.orcid || value.ORCID), 120)};
+        const authorId = value && (value.openAlexId || value.id);
+        const authorMatch = text(authorId, 160) && text(authorId, 160).match(/(?:openalex\.org\/)?(A\d+)$/i);
+        return {displayName: text(name, 240), openAlexId: authorMatch ? authorMatch[1].toUpperCase() : null, orcid: text(value && (value.orcid || value.ORCID), 120)};
     }).filter(value => value.displayName);
 }
 

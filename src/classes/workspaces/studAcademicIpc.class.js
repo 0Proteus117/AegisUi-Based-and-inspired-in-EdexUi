@@ -16,6 +16,7 @@ const {StudWorkflowService} = require("./studWorkflowService.class.js");
 const {StudArtifactOperationsService} = require("./studArtifactOperationsService.class.js");
 const {StudResearchPlanService} = require("./studResearchPlanService.class.js");
 const {StudClaimEvidenceService} = require("./studClaimEvidenceService.class.js");
+const {StudFacultyLiteratureService} = require("./studFacultyLiteratureService.class.js");
 
 const CHANNELS = Object.freeze([
     "stud-core-status",
@@ -211,7 +212,15 @@ const CHANNELS = Object.freeze([
     "stud-claim-evidence-review",
     "stud-claim-evidence-revise",
     "stud-evidence-map",
-    "stud-evidence-source-preview"
+    "stud-evidence-source-preview",
+    "stud-faculty-scout-state",
+    "stud-faculty-observation-create",
+    "stud-faculty-identity-discover",
+    "stud-faculty-identity-confirm",
+    "stud-faculty-identity-reject",
+    "stud-faculty-publications-discover",
+    "stud-faculty-publication-import",
+    "stud-faculty-publication-dismiss"
 ]);
 
 function senderIsTrusted(event) {
@@ -293,6 +302,11 @@ function registerStudAcademicIpc(options = {}) {
     // separate. Renderer input cannot forge reviewed state, privileged origin,
     // canonical ownership or Evidence provenance.
     const claimEvidence = options.claimEvidenceService || new StudClaimEvidenceService({store, workingContextService: workingContext, artifactOperationsService: artifactOperations, researchPlanService: researchPlans});
+    // M9 resolves explicitly observed teaching-team identities against fixed
+    // public scholarly metadata and applies deterministic Topic relevance.
+    // It reuses canonical Research Papers and M7 Dossiers; it cannot create
+    // M8 Evidence, invoke AI, crawl profiles or append Mission Control logs.
+    const facultyLiterature = options.facultyLiteratureService || new StudFacultyLiteratureService({store, researchRuntime: runtime, researchPlanService: researchPlans});
     let shell = options.shell || null;
     if (!shell) { try { shell = require("electron").shell; } catch (error) {} }
     const handlers = new Map();
@@ -393,6 +407,14 @@ function registerStudAcademicIpc(options = {}) {
     add("stud-claim-evidence-revise", ["assignmentId", "linkId", "expectedVersion"], payload => claimEvidence.reviseLink(payload));
     add("stud-evidence-map", ["assignmentId", "planId", "topicId", "claimLimit", "evidenceLimit"], payload => claimEvidence.map(payload));
     add("stud-evidence-source-preview", ["assignmentId", "evidenceId"], payload => claimEvidence.sourcePreview(payload));
+    add("stud-faculty-scout-state", ["assignmentId", "topicId", "limit"], payload => facultyLiterature.state(payload));
+    add("stud-faculty-observation-create", ["assignmentId", "displayName", "institution", "department", "orcid", "role", "sourceType", "sourceId", "documentId", "extractionId", "chunkId"], payload => facultyLiterature.createIdentity(payload));
+    add("stud-faculty-identity-discover", ["assignmentId", "facultyId", "requestId", "limit"], payload => facultyLiterature.discoverIdentity(payload));
+    add("stud-faculty-identity-confirm", ["assignmentId", "facultyId", "candidateId", "expectedVersion", "note"], payload => facultyLiterature.confirmIdentity(payload));
+    add("stud-faculty-identity-reject", ["assignmentId", "facultyId", "candidateId", "expectedVersion"], payload => facultyLiterature.rejectCandidate(payload));
+    add("stud-faculty-publications-discover", ["assignmentId", "planId", "topicId", "facultyId", "questionId", "claimId", "requestId", "limit"], payload => facultyLiterature.discoverPublications(payload));
+    add("stud-faculty-publication-import", ["assignmentId", "publicationId", "expectedVersion"], payload => facultyLiterature.importToDossier(payload));
+    add("stud-faculty-publication-dismiss", ["assignmentId", "publicationId", "expectedVersion"], payload => facultyLiterature.dismissPublication(payload));
     add("stud-requirements-state", ["assignmentId"], payload => requirements.state(payload.assignmentId));
     add("stud-requirements-create-draft", ["assignmentId"], payload => requirements.createDraft(payload.assignmentId));
     add("stud-requirements-review-candidate", ["contractId", "candidateId", "disposition", "expectedVersion"], payload => requirements.reviewCandidate(payload));

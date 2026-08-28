@@ -24,6 +24,7 @@ documents translate that intent into the audited v2.7.0 implementation:
 - [M6 Artifact Bay / Mission Control implementation and validation](STUD_M6_ARTIFACT_BAY_MISSION_CONTROL_VALIDATION.md)
 - [M7 Research Plan / Topic Dossiers implementation and validation](STUD_M7_RESEARCH_PLAN_TOPIC_DOSSIERS_VALIDATION.md)
 - [M8 Claims / Evidence Map / Citation Integrity implementation and validation](STUD_M8_CLAIMS_EVIDENCE_CITATION_INTEGRITY_VALIDATION.md)
+- [M9 Faculty Literature Scout implementation and validation](STUD_M9_FACULTY_LITERATURE_SCOUT_VALIDATION.md)
 - [M1-M3 integration and final technical audit](STUD_M1_M3_INTEGRATION_AUDIT.md)
 - [Electron trust-boundary hardening](../../security/ELECTRON_TRUST_BOUNDARY_HARDENING_2026-08-24.md)
 
@@ -60,5 +61,9 @@ immutable Claim revisions, exact canonical Evidence provenance, explicit
 reviewed Claim/Evidence assessments, citation-support integrity and an
 Assignment-scoped Evidence Map. Citation rendering remains separate from
 intellectual support and M7 Dossier membership requires explicit promotion
-before it becomes Evidence. The exact next product milestone is M9 — Faculty
-Literature Scout.
+before it becomes Evidence. M9 advances schema v21 to v22 with provenance-bound
+faculty observations, explicit OpenAlex identity confirmation, bounded
+works-by-author discovery and explainable Topic relevance. A Faculty Gem is an
+explicit canonical Research Paper/M7 Dossier import; it is not M8 Evidence or a
+source-quality judgement. The exact next product milestone is M10 — Composition
+Plan and Draft Versions.
