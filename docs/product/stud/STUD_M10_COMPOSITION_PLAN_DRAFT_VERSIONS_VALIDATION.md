@@ -182,9 +182,23 @@ card wall. No private Moodle, institutional or local-path data was captured.
 
 ## Packaged validation
 
-M10 adds fixed preload channels, so an ARM64 validation DMG is required. The
-actual final artifact result is recorded after the final commit/build and before
-integration.
+M10 adds fixed preload channels, so an ARM64 validation DMG was required. The
+implementation commit `8ed1d5d2efb204004678876395613fc2fd95a188` produced the
+private validation artifact `AegisUi-2.7.1-arm64-m10-validation.dmg` with
+SHA-256 `feedefee782e82278bb7feadb440cfac5b252b2693852dbe4a47c47dcb2a7662`.
+The disk image passed `hdiutil verify`, mounted read-only and AegisUi launched
+from the mounted volume with an isolated synthetic user-data directory.
+
+The mounted bundle passed strict deep ad-hoc signature verification. Its real
+`app.asar` physically contained the four M10 modules, the fixed M10 preload
+channels and Citation.js, with no dependency symlink back to a worktree. The
+Calendar helper was packaged. The unpacked `node-pty` ARM64 module and signed
+spawn helper were present, and an authenticated terminal connected during
+startup. Runtime inspection confirmed schema v23, the typed Composition
+handler, Citation and Compute handlers, and the M10 Workspace. Renderer
+`require` and `process` were absent, raw `ipcRenderer` was not exposed, and the
+preload bridge remained available. Ollama was not invoked because M10 does not
+use Local Academic AI.
 
 ## Known limitations and M11 boundary
 
