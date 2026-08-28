@@ -25,6 +25,7 @@ documents translate that intent into the audited v2.7.0 implementation:
 - [M7 Research Plan / Topic Dossiers implementation and validation](STUD_M7_RESEARCH_PLAN_TOPIC_DOSSIERS_VALIDATION.md)
 - [M8 Claims / Evidence Map / Citation Integrity implementation and validation](STUD_M8_CLAIMS_EVIDENCE_CITATION_INTEGRITY_VALIDATION.md)
 - [M9 Faculty Literature Scout implementation and validation](STUD_M9_FACULTY_LITERATURE_SCOUT_VALIDATION.md)
+- [M10 Composition Plan / Draft Versions implementation and validation](STUD_M10_COMPOSITION_PLAN_DRAFT_VERSIONS_VALIDATION.md)
 - [M1-M3 integration and final technical audit](STUD_M1_M3_INTEGRATION_AUDIT.md)
 - [Electron trust-boundary hardening](../../security/ELECTRON_TRUST_BOUNDARY_HARDENING_2026-08-24.md)
 
@@ -65,5 +66,10 @@ before it becomes Evidence. M9 advances schema v21 to v22 with provenance-bound
 faculty observations, explicit OpenAlex identity confirmation, bounded
 works-by-author discovery and explainable Topic relevance. A Faculty Gem is an
 explicit canonical Research Paper/M7 Dossier import; it is not M8 Evidence or a
-source-quality judgement. The exact next product milestone is M10 — Composition
-Plan and Draft Versions.
+source-quality judgement. M10 advances schema v22 to v23 with reviewed immutable
+Composition Plan revisions, Section-level purpose and length allocation,
+explicit Requirement/Claim/Evidence placement, explainable readiness and
+immutable Draft Versions with bounded line diff. M10 references M8 Evidence and
+Citation.js output without creating a second intellectual-evidence store, and
+ordinary planning creates no provider, AI or Mission Control activity. The
+exact next product milestone is M11 — Humanisation with Diff.

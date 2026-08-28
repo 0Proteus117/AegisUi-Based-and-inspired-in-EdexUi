@@ -17,6 +17,7 @@ const {StudArtifactOperationsService} = require("./studArtifactOperationsService
 const {StudResearchPlanService} = require("./studResearchPlanService.class.js");
 const {StudClaimEvidenceService} = require("./studClaimEvidenceService.class.js");
 const {StudFacultyLiteratureService} = require("./studFacultyLiteratureService.class.js");
+const {StudCompositionService} = require("./studCompositionService.class.js");
 
 const CHANNELS = Object.freeze([
     "stud-core-status",
@@ -220,7 +221,26 @@ const CHANNELS = Object.freeze([
     "stud-faculty-identity-reject",
     "stud-faculty-publications-discover",
     "stud-faculty-publication-import",
-    "stud-faculty-publication-dismiss"
+    "stud-faculty-publication-dismiss",
+    "stud-composition-state",
+    "stud-composition-create",
+    "stud-composition-update",
+    "stud-composition-section-add",
+    "stud-composition-section-update",
+    "stud-composition-section-remove",
+    "stud-composition-requirement-set",
+    "stud-composition-claim-link",
+    "stud-composition-evidence-link",
+    "stud-composition-reference-unlink",
+    "stud-composition-review",
+    "stud-composition-create-revision",
+    "stud-composition-readiness",
+    "stud-composition-section-context",
+    "stud-draft-create",
+    "stud-draft-read",
+    "stud-draft-version-read",
+    "stud-draft-save-version",
+    "stud-draft-diff"
 ]);
 
 function senderIsTrusted(event) {
@@ -307,6 +327,10 @@ function registerStudAcademicIpc(options = {}) {
     // It reuses canonical Research Papers and M7 Dossiers; it cannot create
     // M8 Evidence, invoke AI, crawl profiles or append Mission Control logs.
     const facultyLiterature = options.facultyLiteratureService || new StudFacultyLiteratureService({store, researchRuntime: runtime, researchPlanService: researchPlans});
+    // M10 owns reviewed composition structure and immutable Draft snapshots.
+    // It references M1/M8 canonical records and never treats writing as
+    // Workflow completion, Evidence creation or operational execution.
+    const composition = options.compositionService || new StudCompositionService({store, workingContextService: workingContext, claimEvidenceService: claimEvidence});
     let shell = options.shell || null;
     if (!shell) { try { shell = require("electron").shell; } catch (error) {} }
     const handlers = new Map();
@@ -344,7 +368,7 @@ function registerStudAcademicIpc(options = {}) {
     add("stud-assessment-classification-set", ["assignmentId", "classification", "reason"], payload => workingContext.setClassification(payload));
     add("stud-course-organisation", ["limit"], payload => workingContext.courseOrganisation(payload));
     add("stud-working-context-read", [], () => workingContext.read());
-    add("stud-working-context-update", ["courseId", "assignmentId", "objectType", "objectId", "workflowId", "workflowNodeId", "researchPlanId", "researchTopicId", "claimId", "evidenceId", "originSurface", "userPinned"], payload => workingContext.update(payload));
+    add("stud-working-context-update", ["courseId", "assignmentId", "objectType", "objectId", "workflowId", "workflowNodeId", "researchPlanId", "researchTopicId", "claimId", "evidenceId", "compositionPlanId", "compositionSectionId", "draftDocumentId", "draftVersionId", "originSurface", "userPinned"], payload => workingContext.update(payload));
     add("stud-working-context-clear", [], () => workingContext.clear());
     add("stud-workflow-templates", ["assignmentId"], payload => workflow.templates(payload));
     add("stud-workflow-assignment-state", ["assignmentId", "historyLimit"], payload => workflow.assignmentState(payload));
@@ -415,6 +439,25 @@ function registerStudAcademicIpc(options = {}) {
     add("stud-faculty-publications-discover", ["assignmentId", "planId", "topicId", "facultyId", "questionId", "claimId", "requestId", "limit"], payload => facultyLiterature.discoverPublications(payload));
     add("stud-faculty-publication-import", ["assignmentId", "publicationId", "expectedVersion"], payload => facultyLiterature.importToDossier(payload));
     add("stud-faculty-publication-dismiss", ["assignmentId", "publicationId", "expectedVersion"], payload => facultyLiterature.dismissPublication(payload));
+    add("stud-composition-state", ["assignmentId", "draftLimit"], payload => composition.state(payload));
+    add("stud-composition-create", ["assignmentId", "contractId", "researchPlanId", "workflowId", "title", "lengthUnit", "userPlannedTotal", "userNotes", "seedProposals"], payload => composition.createPlan(payload));
+    add("stud-composition-update", ["planId", "expectedVersion", "title", "lengthUnit", "userPlannedTotal", "userNotes"], payload => composition.updatePlan(payload));
+    add("stud-composition-section-add", ["planId", "expectedVersion", "section"], payload => composition.addSection({...payload,section:{...payload.section,origin:"USER"}}));
+    add("stud-composition-section-update", ["planId", "sectionId", "expectedPlanVersion", "expectedSectionVersion", "section"], payload => composition.updateSection(payload));
+    add("stud-composition-section-remove", ["planId", "sectionId", "expectedPlanVersion", "expectedSectionVersion"], payload => composition.removeSection(payload));
+    add("stud-composition-requirement-set", ["planId", "expectedVersion", "requirementItemId", "sectionId", "disposition", "reason"], payload => composition.setRequirementCoverage(payload));
+    add("stud-composition-claim-link", ["planId", "expectedVersion", "sectionId", "claimId", "order", "rationale"], payload => composition.linkClaim(payload));
+    add("stud-composition-evidence-link", ["planId", "expectedVersion", "sectionId", "evidenceId", "intendedUse"], payload => composition.linkEvidence(payload));
+    add("stud-composition-reference-unlink", ["planId", "expectedVersion", "sectionId", "kind", "targetId"], payload => composition.unlinkReference(payload));
+    add("stud-composition-review", ["planId", "expectedVersion"], payload => composition.reviewPlan(payload));
+    add("stud-composition-create-revision", ["planId", "expectedVersion"], payload => composition.createRevision(payload));
+    add("stud-composition-readiness", ["assignmentId", "planId"], payload => composition.readiness(payload));
+    add("stud-composition-section-context", ["assignmentId", "planId", "sectionId"], payload => composition.sectionContext(payload));
+    add("stud-draft-create", ["assignmentId", "planId", "title"], payload => composition.createDraft(payload));
+    add("stud-draft-read", ["assignmentId", "draftId", "versionLimit"], payload => composition.draft(payload));
+    add("stud-draft-version-read", ["assignmentId", "draftId", "versionId"], payload => composition.draftVersion(payload));
+    add("stud-draft-save-version", ["assignmentId", "draftId", "expectedVersion", "sections", "changeReason"], payload => composition.saveDraftVersion({...payload,origin:"USER"}));
+    add("stud-draft-diff", ["assignmentId", "draftId", "fromVersionId", "toVersionId"], payload => composition.diff(payload));
     add("stud-requirements-state", ["assignmentId"], payload => requirements.state(payload.assignmentId));
     add("stud-requirements-create-draft", ["assignmentId"], payload => requirements.createDraft(payload.assignmentId));
     add("stud-requirements-review-candidate", ["contractId", "candidateId", "disposition", "expectedVersion"], payload => requirements.reviewCandidate(payload));

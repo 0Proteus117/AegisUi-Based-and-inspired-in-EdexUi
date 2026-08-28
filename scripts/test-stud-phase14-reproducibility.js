@@ -20,6 +20,7 @@ const OPERATIONAL_TABLES = ["stud_operation_event_artifacts", "stud_operation_ev
 const RESEARCH_PLAN_TABLES = ["stud_research_gaps", "stud_topic_dossier_items", "stud_research_question_requirements", "stud_research_questions", "stud_research_topic_requirements", "stud_research_topics", "stud_assignment_research_plans", "stud_research_plans"];
 const CLAIM_EVIDENCE_TABLES = ["stud_claim_evidence_links", "stud_evidence_records", "stud_claim_requirements", "stud_claim_pointers", "stud_claims"];
 const FACULTY_SCOUT_TABLES = ["stud_faculty_publication_candidates", "stud_faculty_observations", "stud_faculty_identity_candidates", "stud_faculty_identities"];
+const COMPOSITION_TABLES = ["stud_draft_section_versions", "stud_draft_versions", "stud_draft_documents", "stud_composition_section_evidence", "stud_composition_section_claims", "stud_composition_requirement_coverage", "stud_composition_sections", "stud_assignment_composition_plans", "stud_composition_plans"];
 
 let passed = 0;
 function check(name, fn) {
@@ -75,7 +76,7 @@ try {
 
     const v12Root = path.join(root, "legacy-v12");
     const v12 = freshStore(v12Root);
-    removeTables(v12, [...FACULTY_SCOUT_TABLES, ...CLAIM_EVIDENCE_TABLES, ...RESEARCH_PLAN_TABLES, ...OPERATIONAL_TABLES, ...WORKFLOW_CONDITION_TABLES, ...WORKFLOW_TABLES, ...REQUIREMENTS_TABLES, "stud_provider_sync_preferences", "stud_discipline_profile", "stud_tool_preferences"]);
+    removeTables(v12, [...COMPOSITION_TABLES, ...FACULTY_SCOUT_TABLES, ...CLAIM_EVIDENCE_TABLES, ...RESEARCH_PLAN_TABLES, ...OPERATIONAL_TABLES, ...WORKFLOW_CONDITION_TABLES, ...WORKFLOW_TABLES, ...REQUIREMENTS_TABLES, "stud_provider_sync_preferences", "stud_discipline_profile", "stud_tool_preferences"]);
     removeM2Schema(v12);
     v12.db.prepare("DELETE FROM stud_schema_migrations WHERE version>=13").run();
     v12.close();
@@ -91,7 +92,7 @@ try {
     const v9 = freshStore(v9Root);
     const legacyCourse = v9.createEntity("COURSE", {title: "Legacy course retained across migration"});
     const legacyAssignment = v9.createEntity("ASSIGNMENT", {courseId: legacyCourse.id, title: "Legacy assignment retained across migration"});
-    removeTables(v9, [...FACULTY_SCOUT_TABLES, ...CLAIM_EVIDENCE_TABLES, ...RESEARCH_PLAN_TABLES, ...OPERATIONAL_TABLES, ...WORKFLOW_CONDITION_TABLES, ...WORKFLOW_TABLES, ...REQUIREMENTS_TABLES, "stud_provider_sync_preferences", "stud_discipline_profile", "stud_tool_preferences", "stud_repository_references", "stud_datasets", "stud_notebook_outputs", "stud_notebook_cells", "stud_notebooks", "stud_context_packages", "stud_context_decisions", "stud_concept_observations", "stud_academic_concepts"]);
+    removeTables(v9, [...COMPOSITION_TABLES, ...FACULTY_SCOUT_TABLES, ...CLAIM_EVIDENCE_TABLES, ...RESEARCH_PLAN_TABLES, ...OPERATIONAL_TABLES, ...WORKFLOW_CONDITION_TABLES, ...WORKFLOW_TABLES, ...REQUIREMENTS_TABLES, "stud_provider_sync_preferences", "stud_discipline_profile", "stud_tool_preferences", "stud_repository_references", "stud_datasets", "stud_notebook_outputs", "stud_notebook_cells", "stud_notebooks", "stud_context_packages", "stud_context_decisions", "stud_concept_observations", "stud_academic_concepts"]);
     removeM2Schema(v9);
     v9.db.exec("DROP INDEX IF EXISTS stud_assignments_grade_context_index; ALTER TABLE stud_assignments DROP COLUMN grade_scheme; ALTER TABLE stud_assignments DROP COLUMN grade_text;");
     v9.db.prepare("DELETE FROM stud_schema_migrations WHERE version >= 10").run();

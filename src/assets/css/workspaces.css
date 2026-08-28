@@ -7686,3 +7686,93 @@ button.eng-thread-row.active {
     .engineering-mode .stud-assignment-workspace-requirements button { justify-items: start; }
     .engineering-mode .stud-assignment-workspace-actions > div:last-child { width: 100%; }
 }
+
+/* STUD M10 - Composition stays calm around one primary writing surface. */
+.engineering-mode .stud-assignment-workspace-detail.is-composition { min-width: 0; }
+.engineering-mode .stud-composition-workspace { display: grid; gap: .85vh; min-width: 0; padding: .9vh; }
+.engineering-mode .stud-composition-heading { display: flex; justify-content: space-between; align-items: start; gap: 1vh; padding: .85vh 1vh; border-left: .18vh solid var(--aegis-accent-soft); background: var(--aegis-surface-muted); }
+.engineering-mode .stud-composition-heading > div { display: grid; gap: .18vh; min-width: 0; }
+.engineering-mode .stud-composition-heading > div:last-child { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: .4vh; }
+.engineering-mode .stud-composition-heading h2,
+.engineering-mode .stud-composition-heading p { margin: 0; overflow-wrap: anywhere; }
+.engineering-mode .stud-composition-heading h2 { color: var(--aegis-text-primary); font: max(15px,.76vh)/1.3 var(--font_main); }
+.engineering-mode .stud-composition-heading p,
+.engineering-mode .stud-composition-heading span { color: var(--aegis-text-muted); font: max(9px,.38vh)/1.35 var(--font_mono); }
+.engineering-mode .stud-composition-state { color: var(--aegis-accent-soft) !important; }
+.engineering-mode .stud-composition-plan-settings { padding: .55vh .8vh; border: .07vh solid var(--aegis-border-subtle); background: var(--aegis-surface); }
+.engineering-mode .stud-composition-plan-settings form { grid-template-columns: minmax(14rem,1fr); margin-top: .55vh; }
+.engineering-mode .stud-composition-plan-settings form > div { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); }
+.engineering-mode .stud-composition-plan-settings p { margin: 0; color: var(--aegis-text-muted); font: max(9px,.39vh)/1.4 var(--font_main_light); }
+.engineering-mode .stud-composition-workspace button,
+.engineering-mode .stud-composition-workspace summary { min-height: 2.25vh; padding: .34vh .62vh; color: var(--aegis-accent-soft); border: .07vh solid var(--aegis-border); background: transparent; font: max(9px,.38vh)/1.25 var(--font_mono); cursor: pointer; }
+.engineering-mode .stud-composition-workspace button:disabled { color: var(--aegis-text-faint); cursor: not-allowed; opacity: .58; }
+.engineering-mode .stud-composition-layout { display: grid; grid-template-columns: minmax(13rem,.52fr) minmax(26rem,1.45fr) minmax(17rem,.72fr); gap: .8vh; min-width: 0; align-items: start; }
+.engineering-mode .stud-composition-outline,
+.engineering-mode .stud-composition-writer,
+.engineering-mode .stud-composition-support { min-width: 0; border: .07vh solid var(--aegis-border); background: var(--aegis-surface); }
+.engineering-mode .stud-composition-outline > header,
+.engineering-mode .stud-composition-support > header { display: flex; justify-content: space-between; gap: .5vh; padding: .7vh; border-bottom: .06vh solid var(--aegis-border-subtle); }
+.engineering-mode .stud-composition-outline > nav { display: grid; max-height: 60vh; overflow: auto; }
+.engineering-mode .stud-composition-outline > nav > button { display: grid; grid-template-columns: 2.2vh minmax(0,1fr); gap: .18vh .45vh; width: 100%; padding: .72vh .75vh .72vh calc(.75vh + var(--stud-section-depth,0) * .8vh); border: 0; border-left: .16vh solid transparent; border-bottom: .05vh solid var(--aegis-border-subtle); text-align: left; }
+.engineering-mode .stud-composition-outline > nav > button.is-current { border-left-color: var(--aegis-accent-soft); background: var(--aegis-surface-muted); }
+.engineering-mode .stud-composition-outline > nav strong { color: var(--aegis-text-primary); overflow-wrap: anywhere; }
+.engineering-mode .stud-composition-outline > nav small { grid-column: 2; color: var(--aegis-text-faint); }
+.engineering-mode .stud-composition-outline > nav p { padding: .8vh; color: var(--aegis-text-muted); }
+.engineering-mode .stud-composition-outline > details { padding: .65vh; }
+.engineering-mode .stud-composition-workspace form { display: grid; gap: .5vh; }
+.engineering-mode .stud-composition-workspace form label { display: grid; gap: .18vh; color: var(--aegis-text-faint); font: max(9px,.36vh)/1.3 var(--font_mono); }
+.engineering-mode .stud-composition-workspace form > div { display: flex; flex-wrap: wrap; align-items: end; gap: .45vh; }
+.engineering-mode .stud-composition-workspace :is(input,textarea,select) { width: 100%; min-width: 0; padding: .48vh .58vh; color: var(--aegis-text-primary); border: .07vh solid var(--aegis-border); background: var(--aegis-input-bg,var(--aegis-surface-muted)); font: max(10px,.44vh)/1.45 var(--font_main_light); box-sizing: border-box; }
+.engineering-mode .stud-composition-workspace textarea { resize: vertical; }
+.engineering-mode .stud-composition-writer { display: grid; align-content: start; gap: .8vh; padding: 1vh; }
+.engineering-mode .stud-composition-writer > header { display: flex; justify-content: space-between; gap: .8vh; padding-bottom: .7vh; border-bottom: .07vh solid var(--aegis-border-subtle); }
+.engineering-mode .stud-composition-writer h3,
+.engineering-mode .stud-composition-writer p { margin: 0; overflow-wrap: anywhere; }
+.engineering-mode .stud-composition-writer h3 { color: var(--aegis-text-primary); font: max(16px,.82vh)/1.32 var(--font_main); }
+.engineering-mode .stud-composition-writer p { color: var(--aegis-text-muted); font: max(10px,.45vh)/1.5 var(--font_main_light); }
+.engineering-mode .stud-composition-writing-label textarea { min-height: 36vh; padding: 1vh; font: max(11px,.5vh)/1.65 var(--font_main_light); }
+.engineering-mode .stud-composition-section-editor { padding: .55vh 0; border-bottom: .06vh solid var(--aegis-border-subtle); }
+.engineering-mode .stud-composition-section-editor form { margin-top: .55vh; padding: .65vh; background: var(--aegis-surface-muted); }
+.engineering-mode .stud-composition-no-draft,
+.engineering-mode .stud-composition-empty-inline { display: grid; gap: .35vh; padding: 1vh; border-left: .16vh solid var(--aegis-border); background: var(--aegis-surface-muted); }
+.engineering-mode .stud-composition-version-banner { display: flex; justify-content: space-between; align-items: center; gap: .5vh; padding: .55vh .65vh; color: var(--aegis-warning); border-left: .15vh solid var(--aegis-warning); background: var(--aegis-surface-muted); font: max(9px,.38vh)/1.3 var(--font_mono); }
+.engineering-mode .stud-composition-support { display: grid; align-content: start; max-height: 70vh; overflow: auto; }
+.engineering-mode .stud-composition-support > section { display: grid; gap: .42vh; padding: .7vh; border-bottom: .06vh solid var(--aegis-border-subtle); }
+.engineering-mode .stud-composition-support h4 { margin: 0; color: var(--aegis-text-faint); font: max(9px,.38vh) var(--font_mono); }
+.engineering-mode .stud-composition-support article { display: grid; gap: .2vh; padding: .55vh 0; border-bottom: .05vh solid var(--aegis-border-subtle); }
+.engineering-mode .stud-composition-support article strong { color: var(--aegis-text-primary); font: max(10px,.44vh)/1.4 var(--font_main_light); overflow-wrap: anywhere; }
+.engineering-mode .stud-composition-support article small,
+.engineering-mode .stud-composition-support p { margin: 0; color: var(--aegis-text-muted); font: max(9px,.39vh)/1.42 var(--font_main_light); overflow-wrap: anywhere; }
+.engineering-mode .stud-composition-support article > div { display: flex; flex-wrap: wrap; gap: .3vh; }
+.engineering-mode .stud-composition-readiness p { display: grid; gap: .1vh; padding-left: .45vh; border-left: .13vh solid var(--aegis-warning); }
+.engineering-mode .stud-composition-history { display: grid; gap: .5vh; border-top: .07vh solid var(--aegis-border-subtle); padding-top: .7vh; }
+.engineering-mode .stud-composition-history > header,
+.engineering-mode .stud-composition-diff > header { display: flex; justify-content: space-between; gap: .5vh; }
+.engineering-mode .stud-composition-history ol { display: grid; gap: .28vh; margin: 0; padding: 0; list-style: none; }
+.engineering-mode .stud-composition-history li { background: var(--aegis-surface-muted); }
+.engineering-mode .stud-composition-history li > button { display: grid; grid-template-columns: auto minmax(0,1fr); gap: .12vh .5vh; width: 100%; text-align: left; }
+.engineering-mode .stud-composition-history li small { grid-column: 2; color: var(--aegis-text-faint); }
+.engineering-mode .stud-composition-diff { display: grid; gap: .5vh; }
+.engineering-mode .stud-composition-diff pre { display: grid; max-height: 28vh; overflow: auto; padding: .6vh; color: var(--aegis-text-muted); background: var(--aegis-surface-muted); white-space: pre-wrap; overflow-wrap: anywhere; }
+.engineering-mode .stud-composition-diff pre span { display: block; }
+.engineering-mode .stud-composition-diff .is-added { color: var(--aegis-success,var(--aegis-accent-soft)); }
+.engineering-mode .stud-composition-diff .is-removed { color: var(--aegis-warning); }
+.engineering-mode .stud-composition-empty,
+.engineering-mode .stud-composition-loading { display: grid; place-items: start; gap: .55vh; min-height: 24vh; padding: 1.3vh; color: var(--aegis-text-muted); border: .07vh solid var(--aegis-border); background: var(--aegis-surface); }
+.engineering-mode .stud-composition-empty h2 { margin: 0; color: var(--aegis-text-primary); font: max(16px,.86vh) var(--font_main); }
+.engineering-mode .stud-composition-empty.is-error { border-left: .2vh solid var(--aegis-warning); }
+@media (max-width: 1400px) {
+    .engineering-mode .stud-composition-layout { grid-template-columns: minmax(12rem,.48fr) minmax(0,1.3fr); }
+    .engineering-mode .stud-composition-support { grid-column: 1 / -1; grid-template-columns: repeat(2,minmax(0,1fr)); max-height: none; }
+    .engineering-mode .stud-composition-support > header { grid-column: 1 / -1; }
+}
+@media (max-width: 900px) {
+    .engineering-mode .stud-composition-heading,
+    .engineering-mode .stud-composition-writer > header { flex-direction: column; }
+    .engineering-mode .stud-composition-heading > div:last-child { justify-content: flex-start; }
+    .engineering-mode .stud-composition-layout,
+    .engineering-mode .stud-composition-support { grid-template-columns: minmax(0,1fr); }
+    .engineering-mode .stud-composition-plan-settings form > div { grid-template-columns: minmax(0,1fr); }
+    .engineering-mode .stud-composition-outline > nav { max-height: 24vh; }
+    .engineering-mode .stud-composition-writing-label textarea { min-height: 28vh; }
+}

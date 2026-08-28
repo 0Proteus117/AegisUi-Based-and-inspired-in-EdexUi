@@ -78,7 +78,7 @@ try {
     const root = path.join(temp, "domain");
     const {store, requirements, context, workflow} = open(root);
     check("CURRENT_SCHEMA_AND_NO_FABRICATED_CONDITIONS", () => {
-        assert.strictEqual(store.schemaInfo().version, 22);
+        assert.strictEqual(store.schemaInfo().version, 23);
         assert.strictEqual(store.db.prepare("SELECT COUNT(*) count FROM stud_workflow_blockers").get().count, 0);
         assert.strictEqual(store.db.prepare("SELECT COUNT(*) count FROM stud_workflow_checkpoints").get().count, 0);
     });
@@ -271,7 +271,7 @@ try {
     stripV18(path.join(migrationRoot, "academic.sqlite"));
     const migrated = open(migrationRoot);
     check("V17_TO_CURRENT_MIGRATION_PRESERVES_WORKFLOW_WITHOUT_FABRICATION", () => {
-        assert.strictEqual(migrated.store.schemaInfo().version, 22);
+        assert.strictEqual(migrated.store.schemaInfo().version, 23);
         assert.ok(migrated.workflow.read({workflowId: oldWorkflowId}));
         assert.strictEqual(migrated.store.db.prepare("SELECT COUNT(*) count FROM stud_workflow_blockers").get().count, 0);
         assert.strictEqual(migrated.store.db.prepare("SELECT COUNT(*) count FROM stud_workflow_checkpoints").get().count, 0);
