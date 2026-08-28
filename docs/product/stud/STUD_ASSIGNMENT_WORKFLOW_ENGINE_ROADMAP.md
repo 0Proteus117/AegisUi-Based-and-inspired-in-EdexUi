@@ -303,6 +303,9 @@ operation was introduced. See
 
 ## M10 — Composition Plan, requirement coverage and draft versions
 
+**Status: COMPLETE.** Runtime/schema/UI validation is recorded in
+`STUD_M10_COMPOSITION_PLAN_DRAFT_VERSIONS_VALIDATION.md`.
+
 - **Objective:** create an evidence-backed composition plan and versioned drafting
   surface.
 - **Exact scope:** section purpose, requirement/LO/rubric links, planned claims,
@@ -476,8 +479,7 @@ operation was introduced. See
 
 ## Exact next milestone
 
-M1, the dedicated Electron Trust-Boundary Hardening intervention, and M2–M9 are
-complete. The exact next product milestone is **M10 — Composition Plan and Draft
-Versions**. M9 does not include automatic source acquisition, source-quality
-judgement, Evidence creation, drafting, workers, resource profiles, watchdog
-operation or automatic submission.
+M1, the dedicated Electron Trust-Boundary Hardening intervention, and M2–M10 are
+complete. The exact next product milestone is **M11 — Humanisation with Diff**.
+M10 does not include autonomous drafting, Humanisation, Lecturer Committee,
+worker scheduling, resource profiles, watchdog operation or submission.

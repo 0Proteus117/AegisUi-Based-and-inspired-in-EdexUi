@@ -60,7 +60,7 @@ try {
     let env = open(path.join(root, "domain"));
     const {store, workflow, operations} = env;
     check("CURRENT_SCHEMA_AND_NO_FABRICATED_OPERATIONAL_STATE", () => {
-        assert.strictEqual(store.schemaInfo().version, 22);
+        assert.strictEqual(store.schemaInfo().version, 23);
         ["stud_assignment_artifacts", "stud_artifact_relationships", "stud_operation_runs", "stud_operation_events"].forEach(table => assert.strictEqual(store.db.prepare(`SELECT COUNT(*) count FROM ${table}`).get().count, 0));
     });
     const base = fixture(store, workflow);
@@ -208,7 +208,7 @@ try {
     let migration = open(migrationRoot); const legacyAssignment = migration.store.createEntity("ASSIGNMENT", {title: "Existing v18 Assignment"}); migration.store.close(); stripV19(path.join(migrationRoot, "academic.sqlite"));
     migration = open(migrationRoot);
     check("V18_TO_V19_MIGRATION_PRESERVES_ASSIGNMENT_WITHOUT_FABRICATION", () => {
-        assert.strictEqual(migration.store.schemaInfo().version, 22); assert.ok(migration.store.getEntity("ASSIGNMENT", legacyAssignment.id));
+        assert.strictEqual(migration.store.schemaInfo().version, 23); assert.ok(migration.store.getEntity("ASSIGNMENT", legacyAssignment.id));
         assert.strictEqual(migration.store.db.prepare("SELECT COUNT(*) count FROM stud_assignment_artifacts").get().count, 0);
         assert.strictEqual(migration.store.db.prepare("SELECT COUNT(*) count FROM stud_operation_runs").get().count, 0);
     });

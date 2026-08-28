@@ -1236,6 +1236,185 @@ class StudAcademicStore {
             );
             CREATE INDEX stud_faculty_publications_topic_index ON stud_faculty_publication_candidates(topic_id,relevance_state,disposition,updated_at DESC,id DESC);
             CREATE INDEX stud_faculty_publications_faculty_index ON stud_faculty_publication_candidates(faculty_id,updated_at DESC,id DESC);
+        `}, {version: 23, sql: `
+            CREATE TABLE stud_composition_plans (
+                id TEXT PRIMARY KEY,
+                plan_key TEXT NOT NULL,
+                assignment_id TEXT NOT NULL,
+                course_id TEXT,
+                workflow_id TEXT,
+                research_plan_id TEXT,
+                requirements_contract_id TEXT NOT NULL,
+                requirements_contract_revision INTEGER NOT NULL CHECK(requirements_contract_revision >= 1),
+                requirements_contract_hash TEXT NOT NULL,
+                lifecycle TEXT NOT NULL CHECK(lifecycle IN ('DRAFT','REVIEWED','SUPERSEDED')),
+                revision INTEGER NOT NULL CHECK(revision >= 1),
+                parent_plan_id TEXT,
+                title TEXT NOT NULL CHECK(length(title) BETWEEN 1 AND 240),
+                length_unit TEXT NOT NULL CHECK(length_unit IN ('WORDS','PAGES','SLIDES','MINUTES','ITEMS','OTHER')),
+                authoritative_total REAL CHECK(authoritative_total IS NULL OR authoritative_total >= 0),
+                user_planned_total REAL CHECK(user_planned_total IS NULL OR user_planned_total >= 0),
+                total_source TEXT NOT NULL CHECK(total_source IN ('REQUIREMENTS_CONTRACT','USER_PLAN','NONE')),
+                origin TEXT NOT NULL CHECK(origin IN ('USER','REQUIREMENT_PROPOSAL')),
+                user_notes TEXT,
+                plan_hash TEXT,
+                row_version INTEGER NOT NULL DEFAULT 1 CHECK(row_version >= 1),
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                reviewed_at TEXT,
+                FOREIGN KEY(assignment_id) REFERENCES stud_assignments(id),
+                FOREIGN KEY(course_id) REFERENCES stud_courses(id),
+                FOREIGN KEY(workflow_id) REFERENCES stud_workflow_instances(id),
+                FOREIGN KEY(research_plan_id) REFERENCES stud_research_plans(id),
+                FOREIGN KEY(requirements_contract_id) REFERENCES stud_requirement_contracts(id),
+                FOREIGN KEY(parent_plan_id) REFERENCES stud_composition_plans(id),
+                UNIQUE(plan_key,revision)
+            );
+            CREATE UNIQUE INDEX stud_composition_plans_draft_index ON stud_composition_plans(assignment_id) WHERE lifecycle='DRAFT';
+            CREATE INDEX stud_composition_plans_assignment_index ON stud_composition_plans(assignment_id,lifecycle,updated_at DESC,id DESC);
+
+            CREATE TABLE stud_assignment_composition_plans (
+                assignment_id TEXT PRIMARY KEY,
+                current_reviewed_plan_id TEXT,
+                current_draft_plan_id TEXT,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY(assignment_id) REFERENCES stud_assignments(id),
+                FOREIGN KEY(current_reviewed_plan_id) REFERENCES stud_composition_plans(id),
+                FOREIGN KEY(current_draft_plan_id) REFERENCES stud_composition_plans(id),
+                CHECK(current_reviewed_plan_id IS NOT NULL OR current_draft_plan_id IS NOT NULL)
+            );
+
+            CREATE TABLE stud_composition_sections (
+                id TEXT PRIMARY KEY,
+                plan_id TEXT NOT NULL,
+                assignment_id TEXT NOT NULL,
+                parent_section_id TEXT,
+                title TEXT NOT NULL CHECK(length(title) BETWEEN 1 AND 240),
+                purpose TEXT NOT NULL CHECK(length(purpose) BETWEEN 1 AND 12000),
+                section_order INTEGER NOT NULL CHECK(section_order >= 0),
+                depth INTEGER NOT NULL CHECK(depth BETWEEN 0 AND 4),
+                planned_length REAL CHECK(planned_length IS NULL OR planned_length >= 0),
+                length_unit TEXT NOT NULL CHECK(length_unit IN ('WORDS','PAGES','SLIDES','MINUTES','ITEMS','OTHER')),
+                origin TEXT NOT NULL CHECK(origin IN ('USER','REQUIREMENT_PROPOSAL','CLAIM_REVIEW_PROPOSAL')),
+                origin_reason TEXT NOT NULL,
+                notes TEXT,
+                row_version INTEGER NOT NULL DEFAULT 1 CHECK(row_version >= 1),
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY(plan_id) REFERENCES stud_composition_plans(id) ON DELETE CASCADE,
+                FOREIGN KEY(assignment_id) REFERENCES stud_assignments(id),
+                FOREIGN KEY(parent_section_id) REFERENCES stud_composition_sections(id),
+                UNIQUE(plan_id,section_order,id),
+                CHECK(parent_section_id IS NULL OR parent_section_id <> id)
+            );
+            CREATE INDEX stud_composition_sections_plan_index ON stud_composition_sections(plan_id,section_order,id);
+            CREATE INDEX stud_composition_sections_parent_index ON stud_composition_sections(parent_section_id,section_order,id);
+
+            CREATE TABLE stud_composition_requirement_coverage (
+                id TEXT PRIMARY KEY,
+                plan_id TEXT NOT NULL,
+                section_id TEXT,
+                requirement_item_id TEXT NOT NULL,
+                requirement_snapshot_hash TEXT NOT NULL,
+                disposition TEXT NOT NULL CHECK(disposition IN ('ASSIGNED','EXCLUDED')),
+                reason TEXT,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY(plan_id) REFERENCES stud_composition_plans(id) ON DELETE CASCADE,
+                FOREIGN KEY(section_id) REFERENCES stud_composition_sections(id) ON DELETE CASCADE,
+                FOREIGN KEY(requirement_item_id) REFERENCES stud_requirement_items(id),
+                UNIQUE(plan_id,requirement_item_id,section_id),
+                CHECK((disposition='ASSIGNED' AND section_id IS NOT NULL) OR (disposition='EXCLUDED' AND section_id IS NULL AND reason IS NOT NULL))
+            );
+            CREATE INDEX stud_composition_requirement_plan_index ON stud_composition_requirement_coverage(plan_id,requirement_item_id,disposition);
+            CREATE INDEX stud_composition_requirement_section_index ON stud_composition_requirement_coverage(section_id,requirement_item_id);
+
+            CREATE TABLE stud_composition_section_claims (
+                section_id TEXT NOT NULL,
+                claim_id TEXT NOT NULL,
+                placement_order INTEGER NOT NULL DEFAULT 0 CHECK(placement_order >= 0),
+                rationale TEXT,
+                created_at TEXT NOT NULL,
+                PRIMARY KEY(section_id,claim_id),
+                FOREIGN KEY(section_id) REFERENCES stud_composition_sections(id) ON DELETE CASCADE,
+                FOREIGN KEY(claim_id) REFERENCES stud_claims(id)
+            );
+            CREATE INDEX stud_composition_claim_index ON stud_composition_section_claims(claim_id,section_id);
+
+            CREATE TABLE stud_composition_section_evidence (
+                section_id TEXT NOT NULL,
+                evidence_id TEXT NOT NULL,
+                intended_use TEXT,
+                created_at TEXT NOT NULL,
+                PRIMARY KEY(section_id,evidence_id),
+                FOREIGN KEY(section_id) REFERENCES stud_composition_sections(id) ON DELETE CASCADE,
+                FOREIGN KEY(evidence_id) REFERENCES stud_evidence_records(id)
+            );
+            CREATE INDEX stud_composition_evidence_index ON stud_composition_section_evidence(evidence_id,section_id);
+
+            CREATE TABLE stud_draft_documents (
+                id TEXT PRIMARY KEY,
+                assignment_id TEXT NOT NULL,
+                course_id TEXT,
+                composition_plan_id TEXT NOT NULL,
+                composition_plan_revision INTEGER NOT NULL CHECK(composition_plan_revision >= 1),
+                composition_plan_hash TEXT NOT NULL,
+                requirements_contract_id TEXT NOT NULL,
+                requirements_contract_revision INTEGER NOT NULL CHECK(requirements_contract_revision >= 1),
+                requirements_contract_hash TEXT NOT NULL,
+                title TEXT NOT NULL CHECK(length(title) BETWEEN 1 AND 240),
+                lifecycle TEXT NOT NULL CHECK(lifecycle IN ('ACTIVE','ARCHIVED')),
+                current_version_id TEXT,
+                row_version INTEGER NOT NULL DEFAULT 1 CHECK(row_version >= 1),
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY(assignment_id) REFERENCES stud_assignments(id),
+                FOREIGN KEY(course_id) REFERENCES stud_courses(id),
+                FOREIGN KEY(composition_plan_id) REFERENCES stud_composition_plans(id),
+                FOREIGN KEY(requirements_contract_id) REFERENCES stud_requirement_contracts(id),
+                FOREIGN KEY(current_version_id) REFERENCES stud_draft_versions(id),
+                UNIQUE(assignment_id,composition_plan_id,title)
+            );
+            CREATE INDEX stud_draft_documents_assignment_index ON stud_draft_documents(assignment_id,lifecycle,updated_at DESC,id DESC);
+
+            CREATE TABLE stud_draft_versions (
+                id TEXT PRIMARY KEY,
+                draft_id TEXT NOT NULL,
+                assignment_id TEXT NOT NULL,
+                version_number INTEGER NOT NULL CHECK(version_number >= 1),
+                parent_version_id TEXT,
+                origin TEXT NOT NULL CHECK(origin IN ('USER','LOCAL_AI','IMPORTED','REVISION','OTHER')),
+                change_reason TEXT,
+                content_hash TEXT NOT NULL,
+                total_length REAL NOT NULL DEFAULT 0 CHECK(total_length >= 0),
+                length_unit TEXT NOT NULL CHECK(length_unit IN ('WORDS','PAGES','SLIDES','MINUTES','ITEMS','OTHER')),
+                created_at TEXT NOT NULL,
+                FOREIGN KEY(draft_id) REFERENCES stud_draft_documents(id) ON DELETE CASCADE,
+                FOREIGN KEY(assignment_id) REFERENCES stud_assignments(id),
+                FOREIGN KEY(parent_version_id) REFERENCES stud_draft_versions(id),
+                UNIQUE(draft_id,version_number)
+            );
+            CREATE INDEX stud_draft_versions_document_index ON stud_draft_versions(draft_id,version_number DESC,id DESC);
+
+            CREATE TABLE stud_draft_section_versions (
+                id TEXT PRIMARY KEY,
+                draft_version_id TEXT NOT NULL,
+                draft_id TEXT NOT NULL,
+                section_id TEXT NOT NULL,
+                content TEXT NOT NULL,
+                content_hash TEXT NOT NULL,
+                measured_length REAL NOT NULL DEFAULT 0 CHECK(measured_length >= 0),
+                created_at TEXT NOT NULL,
+                FOREIGN KEY(draft_version_id) REFERENCES stud_draft_versions(id) ON DELETE CASCADE,
+                FOREIGN KEY(draft_id) REFERENCES stud_draft_documents(id) ON DELETE CASCADE,
+                FOREIGN KEY(section_id) REFERENCES stud_composition_sections(id),
+                UNIQUE(draft_version_id,section_id)
+            );
+            CREATE INDEX stud_draft_section_version_index ON stud_draft_section_versions(draft_version_id,section_id);
+
+            ALTER TABLE stud_working_context ADD COLUMN active_composition_plan_id TEXT REFERENCES stud_composition_plans(id);
+            ALTER TABLE stud_working_context ADD COLUMN active_composition_section_id TEXT REFERENCES stud_composition_sections(id);
+            ALTER TABLE stud_working_context ADD COLUMN active_draft_document_id TEXT REFERENCES stud_draft_documents(id);
+            ALTER TABLE stud_working_context ADD COLUMN active_draft_version_id TEXT REFERENCES stud_draft_versions(id);
         `}];
         for (const migration of migrations) {
             if (applied.has(migration.version)) continue;

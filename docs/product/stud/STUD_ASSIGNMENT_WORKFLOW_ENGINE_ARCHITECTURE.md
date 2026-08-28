@@ -376,10 +376,30 @@ it performs no network operation.
 
 ### Composition, drafting and Humanisation
 
-- Composition Plans contain versioned sections, purpose, requirement/learning-
-  outcome links, planned claims/evidence and word budgets.
-- Drafts are versioned canonical workflow artifacts with parent version and
-  immutable source/context snapshot IDs. They are not silently overwritten.
+- M10 implements Composition Plans as Assignment-owned revision lineages with
+  an explicit current reviewed pointer. A reviewed revision has a deterministic
+  SHA-256 fingerprint and cannot be edited in place; changes create a new Draft
+  plan revision while the prior reviewed plan remains queryable.
+- Sections retain hierarchy, order, purpose, origin/reason, length unit and
+  optional allocation. Requirement placement references exact M1 Requirement
+  Items plus their snapshot hashes. Intentional exclusion requires a persisted
+  user reason. Claim and Evidence placement references canonical M8 identities;
+  it does not duplicate Claim text, Evidence provenance or Citation records.
+- Length authority and user planning are independent. An authoritative total is
+  used only when the reviewed Contract has one unambiguous supported LENGTH
+  observation in the selected unit. `WORDS`, `PAGES`, `SLIDES`, `MINUTES`,
+  `ITEMS` and `OTHER` remain discipline-neutral; only words/items are measured
+  automatically from plain draft text.
+- Draft Documents bind to the exact reviewed Composition Plan and Requirements
+  Contract revision/hash. Every explicit save creates an immutable Draft Version
+  plus a complete per-Section content/hash snapshot. Historical versions remain
+  readable and a bounded deterministic line diff compares explicit versions.
+- Composition readiness is an explainable list of structural, Requirement,
+  Claim/Evidence, Citation, Research Gap and Workflow Blocker conditions. It is
+  not an academic quality judgement and has no fabricated percentage.
+- Working Context may retain the active Composition Plan, Section, Draft and
+  exact Draft Version. Main process validates Assignment/Plan/Draft ownership;
+  context changes never start a provider, model, Workflow or Run.
 - Local AI may draft only from an approved Context Package/source plan and keeps
   the existing no-tools/no-cloud/no-automatic-save boundary.
 - Humanisation is an opt-in draft transformation with author/genre profile,
