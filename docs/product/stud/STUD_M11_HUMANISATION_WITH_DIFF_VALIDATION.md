@@ -1,8 +1,8 @@
 # STUD M11 — Humanisation with Diff validation
 
-Date: 2026-08-29  
-Implementation baseline: `891fb2a98e7187300e3a2f8817441ecf9ce23580`  
-Canonical academic schema: v24  
+Date: 2026-08-29
+Implementation baseline: `891fb2a98e7187300e3a2f8817441ecf9ce23580`
+Canonical academic schema: v24
 Product authority: `AEGIS_STUD_ASSIGNMENT_WORKFLOW_ENGINE_SPEC.pdf`
 
 ## Scope and outcome
@@ -242,10 +242,23 @@ BLOCKING/MAJOR finding remained after correction and rerun.
 ## Packaging decision
 
 M11 extends preload and the local-AI runtime boundary, so private ARM64 packaged
-validation is required. The final validation records the DMG filename/hash,
-`app.asar` inspection, mount/launch, signature, Citation.js, Calendar helper,
-node-pty architecture, terminal and renderer isolation. No public release is
-created for this incremental milestone.
+validation was required. `AegisUi-2.7.1-arm64.dmg` was generated from a
+prebuild whose integrity stamp matched the M11 implementation commit, verified
+with `hdiutil`, mounted read-only and launched from the mounted volume. The
+application and nested helpers passed strict deep code-signature validation.
+
+Inspection of the packaged `app.asar` confirmed the M11 domain, repository,
+service, runtime and workspace implementation plus Citation.js. The packaged
+Calendar helper and ARM64 node-pty `spawn-helper` were present and valid. A live
+packaged-runtime probe confirmed Requirements Contract, Workflow, Working
+Context, Citation.js, Moodle boundary, Documents, Compute, local Ollama bridge
+and terminal connectivity. The packaged renderer exposed neither `require`,
+`process`, raw Electron nor raw `ipcRenderer`; `contextIsolation` remained
+effective. The synthetic M11 candidate/diff surface also passed at 1440×900.
+The first validation artifact had SHA-256
+`477e5f36e57b904762da33daa4344f8711e69228fc88771202321f22a467e471`;
+the final post-documentation artifact checksum is reported in the milestone
+handoff. No public release is created for this incremental milestone.
 
 ## Boundary
 
