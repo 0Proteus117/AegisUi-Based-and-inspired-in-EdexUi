@@ -46,6 +46,13 @@ class StudArtifactOperationsService {
     scopedArtifact(assignmentId, artifactId) { const assignment = this.assignment(assignmentId); const artifact = this.repository.requireArtifact(artifactId); if (artifact.assignmentId !== assignment.id) throw new Academic.StudError("CROSS_ASSIGNMENT_ARTIFACT", "Artifact does not belong to this Assignment."); return artifact; }
     scopedRun(assignmentId, runId) { const assignment = this.assignment(assignmentId); const run = this.repository.requireRun(runId); if (run.assignmentId !== assignment.id) throw new Academic.StudError("INVALID_INPUT", "Operation Run does not belong to this Assignment."); return run; }
     canonical(type, id) {
+        if (String(type || "").toUpperCase() === "DRAFT_VERSION") {
+            const objectId = Academic.safeId(id, "Draft Version ID");
+            const row = this.repository.db.prepare(`SELECT v.id,v.draft_id,v.assignment_id,v.version_number,v.content_hash,v.created_at,d.title
+                FROM stud_draft_versions v JOIN stud_draft_documents d ON d.id=v.draft_id WHERE v.id=?`).get(objectId);
+            if (!row) throw new Academic.StudError("NOT_FOUND", "Canonical Draft Version does not exist.");
+            return Object.freeze({id: row.id, draftId: row.draft_id, assignmentId: row.assignment_id, versionNumber: row.version_number, contentHash: row.content_hash, createdAt: row.created_at, title: `${row.title} · V${row.version_number}`, entityType: "DRAFT_VERSION"});
+        }
         const entityType = Academic.validateEntityType(type);
         if (["COURSE", "ASSIGNMENT"].includes(entityType)) throw new Academic.StudError("INVALID_INPUT", "Course and Assignment records are context, not Artifact Bay entries.");
         const value = this.store.getEntity(entityType, Academic.safeId(id, "Canonical object ID"));
@@ -71,6 +78,11 @@ class StudArtifactOperationsService {
     eventCanonical(assignment, type, id) {
         if (!type && !id) return {canonicalObjectType: null, canonicalObjectId: null};
         if (!type || !id) throw new Academic.StudError("INVALID_INPUT", "Event canonical object type and ID must be supplied together.");
+        if (String(type || "").toUpperCase() === "DRAFT_VERSION") {
+            const object = this.canonical("DRAFT_VERSION", id);
+            if (object.assignmentId !== assignment.id) throw new Academic.StudError("CONTEXT_RELATION_REQUIRED", "Event Draft Version belongs to another Assignment.");
+            return {canonicalObjectType: "DRAFT_VERSION", canonicalObjectId: object.id};
+        }
         const entityType = Academic.validateEntityType(type);
         const objectId = Academic.safeId(id, "Canonical object ID");
         const object = this.store.getEntity(entityType, objectId);
@@ -85,7 +97,9 @@ class StudArtifactOperationsService {
         Academic.assertAllowedKeys(input, ["assignmentId", "canonicalObjectType", "canonicalObjectId", "artifactType", "label", "origin", "producer", "workflowId", "workflowNodeId", "runId", "parentArtifactId", "metadata", "integrityHash", "availabilityState"], "Artifact registration");
         const assignment = this.assignment(input.assignmentId);
         const object = this.canonical(input.canonicalObjectType, input.canonicalObjectId);
-        this.scopeObject(assignment, object);
+        if (object.entityType === "DRAFT_VERSION") {
+            if (object.assignmentId !== assignment.id) throw new Academic.StudError("CONTEXT_RELATION_REQUIRED", "Draft Version Artifact belongs to another Assignment.");
+        } else this.scopeObject(assignment, object);
         const workflow = this.workflowScope(assignment.id, input.workflowId || null, input.workflowNodeId || null);
         const artifactType = Academic.enumValue(input.artifactType || DEFAULT_ARTIFACT_TYPE[object.entityType] || "GENERIC_MANUAL", Domain.ARTIFACT_TYPES, "Artifact type");
         const existing = this.repository.db.prepare("SELECT id FROM stud_assignment_artifacts WHERE assignment_id=? AND canonical_object_type=? AND canonical_object_id=? AND artifact_type=?").get(assignment.id, object.entityType, object.id, artifactType);
@@ -105,7 +119,8 @@ class StudArtifactOperationsService {
         };
         return this.repository.transaction(() => {
             const artifact = this.repository.insertArtifact(value);
-            this.appendEvent({assignmentId: assignment.id, ...workflow, runId: input.runId || null, eventType: "ARTIFACT_REGISTERED", actor: value.origin === "SYSTEM_GENERATED" ? "SYSTEM" : "USER", severity: "INFO", summary: `Registered ${artifact.label}`, artifactIds: [artifact.id], canonicalObjectType: object.entityType, canonicalObjectId: object.id, payload: {artifactType: artifact.artifactType, origin: artifact.origin}});
+            const actor = value.origin === "MODEL_GENERATED" ? "MODEL" : value.origin === "SYSTEM_GENERATED" ? "SYSTEM" : "USER";
+            this.appendEvent({assignmentId: assignment.id, ...workflow, runId: input.runId || null, eventType: "ARTIFACT_REGISTERED", actor, severity: "INFO", summary: `Registered ${artifact.label}`, artifactIds: [artifact.id], canonicalObjectType: object.entityType, canonicalObjectId: object.id, payload: {artifactType: artifact.artifactType, origin: artifact.origin}});
             return Object.freeze({artifact, created: true});
         });
     }

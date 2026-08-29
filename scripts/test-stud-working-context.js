@@ -25,7 +25,7 @@ try {
     const service = new StudWorkingContextService({store, requirementsService: requirements});
 
     check("CURRENT_SCHEMA_AND_NO_FABRICATED_CONTEXT", () => {
-        assert.strictEqual(store.schemaInfo().version, 23);
+        assert.strictEqual(store.schemaInfo().version, 24);
         assert.strictEqual(service.read().status, "EMPTY");
     });
     const engineering = store.createEntity("COURSE", {title: "Structures", code: "ENG101", academicYear: "2025/26", academicTerm: "Term 1"});
@@ -113,7 +113,7 @@ try {
     db.close();
     legacy = makeStore(v15Root);
     check("V15_TO_CURRENT_MIGRATION_NO_FABRICATED_STATE", () => {
-        assert.strictEqual(legacy.schemaInfo().version, 23);
+        assert.strictEqual(legacy.schemaInfo().version, 24);
         assert.strictEqual(legacy.getEntity("COURSE", legacyCourse.id).academicYear, null);
         assert.strictEqual(new StudWorkingContextService({store: legacy}).read().status, "EMPTY");
     });

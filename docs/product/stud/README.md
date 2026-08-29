@@ -26,6 +26,7 @@ documents translate that intent into the audited v2.7.0 implementation:
 - [M8 Claims / Evidence Map / Citation Integrity implementation and validation](STUD_M8_CLAIMS_EVIDENCE_CITATION_INTEGRITY_VALIDATION.md)
 - [M9 Faculty Literature Scout implementation and validation](STUD_M9_FACULTY_LITERATURE_SCOUT_VALIDATION.md)
 - [M10 Composition Plan / Draft Versions implementation and validation](STUD_M10_COMPOSITION_PLAN_DRAFT_VERSIONS_VALIDATION.md)
+- [M11 Humanisation with Diff implementation and validation](STUD_M11_HUMANISATION_WITH_DIFF_VALIDATION.md)
 - [M1-M3 integration and final technical audit](STUD_M1_M3_INTEGRATION_AUDIT.md)
 - [Electron trust-boundary hardening](../../security/ELECTRON_TRUST_BOUNDARY_HARDENING_2026-08-24.md)
 
@@ -72,4 +73,10 @@ explicit Requirement/Claim/Evidence placement, explainable readiness and
 immutable Draft Versions with bounded line diff. M10 references M8 Evidence and
 Citation.js output without creating a second intellectual-evidence store, and
 ordinary planning creates no provider, AI or Mission Control activity. The
-exact next product milestone is M11 — Humanisation with Diff.
+M11 advances schema v23 to v24 with versioned local Humanisation Profiles,
+explicit user-authored writing samples, exact immutable Draft source lineage,
+protected academic spans, deterministic integrity checks, inspectable diff and
+explicit full/Section acceptance into a new M10 Draft Version. It uses the fixed
+Ollama loopback boundary without tools or cloud fallback; the installed 3B model
+is reported as limited and carries no quality claim. The exact next product
+milestone is M12 — Lecturer Committee and Corrections.

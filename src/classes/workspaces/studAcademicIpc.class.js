@@ -18,6 +18,8 @@ const {StudResearchPlanService} = require("./studResearchPlanService.class.js");
 const {StudClaimEvidenceService} = require("./studClaimEvidenceService.class.js");
 const {StudFacultyLiteratureService} = require("./studFacultyLiteratureService.class.js");
 const {StudCompositionService} = require("./studCompositionService.class.js");
+const {StudHumanisationRuntime} = require("./studHumanisationRuntime.class.js");
+const {StudHumanisationService} = require("./studHumanisationService.class.js");
 
 const CHANNELS = Object.freeze([
     "stud-core-status",
@@ -241,6 +243,7 @@ const CHANNELS = Object.freeze([
     "stud-draft-version-read",
     "stud-draft-save-version",
     "stud-draft-diff"
+    ,"stud-humanisation-profile-list","stud-humanisation-profile-read","stud-humanisation-profile-create","stud-humanisation-profile-update","stud-humanisation-profile-duplicate","stud-humanisation-profile-archive","stud-humanisation-sample-add","stud-humanisation-sample-remove","stud-humanisation-profile-analyze","stud-humanisation-session-list","stud-humanisation-session-read","stud-humanisation-session-create","stud-humanisation-status","stud-humanisation-run","stud-humanisation-cancel","stud-humanisation-diff","stud-humanisation-accept","stud-humanisation-reject"
 ]);
 
 function senderIsTrusted(event) {
@@ -331,6 +334,12 @@ function registerStudAcademicIpc(options = {}) {
     // It references M1/M8 canonical records and never treats writing as
     // Workflow completion, Evidence creation or operational execution.
     const composition = options.compositionService || new StudCompositionService({store, workingContextService: workingContext, claimEvidenceService: claimEvidence});
+    // M11 is a bounded local editorial transformation over exact immutable M10
+    // versions. Profile origins, integrity results, AI origin and accepted
+    // lineage remain main-process owned; no generic model or persistence bridge
+    // is exposed to the renderer.
+    const humanisationRuntime = options.humanisationRuntime || new StudHumanisationRuntime({assistantRuntime: academicAiRuntime});
+    const humanisation = options.humanisationService || new StudHumanisationService({store, compositionService: composition, runtime: humanisationRuntime, artifactOperationsService: artifactOperations, workingContextService: workingContext});
     let shell = options.shell || null;
     if (!shell) { try { shell = require("electron").shell; } catch (error) {} }
     const handlers = new Map();
@@ -368,7 +377,7 @@ function registerStudAcademicIpc(options = {}) {
     add("stud-assessment-classification-set", ["assignmentId", "classification", "reason"], payload => workingContext.setClassification(payload));
     add("stud-course-organisation", ["limit"], payload => workingContext.courseOrganisation(payload));
     add("stud-working-context-read", [], () => workingContext.read());
-    add("stud-working-context-update", ["courseId", "assignmentId", "objectType", "objectId", "workflowId", "workflowNodeId", "researchPlanId", "researchTopicId", "claimId", "evidenceId", "compositionPlanId", "compositionSectionId", "draftDocumentId", "draftVersionId", "originSurface", "userPinned"], payload => workingContext.update(payload));
+    add("stud-working-context-update", ["courseId", "assignmentId", "objectType", "objectId", "workflowId", "workflowNodeId", "researchPlanId", "researchTopicId", "claimId", "evidenceId", "compositionPlanId", "compositionSectionId", "draftDocumentId", "draftVersionId", "humanisationProfileId", "humanisationSessionId", "originSurface", "userPinned"], payload => workingContext.update(payload));
     add("stud-working-context-clear", [], () => workingContext.clear());
     add("stud-workflow-templates", ["assignmentId"], payload => workflow.templates(payload));
     add("stud-workflow-assignment-state", ["assignmentId", "historyLimit"], payload => workflow.assignmentState(payload));
@@ -458,6 +467,24 @@ function registerStudAcademicIpc(options = {}) {
     add("stud-draft-version-read", ["assignmentId", "draftId", "versionId"], payload => composition.draftVersion(payload));
     add("stud-draft-save-version", ["assignmentId", "draftId", "expectedVersion", "sections", "changeReason"], payload => composition.saveDraftVersion({...payload,origin:"USER"}));
     add("stud-draft-diff", ["assignmentId", "draftId", "fromVersionId", "toVersionId"], payload => composition.diff(payload));
+    add("stud-humanisation-profile-list", ["includeArchived", "limit"], payload => humanisation.profiles(payload));
+    add("stud-humanisation-profile-read", ["profileId", "historyLimit"], payload => humanisation.profile(payload));
+    add("stud-humanisation-profile-create", ["name", "genre", "preferences", "preferredPhrases", "avoidedPhrases", "customNotes", "genreDefault"], payload => humanisation.createProfile({...payload,origin:payload.genreDefault===true?"GENRE_DEFAULT":"USER_CONFIGURED"}));
+    add("stud-humanisation-profile-update", ["profileId", "expectedVersion", "name", "genre", "preferences", "preferredPhrases", "avoidedPhrases", "customNotes"], payload => humanisation.updateProfile(payload));
+    add("stud-humanisation-profile-duplicate", ["profileId", "name"], payload => humanisation.duplicateProfile(payload));
+    add("stud-humanisation-profile-archive", ["profileId", "expectedVersion"], payload => humanisation.archiveProfile(payload));
+    add("stud-humanisation-sample-add", ["profileId", "sourceType", "canonicalObjectId", "text", "label", "genre", "confirmUserAuthorship"], payload => humanisation.addSample(payload));
+    add("stud-humanisation-sample-remove", ["profileId", "sampleId", "expectedVersion"], payload => humanisation.removeSample(payload));
+    add("stud-humanisation-profile-analyze", ["profileId", "expectedVersion"], payload => humanisation.analyzeProfile(payload));
+    add("stud-humanisation-session-list", ["assignmentId", "draftId", "limit"], payload => humanisation.sessions(payload));
+    add("stud-humanisation-session-read", ["assignmentId", "sessionId"], payload => humanisation.session(payload));
+    add("stud-humanisation-session-create", ["assignmentId", "draftId", "sourceVersionId", "profileId", "scope", "sectionIds", "goals", "editorialNote"], payload => humanisation.createSession(payload));
+    add("stud-humanisation-status", [], () => humanisation.status());
+    add("stud-humanisation-run", ["assignmentId", "sessionId", "expectedVersion"], payload => humanisation.transform(payload));
+    add("stud-humanisation-cancel", ["assignmentId", "sessionId", "expectedVersion"], payload => humanisation.cancel(payload));
+    add("stud-humanisation-diff", ["assignmentId", "sessionId", "sectionId"], payload => humanisation.diff(payload));
+    add("stud-humanisation-accept", ["assignmentId", "sessionId", "expectedVersion", "sectionIds"], payload => humanisation.accept(payload));
+    add("stud-humanisation-reject", ["assignmentId", "sessionId", "expectedVersion"], payload => humanisation.reject(payload));
     add("stud-requirements-state", ["assignmentId"], payload => requirements.state(payload.assignmentId));
     add("stud-requirements-create-draft", ["assignmentId"], payload => requirements.createDraft(payload.assignmentId));
     add("stud-requirements-review-candidate", ["contractId", "candidateId", "disposition", "expectedVersion"], payload => requirements.reviewCandidate(payload));
@@ -679,6 +706,7 @@ function registerStudAcademicIpc(options = {}) {
         lmsRuntime.dispose();
         documentRuntime.dispose();
         academicAiRuntime.dispose();
+        humanisationRuntime.dispose();
         notebookRuntime.dispose();
         store.close();
     }});
