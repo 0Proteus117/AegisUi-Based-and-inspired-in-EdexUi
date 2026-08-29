@@ -330,6 +330,13 @@ operation was introduced. See
 
 ## M11 — Versioned Humanisation with diff
 
+**Status: COMPLETE.** Implementation and validation are recorded in
+`STUD_M11_HUMANISATION_WITH_DIFF_VALIDATION.md`. Canonical schema v24 preserves
+versioned Profiles, explicit writing samples, immutable Session/Draft lineage,
+protected-span integrity, inspectable diff and explicit acceptance. The local
+model boundary has no tools or cloud fallback; unavailable/limited capability is
+reported honestly.
+
 - **Objective:** provide controlled author-voice editing without evidence changes
   or detector-evasion claims.
 - **Exact scope:** explicit genre/profile selection, bounded local-model transform,
@@ -359,7 +366,7 @@ operation was introduced. See
   section handling, accept/reject/defer finding and correction trace.
 - **Components:** review service, Requirements Contract/rubric, Evidence Map,
   drafts, Revision Items, Local AI and UI.
-- **Schema/migration:** expected v24; review rounds/findings/decisions and links.
+- **Schema/migration:** expected v25; review rounds/findings/decisions and links.
 - **Dependencies:** M10; M11 optional.
 - **Non-goals:** no institutional grade promise, automatic final acceptance,
   penalty for genuine blockers or historical-result rewriting.
@@ -479,7 +486,7 @@ operation was introduced. See
 
 ## Exact next milestone
 
-M1, the dedicated Electron Trust-Boundary Hardening intervention, and M2–M10 are
-complete. The exact next product milestone is **M11 — Humanisation with Diff**.
-M10 does not include autonomous drafting, Humanisation, Lecturer Committee,
+M1, the dedicated Electron Trust-Boundary Hardening intervention, and M2–M11 are
+complete. The exact next product milestone is **M12 — Lecturer Committee and
+Corrections**. M10/M11 do not include autonomous drafting, Lecturer Committee,
 worker scheduling, resource profiles, watchdog operation or submission.

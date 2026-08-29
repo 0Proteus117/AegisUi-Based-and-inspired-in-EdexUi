@@ -1415,6 +1415,141 @@ class StudAcademicStore {
             ALTER TABLE stud_working_context ADD COLUMN active_composition_section_id TEXT REFERENCES stud_composition_sections(id);
             ALTER TABLE stud_working_context ADD COLUMN active_draft_document_id TEXT REFERENCES stud_draft_documents(id);
             ALTER TABLE stud_working_context ADD COLUMN active_draft_version_id TEXT REFERENCES stud_draft_versions(id);
+        `}, {version: 24, sql: `
+            CREATE TABLE stud_humanisation_profiles (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL CHECK(length(name) BETWEEN 1 AND 160),
+                genre TEXT NOT NULL CHECK(genre IN ('ACADEMIC_ESSAY','TECHNICAL_REPORT','LAB_REPORT','REFLECTIVE_WRITING','CASE_ANALYSIS','RESEARCH_REPORT','PRESENTATION_SCRIPT','CUSTOM')),
+                lifecycle TEXT NOT NULL CHECK(lifecycle IN ('ACTIVE','ARCHIVED')),
+                current_revision_id TEXT,
+                row_version INTEGER NOT NULL DEFAULT 1 CHECK(row_version >= 1),
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY(current_revision_id) REFERENCES stud_humanisation_profile_revisions(id)
+            );
+            CREATE INDEX stud_humanisation_profiles_state_index ON stud_humanisation_profiles(lifecycle,updated_at DESC,id DESC);
+
+            CREATE TABLE stud_humanisation_profile_revisions (
+                id TEXT PRIMARY KEY,
+                profile_id TEXT NOT NULL,
+                revision INTEGER NOT NULL CHECK(revision >= 1),
+                origin TEXT NOT NULL CHECK(origin IN ('USER_CONFIGURED','USER_WRITING_SAMPLES','GENRE_DEFAULT','IMPORT_OTHER')),
+                preferences_json TEXT NOT NULL,
+                preferred_phrases_json TEXT NOT NULL,
+                avoided_phrases_json TEXT NOT NULL,
+                custom_notes TEXT,
+                fingerprint_json TEXT NOT NULL,
+                profile_hash TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY(profile_id) REFERENCES stud_humanisation_profiles(id) ON DELETE CASCADE,
+                UNIQUE(profile_id,revision)
+            );
+            CREATE INDEX stud_humanisation_profile_revisions_index ON stud_humanisation_profile_revisions(profile_id,revision DESC,id DESC);
+
+            CREATE TABLE stud_humanisation_writing_samples (
+                id TEXT PRIMARY KEY,
+                profile_id TEXT NOT NULL,
+                source_type TEXT NOT NULL CHECK(source_type IN ('MANUAL_TEXT','CANONICAL_NOTE','CANONICAL_DRAFT','CANONICAL_DOCUMENT')),
+                canonical_object_type TEXT,
+                canonical_object_id TEXT,
+                authorship TEXT NOT NULL CHECK(authorship IN ('USER_CONFIRMED','UNKNOWN')),
+                genre TEXT NOT NULL CHECK(genre IN ('ACADEMIC_ESSAY','TECHNICAL_REPORT','LAB_REPORT','REFLECTIVE_WRITING','CASE_ANALYSIS','RESEARCH_REPORT','PRESENTATION_SCRIPT','CUSTOM')),
+                label TEXT NOT NULL CHECK(length(label) BETWEEN 1 AND 240),
+                text_snapshot TEXT NOT NULL,
+                content_hash TEXT NOT NULL,
+                state TEXT NOT NULL CHECK(state IN ('ACTIVE','REMOVED')),
+                row_version INTEGER NOT NULL DEFAULT 1 CHECK(row_version >= 1),
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY(profile_id) REFERENCES stud_humanisation_profiles(id) ON DELETE CASCADE,
+                CHECK((canonical_object_type IS NULL AND canonical_object_id IS NULL) OR (canonical_object_type IS NOT NULL AND canonical_object_id IS NOT NULL))
+            );
+            CREATE INDEX stud_humanisation_samples_profile_index ON stud_humanisation_writing_samples(profile_id,state,updated_at DESC,id DESC);
+
+            CREATE TABLE stud_humanisation_sessions (
+                id TEXT PRIMARY KEY,
+                assignment_id TEXT NOT NULL,
+                draft_id TEXT NOT NULL,
+                source_draft_version_id TEXT NOT NULL,
+                source_content_hash TEXT NOT NULL,
+                composition_plan_id TEXT NOT NULL,
+                composition_plan_revision INTEGER NOT NULL CHECK(composition_plan_revision >= 1),
+                composition_plan_hash TEXT NOT NULL,
+                requirements_contract_id TEXT NOT NULL,
+                requirements_contract_revision INTEGER NOT NULL CHECK(requirements_contract_revision >= 1),
+                requirements_contract_hash TEXT NOT NULL,
+                profile_id TEXT NOT NULL,
+                profile_revision_id TEXT NOT NULL,
+                profile_hash TEXT NOT NULL,
+                scope TEXT NOT NULL CHECK(scope IN ('SECTION','SELECTED_SECTIONS','FULL_DRAFT')),
+                goals_json TEXT NOT NULL,
+                editorial_note TEXT,
+                state TEXT NOT NULL CHECK(state IN ('CREATED','RUNNING','CANDIDATE_READY','NEEDS_REVIEW','ACCEPTED','REJECTED','FAILED','CANCELLED')),
+                runtime TEXT,
+                model TEXT,
+                capability_state TEXT,
+                run_id TEXT,
+                candidate_hash TEXT,
+                integrity_state TEXT NOT NULL CHECK(integrity_state IN ('PENDING','PASS','CONFLICT','REVIEW_REQUIRED')),
+                decision TEXT CHECK(decision IS NULL OR decision IN ('ACCEPT_ALL','ACCEPT_SELECTED_SECTIONS','REJECT_ALL')),
+                resulting_draft_version_id TEXT,
+                error_summary TEXT,
+                row_version INTEGER NOT NULL DEFAULT 1 CHECK(row_version >= 1),
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                finished_at TEXT,
+                FOREIGN KEY(assignment_id) REFERENCES stud_assignments(id),
+                FOREIGN KEY(draft_id) REFERENCES stud_draft_documents(id),
+                FOREIGN KEY(source_draft_version_id) REFERENCES stud_draft_versions(id),
+                FOREIGN KEY(composition_plan_id) REFERENCES stud_composition_plans(id),
+                FOREIGN KEY(requirements_contract_id) REFERENCES stud_requirement_contracts(id),
+                FOREIGN KEY(profile_id) REFERENCES stud_humanisation_profiles(id),
+                FOREIGN KEY(profile_revision_id) REFERENCES stud_humanisation_profile_revisions(id),
+                FOREIGN KEY(run_id) REFERENCES stud_operation_runs(id),
+                FOREIGN KEY(resulting_draft_version_id) REFERENCES stud_draft_versions(id)
+            );
+            CREATE INDEX stud_humanisation_sessions_assignment_index ON stud_humanisation_sessions(assignment_id,updated_at DESC,id DESC);
+            CREATE INDEX stud_humanisation_sessions_draft_index ON stud_humanisation_sessions(draft_id,updated_at DESC,id DESC);
+
+            CREATE TABLE stud_humanisation_session_sections (
+                id TEXT PRIMARY KEY,
+                session_id TEXT NOT NULL,
+                section_id TEXT NOT NULL,
+                section_order INTEGER NOT NULL CHECK(section_order >= 0),
+                source_content_hash TEXT NOT NULL,
+                protected_spans_json TEXT NOT NULL,
+                candidate_content TEXT,
+                candidate_content_hash TEXT,
+                integrity_state TEXT NOT NULL CHECK(integrity_state IN ('PENDING','PASS','CONFLICT','REVIEW_REQUIRED')),
+                editorial_categories_json TEXT NOT NULL,
+                decision TEXT NOT NULL CHECK(decision IN ('PENDING','ACCEPTED','REJECTED')),
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY(session_id) REFERENCES stud_humanisation_sessions(id) ON DELETE CASCADE,
+                FOREIGN KEY(section_id) REFERENCES stud_composition_sections(id),
+                UNIQUE(session_id,section_id)
+            );
+            CREATE INDEX stud_humanisation_session_sections_index ON stud_humanisation_session_sections(session_id,section_order,id);
+
+            CREATE TABLE stud_humanisation_integrity_checks (
+                id TEXT PRIMARY KEY,
+                session_id TEXT NOT NULL,
+                section_id TEXT,
+                check_type TEXT NOT NULL CHECK(check_type IN ('CITATIONS','NUMBERS_UNITS','QUOTATIONS','EQUATIONS','URL_IDENTIFIERS','PROTECTED_TERMS','CLAIMS','EVIDENCE_LINKS')),
+                state TEXT NOT NULL CHECK(state IN ('PASS','CONFLICT','REVIEW_REQUIRED','NOT_APPLICABLE')),
+                source_values_json TEXT NOT NULL,
+                candidate_values_json TEXT NOT NULL,
+                summary TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY(session_id) REFERENCES stud_humanisation_sessions(id) ON DELETE CASCADE,
+                FOREIGN KEY(section_id) REFERENCES stud_composition_sections(id)
+            );
+            CREATE INDEX stud_humanisation_checks_session_index ON stud_humanisation_integrity_checks(session_id,section_id,check_type);
+
+            ALTER TABLE stud_working_context ADD COLUMN active_humanisation_profile_id TEXT REFERENCES stud_humanisation_profiles(id);
+            ALTER TABLE stud_working_context ADD COLUMN active_humanisation_session_id TEXT REFERENCES stud_humanisation_sessions(id);
+            ALTER TABLE stud_draft_versions ADD COLUMN humanisation_session_id TEXT REFERENCES stud_humanisation_sessions(id);
+            ALTER TABLE stud_draft_versions ADD COLUMN humanisation_profile_revision_id TEXT REFERENCES stud_humanisation_profile_revisions(id);
         `}];
         for (const migration of migrations) {
             if (applied.has(migration.version)) continue;

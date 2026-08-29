@@ -402,9 +402,21 @@ it performs no network operation.
   context changes never start a provider, model, Workflow or Run.
 - Local AI may draft only from an approved Context Package/source plan and keeps
   the existing no-tools/no-cloud/no-automatic-save boundary.
-- Humanisation is an opt-in draft transformation with author/genre profile,
-  parent/child versions and visible diff. It must not alter citation targets,
-  evidence meaning or numerical results and must never claim detector evasion.
+- M11 implements Humanisation as an opt-in local editorial candidate over an
+  exact immutable M10 Draft Version. Versioned genre Profiles may use only
+  explicitly selected and user-confirmed writing samples; their deterministic
+  style fingerprints are descriptive, non-biometric and make no authorship
+  claim. The source text remains canonical in M10 rather than being copied into
+  Session storage.
+- The fixed Ollama loopback runtime receives bounded protected Section text and
+  no tools, filesystem, provider or network capability. Citations, quotations,
+  numbers/units, equations, URLs/DOIs and identifiers are restored exactly;
+  conflicts fail closed and reviewed Claims require human review. Candidate
+  text is not a Draft Version until explicit acceptance.
+- Full or Section-level acceptance creates one complete immutable M10 Draft
+  child with Session/Profile lineage and atomically registers the resulting M6
+  Artifact. Only the real model request creates an indeterminate M6 Run. M11
+  never claims detector evasion, human identity or model quality.
 
 ### Lecturer Committee and corrections
 

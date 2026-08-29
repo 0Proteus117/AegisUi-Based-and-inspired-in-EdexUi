@@ -76,7 +76,7 @@ function ipcMock() { const handlers = new Map(); return {handlers, handle: (name
             assert.ok(!ipcSource.includes("stud-compute-shell"));
         });
         check("MODEL_SCHEMA_CURRENT", () => {
-            assert.strictEqual(Model.SCHEMA_VERSION, 23);
+            assert.strictEqual(Model.SCHEMA_VERSION, 24);
             assert.ok(Model.ENTITY_TYPES.includes("COMPUTE_RESULT"));
             assert.ok(Model.ENTITY_TYPES.includes("ACADEMIC_DOCUMENT"));
         });
