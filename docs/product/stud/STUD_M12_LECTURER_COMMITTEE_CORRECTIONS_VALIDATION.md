@@ -1,7 +1,7 @@
 # STUD M12 — Lecturer Committee and Corrections validation
 
 Date: 2026-09-01
-Implementation baseline: `b3684d05212872e0b0997da4590592e89ca26442`
+Implementation commit: `e9fcd834dea83e33434e72e0cb93b3b842a086b0`
 Canonical academic schema: v25
 Product authority: `AEGIS_STUD_ASSIGNMENT_WORKFLOW_ENGINE_SPEC.pdf`
 
@@ -156,9 +156,11 @@ Focused M12 source validation:
 
 M10 (21), M11 (33), Working Context (13), Electron trust boundary (17),
 CodeQL-focused security (7), prebuild integrity (4) and clean-environment schema
-reproducibility (8) passed after M12 corrections. Full regression,
-release-health and packaged-runtime results are reported after final committed
-source validation.
+reproducibility (8) passed after M12 corrections. The broad harness ran 85
+suites: 83 passed, one inherited Map environment suite failed because TomTom
+returned HTTP 401 and `AISSTREAM_API_KEY` was absent, and SAT/Celestrak was
+skipped in this environment. Release health and `git diff --check` passed. No
+new M12 regression was observed.
 
 ## M1–M12 technical audit
 
@@ -177,6 +179,11 @@ None remaining after correction and rerun.
    database without removing the newly created v25 objects. The fixture now
    removes only v25 objects before replay and verifies representative v9/v12
    migration to the current schema.
+3. Artifact metadata initially allowed canonical Session IDs through a suffix
+   match, which could also accept a secret-bearing key ending in the same text.
+   The exception now permits only the exact keys `lecturerReviewSessionId`,
+   `correctionSessionId` and `humanisationSessionId`, each with a canonical STUD
+   ID. An adversarial regression confirms disguised credential keys fail closed.
 
 ### MINOR
 
@@ -199,9 +206,25 @@ MAJOR finding remained after correction and rerun.
 ## Packaging and release boundary
 
 M12 extends preload and the local-model runtime boundary, so private ARM64
-packaged validation is required. The final DMG identity, mount/launch evidence,
-`app.asar` inspection and packaged dependency checks are reported after the
-final committed source is packaged. M12 does not create a public release.
+packaged validation was performed. `AegisUi-2.7.1-arm64.dmg` (approximately
+148 MB) was generated from a `prebuild-src` integrity stamp bound to
+`e9fcd834dea83e33434e72e0cb93b3b842a086b0`. SHA-256:
+
+`9899284cdc6d1bdeee8a95629903fc7205f65133b4b5a8ff43b4d966e8282e3a`
+
+`hdiutil verify` passed, the image mounted read-only, and AegisUi launched from
+the mounted volume with isolated user data. Deep strict code-signature
+validation passed. The application binary, Calendar helper and active node-pty
+`spawn-helper` are ARM64. `app.asar` inspection confirmed schema v25, all M12
+domain/runtime/workspace files, the 22 fixed channels and Citation.js 0.8.2.
+
+The live packaged probe passed renderer isolation, Course/Assignment creation,
+M1 Requirements Contract, M3 Workflow, Working Context, organisation,
+classification, Citation.js, Moodle boundary, Document and Compute capabilities,
+Ollama bridge and terminal connectivity. A synthetic M12 review rendered from
+the mounted application at 1440×900 @2x with no overflow, escaped controls or
+fake progress and was visually inspected. The DMG is a private validation
+artifact only; no public release was created.
 
 ## Next milestone boundary
 
