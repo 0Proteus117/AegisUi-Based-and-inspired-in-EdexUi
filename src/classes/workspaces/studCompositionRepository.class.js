@@ -132,8 +132,8 @@ class StudCompositionRepository {
 
     insertVersion(draft, value, sectionContents) {
         const id = Academic.createId("draft_version"), timestamp = Academic.now();
-        this.db.prepare(`INSERT INTO stud_draft_versions (id,draft_id,assignment_id,version_number,parent_version_id,origin,change_reason,content_hash,total_length,length_unit,humanisation_session_id,humanisation_profile_revision_id,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`)
-            .run(id,draft.id,draft.assignmentId,value.versionNumber,value.parentVersionId,value.origin,value.changeReason,value.contentHash,value.totalLength,value.lengthUnit,value.humanisationSessionId||null,value.humanisationProfileRevisionId||null,timestamp);
+        this.db.prepare(`INSERT INTO stud_draft_versions (id,draft_id,assignment_id,version_number,parent_version_id,origin,change_reason,content_hash,total_length,length_unit,humanisation_session_id,humanisation_profile_revision_id,lecturer_review_session_id,correction_plan_id,correction_session_id,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+            .run(id,draft.id,draft.assignmentId,value.versionNumber,value.parentVersionId,value.origin,value.changeReason,value.contentHash,value.totalLength,value.lengthUnit,value.humanisationSessionId||null,value.humanisationProfileRevisionId||null,value.lecturerReviewSessionId||null,value.correctionPlanId||null,value.correctionSessionId||null,timestamp);
         sectionContents.forEach(item => this.db.prepare(`INSERT INTO stud_draft_section_versions (id,draft_version_id,draft_id,section_id,content,content_hash,measured_length,created_at) VALUES (?,?,?,?,?,?,?,?)`)
             .run(Academic.createId("draft_section_version"),id,draft.id,item.sectionId,item.content,item.contentHash,item.measuredLength,timestamp));
         const result = this.db.prepare("UPDATE stud_draft_documents SET current_version_id=?,row_version=row_version+1,updated_at=? WHERE id=? AND row_version=?").run(id,timestamp,draft.id,draft.rowVersion);
@@ -153,7 +153,7 @@ class StudCompositionRepository {
         const draft = this.draftRow(id);
         const currentVersion = draft.currentVersionId ? this.hydrateVersion(draft.currentVersionId) : null;
         const limit = Math.max(1, Math.min(Number(options.versionLimit) || 25, 100));
-        const history = Object.freeze(this.db.prepare("SELECT id,draft_id,assignment_id,version_number,parent_version_id,origin,change_reason,content_hash,total_length,length_unit,humanisation_session_id,humanisation_profile_revision_id,created_at FROM stud_draft_versions WHERE draft_id=? ORDER BY version_number DESC LIMIT ?").all(draft.id,limit).map(row => Object.freeze(camel(row))));
+        const history = Object.freeze(this.db.prepare("SELECT id,draft_id,assignment_id,version_number,parent_version_id,origin,change_reason,content_hash,total_length,length_unit,humanisation_session_id,humanisation_profile_revision_id,lecturer_review_session_id,correction_plan_id,correction_session_id,created_at FROM stud_draft_versions WHERE draft_id=? ORDER BY version_number DESC LIMIT ?").all(draft.id,limit).map(row => Object.freeze(camel(row))));
         return Object.freeze({...draft,currentVersion,history});
     }
 

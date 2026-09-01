@@ -420,14 +420,35 @@ it performs no network operation.
 
 ### Lecturer Committee and corrections
 
-Review rounds reference a rubric/Requirements Contract, exact draft version,
-model/runtime profile and panel-role findings. Findings contain severity,
-criterion, evidence, suggested correction and uncertainty. Estimated ranges are
-advisory and never institutional predictions.
-
-Corrections create a new draft version and trace each accepted/rejected finding.
-Real lecturer grade/feedback may later be imported as new observations and
-compared with historical findings without rewriting them.
+- M12 implements Assignment-owned review Sessions over one exact immutable M10
+  Draft Version. The Session snapshots Draft, Composition Plan, Requirements
+  Contract, Citation and optional M11 lineage hashes. Source content remains
+  canonical in M1/M8/M10/M11 rather than being copied into another authority.
+- The fixed committee roles are Requirements, Argument/Structure,
+  Evidence/Citation, Methods/Technical and Academic Communication. Applicability
+  is explicit. Each pass receives the same bounded review basis and no earlier
+  reviewer findings; deterministic checks run before optional fixed-loopback
+  local-model assistance. Synthesis occurs only after independent passes.
+- Findings are typed, severity-bearing, versioned review records with explicit
+  status and event history. They cite exact Draft/Section/Requirement/Evidence/
+  Citation identities where available. Findings and synthesis are advisory;
+  they are not lecturer impersonation, academic correctness or grades.
+- An optional formative estimate is available only from an explicit
+  authoritative rubric and is stored as an advisory range plus rationale. A
+  missing or ambiguous rubric fails closed; no single mark is generated.
+- Correction Plans contain explicit user-selected findings and actions. Manual
+  editing remains available without AI. Local correction output is a candidate
+  only, preserves M11 protected spans and integrity checks, exposes a diff, and
+  requires explicit full/Section acceptance or rejection. A protected-content
+  override is scoped to one exact Section and protected type and requires
+  confirmation.
+- Acceptance atomically creates a complete immutable M10 Draft child, persists
+  review/plan/correction lineage and registers the resulting M6 Artifact.
+  Cancellation and failure create no Draft. Deterministic recheck is explicit
+  and does not mutate M3/M4 Workflow state. Only real model calls create honest
+  indeterminate M6 Runs.
+- Real lecturer grade/feedback may later be imported as new observations and
+  compared with historical findings without rewriting M12 history.
 
 ### Execution, models, resource profiles and watchdog
 

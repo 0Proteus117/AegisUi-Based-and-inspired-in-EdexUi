@@ -23,7 +23,7 @@ function sensitiveKey(key) { return /(?:token|secret|password|credential|cookie|
 function assertSafeValue(value, path = "metadata", depth = 0) {
     if (depth > 5) throw new Academic.StudError("INVALID_INPUT", `${path} nesting is too deep.`);
     if (Array.isArray(value)) { if (value.length > 100) throw new Academic.StudError("PAYLOAD_TOO_LARGE", `${path} has too many items.`); value.forEach((item, index) => assertSafeValue(item, `${path}[${index}]`, depth + 1)); return; }
-    if (value && typeof value === "object") { Object.entries(value).forEach(([key, item]) => { if (sensitiveKey(key)) throw new Academic.StudError("POLICY_BLOCKED", `${path} cannot persist secret-bearing field ${key}.`); assertSafeValue(item, `${path}.${key}`, depth + 1); }); return; }
+    if (value && typeof value === "object") { Object.entries(value).forEach(([key, item]) => { const canonicalSessionReference = ["lecturerReviewSessionId", "correctionSessionId", "humanisationSessionId"].includes(String(key)) && typeof item === "string" && /^stud_[a-z0-9_]{3,95}$/i.test(item); if (sensitiveKey(key) && !canonicalSessionReference) throw new Academic.StudError("POLICY_BLOCKED", `${path} cannot persist secret-bearing field ${key}.`); assertSafeValue(item, `${path}.${key}`, depth + 1); }); return; }
     if (typeof value === "string") {
         if (value.length > 4000) throw new Academic.StudError("PAYLOAD_TOO_LARGE", `${path} text is too long.`);
         if (/^[a-z]+:\/\//i.test(value)) {

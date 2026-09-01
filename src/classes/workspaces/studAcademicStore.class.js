@@ -1550,6 +1550,286 @@ class StudAcademicStore {
             ALTER TABLE stud_working_context ADD COLUMN active_humanisation_session_id TEXT REFERENCES stud_humanisation_sessions(id);
             ALTER TABLE stud_draft_versions ADD COLUMN humanisation_session_id TEXT REFERENCES stud_humanisation_sessions(id);
             ALTER TABLE stud_draft_versions ADD COLUMN humanisation_profile_revision_id TEXT REFERENCES stud_humanisation_profile_revisions(id);
+        `}, {version: 25, sql: `
+            CREATE TABLE stud_lecturer_review_sessions (
+                id TEXT PRIMARY KEY,
+                assignment_id TEXT NOT NULL,
+                draft_id TEXT NOT NULL,
+                source_draft_version_id TEXT NOT NULL,
+                source_content_hash TEXT NOT NULL,
+                composition_plan_id TEXT NOT NULL,
+                composition_plan_revision INTEGER NOT NULL CHECK(composition_plan_revision >= 1),
+                composition_plan_hash TEXT NOT NULL,
+                requirements_contract_id TEXT NOT NULL,
+                requirements_contract_revision INTEGER NOT NULL CHECK(requirements_contract_revision >= 1),
+                requirements_contract_hash TEXT NOT NULL,
+                research_plan_id TEXT,
+                research_plan_revision INTEGER,
+                research_plan_hash TEXT,
+                source_humanisation_session_id TEXT,
+                source_humanisation_profile_revision_id TEXT,
+                committee_json TEXT NOT NULL,
+                citation_snapshot_json TEXT NOT NULL,
+                citation_snapshot_hash TEXT NOT NULL,
+                state TEXT NOT NULL CHECK(state IN ('CREATED','RUNNING','COMPLETE','PARTIAL','FAILED','CANCELLED')),
+                runtime TEXT,
+                model TEXT,
+                capability_state TEXT,
+                run_ids_json TEXT NOT NULL DEFAULT '[]',
+                error_summary TEXT,
+                row_version INTEGER NOT NULL DEFAULT 1 CHECK(row_version >= 1),
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                finished_at TEXT,
+                FOREIGN KEY(assignment_id) REFERENCES stud_assignments(id),
+                FOREIGN KEY(draft_id) REFERENCES stud_draft_documents(id),
+                FOREIGN KEY(source_draft_version_id) REFERENCES stud_draft_versions(id),
+                FOREIGN KEY(composition_plan_id) REFERENCES stud_composition_plans(id),
+                FOREIGN KEY(requirements_contract_id) REFERENCES stud_requirement_contracts(id),
+                FOREIGN KEY(research_plan_id) REFERENCES stud_research_plans(id),
+                FOREIGN KEY(source_humanisation_session_id) REFERENCES stud_humanisation_sessions(id),
+                FOREIGN KEY(source_humanisation_profile_revision_id) REFERENCES stud_humanisation_profile_revisions(id)
+            );
+            CREATE INDEX stud_lecturer_review_assignment_index ON stud_lecturer_review_sessions(assignment_id,updated_at DESC,id DESC);
+            CREATE INDEX stud_lecturer_review_draft_index ON stud_lecturer_review_sessions(draft_id,source_draft_version_id,created_at DESC);
+
+            CREATE TABLE stud_lecturer_reviewer_passes (
+                id TEXT PRIMARY KEY,
+                session_id TEXT NOT NULL,
+                assignment_id TEXT NOT NULL,
+                reviewer_role TEXT NOT NULL CHECK(reviewer_role IN ('REQUIREMENTS','ARGUMENT_STRUCTURE','EVIDENCE_CITATION','METHODS_TECHNICAL','ACADEMIC_COMMUNICATION')),
+                applicability TEXT NOT NULL CHECK(applicability IN ('APPLICABLE','NOT_APPLICABLE')),
+                focus TEXT,
+                state TEXT NOT NULL CHECK(state IN ('PENDING','RUNNING','COMPLETE','FAILED','CANCELLED','NOT_APPLICABLE')),
+                provenance TEXT NOT NULL CHECK(provenance IN ('DETERMINISTIC','LOCAL_MODEL')),
+                runtime TEXT,
+                model TEXT,
+                capability_state TEXT,
+                run_id TEXT,
+                error_summary TEXT,
+                row_version INTEGER NOT NULL DEFAULT 1 CHECK(row_version >= 1),
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                finished_at TEXT,
+                FOREIGN KEY(session_id) REFERENCES stud_lecturer_review_sessions(id) ON DELETE CASCADE,
+                FOREIGN KEY(assignment_id) REFERENCES stud_assignments(id),
+                FOREIGN KEY(run_id) REFERENCES stud_operation_runs(id),
+                UNIQUE(session_id,reviewer_role,provenance)
+            );
+            CREATE INDEX stud_lecturer_pass_session_index ON stud_lecturer_reviewer_passes(session_id,reviewer_role,provenance);
+
+            CREATE TABLE stud_lecturer_review_findings (
+                id TEXT PRIMARY KEY,
+                session_id TEXT NOT NULL,
+                pass_id TEXT NOT NULL,
+                assignment_id TEXT NOT NULL,
+                reviewer_role TEXT NOT NULL CHECK(reviewer_role IN ('REQUIREMENTS','ARGUMENT_STRUCTURE','EVIDENCE_CITATION','METHODS_TECHNICAL','ACADEMIC_COMMUNICATION')),
+                provenance TEXT NOT NULL CHECK(provenance IN ('DETERMINISTIC','LOCAL_MODEL','USER')),
+                category TEXT NOT NULL CHECK(category IN ('REQUIREMENT_COVERAGE','ARGUMENT_STRUCTURE','EVIDENCE_SUPPORT','CITATION_INTEGRITY','METHODS_TECHNICAL','ACADEMIC_COMMUNICATION','WORD_BUDGET','RESEARCH_GAP','WORKFLOW_CONDITION','OTHER')),
+                severity TEXT NOT NULL CHECK(severity IN ('BLOCKING','MAJOR','MINOR','INFORMATIONAL')),
+                status TEXT NOT NULL CHECK(status IN ('OPEN','ACKNOWLEDGED','PLANNED','ADDRESSED','DISMISSED','SUPERSEDED')),
+                title TEXT NOT NULL CHECK(length(title) BETWEEN 1 AND 240),
+                explanation TEXT NOT NULL,
+                basis_type TEXT NOT NULL CHECK(basis_type IN ('REQUIREMENT_ITEM','COMPOSITION_SECTION','CLAIM','EVIDENCE','CITATION','RESEARCH_GAP','WORKFLOW_BLOCKER','DRAFT_SECTION','OTHER')),
+                basis_id TEXT,
+                requirement_item_id TEXT,
+                claim_id TEXT,
+                evidence_id TEXT,
+                citation_paper_id TEXT,
+                draft_section_id TEXT,
+                excerpt TEXT,
+                locator TEXT,
+                recommended_action TEXT,
+                rationale TEXT,
+                semantic_fingerprint TEXT NOT NULL,
+                row_version INTEGER NOT NULL DEFAULT 1 CHECK(row_version >= 1),
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY(session_id) REFERENCES stud_lecturer_review_sessions(id) ON DELETE CASCADE,
+                FOREIGN KEY(pass_id) REFERENCES stud_lecturer_reviewer_passes(id) ON DELETE CASCADE,
+                FOREIGN KEY(assignment_id) REFERENCES stud_assignments(id),
+                FOREIGN KEY(requirement_item_id) REFERENCES stud_requirement_items(id),
+                FOREIGN KEY(claim_id) REFERENCES stud_claims(id),
+                FOREIGN KEY(evidence_id) REFERENCES stud_evidence_records(id),
+                FOREIGN KEY(citation_paper_id) REFERENCES stud_research_papers(id),
+                FOREIGN KEY(draft_section_id) REFERENCES stud_composition_sections(id)
+            );
+            CREATE INDEX stud_lecturer_findings_session_index ON stud_lecturer_review_findings(session_id,status,severity,updated_at DESC,id DESC);
+            CREATE INDEX stud_lecturer_findings_basis_index ON stud_lecturer_review_findings(assignment_id,basis_type,basis_id);
+
+            CREATE TABLE stud_lecturer_finding_events (
+                id TEXT PRIMARY KEY,
+                finding_id TEXT NOT NULL,
+                from_status TEXT,
+                to_status TEXT NOT NULL CHECK(to_status IN ('OPEN','ACKNOWLEDGED','PLANNED','ADDRESSED','DISMISSED','SUPERSEDED')),
+                actor TEXT NOT NULL CHECK(actor IN ('USER','SYSTEM')),
+                note TEXT,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY(finding_id) REFERENCES stud_lecturer_review_findings(id) ON DELETE CASCADE
+            );
+            CREATE INDEX stud_lecturer_finding_events_index ON stud_lecturer_finding_events(finding_id,created_at,id);
+
+            CREATE TABLE stud_lecturer_synthesis (
+                id TEXT PRIMARY KEY,
+                session_id TEXT NOT NULL,
+                assignment_id TEXT NOT NULL,
+                synthesis_kind TEXT NOT NULL CHECK(synthesis_kind IN ('AGREEMENT','COMPLEMENTARY','DISAGREEMENT','UNIQUE')),
+                title TEXT NOT NULL,
+                summary TEXT NOT NULL,
+                cluster_fingerprint TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY(session_id) REFERENCES stud_lecturer_review_sessions(id) ON DELETE CASCADE,
+                FOREIGN KEY(assignment_id) REFERENCES stud_assignments(id)
+            );
+            CREATE INDEX stud_lecturer_synthesis_session_index ON stud_lecturer_synthesis(session_id,synthesis_kind,id);
+
+            CREATE TABLE stud_lecturer_synthesis_findings (
+                synthesis_id TEXT NOT NULL,
+                finding_id TEXT NOT NULL,
+                PRIMARY KEY(synthesis_id,finding_id),
+                FOREIGN KEY(synthesis_id) REFERENCES stud_lecturer_synthesis(id) ON DELETE CASCADE,
+                FOREIGN KEY(finding_id) REFERENCES stud_lecturer_review_findings(id) ON DELETE CASCADE
+            );
+
+            CREATE TABLE stud_lecturer_formative_estimates (
+                id TEXT PRIMARY KEY,
+                session_id TEXT NOT NULL,
+                assignment_id TEXT NOT NULL,
+                state TEXT NOT NULL CHECK(state IN ('NOT_REQUESTED','UNAVAILABLE','READY','FAILED')),
+                rubric_snapshot_json TEXT NOT NULL,
+                rubric_snapshot_hash TEXT NOT NULL,
+                range_low REAL,
+                range_high REAL,
+                readiness_label TEXT CHECK(readiness_label IS NULL OR readiness_label IN ('NOT_READY','DEVELOPING','SUBMISSION_READY_WITH_REVISIONS','READY_FOR_FINAL_HUMAN_REVIEW')),
+                reasoning_json TEXT NOT NULL,
+                runtime TEXT,
+                model TEXT,
+                capability_state TEXT,
+                run_id TEXT,
+                error_summary TEXT,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY(session_id) REFERENCES stud_lecturer_review_sessions(id) ON DELETE CASCADE,
+                FOREIGN KEY(assignment_id) REFERENCES stud_assignments(id),
+                FOREIGN KEY(run_id) REFERENCES stud_operation_runs(id),
+                CHECK((range_low IS NULL AND range_high IS NULL) OR (range_low IS NOT NULL AND range_high IS NOT NULL AND range_low <= range_high))
+            );
+            CREATE INDEX stud_lecturer_estimate_session_index ON stud_lecturer_formative_estimates(session_id,created_at DESC,id DESC);
+
+            CREATE TABLE stud_correction_plans (
+                id TEXT PRIMARY KEY,
+                assignment_id TEXT NOT NULL,
+                review_session_id TEXT NOT NULL,
+                source_draft_version_id TEXT NOT NULL,
+                title TEXT NOT NULL,
+                state TEXT NOT NULL CHECK(state IN ('DRAFT','ACTIVE','COMPLETE','ARCHIVED')),
+                row_version INTEGER NOT NULL DEFAULT 1 CHECK(row_version >= 1),
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY(assignment_id) REFERENCES stud_assignments(id),
+                FOREIGN KEY(review_session_id) REFERENCES stud_lecturer_review_sessions(id),
+                FOREIGN KEY(source_draft_version_id) REFERENCES stud_draft_versions(id)
+            );
+            CREATE INDEX stud_correction_plans_assignment_index ON stud_correction_plans(assignment_id,updated_at DESC,id DESC);
+
+            CREATE TABLE stud_correction_items (
+                id TEXT PRIMARY KEY,
+                plan_id TEXT NOT NULL,
+                assignment_id TEXT NOT NULL,
+                title TEXT NOT NULL,
+                action_type TEXT NOT NULL CHECK(action_type IN ('MANUAL_EDIT','LOCAL_AI_CANDIDATE')),
+                state TEXT NOT NULL CHECK(state IN ('PENDING','IN_PROGRESS','CANDIDATE_READY','ACCEPTED','REJECTED','DEFERRED')),
+                instructions TEXT,
+                section_id TEXT,
+                item_order INTEGER NOT NULL DEFAULT 0 CHECK(item_order >= 0),
+                row_version INTEGER NOT NULL DEFAULT 1 CHECK(row_version >= 1),
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY(plan_id) REFERENCES stud_correction_plans(id) ON DELETE CASCADE,
+                FOREIGN KEY(assignment_id) REFERENCES stud_assignments(id),
+                FOREIGN KEY(section_id) REFERENCES stud_composition_sections(id)
+            );
+            CREATE INDEX stud_correction_items_plan_index ON stud_correction_items(plan_id,item_order,id);
+
+            CREATE TABLE stud_correction_item_findings (
+                correction_item_id TEXT NOT NULL,
+                finding_id TEXT NOT NULL,
+                PRIMARY KEY(correction_item_id,finding_id),
+                FOREIGN KEY(correction_item_id) REFERENCES stud_correction_items(id) ON DELETE CASCADE,
+                FOREIGN KEY(finding_id) REFERENCES stud_lecturer_review_findings(id)
+            );
+
+            CREATE TABLE stud_correction_sessions (
+                id TEXT PRIMARY KEY,
+                assignment_id TEXT NOT NULL,
+                correction_plan_id TEXT NOT NULL,
+                source_draft_version_id TEXT NOT NULL,
+                source_content_hash TEXT NOT NULL,
+                state TEXT NOT NULL CHECK(state IN ('CREATED','RUNNING','CANDIDATE_READY','NEEDS_REVIEW','ACCEPTED','REJECTED','FAILED','CANCELLED')),
+                selected_item_ids_json TEXT NOT NULL,
+                protected_overrides_json TEXT NOT NULL,
+                runtime TEXT,
+                model TEXT,
+                capability_state TEXT,
+                run_id TEXT,
+                candidate_hash TEXT,
+                integrity_state TEXT NOT NULL CHECK(integrity_state IN ('PENDING','PASS','CONFLICT','REVIEW_REQUIRED')),
+                decision TEXT CHECK(decision IS NULL OR decision IN ('ACCEPT_ALL','ACCEPT_SELECTED_SECTIONS','REJECT_ALL')),
+                resulting_draft_version_id TEXT,
+                error_summary TEXT,
+                row_version INTEGER NOT NULL DEFAULT 1 CHECK(row_version >= 1),
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                finished_at TEXT,
+                FOREIGN KEY(assignment_id) REFERENCES stud_assignments(id),
+                FOREIGN KEY(correction_plan_id) REFERENCES stud_correction_plans(id),
+                FOREIGN KEY(source_draft_version_id) REFERENCES stud_draft_versions(id),
+                FOREIGN KEY(run_id) REFERENCES stud_operation_runs(id),
+                FOREIGN KEY(resulting_draft_version_id) REFERENCES stud_draft_versions(id)
+            );
+            CREATE INDEX stud_correction_sessions_plan_index ON stud_correction_sessions(correction_plan_id,updated_at DESC,id DESC);
+
+            CREATE TABLE stud_correction_session_sections (
+                id TEXT PRIMARY KEY,
+                session_id TEXT NOT NULL,
+                section_id TEXT NOT NULL,
+                section_order INTEGER NOT NULL CHECK(section_order >= 0),
+                source_content_hash TEXT NOT NULL,
+                protected_spans_json TEXT NOT NULL,
+                candidate_content TEXT,
+                candidate_content_hash TEXT,
+                integrity_state TEXT NOT NULL CHECK(integrity_state IN ('PENDING','PASS','CONFLICT','REVIEW_REQUIRED')),
+                decision TEXT NOT NULL CHECK(decision IN ('PENDING','ACCEPTED','REJECTED')),
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY(session_id) REFERENCES stud_correction_sessions(id) ON DELETE CASCADE,
+                FOREIGN KEY(section_id) REFERENCES stud_composition_sections(id),
+                UNIQUE(session_id,section_id)
+            );
+
+            CREATE TABLE stud_correction_integrity_checks (
+                id TEXT PRIMARY KEY,
+                session_id TEXT NOT NULL,
+                section_id TEXT,
+                check_type TEXT NOT NULL CHECK(check_type IN ('CITATIONS','NUMBERS_UNITS','QUOTATIONS','EQUATIONS','URL_IDENTIFIERS','PROTECTED_TERMS','CLAIMS','EVIDENCE_LINKS')),
+                state TEXT NOT NULL CHECK(state IN ('PASS','CONFLICT','REVIEW_REQUIRED','NOT_APPLICABLE')),
+                override_authorized INTEGER NOT NULL DEFAULT 0 CHECK(override_authorized IN (0,1)),
+                source_values_json TEXT NOT NULL,
+                candidate_values_json TEXT NOT NULL,
+                summary TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY(session_id) REFERENCES stud_correction_sessions(id) ON DELETE CASCADE,
+                FOREIGN KEY(section_id) REFERENCES stud_composition_sections(id)
+            );
+            CREATE INDEX stud_correction_checks_session_index ON stud_correction_integrity_checks(session_id,section_id,check_type);
+
+            ALTER TABLE stud_draft_versions ADD COLUMN lecturer_review_session_id TEXT REFERENCES stud_lecturer_review_sessions(id);
+            ALTER TABLE stud_draft_versions ADD COLUMN correction_plan_id TEXT REFERENCES stud_correction_plans(id);
+            ALTER TABLE stud_draft_versions ADD COLUMN correction_session_id TEXT REFERENCES stud_correction_sessions(id);
+            ALTER TABLE stud_working_context ADD COLUMN active_lecturer_review_session_id TEXT REFERENCES stud_lecturer_review_sessions(id);
+            ALTER TABLE stud_working_context ADD COLUMN active_lecturer_finding_id TEXT REFERENCES stud_lecturer_review_findings(id);
+            ALTER TABLE stud_working_context ADD COLUMN active_correction_plan_id TEXT REFERENCES stud_correction_plans(id);
+            ALTER TABLE stud_working_context ADD COLUMN active_correction_item_id TEXT REFERENCES stud_correction_items(id);
+            ALTER TABLE stud_working_context ADD COLUMN active_correction_session_id TEXT REFERENCES stud_correction_sessions(id);
         `}];
         for (const migration of migrations) {
             if (applied.has(migration.version)) continue;
