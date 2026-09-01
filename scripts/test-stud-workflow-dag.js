@@ -75,7 +75,7 @@ try {
     const {requirements, context, workflow} = services(store);
 
     check("CURRENT_SCHEMA_AND_NO_FABRICATED_WORKFLOW", () => {
-        assert.strictEqual(store.schemaInfo().version, 24);
+        assert.strictEqual(store.schemaInfo().version, 25);
         assert.strictEqual(store.db.prepare("SELECT COUNT(*) count FROM stud_workflow_instances").get().count, 0);
     });
     check("NORMALIZED_WORKFLOW_TABLES", () => {
@@ -318,7 +318,7 @@ try {
     stripV17(path.join(migrationRoot, "academic.sqlite"));
     legacy = storeAt(migrationRoot);
     check("V16_TO_CURRENT_MIGRATION_HAS_NO_FABRICATED_STATE", () => {
-        assert.strictEqual(legacy.schemaInfo().version, 24);
+        assert.strictEqual(legacy.schemaInfo().version, 25);
         assert.ok(legacy.getEntity("ASSIGNMENT", legacyAssignment.id));
         assert.strictEqual(legacy.db.prepare("SELECT COUNT(*) count FROM stud_workflow_instances").get().count, 0);
         assert.strictEqual(new StudWorkingContextService({store: legacy}).read().status, "EMPTY");

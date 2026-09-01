@@ -178,6 +178,25 @@ function main() {
         && exists("scripts/test-stud-composition-ui.js")
         && exists("scripts/test-stud-composition-scale.js")
         && exists("docs/product/stud/STUD_M10_COMPOSITION_PLAN_DRAFT_VERSIONS_VALIDATION.md");
+    const studHumanisation = exists("src/classes/workspaces/studHumanisationModel.class.js")
+        && exists("src/classes/workspaces/studHumanisationRepository.class.js")
+        && exists("src/classes/workspaces/studHumanisationService.class.js")
+        && exists("src/classes/workspaces/studHumanisationWorkspace.class.js")
+        && exists("scripts/test-stud-humanisation-diff.js")
+        && exists("scripts/test-stud-humanisation-ipc.js")
+        && exists("scripts/test-stud-humanisation-ui.js")
+        && exists("scripts/test-stud-humanisation-scale.js")
+        && exists("docs/product/stud/STUD_M11_HUMANISATION_WITH_DIFF_VALIDATION.md");
+    const studLecturerCommittee = exists("src/classes/workspaces/studLecturerCommitteeModel.class.js")
+        && exists("src/classes/workspaces/studLecturerCommitteeRepository.class.js")
+        && exists("src/classes/workspaces/studLecturerCommitteeService.class.js")
+        && exists("src/classes/workspaces/studLecturerCommitteeRuntime.class.js")
+        && exists("src/classes/workspaces/studLecturerCommitteeWorkspace.class.js")
+        && exists("scripts/test-stud-lecturer-committee-corrections.js")
+        && exists("scripts/test-stud-lecturer-committee-ipc.js")
+        && exists("scripts/test-stud-lecturer-committee-ui.js")
+        && exists("scripts/test-stud-lecturer-committee-scale.js")
+        && exists("docs/product/stud/STUD_M12_LECTURER_COMMITTEE_CORRECTIONS_VALIDATION.md");
     const osintFoundation = exists("src/classes/workspaces/osintTools.registry.js")
         && exists("src/classes/workspaces/osintProviderSchema.class.js")
         && exists("src/classes/workspaces/osintProviderPolicy.class.js")
@@ -255,6 +274,8 @@ function main() {
     if (!studClaimEvidence) failures.push("STUD Claims / Evidence Map / Citation Integrity foundation missing");
     if (!studFacultyLiterature) failures.push("STUD Faculty Literature Scout foundation missing");
     if (!studCompositionDrafts) failures.push("STUD Composition Plan / Draft Versions foundation missing");
+    if (!studHumanisation) failures.push("STUD Humanisation / Diff foundation missing");
+    if (!studLecturerCommittee) failures.push("STUD Lecturer Committee / Corrections foundation missing");
     if (!osintFoundation) failures.push("OSINT native access foundation files missing");
     if (!osintCaseWorkspace) failures.push("OSINT investigation case workspace files missing");
     if (!osintGeospatialVerification) failures.push("OSINT geospatial verification files missing");
@@ -292,6 +313,8 @@ function main() {
     print("STUD_CLAIMS_EVIDENCE_CITATION", studClaimEvidence ? "PRESENT" : "MISSING");
     print("STUD_FACULTY_LITERATURE_SCOUT", studFacultyLiterature ? "PRESENT" : "MISSING");
     print("STUD_COMPOSITION_PLAN_DRAFT_VERSIONS", studCompositionDrafts ? "PRESENT" : "MISSING");
+    print("STUD_HUMANISATION_DIFF", studHumanisation ? "PRESENT" : "MISSING");
+    print("STUD_LECTURER_COMMITTEE_CORRECTIONS", studLecturerCommittee ? "PRESENT" : "MISSING");
     print("OSINT_NATIVE_ACCESS", osintFoundation ? "PRESENT" : "MISSING");
     print("OSINT_PROVIDER_REGISTRY", exists("src/classes/workspaces/osintProviderSchema.class.js") && exists("src/classes/workspaces/osintProviderPolicy.class.js") && exists("src/classes/workspaces/osintToolAccessPanel.class.js") ? "PRESENT" : "MISSING");
     print("OSINT_CASE_WORKSPACE", osintCaseWorkspace ? "PRESENT" : "MISSING");

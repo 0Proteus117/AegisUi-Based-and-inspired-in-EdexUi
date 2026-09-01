@@ -6,6 +6,7 @@ const EvidenceMapWorkspace = typeof StudEvidenceMapWorkspace !== "undefined" ? S
 const FacultyScoutWorkspace = typeof StudFacultyScoutWorkspace !== "undefined" ? StudFacultyScoutWorkspace : require("./studFacultyScoutWorkspace.class.js").StudFacultyScoutWorkspace;
 const CompositionWorkspace = typeof StudCompositionWorkspace !== "undefined" ? StudCompositionWorkspace : require("./studCompositionWorkspace.class.js").StudCompositionWorkspace;
 const HumanisationWorkspace = typeof StudHumanisationWorkspace !== "undefined" ? StudHumanisationWorkspace : require("./studHumanisationWorkspace.class.js").StudHumanisationWorkspace;
+const LecturerCommitteeWorkspace = typeof StudLecturerCommitteeWorkspace !== "undefined" ? StudLecturerCommitteeWorkspace : require("./studLecturerCommitteeWorkspace.class.js").StudLecturerCommitteeWorkspace;
 
 // M5 is intentionally a composition layer. It owns no academic records: every
 // entry below is a canonical STUD object already related to the active
@@ -82,6 +83,7 @@ class StudAssignmentWorkspace {
         this.facultyScout = new FacultyScoutWorkspace({request: this.request, escape: this.escape, showToast: this.showToast, parent: this});
         this.composition = new CompositionWorkspace({request: this.request, escape: this.escape, showToast: this.showToast, parent: this});
         this.humanisation = new HumanisationWorkspace({request: this.request, escape: this.escape, showToast: this.showToast, parent: this});
+        this.lecturerCommittee = new LecturerCommitteeWorkspace({request: this.request, escape: this.escape, showToast: this.showToast, parent: this});
     }
 
     setState(context, workingContext, courseContext = null) {
@@ -104,6 +106,7 @@ class StudAssignmentWorkspace {
             this.facultyScout.reset();
             this.composition.reset();
             this.humanisation.reset();
+            this.lecturerCommittee.reset();
         }
         const active = workingContext && workingContext.activeObject;
         if (active && assignment && findWorkspaceObject(this.objectsContext(), active.entityType, active.id)) {
@@ -372,7 +375,7 @@ class StudAssignmentWorkspace {
 
     renderActions() {
         const active = this.activeObject();
-        return `<footer class="stud-assignment-workspace-actions"><div><small>CONTEXTUAL ACTIONS</small><span>${active ? `${this.escape(objectTypeLabel(active.entityType))} · ${this.escape(objectTitle(active))}` : "SELECT A RELATED OBJECT"}</span></div><div><button type="button" data-stud-workspace-mode="COMPOSITION">COMPOSITION</button><button type="button" data-stud-workspace-mode="HUMANISATION">REFINE STYLE</button><button type="button" data-stud-workspace-mode="RESEARCH_PLAN">RESEARCH PLAN</button><button type="button" data-stud-workspace-mode="FACULTY_SCOUT">FACULTY SCOUT</button><button type="button" data-stud-workspace-mode="EVIDENCE_MAP">EVIDENCE MAP</button><button type="button" data-stud-workspace-mode="ARTIFACTS">ARTIFACTS</button><button type="button" data-stud-workspace-mode="MISSION">ACTIVITY</button><button type="button" data-stud-workspace-open-specialist="RESEARCH">RESEARCH LIBRARY</button><button type="button" data-stud-workspace-open-specialist="KNOWLEDGE">KNOWLEDGE</button><button type="button" data-stud-workspace-open-specialist="CITATIONS">CITATIONS</button><button type="button" data-stud-workspace-open-specialist="WORKBENCH">WORKBENCH</button></div></footer>`;
+        return `<footer class="stud-assignment-workspace-actions"><div><small>CONTEXTUAL ACTIONS</small><span>${active ? `${this.escape(objectTypeLabel(active.entityType))} · ${this.escape(objectTitle(active))}` : "SELECT A RELATED OBJECT"}</span></div><div><button type="button" data-stud-workspace-mode="COMPOSITION">COMPOSITION</button><button type="button" data-stud-workspace-mode="HUMANISATION">REFINE STYLE</button><button type="button" data-stud-workspace-mode="LECTURER_REVIEW">ACADEMIC REVIEW</button><button type="button" data-stud-workspace-mode="RESEARCH_PLAN">RESEARCH PLAN</button><button type="button" data-stud-workspace-mode="FACULTY_SCOUT">FACULTY SCOUT</button><button type="button" data-stud-workspace-mode="EVIDENCE_MAP">EVIDENCE MAP</button><button type="button" data-stud-workspace-mode="ARTIFACTS">ARTIFACTS</button><button type="button" data-stud-workspace-mode="MISSION">ACTIVITY</button><button type="button" data-stud-workspace-open-specialist="RESEARCH">RESEARCH LIBRARY</button><button type="button" data-stud-workspace-open-specialist="KNOWLEDGE">KNOWLEDGE</button><button type="button" data-stud-workspace-open-specialist="CITATIONS">CITATIONS</button><button type="button" data-stud-workspace-open-specialist="WORKBENCH">WORKBENCH</button></div></footer>`;
     }
 
     renderWorkspace() {
@@ -388,6 +391,7 @@ class StudAssignmentWorkspace {
         if (this.state.mode === "FACULTY_SCOUT") return `<section class="stud-assignment-workspace-detail is-faculty-scout"><header><button type="button" data-stud-workspace-mode="WORK">← WORKSPACE</button><div><small>FACULTY LITERATURE SCOUT</small><h2>${this.escape(assignment.title)}</h2></div></header>${this.facultyScout.render()}</section>`;
         if (this.state.mode === "COMPOSITION") return `<section class="stud-assignment-workspace-detail is-composition"><header><button type="button" data-stud-workspace-mode="WORK">← WORKSPACE</button><div><small>COMPOSITION PLAN / DRAFT VERSIONS</small><h2>${this.escape(assignment.title)}</h2></div></header>${this.composition.render()}</section>`;
         if (this.state.mode === "HUMANISATION") return `<section class="stud-assignment-workspace-detail is-humanisation"><header><button type="button" data-stud-workspace-mode="COMPOSITION">← COMPOSITION</button><div><small>HUMANISATION / EDITORIAL DIFF</small><h2>${this.escape(assignment.title)}</h2></div></header>${this.humanisation.render()}</section>`;
+        if (this.state.mode === "LECTURER_REVIEW") return `<section class="stud-assignment-workspace-detail is-lecturer-review"><header><button type="button" data-stud-workspace-mode="COMPOSITION">← COMPOSITION</button><div><small>LECTURER COMMITTEE / CORRECTIONS</small><h2>${this.escape(assignment.title)}</h2></div></header>${this.lecturerCommittee.render()}</section>`;
         if (["ARTIFACTS", "MISSION"].includes(this.state.mode)) return `<section class="stud-assignment-workspace-detail is-operational"><header><button type="button" data-stud-workspace-mode="WORK">← WORKSPACE</button><div><small>${this.state.mode === "MISSION" ? "MISSION CONTROL" : "ARTIFACT BAY"}</small><h2>${this.escape(assignment.title)}</h2></div><nav><button type="button" data-stud-workspace-mode="ARTIFACTS" class="${this.state.mode === "ARTIFACTS" ? "is-current" : ""}">ARTIFACTS</button><button type="button" data-stud-workspace-mode="MISSION" class="${this.state.mode === "MISSION" ? "is-current" : ""}">ACTIVITY</button></nav></header>${this.operational.render()}</section>`;
         return `<section class="stud-assignment-workspace">
             ${this.renderHeader()}
@@ -465,6 +469,7 @@ class StudAssignmentWorkspace {
         if (await this.facultyScout.handleClick(event)) return true;
         if (await this.composition.handleClick(event)) return true;
         if (await this.humanisation.handleClick(event)) return true;
+        if (await this.lecturerCommittee.handleClick(event)) return true;
         const object = event.target.closest("[data-stud-workspace-object-id]");
         const mode = event.target.closest("[data-stud-workspace-mode]");
         const showMaterials = event.target.closest("[data-stud-workspace-show-materials]");
@@ -489,6 +494,7 @@ class StudAssignmentWorkspace {
             if (this.state.mode === "FACULTY_SCOUT") await this.facultyScout.open();
             if (this.state.mode === "COMPOSITION") await this.composition.open();
             if (this.state.mode === "HUMANISATION") await this.humanisation.open();
+            if (this.state.mode === "LECTURER_REVIEW") await this.lecturerCommittee.open();
             this.parent.render();
         }
         else if (showMaterials) { this.state.materialsOpen = true; this.parent.render(); }
@@ -505,8 +511,8 @@ class StudAssignmentWorkspace {
         return true;
     }
 
-    async handleSubmit(event) { if (await this.evidenceMap.handleSubmit(event)) return true; if (await this.facultyScout.handleSubmit(event)) return true; if (await this.composition.handleSubmit(event)) return true; if (await this.humanisation.handleSubmit(event)) return true; return this.researchPlan.handleSubmit(event); }
-    async handleChange(event) { return this.humanisation.handleChange(event); }
+    async handleSubmit(event) { if (await this.evidenceMap.handleSubmit(event)) return true; if (await this.facultyScout.handleSubmit(event)) return true; if (await this.composition.handleSubmit(event)) return true; if (await this.humanisation.handleSubmit(event)) return true; if (await this.lecturerCommittee.handleSubmit(event)) return true; return this.researchPlan.handleSubmit(event); }
+    async handleChange(event) { if(await this.humanisation.handleChange(event))return true;return this.lecturerCommittee.handleChange(event); }
 }
 
 if (typeof window !== "undefined") window.StudAssignmentWorkspace = StudAssignmentWorkspace;

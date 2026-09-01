@@ -20,6 +20,8 @@ const {StudFacultyLiteratureService} = require("./studFacultyLiteratureService.c
 const {StudCompositionService} = require("./studCompositionService.class.js");
 const {StudHumanisationRuntime} = require("./studHumanisationRuntime.class.js");
 const {StudHumanisationService} = require("./studHumanisationService.class.js");
+const {StudLecturerCommitteeRuntime} = require("./studLecturerCommitteeRuntime.class.js");
+const {StudLecturerCommitteeService} = require("./studLecturerCommitteeService.class.js");
 
 const CHANNELS = Object.freeze([
     "stud-core-status",
@@ -244,6 +246,7 @@ const CHANNELS = Object.freeze([
     "stud-draft-save-version",
     "stud-draft-diff"
     ,"stud-humanisation-profile-list","stud-humanisation-profile-read","stud-humanisation-profile-create","stud-humanisation-profile-update","stud-humanisation-profile-duplicate","stud-humanisation-profile-archive","stud-humanisation-sample-add","stud-humanisation-sample-remove","stud-humanisation-profile-analyze","stud-humanisation-session-list","stud-humanisation-session-read","stud-humanisation-session-create","stud-humanisation-status","stud-humanisation-run","stud-humanisation-cancel","stud-humanisation-diff","stud-humanisation-accept","stud-humanisation-reject"
+    ,"stud-lecturer-review-session-list","stud-lecturer-review-session-read","stud-lecturer-review-session-create","stud-lecturer-review-status","stud-lecturer-review-run","stud-lecturer-review-cancel","stud-lecturer-review-finding-update","stud-lecturer-review-synthesis","stud-lecturer-formative-estimate","stud-correction-plan-list","stud-correction-plan-read","stud-correction-plan-create","stud-correction-item-update","stud-correction-session-list","stud-correction-session-read","stud-correction-session-create","stud-correction-run","stud-correction-cancel","stud-correction-diff","stud-correction-accept","stud-correction-reject","stud-lecturer-review-recheck"
 ]);
 
 function senderIsTrusted(event) {
@@ -340,6 +343,11 @@ function registerStudAcademicIpc(options = {}) {
     // is exposed to the renderer.
     const humanisationRuntime = options.humanisationRuntime || new StudHumanisationRuntime({assistantRuntime: academicAiRuntime});
     const humanisation = options.humanisationService || new StudHumanisationService({store, compositionService: composition, runtime: humanisationRuntime, artifactOperationsService: artifactOperations, workingContextService: workingContext});
+    // M12 reviews one exact immutable Draft Version. Deterministic checks and
+    // independent local-model passes stay separate; only explicit acceptance
+    // of a correction candidate can create an immutable child Draft Version.
+    const lecturerCommitteeRuntime = options.lecturerCommitteeRuntime || new StudLecturerCommitteeRuntime({assistantRuntime: academicAiRuntime});
+    const lecturerCommittee = options.lecturerCommitteeService || new StudLecturerCommitteeService({store, compositionService: composition, runtime: lecturerCommitteeRuntime, artifactOperationsService: artifactOperations, claimEvidenceService: claimEvidence, workingContextService: workingContext});
     let shell = options.shell || null;
     if (!shell) { try { shell = require("electron").shell; } catch (error) {} }
     const handlers = new Map();
@@ -485,6 +493,28 @@ function registerStudAcademicIpc(options = {}) {
     add("stud-humanisation-diff", ["assignmentId", "sessionId", "sectionId"], payload => humanisation.diff(payload));
     add("stud-humanisation-accept", ["assignmentId", "sessionId", "expectedVersion", "sectionIds"], payload => humanisation.accept(payload));
     add("stud-humanisation-reject", ["assignmentId", "sessionId", "expectedVersion"], payload => humanisation.reject(payload));
+    add("stud-lecturer-review-session-list", ["assignmentId", "limit"], payload => lecturerCommittee.sessions(payload));
+    add("stud-lecturer-review-session-read", ["assignmentId", "sessionId"], payload => lecturerCommittee.session(payload));
+    add("stud-lecturer-review-session-create", ["assignmentId", "draftId", "sourceVersionId", "committee"], payload => lecturerCommittee.createSession(payload));
+    add("stud-lecturer-review-status", [], () => lecturerCommittee.status());
+    add("stud-lecturer-review-run", ["assignmentId", "sessionId", "expectedVersion"], payload => lecturerCommittee.run(payload));
+    add("stud-lecturer-review-cancel", ["assignmentId", "sessionId", "expectedVersion"], payload => lecturerCommittee.cancel(payload));
+    add("stud-lecturer-review-finding-update", ["assignmentId", "findingId", "expectedVersion", "status", "note"], payload => lecturerCommittee.updateFinding(payload));
+    add("stud-lecturer-review-synthesis", ["assignmentId", "sessionId"], payload => lecturerCommittee.synthesize(payload));
+    add("stud-lecturer-formative-estimate", ["assignmentId", "sessionId", "explicitRequest"], payload => lecturerCommittee.estimate(payload));
+    add("stud-correction-plan-list", ["assignmentId", "limit"], payload => lecturerCommittee.plans(payload));
+    add("stud-correction-plan-read", ["assignmentId", "planId"], payload => lecturerCommittee.plan(payload));
+    add("stud-correction-plan-create", ["assignmentId", "sessionId", "title", "items"], payload => lecturerCommittee.createCorrectionPlan(payload));
+    add("stud-correction-item-update", ["assignmentId", "itemId", "expectedVersion", "actionType", "state", "instructions"], payload => lecturerCommittee.updateCorrectionItem(payload));
+    add("stud-correction-session-list", ["assignmentId", "planId", "limit"], payload => lecturerCommittee.corrections(payload));
+    add("stud-correction-session-read", ["assignmentId", "sessionId"], payload => lecturerCommittee.correction(payload));
+    add("stud-correction-session-create", ["assignmentId", "planId", "itemIds", "sectionIds", "protectedOverrides"], payload => lecturerCommittee.createCorrectionSession(payload));
+    add("stud-correction-run", ["assignmentId", "sessionId", "expectedVersion"], payload => lecturerCommittee.runCorrection(payload));
+    add("stud-correction-cancel", ["assignmentId", "sessionId", "expectedVersion"], payload => lecturerCommittee.cancelCorrection(payload));
+    add("stud-correction-diff", ["assignmentId", "sessionId", "sectionId"], payload => lecturerCommittee.correctionDiff(payload));
+    add("stud-correction-accept", ["assignmentId", "sessionId", "expectedVersion", "sectionIds", "confirmProtectedChanges"], payload => lecturerCommittee.acceptCorrection(payload));
+    add("stud-correction-reject", ["assignmentId", "sessionId", "expectedVersion"], payload => lecturerCommittee.rejectCorrection(payload));
+    add("stud-lecturer-review-recheck", ["assignmentId", "sessionId", "explicitRequest"], payload => lecturerCommittee.recheck(payload));
     add("stud-requirements-state", ["assignmentId"], payload => requirements.state(payload.assignmentId));
     add("stud-requirements-create-draft", ["assignmentId"], payload => requirements.createDraft(payload.assignmentId));
     add("stud-requirements-review-candidate", ["contractId", "candidateId", "disposition", "expectedVersion"], payload => requirements.reviewCandidate(payload));
@@ -707,6 +737,7 @@ function registerStudAcademicIpc(options = {}) {
         documentRuntime.dispose();
         academicAiRuntime.dispose();
         humanisationRuntime.dispose();
+        lecturerCommitteeRuntime.dispose();
         notebookRuntime.dispose();
         store.close();
     }});

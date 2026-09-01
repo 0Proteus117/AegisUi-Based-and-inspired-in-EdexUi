@@ -27,6 +27,7 @@ documents translate that intent into the audited v2.7.0 implementation:
 - [M9 Faculty Literature Scout implementation and validation](STUD_M9_FACULTY_LITERATURE_SCOUT_VALIDATION.md)
 - [M10 Composition Plan / Draft Versions implementation and validation](STUD_M10_COMPOSITION_PLAN_DRAFT_VERSIONS_VALIDATION.md)
 - [M11 Humanisation with Diff implementation and validation](STUD_M11_HUMANISATION_WITH_DIFF_VALIDATION.md)
+- [M12 Lecturer Committee / Corrections implementation and validation](STUD_M12_LECTURER_COMMITTEE_CORRECTIONS_VALIDATION.md)
 - [M1-M3 integration and final technical audit](STUD_M1_M3_INTEGRATION_AUDIT.md)
 - [Electron trust-boundary hardening](../../security/ELECTRON_TRUST_BOUNDARY_HARDENING_2026-08-24.md)
 
@@ -78,5 +79,11 @@ explicit user-authored writing samples, exact immutable Draft source lineage,
 protected academic spans, deterministic integrity checks, inspectable diff and
 explicit full/Section acceptance into a new M10 Draft Version. It uses the fixed
 Ollama loopback boundary without tools or cloud fallback; the installed 3B model
-is reported as limited and carries no quality claim. The exact next product
-milestone is M12 — Lecturer Committee and Corrections.
+is reported as limited and carries no quality claim. M12 advances schema v24 to
+v25 with exact immutable Draft review bases, independent deterministic/local
+reviewer passes, versioned findings and synthesis, optional rubric-bound
+formative ranges, explicit correction plans and protected correction candidates.
+Accepted corrections create a new immutable M10 Draft Version with complete
+review/plan/session lineage; no result is treated as a grade or lecturer
+judgement. The exact next product milestone is M13 — Run Coordinator, Model
+Routing, Resource Profiles and Watchdog.

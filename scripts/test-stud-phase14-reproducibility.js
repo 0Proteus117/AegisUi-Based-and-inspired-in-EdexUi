@@ -22,6 +22,7 @@ const CLAIM_EVIDENCE_TABLES = ["stud_claim_evidence_links", "stud_evidence_recor
 const FACULTY_SCOUT_TABLES = ["stud_faculty_publication_candidates", "stud_faculty_observations", "stud_faculty_identity_candidates", "stud_faculty_identities"];
 const COMPOSITION_TABLES = ["stud_draft_section_versions", "stud_draft_versions", "stud_draft_documents", "stud_composition_section_evidence", "stud_composition_section_claims", "stud_composition_requirement_coverage", "stud_composition_sections", "stud_assignment_composition_plans", "stud_composition_plans"];
 const HUMANISATION_TABLES = ["stud_humanisation_integrity_checks", "stud_humanisation_session_sections", "stud_humanisation_sessions", "stud_humanisation_writing_samples", "stud_humanisation_profile_revisions", "stud_humanisation_profiles"];
+const LECTURER_COMMITTEE_TABLES = ["stud_lecturer_synthesis_findings", "stud_lecturer_finding_events", "stud_correction_integrity_checks", "stud_correction_session_sections", "stud_correction_item_findings", "stud_lecturer_formative_estimates", "stud_lecturer_synthesis", "stud_correction_sessions", "stud_correction_items", "stud_correction_plans", "stud_lecturer_review_findings", "stud_lecturer_reviewer_passes", "stud_lecturer_review_sessions"];
 
 let passed = 0;
 function check(name, fn) {
@@ -44,6 +45,19 @@ function removeM2Schema(store) {
     store.db.exec("DROP INDEX IF EXISTS stud_courses_academic_organisation_index;");
     store.db.exec("CREATE TABLE stud_courses_v15 AS SELECT id,title,short_name,code,description,start_date,end_date,status,created_at,updated_at,archived_at FROM stud_courses; DROP TABLE stud_courses; ALTER TABLE stud_courses_v15 RENAME TO stud_courses;");
     store.db.exec("PRAGMA foreign_keys = ON;");
+}
+
+function removeM12Columns(store) {
+    store.db.exec(`PRAGMA foreign_keys = OFF;
+        ALTER TABLE stud_draft_versions DROP COLUMN lecturer_review_session_id;
+        ALTER TABLE stud_draft_versions DROP COLUMN correction_plan_id;
+        ALTER TABLE stud_draft_versions DROP COLUMN correction_session_id;
+        ALTER TABLE stud_working_context DROP COLUMN active_lecturer_review_session_id;
+        ALTER TABLE stud_working_context DROP COLUMN active_lecturer_finding_id;
+        ALTER TABLE stud_working_context DROP COLUMN active_correction_plan_id;
+        ALTER TABLE stud_working_context DROP COLUMN active_correction_item_id;
+        ALTER TABLE stud_working_context DROP COLUMN active_correction_session_id;
+        PRAGMA foreign_keys = ON;`);
 }
 
 function freshStore(root) {
@@ -77,7 +91,8 @@ try {
 
     const v12Root = path.join(root, "legacy-v12");
     const v12 = freshStore(v12Root);
-    removeTables(v12, [...HUMANISATION_TABLES, ...COMPOSITION_TABLES, ...FACULTY_SCOUT_TABLES, ...CLAIM_EVIDENCE_TABLES, ...RESEARCH_PLAN_TABLES, ...OPERATIONAL_TABLES, ...WORKFLOW_CONDITION_TABLES, ...WORKFLOW_TABLES, ...REQUIREMENTS_TABLES, "stud_provider_sync_preferences", "stud_discipline_profile", "stud_tool_preferences"]);
+    removeM12Columns(v12);
+    removeTables(v12, [...LECTURER_COMMITTEE_TABLES, ...HUMANISATION_TABLES, ...COMPOSITION_TABLES, ...FACULTY_SCOUT_TABLES, ...CLAIM_EVIDENCE_TABLES, ...RESEARCH_PLAN_TABLES, ...OPERATIONAL_TABLES, ...WORKFLOW_CONDITION_TABLES, ...WORKFLOW_TABLES, ...REQUIREMENTS_TABLES, "stud_provider_sync_preferences", "stud_discipline_profile", "stud_tool_preferences"]);
     removeM2Schema(v12);
     v12.db.prepare("DELETE FROM stud_schema_migrations WHERE version>=13").run();
     v12.close();
@@ -93,7 +108,8 @@ try {
     const v9 = freshStore(v9Root);
     const legacyCourse = v9.createEntity("COURSE", {title: "Legacy course retained across migration"});
     const legacyAssignment = v9.createEntity("ASSIGNMENT", {courseId: legacyCourse.id, title: "Legacy assignment retained across migration"});
-    removeTables(v9, [...HUMANISATION_TABLES, ...COMPOSITION_TABLES, ...FACULTY_SCOUT_TABLES, ...CLAIM_EVIDENCE_TABLES, ...RESEARCH_PLAN_TABLES, ...OPERATIONAL_TABLES, ...WORKFLOW_CONDITION_TABLES, ...WORKFLOW_TABLES, ...REQUIREMENTS_TABLES, "stud_provider_sync_preferences", "stud_discipline_profile", "stud_tool_preferences", "stud_repository_references", "stud_datasets", "stud_notebook_outputs", "stud_notebook_cells", "stud_notebooks", "stud_context_packages", "stud_context_decisions", "stud_concept_observations", "stud_academic_concepts"]);
+    removeM12Columns(v9);
+    removeTables(v9, [...LECTURER_COMMITTEE_TABLES, ...HUMANISATION_TABLES, ...COMPOSITION_TABLES, ...FACULTY_SCOUT_TABLES, ...CLAIM_EVIDENCE_TABLES, ...RESEARCH_PLAN_TABLES, ...OPERATIONAL_TABLES, ...WORKFLOW_CONDITION_TABLES, ...WORKFLOW_TABLES, ...REQUIREMENTS_TABLES, "stud_provider_sync_preferences", "stud_discipline_profile", "stud_tool_preferences", "stud_repository_references", "stud_datasets", "stud_notebook_outputs", "stud_notebook_cells", "stud_notebooks", "stud_context_packages", "stud_context_decisions", "stud_concept_observations", "stud_academic_concepts"]);
     removeM2Schema(v9);
     v9.db.exec("DROP INDEX IF EXISTS stud_assignments_grade_context_index; ALTER TABLE stud_assignments DROP COLUMN grade_scheme; ALTER TABLE stud_assignments DROP COLUMN grade_text;");
     v9.db.prepare("DELETE FROM stud_schema_migrations WHERE version >= 10").run();

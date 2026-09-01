@@ -361,6 +361,13 @@ reported honestly.
 
 ## M12 — Lecturer Committee and corrections loop
 
+**Status: COMPLETE.** Implementation and validation are recorded in
+`STUD_M12_LECTURER_COMMITTEE_CORRECTIONS_VALIDATION.md`. Canonical schema v25
+preserves exact immutable review bases, independent reviewer passes, typed
+findings/history, synthesis, explicit correction plans, protected local
+correction candidates and accepted M10 Draft lineage. Review assistance is
+never represented as a grade or lecturer judgement.
+
 - **Objective:** add rubric-led advisory review and versioned corrections.
 - **Exact scope:** panel roles, review rounds/findings, estimate caveat, blocked-
   section handling, accept/reject/defer finding and correction trace.
@@ -486,7 +493,8 @@ reported honestly.
 
 ## Exact next milestone
 
-M1, the dedicated Electron Trust-Boundary Hardening intervention, and M2–M11 are
-complete. The exact next product milestone is **M12 — Lecturer Committee and
-Corrections**. M10/M11 do not include autonomous drafting, Lecturer Committee,
-worker scheduling, resource profiles, watchdog operation or submission.
+M1, the dedicated Electron Trust-Boundary Hardening intervention, and M2–M12 are
+complete. The exact next product milestone is **M13 — Run Coordinator, Model
+Routing, Resource Profiles and Watchdog**. M12 does not include autonomous
+workers, model routing/installation, resource profiles, watchdog operation,
+automatic acceptance, academic grading or submission.

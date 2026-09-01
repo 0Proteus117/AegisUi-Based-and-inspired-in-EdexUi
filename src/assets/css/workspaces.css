@@ -7858,3 +7858,76 @@ button.eng-thread-row.active {
     .engineering-mode .stud-humanisation-workspace fieldset { grid-template-columns: 1fr; }
     .engineering-mode .stud-humanisation-top label { min-width: 100%; }
 }
+
+/* STUD M12 — calm review at rest; evidence, synthesis and correction detail
+   use progressive disclosure and remain inside the Assignment workspace. */
+.engineering-mode .stud-assignment-workspace-detail.is-lecturer-review { min-width: 0; }
+.engineering-mode :is(.stud-committee-loading,.stud-committee-empty) { display: grid; place-content: center; gap: .6vh; min-height: 30vh; padding: 1.4vh; text-align: center; color: var(--aegis-text-muted); border: .07vh solid var(--aegis-border); background: var(--aegis-surface); }
+.engineering-mode :is(.stud-committee-intro,.stud-committee-review,.stud-correction-plan) { display: grid; gap: .85vh; min-width: 0; padding: 1vh; color: var(--aegis-text-muted); background: var(--aegis-surface); }
+.engineering-mode :is(.stud-committee-intro,.stud-committee-review,.stud-correction-plan) h2 { margin: .15vh 0; color: var(--aegis-text-primary); font: max(16px,.82vh)/1.3 var(--font_main); overflow-wrap: anywhere; }
+.engineering-mode :is(.stud-committee-intro,.stud-committee-review,.stud-correction-plan) p { margin: 0; max-width: 76ch; font: max(10px,.43vh)/1.5 var(--font_main_light); overflow-wrap: anywhere; }
+.engineering-mode :is(.stud-committee-intro,.stud-committee-review,.stud-correction-plan) :is(button,summary) { min-height: 2.3vh; padding: .38vh .65vh; color: var(--aegis-accent-soft); border: .07vh solid var(--aegis-border); background: transparent; font: max(9px,.37vh)/1.25 var(--font_mono); cursor: pointer; }
+.engineering-mode :is(.stud-committee-intro,.stud-committee-review,.stud-correction-plan) button:disabled { color: var(--aegis-text-faint); opacity: .55; cursor: not-allowed; }
+.engineering-mode .stud-committee-intro > div { max-width: 58rem; }
+.engineering-mode .stud-committee-intro form { display: grid; gap: .7vh; max-width: 58rem; padding: .9vh; border-left: .18vh solid var(--aegis-accent-soft); background: var(--aegis-surface-muted); }
+.engineering-mode :is(.stud-committee-intro,.stud-correction-create,.stud-correction-start) fieldset { display: flex; flex-wrap: wrap; gap: .45vh .8vh; margin: 0; padding: .6vh; border: .06vh solid var(--aegis-border-subtle); }
+.engineering-mode :is(.stud-committee-intro,.stud-correction-create,.stud-correction-start) fieldset label { display: flex; align-items: start; gap: .35vh; font: max(9px,.36vh)/1.35 var(--font_mono); }
+.engineering-mode .stud-committee-intro > footer { display: flex; flex-wrap: wrap; gap: .45vh 1vh; color: var(--aegis-text-faint); font: max(9px,.36vh) var(--font_mono); }
+.engineering-mode .stud-committee-runtime { display: grid; gap: .18vh; padding: .6vh; border-left: .14vh solid var(--aegis-warning); }
+.engineering-mode :is(.stud-committee-review,.stud-correction-plan,.stud-correction-session) > header { display: flex; justify-content: space-between; align-items: start; gap: .8vh; }
+.engineering-mode .stud-committee-pass-rail { display: grid; grid-template-columns: repeat(5,minmax(10rem,1fr)); gap: .35vh; min-width: 0; overflow-x: auto; padding-bottom: .2vh; }
+.engineering-mode .stud-committee-pass-rail > div { display: grid; gap: .15vh; min-height: 4.2vh; padding: .55vh; border-top: .14vh solid var(--aegis-border); background: var(--aegis-surface-muted); }
+.engineering-mode .stud-committee-pass-rail .is-complete { border-color: var(--aegis-success); }
+.engineering-mode .stud-committee-pass-rail .is-failed { border-color: var(--aegis-danger); }
+.engineering-mode .stud-committee-pass-rail .is-running { border-color: var(--aegis-accent-soft); }
+.engineering-mode .stud-committee-running { padding: .75vh; border-left: .18vh solid var(--aegis-accent-soft); background: var(--aegis-surface-muted); }
+.engineering-mode .stud-committee-review-layout { display: grid; grid-template-columns: minmax(0,1.6fr) minmax(17rem,.72fr); gap: .8vh; align-items: start; min-width: 0; }
+.engineering-mode .stud-committee-review-layout > :is(main,aside) { display: grid; gap: .55vh; min-width: 0; }
+.engineering-mode :is(.stud-committee-review-layout > main,.stud-committee-synthesis,.stud-correction-start,.stud-correction-create) > header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: .35vh .7vh; }
+.engineering-mode :is(.stud-committee-review-layout > main,.stud-committee-synthesis,.stud-correction-start,.stud-correction-create) > header > small { margin-right: .8rem; }
+.engineering-mode .stud-committee-finding { border-bottom: .06vh solid var(--aegis-border-subtle); }
+.engineering-mode .stud-committee-finding > button { display: grid; grid-template-columns: 1.8rem minmax(0,1fr); gap: .5vh; width: 100%; padding: .75vh .25vh; text-align: left; border: 0; }
+.engineering-mode .stud-committee-finding > button > span { display: grid; place-items: center; width: 1.55rem; height: 1.55rem; border: .07vh solid currentColor; border-radius: 50%; font-weight: 700; }
+.engineering-mode .stud-committee-finding > button :is(strong,p) { display: block; overflow-wrap: anywhere; }
+.engineering-mode .stud-committee-finding > button footer { display: flex; flex-wrap: wrap; gap: .3vh .8vh; color: var(--aegis-text-faint); font: max(8px,.34vh) var(--font_mono); }
+.engineering-mode .stud-committee-finding details { margin: 0 0 .6vh 2.35rem; padding: .55vh; background: var(--aegis-surface-muted); }
+.engineering-mode :is(.stud-committee-finding.is-blocking,.stud-committee-finding.is-major) > button > span { color: var(--aegis-danger); }
+.engineering-mode :is(.stud-committee-synthesis,.stud-correction-start,.stud-formative-estimate) { display: grid; gap: .45vh; padding: .75vh; border-top: .14vh solid var(--aegis-border); background: var(--aegis-surface-muted); }
+.engineering-mode .stud-committee-synthesis article { display: grid; grid-template-columns: minmax(8rem,.35fr) minmax(0,1fr); gap: .65rem; padding: .45vh 0; border-top: .05vh solid var(--aegis-border-subtle); }
+.engineering-mode :is(.stud-correction-start form,.stud-correction-create) { display: grid; gap: .55vh; }
+.engineering-mode .stud-correction-start fieldset { display: grid; max-height: 15rem; overflow: auto; }
+.engineering-mode :is(.stud-correction-start,.stud-correction-create) fieldset label { display: grid; grid-template-columns: auto minmax(0,1fr); justify-content: start; width: 100%; }
+.engineering-mode .stud-committee-basis dl { display: grid; grid-template-columns: repeat(auto-fit,minmax(14rem,1fr)); gap: .4vh; }
+.engineering-mode .stud-committee-basis dl div { padding: .5vh; overflow-wrap: anywhere; background: var(--aegis-surface-muted); }
+.engineering-mode .stud-committee-basis dt { color: var(--aegis-text-faint); font: max(8px,.34vh) var(--font_mono); }
+.engineering-mode .stud-committee-history button { display: flex; justify-content: space-between; width: 100%; border: 0; border-bottom: .05vh solid var(--aegis-border-subtle); text-align: left; }
+.engineering-mode .stud-correction-items { display: grid; gap: .5vh; }
+.engineering-mode .stud-correction-items article { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: .8vh; padding: .75vh; border-left: .16vh solid var(--aegis-border); background: var(--aegis-surface-muted); }
+.engineering-mode .stud-correction-items article > div { display: grid; gap: .35rem; min-width: 0; }
+.engineering-mode .stud-correction-items article > div:last-child { display: grid; align-content: center; gap: .4vh; }
+.engineering-mode .stud-correction-create { padding: .75vh; border: .07vh solid var(--aegis-border); }
+.engineering-mode .stud-correction-create :is(input:not([type="checkbox"]),select),.engineering-mode .stud-correction-start :is(input:not([type="checkbox"]),select) { width: 100%; min-width: 0; padding: .42vh .55vh; box-sizing: border-box; color: var(--aegis-text-primary); border: .07vh solid var(--aegis-border); background: var(--aegis-input-bg,var(--aegis-surface-muted)); }
+.engineering-mode :is(.stud-correction-create,.stud-correction-start,.stud-correction-items) input[type="checkbox"] { width: auto; flex: 0 0 auto; }
+.engineering-mode .stud-correction-session { display: grid; gap: .6vh; padding: .75vh; border-top: .16vh solid var(--aegis-accent-soft); background: var(--aegis-surface-muted); }
+.engineering-mode .stud-correction-session > header > div { display: grid; gap: .35rem; min-width: 0; }
+.engineering-mode .stud-correction-session > form { display: grid; grid-template-columns: minmax(0,1fr) minmax(15rem,.42fr); gap: .75vh; }
+.engineering-mode .stud-correction-diff { display: grid; gap: .55vh; min-width: 0; }
+.engineering-mode .stud-correction-diff article { min-width: 0; padding: .75vh; background: var(--aegis-surface); }
+.engineering-mode .stud-correction-diff article > :is(header,div) { display: flex; flex-wrap: wrap; gap: .2vh; overflow-wrap: anywhere; }
+.engineering-mode .stud-correction-diff article > div { max-height: 25vh; overflow: auto; padding: .6vh 0; }
+.engineering-mode .stud-correction-diff .is-added { background: color-mix(in srgb,var(--aegis-success) 20%,transparent); text-decoration: underline dotted; }
+.engineering-mode .stud-correction-diff .is-removed { background: color-mix(in srgb,var(--aegis-danger) 18%,transparent); text-decoration: line-through; }
+.engineering-mode .stud-correction-session form > aside { display: grid; align-content: start; gap: .35vh; }
+.engineering-mode .stud-correction-session form > aside p { display: grid; padding: .45vh; background: var(--aegis-surface); }
+.engineering-mode .stud-correction-session form > footer { grid-column: 1/-1; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .45vh; }
+.engineering-mode :is(.stud-committee-review,.stud-correction-plan) details:not([open]) > :not(summary) { display: none !important; }
+@media (max-width: 1200px) {
+    .engineering-mode :is(.stud-committee-review-layout,.stud-correction-session > form) { grid-template-columns: minmax(0,1fr); }
+    .engineering-mode .stud-correction-items article { grid-template-columns: minmax(0,1fr); }
+    .engineering-mode .stud-correction-session form > footer { grid-column: auto; }
+}
+@media (max-width: 760px) {
+    .engineering-mode :is(.stud-committee-review,.stud-correction-plan,.stud-correction-session) > header { flex-direction: column; }
+    .engineering-mode .stud-committee-synthesis article { grid-template-columns: minmax(0,1fr); }
+    .engineering-mode .stud-committee-finding details { margin-left: 0; }
+}
