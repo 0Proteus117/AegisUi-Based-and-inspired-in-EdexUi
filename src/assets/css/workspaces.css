@@ -7123,7 +7123,7 @@ button.eng-thread-row.active {
 .engineering-mode .stud-mission-stage-empty { padding: .7vh; color: var(--aegis-text-faint); border: .06vh solid var(--aegis-border-subtle); font: .41vh var(--font_mono); }
 .engineering-mode .stud-mission-body { display: grid; grid-template-columns: minmax(15rem,.65fr) minmax(0,1.35fr); gap: 1vh; min-width: 0; }
 .engineering-mode .stud-mission-artifacts { display: grid; align-content: start; gap: .25vh; min-width: 0; border: .06vh solid var(--aegis-border-subtle); }
-.engineering-mode .stud-mission-artifacts > p { margin: .7vh; color: var(--aegis-text-muted); font: .44vh/1.4 var(--font_main_light); }
+.engineering-mode .stud-mission-artifacts > p { margin: .7vh; color: var(--aegis-text-muted); font: max(12px,.44vh)/1.4 var(--font_main_light); }
 .engineering-mode .stud-mission-inspection { display: grid; gap: .8vh; min-width: 0; }
 .engineering-mode .stud-mission-current { display: grid; gap: .45vh; padding: .85vh; border-left: .18vh solid var(--aegis-accent-soft); background: var(--aegis-surface-muted); }
 .engineering-mode .stud-mission-current > small:last-child { color: var(--aegis-text-faint); font: max(9px, .38vh)/1.35 var(--font_main_light); }
@@ -7930,4 +7930,40 @@ button.eng-thread-row.active {
     .engineering-mode :is(.stud-committee-review,.stud-correction-plan,.stud-correction-session) > header { flex-direction: column; }
     .engineering-mode .stud-committee-synthesis article { grid-template-columns: minmax(0,1fr); }
     .engineering-mode .stud-committee-finding details { margin-left: 0; }
+}
+/* STUD M13 — calm at rest, operational only while a real persisted Plan runs. */
+.engineering-mode :is(.stud-execution-options,.stud-execution-profile,.stud-execution-candidate) { min-width:0; padding:.7rem 0; border-top:1px solid var(--aegis-border); }
+.engineering-mode :is(.stud-execution-options,.stud-execution-profile,.stud-execution-candidate) summary { cursor:pointer; color:var(--aegis-text-primary); padding:.5rem 0; }
+.engineering-mode :is(.stud-execution-options,.stud-execution-profile,.stud-execution-candidate):not([open]) > :not(summary) { display:none !important; }
+.engineering-mode .stud-execution-inputs { display:grid; gap:.8rem; margin:1rem 0; max-width:68rem; }
+.engineering-mode .stud-execution-inputs > div { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:.6rem; padding:.5rem 0; border-bottom:1px solid var(--aegis-border); }
+.engineering-mode .stud-execution-inputs :is(select,label) { max-width:100%; min-width:0; overflow-wrap:anywhere; }
+.engineering-mode .stud-execution-candidate pre { white-space:pre-wrap; overflow-wrap:anywhere; max-height:24rem; overflow:auto; font:inherit; line-height:1.6; color:var(--aegis-text-primary); }
+.engineering-mode .stud-execution-options input:not([type=checkbox]) { width:100%; min-width:0; box-sizing:border-box; background:var(--aegis-surface-muted); color:var(--aegis-text-primary); }
+.engineering-mode .stud-execution-stage-rail button { text-align:left; white-space:normal; overflow-wrap:anywhere; color:var(--aegis-text-primary); background:transparent; border:0; cursor:pointer; }
+.engineering-mode :is(.stud-mission-launch,.stud-mission-preflight) { display:grid; gap:.8vh; padding:clamp(.8rem,1.2vw,1.4rem); min-width:0; border-top:.16vh solid var(--aegis-accent-soft); background:var(--aegis-surface); }
+.engineering-mode :is(.stud-mission-launch,.stud-mission-preflight) header { display:grid; gap:.25vh; max-width:72ch; }
+.engineering-mode :is(.stud-mission-launch,.stud-mission-preflight) h2 { margin:0; color:var(--aegis-text-primary); font:max(17px,.9vh)/1.25 var(--font_main); overflow-wrap:anywhere; }
+.engineering-mode :is(.stud-mission-launch,.stud-mission-preflight) p { margin:0; color:var(--aegis-text-muted); font:max(10px,.42vh)/1.5 var(--font_main_light); }
+.engineering-mode .stud-mission-launch-options { display:grid; grid-template-columns:repeat(2,minmax(12rem,1fr)); gap:.7vh; max-width:58rem; }
+.engineering-mode .stud-mission-launch-options label { display:grid; gap:.25vh; color:var(--aegis-text-faint); font:max(9px,.35vh)/1.3 var(--font_mono); }
+.engineering-mode .stud-mission-launch-options select { width:100%; min-width:0; min-height:2.4rem; color:var(--aegis-text-primary); border:.07vh solid var(--aegis-border); background:var(--aegis-surface-muted); }
+.engineering-mode :is(.stud-mission-launch,.stud-mission-preflight,.stud-mission-controls) button { min-height:2.3rem; padding:.45rem .8rem; color:var(--aegis-accent-soft); border:.07vh solid var(--aegis-border); background:transparent; font:max(9px,.36vh)/1.2 var(--font_mono); cursor:pointer; }
+.engineering-mode .stud-mission-preflight dl { display:grid; grid-template-columns:repeat(auto-fit,minmax(9rem,1fr)); gap:.45vh; margin:0; }
+.engineering-mode .stud-mission-preflight dl div { padding:.65vh; border-left:.14vh solid var(--aegis-border); background:var(--aegis-surface-muted); }
+.engineering-mode .stud-mission-preflight :is(dt,dd) { margin:0; overflow-wrap:anywhere; }
+.engineering-mode .stud-mission-preflight dt { color:var(--aegis-text-faint); font:max(8px,.32vh) var(--font_mono); }
+.engineering-mode .stud-mission-preflight dd { margin-top:.2vh; color:var(--aegis-text-primary); font:max(14px,.62vh) var(--font_main); }
+.engineering-mode .stud-mission-warning { padding:.7vh; border-left:.18vh solid var(--aegis-warning); color:var(--aegis-text-primary); background:var(--aegis-surface-muted); }
+.engineering-mode .stud-mission-controls { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:.45vh; padding:.55vh .8vh; border-bottom:.06vh solid var(--aegis-border-subtle); }
+.engineering-mode .stud-execution-stage-rail li.is-waiting-human { border-color:var(--aegis-warning); }
+.engineering-mode .stud-execution-stage-rail li.is-waiting-external { border-color:var(--aegis-text-faint); }
+.engineering-mode .stud-execution-stage-rail li.is-failed { border-color:var(--aegis-danger); }
+.engineering-mode .stud-execution-stage-rail li.is-completed { border-color:var(--aegis-success); }
+.engineering-mode .stud-mission-current dl { display:grid; gap:.35vh; margin:.55vh 0; }
+.engineering-mode .stud-mission-current dl div { display:grid; grid-template-columns:minmax(7rem,.3fr) minmax(0,1fr); gap:.5rem; padding:.35vh 0; border-top:.05vh solid var(--aegis-border-subtle); }
+.engineering-mode .stud-mission-current :is(dt,dd) { margin:0; overflow-wrap:anywhere; }
+@media (max-width:1200px) {
+    .engineering-mode .stud-mission-launch-options { grid-template-columns:minmax(0,1fr); }
+    .engineering-mode .stud-execution-stage-rail { grid-auto-columns:minmax(10rem,72vw); }
 }

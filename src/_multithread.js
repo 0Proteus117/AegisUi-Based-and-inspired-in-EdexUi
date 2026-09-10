@@ -21,7 +21,7 @@ if (cluster.isMaster) {
     registerOsintCaseIpc({ipc, app: electron.app, dialog: electron.dialog});
     // STUD persistence is a bounded main-process service. The renderer only
     // receives validated academic-domain responses; it never opens SQLite.
-    registerStudAcademicIpc({ipc, app: electron.app});
+    registerStudAcademicIpc({ipc, app: electron.app, powerMonitor: electron.powerMonitor, powerSaveBlocker: electron.powerSaveBlocker});
 
     const ALLOWED_SYSTEM_INFORMATION = new Set([
         "battery", "blockDevices", "chassis", "cpu", "cpuTemperature", "currentLoad", "fsSize", "mem", "networkConnections",

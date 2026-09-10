@@ -389,6 +389,11 @@ never represented as a grade or lecturer judgement.
 
 ## M13 — Run coordinator, model routing, resource profiles and watchdog
 
+Implementation is under isolated schema-v26 validation; see the
+[M13 evidence ledger](STUD_M13_RUN_COORDINATOR_VALIDATION.md). Do not start M14
+or change the integration baseline until the remaining real-model and packaged
+acceptance gates pass.
+
 - **Objective:** execute approved workflow tasks manually with honest resource and
   progress control.
 - **Exact scope:** launch consent summary, bounded task coordinator, runtime worker
@@ -397,7 +402,7 @@ never represented as a grade or lecturer judgement.
   pause/resume/retry/give-Mac-back/cancel and full Mission Control operation.
 - **Components:** workflow runtime, existing provider/model/compute/document
   services, ModelCapabilityRouter, ResourcePolicy, Watchdog and Mission Control.
-- **Schema/migration:** expected v25; run consent/profile metadata and durable task
+- **Schema/migration:** v25→v26; normalized execution/model/profile/watchdog state and durable task
   attempts if not already covered by workflow tables.
 - **Dependencies:** M3–M12 contracts; individual branches may execute only when
   their own dependencies are satisfied.

@@ -22,6 +22,7 @@ const {StudHumanisationRuntime} = require("./studHumanisationRuntime.class.js");
 const {StudHumanisationService} = require("./studHumanisationService.class.js");
 const {StudLecturerCommitteeRuntime} = require("./studLecturerCommitteeRuntime.class.js");
 const {StudLecturerCommitteeService} = require("./studLecturerCommitteeService.class.js");
+const {StudRunCoordinator} = require("./studRunCoordinator.class.js");
 
 const CHANNELS = Object.freeze([
     "stud-core-status",
@@ -247,6 +248,7 @@ const CHANNELS = Object.freeze([
     "stud-draft-diff"
     ,"stud-humanisation-profile-list","stud-humanisation-profile-read","stud-humanisation-profile-create","stud-humanisation-profile-update","stud-humanisation-profile-duplicate","stud-humanisation-profile-archive","stud-humanisation-sample-add","stud-humanisation-sample-remove","stud-humanisation-profile-analyze","stud-humanisation-session-list","stud-humanisation-session-read","stud-humanisation-session-create","stud-humanisation-status","stud-humanisation-run","stud-humanisation-cancel","stud-humanisation-diff","stud-humanisation-accept","stud-humanisation-reject"
     ,"stud-lecturer-review-session-list","stud-lecturer-review-session-read","stud-lecturer-review-session-create","stud-lecturer-review-status","stud-lecturer-review-run","stud-lecturer-review-cancel","stud-lecturer-review-finding-update","stud-lecturer-review-synthesis","stud-lecturer-formative-estimate","stud-correction-plan-list","stud-correction-plan-read","stud-correction-plan-create","stud-correction-item-update","stud-correction-session-list","stud-correction-session-read","stud-correction-session-create","stud-correction-run","stud-correction-cancel","stud-correction-diff","stud-correction-accept","stud-correction-reject","stud-lecturer-review-recheck"
+    ,"stud-execution-plan-create","stud-execution-preflight","stud-execution-launch","stud-execution-state","stud-execution-history","stud-execution-pause","stud-execution-resume","stud-execution-cancel","stud-execution-retry","stud-execution-skip","stud-execution-draft-accept","stud-execution-draft-reject","stud-execution-model-inventory","stud-execution-model-probe","stud-execution-resource-profiles","stud-execution-resource-profile-save"
 ]);
 
 function senderIsTrusted(event) {
@@ -348,6 +350,18 @@ function registerStudAcademicIpc(options = {}) {
     // of a correction candidate can create an immutable child Draft Version.
     const lecturerCommitteeRuntime = options.lecturerCommitteeRuntime || new StudLecturerCommitteeRuntime({assistantRuntime: academicAiRuntime});
     const lecturerCommittee = options.lecturerCommitteeService || new StudLecturerCommitteeService({store, compositionService: composition, runtime: lecturerCommitteeRuntime, artifactOperationsService: artifactOperations, claimEvidenceService: claimEvidence, workingContextService: workingContext});
+    // M13 coordinates only fixed main-process Task Handlers. M3/M4 remain
+    // Workflow/gate authority and M6 remains Run/Event/Artifact authority.
+    // The renderer cannot register handlers, choose an endpoint, append events,
+    // claim Steps or declare completion.
+    const runCoordinator = options.runCoordinator || new StudRunCoordinator({
+        store, workflowService: workflow, artifactOperationsService: artifactOperations,
+        requirementsService: requirements, researchPlanService: researchPlans,
+        claimEvidenceService: claimEvidence, compositionService: composition,
+        humanisationService: humanisation, lecturerCommitteeService: lecturerCommittee,
+        assistantRuntime: academicAiRuntime, powerMonitor: options.powerMonitor,
+        powerSaveBlocker: options.powerSaveBlocker, diskProbe: options.diskProbe
+    });
     let shell = options.shell || null;
     if (!shell) { try { shell = require("electron").shell; } catch (error) {} }
     const handlers = new Map();
@@ -515,6 +529,22 @@ function registerStudAcademicIpc(options = {}) {
     add("stud-correction-accept", ["assignmentId", "sessionId", "expectedVersion", "sectionIds", "confirmProtectedChanges"], payload => lecturerCommittee.acceptCorrection(payload));
     add("stud-correction-reject", ["assignmentId", "sessionId", "expectedVersion"], payload => lecturerCommittee.rejectCorrection(payload));
     add("stud-lecturer-review-recheck", ["assignmentId", "sessionId", "explicitRequest"], payload => lecturerCommittee.recheck(payload));
+    add("stud-execution-plan-create", ["assignmentId","workflowId","scope","selectedNodeIds","taskSelections","resourceProfileId","routingPolicy","pinnedModelId","priority","launchPolicy"], payload => runCoordinator.createPlan(payload));
+    add("stud-execution-preflight", ["assignmentId","planId"], payload => runCoordinator.preflight(payload));
+    add("stud-execution-launch", ["assignmentId","planId","expectedVersion","confirmLaunch"], payload => runCoordinator.launch(payload));
+    add("stud-execution-state", ["assignmentId","planId","eventLimit","artifactLimit"], payload => runCoordinator.missionState(payload));
+    add("stud-execution-history", ["assignmentId","limit","beforeCreatedAt"], payload => runCoordinator.repository.listPlans(payload.assignmentId,payload.limit,payload.beforeCreatedAt||null));
+    add("stud-execution-pause", ["assignmentId","planId","expectedVersion"], payload => runCoordinator.pause(payload));
+    add("stud-execution-resume", ["assignmentId","planId","expectedVersion"], payload => runCoordinator.resume(payload));
+    add("stud-execution-cancel", ["assignmentId","planId","expectedVersion"], payload => runCoordinator.cancel(payload));
+    add("stud-execution-retry", ["assignmentId","planId","stepId","expectedPlanVersion","expectedStepVersion"], payload => runCoordinator.retry(payload));
+    add("stud-execution-skip", ["assignmentId","planId","stepId","expectedPlanVersion","expectedStepVersion","reason"], payload => runCoordinator.skip(payload));
+    add("stud-execution-draft-accept", ["assignmentId","planId","stepId","expectedStepVersion","draftId"], payload => runCoordinator.acceptDraftCandidate(payload));
+    add("stud-execution-draft-reject", ["assignmentId","planId","stepId","expectedStepVersion"], payload => runCoordinator.rejectDraftCandidate(payload));
+    add("stud-execution-model-inventory", [], () => runCoordinator.modelInventory());
+    add("stud-execution-model-probe", ["modelId","capability","explicitRequest"], payload => runCoordinator.modelProbe(payload));
+    add("stud-execution-resource-profiles", [], () => runCoordinator.profiles());
+    add("stud-execution-resource-profile-save", ["id","expectedVersion","name","maxLightTasks","maxNetworkTasks","maxModelTasks","minAvailableMemoryBytes","maxModelContext","pauseOnBattery","pauseOnMemoryPressure","keepAwake","timeoutMs","maxRetries"], payload => runCoordinator.saveProfile(payload));
     add("stud-requirements-state", ["assignmentId"], payload => requirements.state(payload.assignmentId));
     add("stud-requirements-create-draft", ["assignmentId"], payload => requirements.createDraft(payload.assignmentId));
     add("stud-requirements-review-candidate", ["contractId", "candidateId", "disposition", "expectedVersion"], payload => requirements.reviewCandidate(payload));
@@ -738,6 +768,7 @@ function registerStudAcademicIpc(options = {}) {
         academicAiRuntime.dispose();
         humanisationRuntime.dispose();
         lecturerCommitteeRuntime.dispose();
+        runCoordinator.dispose();
         notebookRuntime.dispose();
         store.close();
     }});

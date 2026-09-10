@@ -28,6 +28,7 @@ documents translate that intent into the audited v2.7.0 implementation:
 - [M10 Composition Plan / Draft Versions implementation and validation](STUD_M10_COMPOSITION_PLAN_DRAFT_VERSIONS_VALIDATION.md)
 - [M11 Humanisation with Diff implementation and validation](STUD_M11_HUMANISATION_WITH_DIFF_VALIDATION.md)
 - [M12 Lecturer Committee / Corrections implementation and validation](STUD_M12_LECTURER_COMMITTEE_CORRECTIONS_VALIDATION.md)
+- [M13 Run Coordinator evidence ledger — under validation](STUD_M13_RUN_COORDINATOR_VALIDATION.md)
 - [M1-M3 integration and final technical audit](STUD_M1_M3_INTEGRATION_AUDIT.md)
 - [Electron trust-boundary hardening](../../security/ELECTRON_TRUST_BOUNDARY_HARDENING_2026-08-24.md)
 

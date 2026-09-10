@@ -1,5 +1,9 @@
 # STUD Assignment Workflow Engine — target architecture
 
+The isolated schema-v26 M13 implementation is recorded in the
+[M13 evidence ledger](STUD_M13_RUN_COORDINATOR_VALIDATION.md). This is not yet a
+completion marker and does not relax its real-model acceptance gate.
+
 ## Authority and invariants
 
 This document translates the Master Specification into implementation contracts

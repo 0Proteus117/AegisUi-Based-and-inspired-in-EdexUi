@@ -1830,6 +1830,296 @@ class StudAcademicStore {
             ALTER TABLE stud_working_context ADD COLUMN active_correction_plan_id TEXT REFERENCES stud_correction_plans(id);
             ALTER TABLE stud_working_context ADD COLUMN active_correction_item_id TEXT REFERENCES stud_correction_items(id);
             ALTER TABLE stud_working_context ADD COLUMN active_correction_session_id TEXT REFERENCES stud_correction_sessions(id);
+        `}, {version: 26, sql: `
+            ALTER TABLE stud_operation_event_artifacts RENAME TO stud_operation_event_artifacts_v25;
+            ALTER TABLE stud_operation_events RENAME TO stud_operation_events_v25;
+            DROP INDEX stud_operation_event_artifacts_artifact_index;
+            DROP INDEX stud_operation_events_assignment_index;
+            DROP INDEX stud_operation_events_run_index;
+            DROP INDEX stud_operation_events_workflow_index;
+            CREATE TABLE stud_operation_events (
+                id TEXT PRIMARY KEY,
+                assignment_id TEXT NOT NULL,
+                workflow_id TEXT,
+                workflow_node_id TEXT,
+                run_id TEXT,
+                event_sequence INTEGER NOT NULL CHECK(event_sequence >= 1),
+                event_type TEXT NOT NULL CHECK(event_type IN ('OPERATION_CREATED','OPERATION_STARTED','OPERATION_PAUSED','OPERATION_RESUMED','OPERATION_COMPLETED','OPERATION_FAILED','OPERATION_CANCELLED','STAGE_ENTERED','STAGE_LEFT','ARTIFACT_REGISTERED','ARTIFACT_UPDATED','ARTIFACT_SUPERSEDED','SOURCE_ACQUIRED','DOCUMENT_INDEXED','EXTRACTION_COMPLETED','MODEL_REQUEST_STARTED','MODEL_REQUEST_COMPLETED','MODEL_REQUEST_FAILED','COMPUTE_STARTED','COMPUTE_COMPLETED','COMPUTE_FAILED','CHECKPOINT_REQUESTED','CHECKPOINT_DECIDED','BLOCKER_CREATED','BLOCKER_RESOLVED','HUMAN_INPUT_REQUESTED','HUMAN_INPUT_RECEIVED','EXECUTION_PLAN_STARTED','EXECUTION_STEP_READY','EXECUTION_STEP_STARTED','EXECUTION_STEP_PAUSED','EXECUTION_STEP_COMPLETED','EXECUTION_STEP_FAILED','EXECUTION_STEP_INTERRUPTED','EXECUTION_CHECKPOINT_SAVED','MODEL_ROUTED','RESOURCE_PRESSURE','WATCHDOG_INCIDENT','HUMAN_GATE_REACHED','EXECUTION_PLAN_COMPLETED','EXECUTION_PLAN_INTERRUPTED','EXECUTION_INPUT_CHANGED')),
+                actor TEXT NOT NULL CHECK(actor IN ('USER','SYSTEM','MOODLE','RESEARCH','COMPUTE','MODEL','WORKFLOW','UNKNOWN')),
+                severity TEXT NOT NULL CHECK(severity IN ('INFO','NOTICE','WARNING','ERROR')),
+                payload_json TEXT,
+                canonical_object_type TEXT,
+                canonical_object_id TEXT,
+                source_workflow_event_id TEXT,
+                summary TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY(assignment_id) REFERENCES stud_assignments(id),
+                FOREIGN KEY(workflow_id) REFERENCES stud_workflow_instances(id),
+                FOREIGN KEY(workflow_node_id) REFERENCES stud_workflow_nodes(id),
+                FOREIGN KEY(run_id) REFERENCES stud_operation_runs(id),
+                FOREIGN KEY(source_workflow_event_id) REFERENCES stud_workflow_events(id),
+                UNIQUE(assignment_id,event_sequence),
+                CHECK(length(summary) BETWEEN 1 AND 1000),
+                CHECK((workflow_node_id IS NULL) OR (workflow_id IS NOT NULL)),
+                CHECK((canonical_object_type IS NULL AND canonical_object_id IS NULL) OR (canonical_object_type IS NOT NULL AND canonical_object_id IS NOT NULL))
+            );
+            INSERT INTO stud_operation_events SELECT * FROM stud_operation_events_v25;
+            CREATE INDEX stud_operation_events_assignment_index ON stud_operation_events(assignment_id,event_sequence DESC);
+            CREATE INDEX stud_operation_events_run_index ON stud_operation_events(run_id,event_sequence DESC);
+            CREATE INDEX stud_operation_events_workflow_index ON stud_operation_events(workflow_id,workflow_node_id,event_sequence DESC);
+            CREATE TABLE stud_operation_event_artifacts (
+                event_id TEXT NOT NULL,
+                artifact_id TEXT NOT NULL,
+                PRIMARY KEY(event_id,artifact_id),
+                FOREIGN KEY(event_id) REFERENCES stud_operation_events(id) ON DELETE CASCADE,
+                FOREIGN KEY(artifact_id) REFERENCES stud_assignment_artifacts(id)
+            );
+            INSERT INTO stud_operation_event_artifacts SELECT * FROM stud_operation_event_artifacts_v25;
+            CREATE INDEX stud_operation_event_artifacts_artifact_index ON stud_operation_event_artifacts(artifact_id,event_id);
+            DROP TABLE stud_operation_event_artifacts_v25;
+            DROP TABLE stud_operation_events_v25;
+            CREATE TABLE stud_execution_plans (
+                id TEXT PRIMARY KEY,
+                assignment_id TEXT NOT NULL,
+                workflow_id TEXT NOT NULL,
+                workflow_row_version INTEGER NOT NULL CHECK(workflow_row_version >= 1),
+                workflow_fingerprint TEXT NOT NULL,
+                scope TEXT NOT NULL CHECK(scope IN ('CURRENT_STAGE','SELECTED_STAGES','FROM_CURRENT_STAGE','FULL_AVAILABLE_WORKFLOW')),
+                resource_profile_id TEXT NOT NULL,
+                routing_policy TEXT NOT NULL CHECK(routing_policy IN ('AUTOMATIC','PINNED')),
+                pinned_model_id TEXT,
+                launch_policy TEXT NOT NULL DEFAULT 'EXPLICIT' CHECK(launch_policy IN ('EXPLICIT','SAFE_IN_PROCESS_CONTINUE')),
+                state TEXT NOT NULL CHECK(state IN ('DRAFT','READY','RUNNING','PAUSED','WAITING_HUMAN','WAITING_EXTERNAL','INTERRUPTED','COMPLETED','FAILED','CANCELLED')),
+                priority TEXT NOT NULL DEFAULT 'NORMAL' CHECK(priority IN ('NORMAL','HIGH')),
+                input_hash TEXT NOT NULL,
+                topology_hash TEXT NOT NULL,
+                parent_run_id TEXT,
+                user_confirmed_at TEXT,
+                started_at TEXT,
+                finished_at TEXT,
+                status_summary TEXT,
+                row_version INTEGER NOT NULL DEFAULT 1 CHECK(row_version >= 1),
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY(assignment_id) REFERENCES stud_assignments(id),
+                FOREIGN KEY(workflow_id) REFERENCES stud_workflow_instances(id),
+                FOREIGN KEY(parent_run_id) REFERENCES stud_operation_runs(id)
+            );
+            CREATE INDEX stud_operation_runs_parent_index ON stud_operation_runs(parent_run_id,assignment_id);
+            CREATE INDEX stud_execution_plan_profile_index ON stud_execution_plans(resource_profile_id);
+            CREATE UNIQUE INDEX stud_execution_active_plan_index ON stud_execution_plans(assignment_id) WHERE state IN ('READY','RUNNING','PAUSED','WAITING_HUMAN','WAITING_EXTERNAL','INTERRUPTED');
+            CREATE INDEX stud_execution_plan_history_index ON stud_execution_plans(assignment_id,created_at DESC,id DESC);
+
+            CREATE TABLE stud_execution_steps (
+                id TEXT PRIMARY KEY,
+                plan_id TEXT NOT NULL,
+                assignment_id TEXT NOT NULL,
+                workflow_node_id TEXT NOT NULL,
+                task_type TEXT NOT NULL,
+                handler_type TEXT,
+                execution_class TEXT NOT NULL CHECK(execution_class IN ('AUTO_EXECUTABLE','HUMAN_GATE','EXTERNAL_WAIT','MANUAL_ONLY','UNSUPPORTED')),
+                state TEXT NOT NULL CHECK(state IN ('PENDING','READY','RUNNING','PAUSED','WAITING_HUMAN','WAITING_EXTERNAL','INTERRUPTED','COMPLETED','FAILED','CANCELLED','SKIPPED','UNSUPPORTED')),
+                priority TEXT NOT NULL DEFAULT 'NORMAL' CHECK(priority IN ('NORMAL','HIGH')),
+                resource_class TEXT NOT NULL CHECK(resource_class IN ('LIGHT','NETWORK','MODEL_LIGHT','MODEL_HEAVY')),
+                capability TEXT,
+                selected_model_id TEXT,
+                idempotency_class TEXT NOT NULL CHECK(idempotency_class IN ('IDEMPOTENT','RESTARTABLE_WITH_KEY','NON_IDEMPOTENT')),
+                idempotency_key TEXT NOT NULL,
+                recovery_class TEXT NOT NULL CHECK(recovery_class IN ('RESUME_FROM_CHECKPOINT','SAFE_RESTART','MANUAL_RECOVERY','NOT_RECOVERABLE')),
+                supports_pause INTEGER NOT NULL DEFAULT 0 CHECK(supports_pause IN (0,1)),
+                supports_cancel INTEGER NOT NULL DEFAULT 0 CHECK(supports_cancel IN (0,1)),
+                can_skip INTEGER NOT NULL DEFAULT 0 CHECK(can_skip IN (0,1)),
+                timeout_ms INTEGER NOT NULL CHECK(timeout_ms BETWEEN 1000 AND 7200000),
+                max_retries INTEGER NOT NULL DEFAULT 0 CHECK(max_retries BETWEEN 0 AND 3),
+                attempt_count INTEGER NOT NULL DEFAULT 0 CHECK(attempt_count >= 0),
+                active_attempt_id TEXT,
+                input_snapshot_json TEXT NOT NULL,
+                input_hash TEXT NOT NULL,
+                output_summary_json TEXT,
+                checkpoint_cursor TEXT,
+                m6_run_id TEXT,
+                state_reason TEXT,
+                started_at TEXT,
+                finished_at TEXT,
+                row_version INTEGER NOT NULL DEFAULT 1 CHECK(row_version >= 1),
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY(plan_id) REFERENCES stud_execution_plans(id) ON DELETE CASCADE,
+                FOREIGN KEY(assignment_id) REFERENCES stud_assignments(id),
+                FOREIGN KEY(workflow_node_id) REFERENCES stud_workflow_nodes(id),
+                FOREIGN KEY(m6_run_id) REFERENCES stud_operation_runs(id)
+            );
+            CREATE INDEX stud_execution_step_plan_index ON stud_execution_steps(plan_id,state,priority DESC,created_at,id);
+            CREATE INDEX stud_execution_step_assignment_index ON stud_execution_steps(assignment_id,updated_at DESC,id DESC);
+
+            CREATE TABLE stud_execution_step_dependencies (
+                step_id TEXT NOT NULL,
+                depends_on_step_id TEXT NOT NULL,
+                PRIMARY KEY(step_id,depends_on_step_id),
+                FOREIGN KEY(step_id) REFERENCES stud_execution_steps(id) ON DELETE CASCADE,
+                FOREIGN KEY(depends_on_step_id) REFERENCES stud_execution_steps(id) ON DELETE CASCADE,
+                CHECK(step_id <> depends_on_step_id)
+            );
+            CREATE INDEX stud_execution_dependency_target_index ON stud_execution_step_dependencies(depends_on_step_id,step_id);
+
+            CREATE TABLE stud_execution_attempts (
+                id TEXT PRIMARY KEY,
+                step_id TEXT NOT NULL,
+                plan_id TEXT NOT NULL,
+                assignment_id TEXT NOT NULL,
+                attempt_number INTEGER NOT NULL CHECK(attempt_number >= 1),
+                state TEXT NOT NULL CHECK(state IN ('RUNNING','COMPLETED','FAILED','CANCELLED','INTERRUPTED')),
+                runtime_request_id TEXT NOT NULL,
+                idempotency_key TEXT NOT NULL,
+                m6_run_id TEXT NOT NULL,
+                model_id TEXT,
+                route_decision_id TEXT,
+                input_hash TEXT NOT NULL,
+                failure_code TEXT,
+                failure_summary TEXT,
+                watchdog_incident_id TEXT,
+                retry_reason TEXT,
+                started_at TEXT NOT NULL,
+                finished_at TEXT,
+                row_version INTEGER NOT NULL DEFAULT 1 CHECK(row_version >= 1),
+                FOREIGN KEY(step_id) REFERENCES stud_execution_steps(id) ON DELETE CASCADE,
+                FOREIGN KEY(plan_id) REFERENCES stud_execution_plans(id) ON DELETE CASCADE,
+                FOREIGN KEY(assignment_id) REFERENCES stud_assignments(id),
+                FOREIGN KEY(m6_run_id) REFERENCES stud_operation_runs(id),
+                UNIQUE(step_id,attempt_number),
+                UNIQUE(runtime_request_id)
+            );
+            CREATE INDEX stud_execution_attempt_step_index ON stud_execution_attempts(step_id,attempt_number DESC);
+            CREATE INDEX stud_execution_attempt_plan_index ON stud_execution_attempts(plan_id,started_at DESC,id DESC);
+
+            CREATE TABLE stud_execution_checkpoints (
+                id TEXT PRIMARY KEY,
+                plan_id TEXT NOT NULL,
+                step_id TEXT NOT NULL,
+                attempt_id TEXT NOT NULL,
+                handler_type TEXT NOT NULL,
+                input_hash TEXT NOT NULL,
+                cursor TEXT,
+                durable_output_json TEXT,
+                output_hash TEXT,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY(plan_id) REFERENCES stud_execution_plans(id) ON DELETE CASCADE,
+                FOREIGN KEY(step_id) REFERENCES stud_execution_steps(id) ON DELETE CASCADE,
+                FOREIGN KEY(attempt_id) REFERENCES stud_execution_attempts(id) ON DELETE CASCADE
+            );
+            CREATE INDEX stud_execution_checkpoint_step_index ON stud_execution_checkpoints(step_id,created_at DESC,id DESC);
+
+            CREATE TABLE stud_task_handler_snapshots (
+                step_id TEXT PRIMARY KEY,
+                handler_type TEXT NOT NULL,
+                contract_version INTEGER NOT NULL CHECK(contract_version >= 1),
+                capabilities_json TEXT NOT NULL,
+                snapshot_hash TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY(step_id) REFERENCES stud_execution_steps(id) ON DELETE CASCADE
+            );
+
+            CREATE TABLE stud_model_inventory (
+                id TEXT PRIMARY KEY,
+                backend TEXT NOT NULL CHECK(backend='OLLAMA_LOOPBACK'),
+                model_identity TEXT NOT NULL,
+                quantization TEXT,
+                size_bytes INTEGER,
+                context_window INTEGER,
+                availability TEXT NOT NULL CHECK(availability IN ('AVAILABLE','NOT_INSTALLED','UNAVAILABLE','ERROR')),
+                last_probe_at TEXT,
+                runtime_version TEXT,
+                metadata_json TEXT NOT NULL,
+                row_version INTEGER NOT NULL DEFAULT 1 CHECK(row_version >= 1),
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                UNIQUE(backend,model_identity)
+            );
+
+            CREATE TABLE stud_model_capability_assessments (
+                id TEXT PRIMARY KEY,
+                model_id TEXT NOT NULL,
+                capability TEXT NOT NULL CHECK(capability IN ('STRUCTURED_EXTRACTION','SHORT_REASONING','LONG_CONTEXT_SYNTHESIS','ACADEMIC_SECTION_DRAFTING','EDITORIAL_TRANSFORMATION','ACADEMIC_REVIEW','CORRECTION')),
+                assessment TEXT NOT NULL CHECK(assessment IN ('UNVERIFIED','LIMITED','SUITABLE','PREFERRED','UNSUITABLE')),
+                probe_version INTEGER NOT NULL,
+                probe_result_json TEXT NOT NULL,
+                probe_hash TEXT NOT NULL,
+                hardware_class TEXT,
+                measured_latency_ms INTEGER,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY(model_id) REFERENCES stud_model_inventory(id)
+            );
+            CREATE INDEX stud_model_capability_latest_index ON stud_model_capability_assessments(model_id,capability,created_at DESC,id DESC);
+
+            CREATE TABLE stud_model_routing_decisions (
+                id TEXT PRIMARY KEY,
+                plan_id TEXT NOT NULL,
+                step_id TEXT NOT NULL,
+                attempt_id TEXT,
+                capability TEXT NOT NULL,
+                routing_policy TEXT NOT NULL,
+                requested_model_id TEXT,
+                selected_model_id TEXT,
+                outcome TEXT NOT NULL CHECK(outcome IN ('SELECTED','NO_SUITABLE_MODEL','PINNED_MODEL_UNAVAILABLE','RESOURCE_PROFILE_EXCLUDED')),
+                reason TEXT NOT NULL,
+                snapshot_json TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY(plan_id) REFERENCES stud_execution_plans(id) ON DELETE CASCADE,
+                FOREIGN KEY(step_id) REFERENCES stud_execution_steps(id) ON DELETE CASCADE,
+                FOREIGN KEY(attempt_id) REFERENCES stud_execution_attempts(id),
+                FOREIGN KEY(selected_model_id) REFERENCES stud_model_inventory(id)
+            );
+            CREATE INDEX stud_model_routing_step_index ON stud_model_routing_decisions(step_id,created_at DESC,id DESC);
+
+            CREATE TABLE stud_resource_profiles (
+                id TEXT PRIMARY KEY,
+                profile_type TEXT NOT NULL CHECK(profile_type IN ('INTERACTIVE','BALANCED','OVERNIGHT','CUSTOM')),
+                name TEXT NOT NULL,
+                max_light_tasks INTEGER NOT NULL CHECK(max_light_tasks BETWEEN 1 AND 16),
+                max_network_tasks INTEGER NOT NULL CHECK(max_network_tasks BETWEEN 0 AND 8),
+                max_model_tasks INTEGER NOT NULL CHECK(max_model_tasks BETWEEN 0 AND 2),
+                min_available_memory_bytes INTEGER NOT NULL CHECK(min_available_memory_bytes >= 268435456),
+                max_model_context INTEGER NOT NULL CHECK(max_model_context BETWEEN 512 AND 262144),
+                pause_on_battery INTEGER NOT NULL CHECK(pause_on_battery IN (0,1)),
+                pause_on_memory_pressure INTEGER NOT NULL CHECK(pause_on_memory_pressure IN (0,1)),
+                keep_awake INTEGER NOT NULL CHECK(keep_awake IN (0,1)),
+                timeout_ms INTEGER NOT NULL CHECK(timeout_ms BETWEEN 1000 AND 7200000),
+                max_retries INTEGER NOT NULL CHECK(max_retries BETWEEN 0 AND 3),
+                built_in INTEGER NOT NULL CHECK(built_in IN (0,1)),
+                row_version INTEGER NOT NULL DEFAULT 1 CHECK(row_version >= 1),
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+            CREATE UNIQUE INDEX stud_resource_profile_builtin_index ON stud_resource_profiles(profile_type) WHERE built_in=1;
+
+            CREATE TABLE stud_watchdog_incidents (
+                id TEXT PRIMARY KEY,
+                plan_id TEXT NOT NULL,
+                step_id TEXT,
+                attempt_id TEXT,
+                run_id TEXT,
+                incident_type TEXT NOT NULL CHECK(incident_type IN ('TASK_TIMEOUT','HEARTBEAT_LOST','MODEL_UNAVAILABLE','MODEL_REQUEST_FAILED','MEMORY_PRESSURE','DISK_PRESSURE','APP_SUSPENDED','RECOVERY_REQUIRED','LATE_RESULT_REJECTED','RETRY_LIMIT_REACHED','RESOURCE_PROFILE_CONFLICT','INVALID_COORDINATOR_STATE','UNKNOWN')),
+                observed_condition TEXT NOT NULL,
+                policy_response TEXT NOT NULL CHECK(policy_response IN ('WARN','STOP_SCHEDULING_NEW_TASKS','PAUSE_PLAN','CANCEL_CURRENT_ATTEMPT','FAIL_ATTEMPT','REQUEST_HUMAN')),
+                resolution TEXT,
+                created_at TEXT NOT NULL,
+                resolved_at TEXT,
+                FOREIGN KEY(plan_id) REFERENCES stud_execution_plans(id) ON DELETE CASCADE,
+                FOREIGN KEY(step_id) REFERENCES stud_execution_steps(id) ON DELETE CASCADE,
+                FOREIGN KEY(attempt_id) REFERENCES stud_execution_attempts(id),
+                FOREIGN KEY(run_id) REFERENCES stud_operation_runs(id)
+            );
+            CREATE INDEX stud_watchdog_plan_index ON stud_watchdog_incidents(plan_id,created_at DESC,id DESC);
+            INSERT INTO stud_resource_profiles
+                (id,profile_type,name,max_light_tasks,max_network_tasks,max_model_tasks,min_available_memory_bytes,max_model_context,pause_on_battery,pause_on_memory_pressure,keep_awake,timeout_ms,max_retries,built_in,row_version,created_at,updated_at)
+            VALUES
+                ('stud_resource_interactive','INTERACTIVE','Interactive',2,1,1,2147483648,8192,0,1,0,120000,0,1,1,datetime('now'),datetime('now')),
+                ('stud_resource_balanced','BALANCED','Balanced',4,2,1,1610612736,16384,0,1,1,300000,1,1,1,datetime('now'),datetime('now')),
+                ('stud_resource_overnight','OVERNIGHT','Overnight',8,4,1,1073741824,32768,0,1,1,900000,1,1,1,datetime('now'),datetime('now'));
+            ALTER TABLE stud_draft_versions ADD COLUMN execution_plan_id TEXT REFERENCES stud_execution_plans(id);
+            ALTER TABLE stud_draft_versions ADD COLUMN execution_step_id TEXT REFERENCES stud_execution_steps(id);
+            ALTER TABLE stud_draft_versions ADD COLUMN execution_attempt_id TEXT REFERENCES stud_execution_attempts(id);
+            ALTER TABLE stud_draft_versions ADD COLUMN model_routing_decision_id TEXT REFERENCES stud_model_routing_decisions(id);
         `}];
         for (const migration of migrations) {
             if (applied.has(migration.version)) continue;
