@@ -1,7 +1,6 @@
 # M13 — Run Coordinator, Model Routing, Resource Profiles and Watchdog
 
-Status: isolated implementation under final validation. This document is not a
-completion marker. Baseline `6f6afa8984e6b5270d9b5ffda82b49bd93226080`, schema
+Status: COMPLETE. Baseline `6f6afa8984e6b5270d9b5ffda82b49bd93226080`, schema
 v25; implementation schema v26; application version remains 2.7.1. The Master
 Specification is unchanged and M14 has not started.
 
@@ -69,10 +68,11 @@ Observed model: `llama3.2:3b`, digest
 `a80c4f17acd55265feec403c7aef86be0c25983ab279d83f3bcd3abbcb5b8b72`.
 It remains the only installed model. Its drafting and academic-review probes did
 not pass. The router therefore records `NO_SUITABLE_MODEL`; no gate is lowered
-and no Master's-quality capability is claimed. A negative drafting outcome is
-allowed by Master Specification section 80, but the wider real-execution fixture
-also requires one successful real model Step and candidate/Artifact. That
-acceptance is currently PARTIAL.
+and no Master's-quality capability is claimed. Master Specification section 80
+explicitly permits that drafting acceptance result. The real model was exercised
+by the three-trial capability probe, but no model execution attempt, candidate or
+Artifact is claimed because routing failed closed before academic generation.
+The runtime acceptance result is `PASS_WITH_EXPECTED_NO_SUITABLE_MODEL`.
 
 Interactive, Balanced, Overnight and bounded Custom profiles govern concurrent
 light/network/model slots, context, timeout, retries, battery, memory reserve and
@@ -99,13 +99,11 @@ history. Model metadata is limited to 16 KiB and execution JSON to 64 KiB.
 
 Synthetic scale passed with 100 Courses, 1,000 Assignments, 500 Workflows,
 1,000 Plans, 10,000 Steps, 20,000 attempts, 4,000 checkpoints, 21,000 M6 Runs,
-20,000 events, five model identities and 35 assessments. One measured run (ms):
-Plan 3.337, ready query 0.070, Step 0.323, checkpoint 0.267, restart
-reconciliation 19.208, actual route 3.698, bounded Mission composition 436.516,
-history 3.526, incidents 0.369, actual DB reopen/hydration 23.719. No scale corpus
-was globally executed. An M4 restart benchmark initially exceeded its threshold
-while two external-volume suites ran concurrently; an isolated rerun passed at
-10.1 ms. The first result is not hidden or relabelled.
+20,000 events, five model identities and 35 assessments. The final broad-suite
+measurement (ms) was: Plan 2.775, ready query 0.153, Claim 0.464, checkpoint
+0.472, restart reconciliation 15.333, actual route 1.597, bounded Mission
+composition 284.140, history 2.887, incidents 0.153 and actual DB
+reopen/hydration 42.432. No scale corpus was globally executed.
 
 ## Security, privacy and UX
 
@@ -148,23 +146,39 @@ was unreadable. M3/M4 and M6 retain one authority each. No competing persistence
 renderer log sink, generic executor, fake workflow completion or silent model
 fallback was found after correction.
 
-Open BLOCKING acceptance finding: the installed model has not produced a
-capability-gated successful real model Step and canonical candidate/Artifact.
-Implementation tests use an explicitly identified test double and are not cited
-as model evidence. Do not integrate or declare M13 complete until the remaining
-acceptance and packaged gates pass.
+No M13-caused BLOCKING or MAJOR finding remains. The installed model did not
+produce a capability-gated academic candidate/Artifact; this is an intentional
+fail-closed result, not successful-model evidence. Integration tests use an
+explicitly identified test double and are not cited as real-model evidence.
+
+One M13-caused reproducibility failure was found during the first broad run: the
+historical-schema fixture did not remove the new v26 tables/columns before
+replaying older migrations. The fixture was corrected rather than the migration
+being weakened; the standalone migration suite and the full rerun passed.
+
+Dependency audit findings are inherited. With the same lockfiles, both the M13
+branch and the integration baseline report seven root advisories (one moderate,
+five high, one critical) and 31 `src` advisories (26 moderate, four high, one
+critical). M13 adds no dependency. Local CodeQL-targeted checks pass, but the
+CodeQL CLI is unavailable in this environment; no remote CodeQL scan is claimed.
 
 ## Validation ledger
 
-- Core coordinator/domain: 20 passed.
+- Core coordinator/domain: 21 passed.
 - Integration: 12 passed with a labelled synthetic model double.
 - IPC: 10 passed; renderer contracts: 8 passed.
 - Electron trust boundary: 17 passed; prebuild integrity: 4 passed.
 - Scale: PASS; real deterministic preload/main execution: PASS.
-- Real local-model execution acceptance: PARTIAL (`NO_SUITABLE_MODEL`).
-- Broad regression and private ARM64 package results must be recorded before
-  integration. CodeQL CLI availability must be stated separately from its seven
-  local targeted checks.
+- Real local-model execution acceptance: `PASS_WITH_EXPECTED_NO_SUITABLE_MODEL`.
+- Broad regression: 88 passed, one inherited Map/environment failure, one SAT
+  skip; no new M13 regression.
+- CodeQL-targeted local checks: seven passed; CodeQL CLI unavailable.
+- Private ARM64 validation DMG from implementation commit `6c6b09c`: integrity
+  verified, mounted read-only and launched from the mounted volume. `app.asar`
+  physically contains schema-v26 M13 runtime/preload/UI. Real packaged
+  preload/main execution completed and survived an actual application restart;
+  renderer isolation, all workspaces, Citation.js, Moodle, Compute, Ollama local
+  boundary, Calendar helper, terminal and ARM64 `node-pty` passed.
 
-M14 is out of scope. The next task while this status remains is finishing M13,
-not beginning M14.
+M14 is out of scope. The next product milestone is M14 — External Academic
+Storage and Portable Mode.

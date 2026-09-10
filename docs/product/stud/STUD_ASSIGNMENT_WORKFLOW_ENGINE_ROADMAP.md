@@ -389,10 +389,10 @@ never represented as a grade or lecturer judgement.
 
 ## M13 — Run coordinator, model routing, resource profiles and watchdog
 
-Implementation is under isolated schema-v26 validation; see the
-[M13 evidence ledger](STUD_M13_RUN_COORDINATOR_VALIDATION.md). Do not start M14
-or change the integration baseline until the remaining real-model and packaged
-acceptance gates pass.
+Implementation and validation are complete at schema v26; see the
+[M13 validation report](STUD_M13_RUN_COORDINATOR_VALIDATION.md). The installed
+3B model did not pass the academic drafting gate, so the accepted section-80
+outcome is `NO_SUITABLE_MODEL`; no output or capability was fabricated.
 
 - **Objective:** execute approved workflow tasks manually with honest resource and
   progress control.
@@ -498,8 +498,7 @@ acceptance gates pass.
 
 ## Exact next milestone
 
-M1, the dedicated Electron Trust-Boundary Hardening intervention, and M2–M12 are
-complete. The exact next product milestone is **M13 — Run Coordinator, Model
-Routing, Resource Profiles and Watchdog**. M12 does not include autonomous
-workers, model routing/installation, resource profiles, watchdog operation,
-automatic acceptance, academic grading or submission.
+M1, the dedicated Electron Trust-Boundary Hardening intervention, and M2–M13 are
+complete. The exact next product milestone is **M14 — External Academic Storage
+and Portable Mode**. M13 does not include model installation, cloud fallback,
+automatic academic acceptance, grading, submission or a background daemon.
