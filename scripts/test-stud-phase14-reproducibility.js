@@ -23,6 +23,7 @@ const FACULTY_SCOUT_TABLES = ["stud_faculty_publication_candidates", "stud_facul
 const COMPOSITION_TABLES = ["stud_draft_section_versions", "stud_draft_versions", "stud_draft_documents", "stud_composition_section_evidence", "stud_composition_section_claims", "stud_composition_requirement_coverage", "stud_composition_sections", "stud_assignment_composition_plans", "stud_composition_plans"];
 const HUMANISATION_TABLES = ["stud_humanisation_integrity_checks", "stud_humanisation_session_sections", "stud_humanisation_sessions", "stud_humanisation_writing_samples", "stud_humanisation_profile_revisions", "stud_humanisation_profiles"];
 const LECTURER_COMMITTEE_TABLES = ["stud_lecturer_synthesis_findings", "stud_lecturer_finding_events", "stud_correction_integrity_checks", "stud_correction_session_sections", "stud_correction_item_findings", "stud_lecturer_formative_estimates", "stud_lecturer_synthesis", "stud_correction_sessions", "stud_correction_items", "stud_correction_plans", "stud_lecturer_review_findings", "stud_lecturer_reviewer_passes", "stud_lecturer_review_sessions"];
+const EXECUTION_TABLES = ["stud_watchdog_incidents", "stud_model_routing_decisions", "stud_model_capability_assessments", "stud_model_inventory", "stud_task_handler_snapshots", "stud_execution_checkpoints", "stud_execution_attempts", "stud_execution_step_dependencies", "stud_execution_steps", "stud_execution_plans", "stud_resource_profiles"];
 
 let passed = 0;
 function check(name, fn) {
@@ -60,6 +61,16 @@ function removeM12Columns(store) {
         PRAGMA foreign_keys = ON;`);
 }
 
+function removeM13Schema(store) {
+    store.db.exec(`PRAGMA foreign_keys = OFF;
+        ALTER TABLE stud_draft_versions DROP COLUMN execution_plan_id;
+        ALTER TABLE stud_draft_versions DROP COLUMN execution_step_id;
+        ALTER TABLE stud_draft_versions DROP COLUMN execution_attempt_id;
+        ALTER TABLE stud_draft_versions DROP COLUMN model_routing_decision_id;
+        PRAGMA foreign_keys = ON;`);
+    removeTables(store, EXECUTION_TABLES);
+}
+
 function freshStore(root) {
     return new StudAcademicStore({root, applicationVersion: "phase14-reproducibility"}).initialize();
 }
@@ -91,6 +102,7 @@ try {
 
     const v12Root = path.join(root, "legacy-v12");
     const v12 = freshStore(v12Root);
+    removeM13Schema(v12);
     removeM12Columns(v12);
     removeTables(v12, [...LECTURER_COMMITTEE_TABLES, ...HUMANISATION_TABLES, ...COMPOSITION_TABLES, ...FACULTY_SCOUT_TABLES, ...CLAIM_EVIDENCE_TABLES, ...RESEARCH_PLAN_TABLES, ...OPERATIONAL_TABLES, ...WORKFLOW_CONDITION_TABLES, ...WORKFLOW_TABLES, ...REQUIREMENTS_TABLES, "stud_provider_sync_preferences", "stud_discipline_profile", "stud_tool_preferences"]);
     removeM2Schema(v12);
@@ -108,6 +120,7 @@ try {
     const v9 = freshStore(v9Root);
     const legacyCourse = v9.createEntity("COURSE", {title: "Legacy course retained across migration"});
     const legacyAssignment = v9.createEntity("ASSIGNMENT", {courseId: legacyCourse.id, title: "Legacy assignment retained across migration"});
+    removeM13Schema(v9);
     removeM12Columns(v9);
     removeTables(v9, [...LECTURER_COMMITTEE_TABLES, ...HUMANISATION_TABLES, ...COMPOSITION_TABLES, ...FACULTY_SCOUT_TABLES, ...CLAIM_EVIDENCE_TABLES, ...RESEARCH_PLAN_TABLES, ...OPERATIONAL_TABLES, ...WORKFLOW_CONDITION_TABLES, ...WORKFLOW_TABLES, ...REQUIREMENTS_TABLES, "stud_provider_sync_preferences", "stud_discipline_profile", "stud_tool_preferences", "stud_repository_references", "stud_datasets", "stud_notebook_outputs", "stud_notebook_cells", "stud_notebooks", "stud_context_packages", "stud_context_decisions", "stud_concept_observations", "stud_academic_concepts"]);
     removeM2Schema(v9);

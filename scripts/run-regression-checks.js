@@ -69,6 +69,11 @@ const CHECKS = [
     "scripts/test-stud-lecturer-committee-ipc.js",
     "scripts/test-stud-lecturer-committee-ui.js",
     "scripts/test-stud-lecturer-committee-scale.js",
+    "scripts/test-stud-run-coordinator.js",
+    "scripts/test-stud-run-coordinator-ipc.js",
+    "scripts/test-stud-run-coordinator-ui.js",
+    "scripts/test-stud-run-coordinator-integration.js",
+    "scripts/test-stud-run-coordinator-scale.js",
     "scripts/test-stud-tool-catalog.js",
     "scripts/test-stud-academic-ai.js",
     "scripts/test-osint-workspace.js",
@@ -129,6 +134,7 @@ function runCheck(script) {
 const results = CHECKS.map(runCheck);
 const failed = results.filter(item => item.status === "FAIL").length;
 const skipped = results.filter(item => item.status === "SKIPPED").length;
+console.log(`REGRESSION_SUMMARY: ${JSON.stringify({passed:results.filter(item=>item.status==="OK").length,failed,skipped,total:results.length,failedScripts:CHECKS.filter((_script,index)=>results[index].status==="FAIL")})}`);
 
 if (failed) {
     console.log("REGRESSION_CHECKS: FAIL");

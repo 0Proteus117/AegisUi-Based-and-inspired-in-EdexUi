@@ -28,6 +28,7 @@ documents translate that intent into the audited v2.7.0 implementation:
 - [M10 Composition Plan / Draft Versions implementation and validation](STUD_M10_COMPOSITION_PLAN_DRAFT_VERSIONS_VALIDATION.md)
 - [M11 Humanisation with Diff implementation and validation](STUD_M11_HUMANISATION_WITH_DIFF_VALIDATION.md)
 - [M12 Lecturer Committee / Corrections implementation and validation](STUD_M12_LECTURER_COMMITTEE_CORRECTIONS_VALIDATION.md)
+- [M13 Run Coordinator implementation and validation](STUD_M13_RUN_COORDINATOR_VALIDATION.md)
 - [M1-M3 integration and final technical audit](STUD_M1_M3_INTEGRATION_AUDIT.md)
 - [Electron trust-boundary hardening](../../security/ELECTRON_TRUST_BOUNDARY_HARDENING_2026-08-24.md)
 
@@ -85,5 +86,11 @@ reviewer passes, versioned findings and synthesis, optional rubric-bound
 formative ranges, explicit correction plans and protected correction candidates.
 Accepted corrections create a new immutable M10 Draft Version with complete
 review/plan/session lineage; no result is treated as a grade or lecturer
-judgement. The exact next product milestone is M13 — Run Coordinator, Model
-Routing, Resource Profiles and Watchdog.
+judgement. M13 advances schema v25 to v26 with persistent Execution Plans,
+Steps, attempts and checkpoints; fixed trusted handlers; local-model capability
+assessment and explained routing; resource profiles; a real-metric watchdog;
+and Mission Control composed from the existing M3/M4/M6 authorities. The only
+installed 3B model remains unsuitable for academic section drafting, so the
+validated result is honestly `NO_SUITABLE_MODEL` with no gate reduction or
+cloud fallback. The exact next product milestone is M14 — External Academic
+Storage and Portable Mode.

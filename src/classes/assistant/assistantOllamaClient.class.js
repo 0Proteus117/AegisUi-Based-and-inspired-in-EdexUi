@@ -185,8 +185,9 @@
 
             try {
                 const data = await this.request("/api/tags", {method: "GET", timeoutMs: 5000});
-                const models = Array.isArray(data.models) ? data.models.map(model => model.name).filter(Boolean) : [];
-                return {ok: true, status: "READY", endpoint: endpoint.endpoint, checkedAt, models};
+                const observed=Array.isArray(data.models)?data.models.slice(0,100).filter(model=>model&&typeof model.name==="string"&&model.name.length<=256):[];
+                const models = observed.map(model=>model.name),modelDetails=observed.map(model=>({name:model.name,sizeBytes:Number.isSafeInteger(model.size)&&model.size>=0?model.size:null,quantization:typeof model.details?.quantization_level==="string"?model.details.quantization_level.slice(0,80):null,digest:typeof model.digest==="string"?model.digest.slice(0,128):null}));
+                return {ok: true, status: "READY", endpoint: endpoint.endpoint, checkedAt, models,modelDetails};
             } catch (error) {
                 return {
                     ok: false,
@@ -214,8 +215,22 @@
                 : {...health, ok: false, status: "MODEL_NOT_FOUND", model: wanted};
         }
 
-        async chat({model, messages, temperature, signal} = {}) {
+        async chat({model, messages, temperature, signal, contextTokens, maxOutputTokens, jsonOnly, responseContract} = {}) {
             try {
+                // Fixed main-process contracts only, never a renderer-supplied schema.
+                // No const/enum answers: decoding constrains shape, not correctness.
+                let format=jsonOnly===true?"json":undefined;
+                if(responseContract!==undefined){
+                    const fields=responseContract==="STUD_DRAFT_CANDIDATE"?{status:{type:"string"},candidate:{type:"string"},limitations:{type:"array",items:{type:"string"}}}:responseContract==="STUD_DRAFT_PROBE"?{status:{type:"string"},candidate:{type:"string"},nonce:{type:"string"}}:null;
+                    if(!fields)throw new Error("INVALID_RESPONSE_CONTRACT");
+                    format={type:"object",properties:fields,required:Object.keys(fields),additionalProperties:false};
+                }
+                const bounds={};
+                for(const [name,value,min,max] of [["num_ctx",contextTokens,512,262144],["num_predict",maxOutputTokens,1,16384]]){
+                    if(value===undefined)continue;
+                    if(!Number.isInteger(value)||value<min||value>max)throw new Error("INVALID_GENERATION_BOUND");
+                    bounds[name]=value;
+                }
                 const data = await this.request("/api/chat", {
                     method: "POST",
                     timeoutMs: this.timeoutMs,
@@ -223,8 +238,10 @@
                         model,
                         messages: Array.isArray(messages) ? messages : [],
                         stream: false,
+                        ...(format?{format}:{}),
                         options: {
-                            temperature: Number.isFinite(Number(temperature)) ? Number(temperature) : 0.5
+                            temperature: Number.isFinite(Number(temperature)) ? Number(temperature) : 0.5,
+                            ...bounds
                         }
                     },
                     signal

@@ -389,6 +389,11 @@ never represented as a grade or lecturer judgement.
 
 ## M13 — Run coordinator, model routing, resource profiles and watchdog
 
+Implementation and validation are complete at schema v26; see the
+[M13 validation report](STUD_M13_RUN_COORDINATOR_VALIDATION.md). The installed
+3B model did not pass the academic drafting gate, so the accepted section-80
+outcome is `NO_SUITABLE_MODEL`; no output or capability was fabricated.
+
 - **Objective:** execute approved workflow tasks manually with honest resource and
   progress control.
 - **Exact scope:** launch consent summary, bounded task coordinator, runtime worker
@@ -397,7 +402,7 @@ never represented as a grade or lecturer judgement.
   pause/resume/retry/give-Mac-back/cancel and full Mission Control operation.
 - **Components:** workflow runtime, existing provider/model/compute/document
   services, ModelCapabilityRouter, ResourcePolicy, Watchdog and Mission Control.
-- **Schema/migration:** expected v25; run consent/profile metadata and durable task
+- **Schema/migration:** v25→v26; normalized execution/model/profile/watchdog state and durable task
   attempts if not already covered by workflow tables.
 - **Dependencies:** M3–M12 contracts; individual branches may execute only when
   their own dependencies are satisfied.
@@ -493,8 +498,7 @@ never represented as a grade or lecturer judgement.
 
 ## Exact next milestone
 
-M1, the dedicated Electron Trust-Boundary Hardening intervention, and M2–M12 are
-complete. The exact next product milestone is **M13 — Run Coordinator, Model
-Routing, Resource Profiles and Watchdog**. M12 does not include autonomous
-workers, model routing/installation, resource profiles, watchdog operation,
-automatic acceptance, academic grading or submission.
+M1, the dedicated Electron Trust-Boundary Hardening intervention, and M2–M13 are
+complete. The exact next product milestone is **M14 — External Academic Storage
+and Portable Mode**. M13 does not include model installation, cloud fallback,
+automatic academic acceptance, grading, submission or a background daemon.

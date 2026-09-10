@@ -1,5 +1,11 @@
 # STUD Assignment Workflow Engine — target architecture
 
+The completed schema-v26 M13 implementation is recorded in the
+[M13 validation report](STUD_M13_RUN_COORDINATOR_VALIDATION.md). Its local-model
+acceptance retains the capability gate: the installed 3B model is recorded as
+unsuitable and routes to `NO_SUITABLE_MODEL`, as explicitly permitted by the
+Master Specification, rather than producing untrusted academic content.
+
 ## Authority and invariants
 
 This document translates the Master Specification into implementation contracts
