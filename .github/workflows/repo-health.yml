@@ -17,6 +17,28 @@ permissions:
   contents: read
 
 jobs:
+  stud-execution-contract:
+    name: STUD execution and workflow contracts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: src/package-lock.json
+      - name: Install declared academic dependencies without native install hooks
+        run: npm ci --prefix src --ignore-scripts --no-audit --no-fund
+      - name: Deterministic domain and dispatch regression
+        run: |
+          node scripts/test-stud-execution-dispatch.js
+          node scripts/test-stud-run-coordinator.js
+          node scripts/test-stud-run-coordinator-integration.js
+          node scripts/test-stud-run-coordinator-ipc.js
+          node scripts/test-stud-run-coordinator-ui.js
+          node scripts/test-stud-workflow-dag.js
+          node scripts/test-stud-workflow-conditions.js
+          node scripts/test-codeql-security-hardening.js
   health:
     name: Repository health
     runs-on: ubuntu-latest
