@@ -71,7 +71,21 @@ in this worktree (`npm ci --prefix src --ignore-scripts`: 202 packages).
 Native install hooks were intentionally not run for these pure Node domain
 checks; this is not a native/package validation claim.
 
-Existing M1–M12 domain and scale regressions are being checked separately. No UI,
+The full 65 `test-stud-*` suites pass, including M1–M13 domain, IPC, UI contracts,
+Moodle, Documents, Research, Revision, Compute, Notebook and scale scenarios.
+The additional cross-Aegis selection passes 37 scripts. Map fails identically
+on the unchanged integration baseline: TomTom HTTP 401 and absent AIS key.
+The SAT script is absent in both trees (the established aggregator skips it;
+an initial direct invocation reported module-not-found, not a product regression).
+Two exploratory invocations used nonexistent Research/Revision script names;
+the actual `test-stud-research-writing.js` and `test-stud-revision-planning.js`
+were subsequently executed and passed. These invocation mistakes are not
+counted as passed tests or hidden product failures.
+
+M6 scale retained 5,000 Artifacts / 25,000 Events with Assignment artifact lookup
+1.6 ms and Mission lookup 16.9 ms in the observed run. M13 scale passed with
+1,000 Plans / 10,000 Steps / 20,000 attempts; these are local observations, not
+performance guarantees. No UI,
 preload, startup, native helper or dependency declaration changed; no new DMG or
 public release is required for this correction. No live model quality or full
 academic acceptance is claimed. GitHub CI/CodeQL results must be checked after
