@@ -84,7 +84,7 @@ try {
     coordinator.dispose(); store.close();
     store = new StudAcademicStore({root}).initialize();
     check("RESTART_PRESERVES_EXACT_OPERATION_IDENTITY_WITHOUT_MIGRATION", () => {
-        assert.strictEqual(store.schemaInfo().version,26);
+        assert.strictEqual(store.schemaInfo().version,27);
         assert.strictEqual(store.db.prepare("SELECT handler_type FROM stud_execution_steps WHERE id=?").get(durable.steps[0].id).handler_type,"SECTION_DRAFT_CANDIDATE");
         assert.deepStrictEqual(store.db.prepare("PRAGMA foreign_key_check").all(),[]);
     });

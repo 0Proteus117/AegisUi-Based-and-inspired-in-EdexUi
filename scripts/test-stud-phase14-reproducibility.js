@@ -24,6 +24,7 @@ const COMPOSITION_TABLES = ["stud_draft_section_versions", "stud_draft_versions"
 const HUMANISATION_TABLES = ["stud_humanisation_integrity_checks", "stud_humanisation_session_sections", "stud_humanisation_sessions", "stud_humanisation_writing_samples", "stud_humanisation_profile_revisions", "stud_humanisation_profiles"];
 const LECTURER_COMMITTEE_TABLES = ["stud_lecturer_synthesis_findings", "stud_lecturer_finding_events", "stud_correction_integrity_checks", "stud_correction_session_sections", "stud_correction_item_findings", "stud_lecturer_formative_estimates", "stud_lecturer_synthesis", "stud_correction_sessions", "stud_correction_items", "stud_correction_plans", "stud_lecturer_review_findings", "stud_lecturer_reviewer_passes", "stud_lecturer_review_sessions"];
 const EXECUTION_TABLES = ["stud_watchdog_incidents", "stud_model_routing_decisions", "stud_model_capability_assessments", "stud_model_inventory", "stud_task_handler_snapshots", "stud_execution_checkpoints", "stud_execution_attempts", "stud_execution_step_dependencies", "stud_execution_steps", "stud_execution_plans", "stud_resource_profiles"];
+const STORAGE_TABLES = ["stud_storage_cleanup_records", "stud_storage_copies", "stud_storage_manifest_items", "stud_storage_manifests", "stud_storage_assets", "stud_storage_profiles"];
 
 let passed = 0;
 function check(name, fn) {
@@ -71,6 +72,14 @@ function removeM13Schema(store) {
     removeTables(store, EXECUTION_TABLES);
 }
 
+function removeM14Schema(store) {
+    removeTables(store, STORAGE_TABLES);
+    store.db.exec(`DROP INDEX IF EXISTS stud_storage_document_reference_index;
+        DROP INDEX IF EXISTS stud_storage_paper_reference_index;
+        DROP INDEX IF EXISTS stud_storage_resource_reference_index;
+        DROP INDEX IF EXISTS stud_storage_dataset_reference_index;`);
+}
+
 function freshStore(root) {
     return new StudAcademicStore({root, applicationVersion: "phase14-reproducibility"}).initialize();
 }
@@ -102,6 +111,7 @@ try {
 
     const v12Root = path.join(root, "legacy-v12");
     const v12 = freshStore(v12Root);
+    removeM14Schema(v12);
     removeM13Schema(v12);
     removeM12Columns(v12);
     removeTables(v12, [...LECTURER_COMMITTEE_TABLES, ...HUMANISATION_TABLES, ...COMPOSITION_TABLES, ...FACULTY_SCOUT_TABLES, ...CLAIM_EVIDENCE_TABLES, ...RESEARCH_PLAN_TABLES, ...OPERATIONAL_TABLES, ...WORKFLOW_CONDITION_TABLES, ...WORKFLOW_TABLES, ...REQUIREMENTS_TABLES, "stud_provider_sync_preferences", "stud_discipline_profile", "stud_tool_preferences"]);
@@ -118,6 +128,7 @@ try {
 
     const v9Root = path.join(root, "legacy-v9");
     const v9 = freshStore(v9Root);
+    removeM14Schema(v9);
     const legacyCourse = v9.createEntity("COURSE", {title: "Legacy course retained across migration"});
     const legacyAssignment = v9.createEntity("ASSIGNMENT", {courseId: legacyCourse.id, title: "Legacy assignment retained across migration"});
     removeM13Schema(v9);
