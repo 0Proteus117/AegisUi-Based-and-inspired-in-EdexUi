@@ -70,6 +70,7 @@ const CHECKS = [
     "scripts/test-stud-lecturer-committee-ui.js",
     "scripts/test-stud-lecturer-committee-scale.js",
     "scripts/test-stud-run-coordinator.js",
+    "scripts/test-stud-execution-dispatch.js",
     "scripts/test-stud-run-coordinator-ipc.js",
     "scripts/test-stud-run-coordinator-ui.js",
     "scripts/test-stud-run-coordinator-integration.js",

@@ -91,15 +91,27 @@ class StudRunCoordinator{
         if(selection.sessionId)input.session=this.handlers.sessionSnapshot(handlerType,base.assignment.id,selection.sessionId);
         return input;
     }
-    classifyNode(node,base){
-        const title=String(node.title||"").toLowerCase(),semantic=String(node.semanticType||"").toUpperCase();
+    selectedSessionType(assignmentId,sessionId){
+        const id=Academic.safeId(sessionId,"Session ID");
+        // These are fixed canonical tables, never names supplied by the renderer.
+        const matches=[
+            ["stud_humanisation_sessions","HUMANISATION_CANDIDATE","WRITING"],
+            ["stud_lecturer_review_sessions","ACADEMIC_REVIEW","REVIEW"],
+            ["stud_correction_sessions","CORRECTION_CANDIDATE","WRITING"]
+        ].filter(([table])=>this.repository.db.prepare(`SELECT id FROM ${table} WHERE id=? AND assignment_id=?`).get(id,assignmentId));
+        if(matches.length!==1)throw new Academic.StudError("INVALID_TASK_SELECTION","Select one canonical Session belonging to this Assignment.");
+        return {handlerType:matches[0][1],semanticType:matches[0][2]};
+    }
+    classifyNode(node,base,selection={}){
+        const semantic=String(node.semanticType||"").toUpperCase();
+        if(selection.sectionId&&selection.sessionId)throw new Academic.StudError("INVALID_TASK_SELECTION","Choose a Section or a Session, not both.");
+        const session=selection.sessionId?this.selectedSessionType(base.assignment.id,selection.sessionId):null;
+        if(session&&session.semanticType!==semantic||selection.sectionId&&semantic!=="WRITING")throw new Academic.StudError("INVALID_TASK_SELECTION","The canonical input is incompatible with this stage type.");
         let handlerType=null,executionClass="MANUAL_ONLY",reason="This stage remains an explicit manual task.";
         if(semantic==="HUMAN_TASK"||semantic==="FINALISATION"){executionClass="HUMAN_GATE";reason="Human review or action is required.";}
         else if(semantic==="EXTERNAL_TASK"){executionClass="EXTERNAL_WAIT";reason="An external human or institutional input is required.";}
-        else if(/humanis/.test(title)){handlerType="HUMANISATION_CANDIDATE";executionClass="AUTO_EXECUTABLE";}
-        else if(/correction/.test(title)){handlerType="CORRECTION_CANDIDATE";executionClass="AUTO_EXECUTABLE";}
-        else if(/academic review|lecturer review/.test(title)){handlerType="ACADEMIC_REVIEW";executionClass="AUTO_EXECUTABLE";}
-        else if(/draft/.test(title)&&semantic==="WRITING"){handlerType="SECTION_DRAFT_CANDIDATE";executionClass="AUTO_EXECUTABLE";if(!base.composition){executionClass="UNSUPPORTED";reason="A reviewed Composition Plan and Section are required for bounded drafting.";}}
+        else if(session){handlerType=session.handlerType;executionClass="AUTO_EXECUTABLE";}
+        else if(semantic==="WRITING"&&(selection.sectionId||(node.origin==="TEMPLATE"&&node.templateNodeKey==="drafting"))){handlerType="SECTION_DRAFT_CANDIDATE";executionClass="AUTO_EXECUTABLE";if(!base.composition){executionClass="UNSUPPORTED";reason="A reviewed Composition Plan and Section are required for bounded drafting.";}}
         else if(semantic==="REVIEW"){handlerType="DETERMINISTIC_STUD_CHECK";executionClass="AUTO_EXECUTABLE";}
         else if(semantic==="RESEARCH"){executionClass="MANUAL_ONLY";reason="Research acquisition is not safely automated by the M13 handler registry.";}
         const handler=handlerType&&this.handlers.get(handlerType);
@@ -127,7 +139,7 @@ class StudRunCoordinator{
             const plan=this.repository.createPlan({assignmentId:assignment.id,workflowId:workflow.id,workflowRowVersion:workflow.rowVersion,workflowFingerprint:workflow.templateFingerprint,scope,resourceProfileId:profile.id,routingPolicy,pinnedModelId,launchPolicy:Academic.enumValue(input.launchPolicy||"EXPLICIT",["EXPLICIT","SAFE_IN_PROCESS_CONTINUE"],"Launch policy","EXPLICIT"),priority:Academic.enumValue(input.priority||"NORMAL",["NORMAL","HIGH"],"Execution priority","NORMAL"),inputHash:Domain.hash(base),topologyHash:Domain.hash(topology),statusSummary:"Review execution preflight before launch."});
             const ids=new Map();
             nodes.forEach(node=>{
-                const classification=this.classifyNode(node,base),selection=selections.get(node.id)||{},sessionTask=["HUMANISATION_CANDIDATE","ACADEMIC_REVIEW","CORRECTION_CANDIDATE"].includes(classification.handlerType);
+                const selection=selections.get(node.id)||{},classification=this.classifyNode(node,base,selection),sessionTask=["HUMANISATION_CANDIDATE","ACADEMIC_REVIEW","CORRECTION_CANDIDATE"].includes(classification.handlerType);
                 if(selection.sectionId&&classification.handlerType!=="SECTION_DRAFT_CANDIDATE"||selection.sessionId&&!sessionTask)throw new Academic.StudError("INVALID_TASK_SELECTION","The selected canonical object does not apply to this task.");
                 if(sessionTask&&!selection.sessionId){classification.executionClass="HUMAN_GATE";classification.reason="Select an unexecuted canonical Session before this task can run.";}
                 const handler=classification.handler,snapshot=handler?this.handlers.snapshot(handler):{handlerType:"NONE",contractVersion:1,executionClass:classification.executionClass,resourceClass:"LIGHT",capability:null,idempotencyClass:"IDEMPOTENT",recoveryClass:"MANUAL_RECOVERY",supportsPause:false,supportsCancel:false,canSkip:true,timeoutMs:30000,maxRetries:0,capabilitiesJson:"{}",handlerHash:Domain.hash({type:"NONE"})};
@@ -264,7 +276,10 @@ class StudRunCoordinator{
     }
     validateInputDrift(plan){
         const workflow=this.workflow.read({workflowId:plan.workflowId,historyLimit:10}),selectedIds=new Set(this.repository.steps(plan.id).map(step=>step.workflowNodeId));if(!workflow.isCurrent||workflow.lifecycle!=="ACTIVE"||workflow.templateFingerprint!==plan.workflowFingerprint||Domain.hash(executionTopology(workflow.graph.nodes.filter(node=>selectedIds.has(node.id))))!==plan.topologyHash)throw new Academic.StudError("RUN_INPUT_CHANGED","Workflow topology changed; rebuild the Execution Plan.");
-        const base=this.contextSnapshot(plan.assignmentId,workflow),steps=this.repository.steps(plan.id);for(const step of steps.filter(item=>["PENDING","READY","INTERRUPTED","WAITING_HUMAN","WAITING_EXTERNAL"].includes(item.state))){const previous=step.inputSnapshot||{},current=this.inputForNode(base,workflow.graph.nodes.find(node=>node.id===step.workflowNodeId)||{},step.handlerType,{sectionId:previous.section&&previous.section.id,sessionId:previous.session&&previous.session.id}),currentHash=Domain.hash(current);if(currentHash!==step.inputHash){const changedKeys=[...new Set([...Object.keys(previous),...Object.keys(current)])].filter(key=>Domain.hash(previous[key]??null)!==Domain.hash(current[key]??null));throw new Academic.StudError("RUN_INPUT_CHANGED",`${step.taskType} input changed; rebuild the Execution Plan.`,{stepId:step.id,expectedInputHash:step.inputHash,currentInputHash:currentHash,changedKeys});}}
+        const base=this.contextSnapshot(plan.assignmentId,workflow),steps=this.repository.steps(plan.id);for(const step of steps.filter(item=>["PENDING","READY","INTERRUPTED","WAITING_HUMAN","WAITING_EXTERNAL"].includes(item.state))){
+            const previous=step.inputSnapshot||{},node=workflow.graph.nodes.find(node=>node.id===step.workflowNodeId)||{},selection={sectionId:previous.section&&previous.section.id,sessionId:previous.session&&previous.session.id};
+            if(this.classifyNode(node,base,selection).handlerType!==step.handlerType)throw new Academic.StudError("RUN_INPUT_CHANGED","Stored task no longer matches canonical dispatch; rebuild the Execution Plan.");
+            const current=this.inputForNode(base,node,step.handlerType,selection),currentHash=Domain.hash(current);if(currentHash!==step.inputHash){const changedKeys=[...new Set([...Object.keys(previous),...Object.keys(current)])].filter(key=>Domain.hash(previous[key]??null)!==Domain.hash(current[key]??null));throw new Academic.StudError("RUN_INPUT_CHANGED",`${step.taskType} input changed; rebuild the Execution Plan.`,{stepId:step.id,expectedInputHash:step.inputHash,currentInputHash:currentHash,changedKeys});}}
     }
     async resume(input={}){
         Academic.assertAllowedKeys(input,["assignmentId","planId","expectedVersion"],"Execution resume");let plan=this.scopedPlan(input.assignmentId,input.planId);this.repository.assertVersion(plan,input.expectedVersion,"STALE_EXECUTION_PLAN");if(!["PAUSED","WAITING_HUMAN","WAITING_EXTERNAL","INTERRUPTED"].includes(plan.state))throw new Academic.StudError("INVALID_TRANSITION","This Plan cannot resume.");this.validateInputDrift(plan);const profile=this.repository.profile(plan.resourceProfileId),resource=this.resources.evaluate(profile);if(!resource.allowNewHeavy)throw new Academic.StudError("RESOURCE_PROFILE_CONFLICT",`Cannot resume: ${resource.reasons.join(", ")}.`);
