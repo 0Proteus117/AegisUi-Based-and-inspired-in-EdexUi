@@ -27,6 +27,8 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
           cache-dependency-path: src/package-lock.json
+      - name: Install declared Electron harness dependencies
+        run: npm ci --no-audit --no-fund
       - name: Install declared academic dependencies without native install hooks
         run: npm ci --prefix src --ignore-scripts --no-audit --no-fund
       - name: Deterministic domain and dispatch regression

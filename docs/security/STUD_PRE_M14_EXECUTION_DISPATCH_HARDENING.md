@@ -48,8 +48,9 @@ The M13 integration suite executes the existing M11/M12 services with renamed
 Spanish stage labels and a clearly synthetic model double.
 
 The broad regression aggregator now includes the dispatch suite. Repository
-health CI adds a deterministic domain job using declared `src/package-lock.json`
-dependencies, Node 24, and no native install hooks. It includes M3/M4, dispatch,
+health CI adds a deterministic domain job using declared root and
+`src/package-lock.json` dependencies, Node 24, and no academic native install
+hooks. Root Electron install hooks remain enabled for the IPC harness. It includes M3/M4, dispatch,
 M13 domain/integration/IPC/UI and CodeQL-targeted security regression. This is not
 a replacement for CodeQL analysis, native builds or real-model acceptance.
 
@@ -90,3 +91,8 @@ preload, startup, native helper or dependency declaration changed; no new DMG or
 public release is required for this correction. No live model quality or full
 academic acceptance is claimed. GitHub CI/CodeQL results must be checked after
 push; a local targeted security suite does not constitute a CodeQL scan.
+
+The first remote domain job passed dispatch, M13 core and integration, then
+failed because it installed only `src` dependencies and the IPC harness also
+imports the root Electron dependency. The job now installs both declared
+lockfiles; no test is skipped, stubbed differently or weakened to address this.
