@@ -5,6 +5,7 @@ const Academic=require("./studAcademicModel.class.js");
 const Domain=require("./studStorageModel.class.js");
 const {StudStorageRepository}=require("./studStorageRepository.class.js");
 const {StudStoragePaths,MARKER,assertDirectory}=require("./studStoragePaths.class.js");
+const {StudStorageFileTransfer}=require("./studStorageFileTransfer.class.js");
 
 class StudStorageProfileService {
     constructor({store,repository,paths,dialog}) {
@@ -111,6 +112,19 @@ class StudStorageProfileService {
         const inspected=this.inspectCanonicalFile(reference);
         if(inspected.asset)return inspected.asset;
         return this.repository.transaction(()=>this.repository.registerLocal(reference,inspected.sha256,inspected.byteSize));
+    }
+    async inspectCanonicalFileAsync(reference,{signal}={}) {
+        const owners=this.repository.canonicalOwners(reference),asset=this.repository.asset(reference);
+        if(!owners.length)Domain.fail("UNOWNED_MANAGED_REFERENCE","The file has no canonical academic owner.");
+        if(owners.length>Domain.LIMITS.manifestItems)Domain.fail("STORAGE_OWNER_LIMIT","Too many canonical owners to verify in one operation.");
+        try{
+            const profile=this.repository.profile(asset?.activeProfileId||Domain.LOCAL_PROFILE_ID);
+            const verified=await new StudStorageFileTransfer(this.paths).verify(profile,reference,asset?{sha256:asset.sha256,byteSize:asset.byteSize}:null,signal);
+            if(JSON.stringify(owners)!==JSON.stringify(this.repository.canonicalOwners(reference))||JSON.stringify(asset)!==JSON.stringify(this.repository.asset(reference)))Domain.fail("STORAGE_SOURCE_CHANGED","Canonical source or storage mapping changed during verification.");
+            if(owners.some(owner=>owner.checksum!==null&&(typeof owner.checksum!=="string"||!/^[a-f0-9]{64}$/i.test(owner.checksum))))Domain.fail("STORAGE_SOURCE_METADATA_INVALID","A canonical owner contains invalid checksum metadata.");
+            if(owners.some(owner=>owner.checksum&&owner.checksum.toLowerCase()!==verified.sha256)||!reference.toLowerCase().includes(`_${verified.sha256.slice(0,16)}.`))Domain.fail("STORAGE_HASH_MISMATCH","The file differs from its canonical source identity.");
+            return Object.freeze({...verified,ownerCount:owners.length,asset});
+        }catch(error){if(error instanceof Academic.StudError)throw error;Domain.fail("STORAGE_FILE_UNAVAILABLE","The managed academic file cannot be verified.");}
     }
 }
 module.exports=Object.freeze({StudStorageProfileService});

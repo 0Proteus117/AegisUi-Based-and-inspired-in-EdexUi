@@ -23,19 +23,20 @@ function openRegular(file){
 class StudStorageFileTransfer {
     constructor(paths){this.paths=paths;}
     async verify(profile,reference,input,signal){
-        expected(input);cancelled(signal);
+        if(input)expected(input);cancelled(signal);
         let opened;
         try{
             const file=this.paths.file(profile,reference);opened=openRegular(file);
             const hash=crypto.createHash("sha256"),buffer=Buffer.alloc(CHUNK_BYTES);let count=0,size;
             while((size=fs.readSync(opened.fd,buffer,0,buffer.length,null))>0){
-                count+=size;if(count>input.byteSize)Domain.fail("STORAGE_HASH_MISMATCH","The file size differs from the approved manifest.");
+                count+=size;if(count>(input?.byteSize??Domain.LIMITS.fileBytes))Domain.fail("STORAGE_HASH_MISMATCH","The file size differs from the approved manifest or storage bounds.");
                 hash.update(buffer.subarray(0,size));await yieldTurn();cancelled(signal);
             }
             const final=fs.fstatSync(opened.fd),named=fs.lstatSync(this.paths.file(profile,reference));
             if(!unchanged(opened.stat,final)||!sameFile(final,named))Domain.fail("STORAGE_SOURCE_CHANGED","The managed file changed during verification.");
-            if(count!==input.byteSize||hash.digest("hex")!==input.sha256)Domain.fail("STORAGE_HASH_MISMATCH","The file differs from the approved manifest hash.");
-            return {reference,sha256:input.sha256,byteSize:count};
+            const sha256=hash.digest("hex");
+            if(input&&(count!==input.byteSize||sha256!==input.sha256))Domain.fail("STORAGE_HASH_MISMATCH","The file differs from the approved manifest hash.");
+            return {reference,sha256,byteSize:count};
         }finally{if(opened)fs.closeSync(opened.fd);}
     }
     async copy({sourceProfile,targetProfile,reference,sha256,byteSize,signal,onProgress=()=>{}}){

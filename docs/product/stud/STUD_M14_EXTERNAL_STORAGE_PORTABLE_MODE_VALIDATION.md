@@ -180,7 +180,7 @@ A successful CodeQL workflow is not a claim that every historical alert is gone.
   leftovers explicitly, without scanning unrelated folders.
 - Canonical file registration is currently synchronous and bounded. Do not
   invoke it for hundreds of files in a UI request: manifest preparation must
-  yield/use asynchronous bounded verification before product integration.
+  use the asynchronous verifier introduced in the next checkpoint below.
 - Native volume identity currently supports macOS local disk volumes. No cloud,
   network-drive, arbitrary model-directory or Ollama-server migration is implied.
 
@@ -202,3 +202,91 @@ A successful CodeQL workflow is not a claim that every historical alert is gone.
    final-commit ARM64 packaged validation after the runtime/preload integration.
 6. Only then accept/integrate M14. M15/M16 and public release remain outside this
    checkpoint. The separate-model-server ownership question remains explicit.
+
+## Assignment inventory / verification checkpoint (2026-09-12)
+
+Based on storage-core commit `fab985f`. Still **IN PROGRESS**, isolated, not
+integrated, with no user-facing storage UI or new preload handlers. Schema stays
+27; no additional migration or dependency change is introduced here.
+
+`StudStorageManifestCatalog` performs read-only, bounded canonical traversal:
+
+- Assignment-owned managed documents, resources, datasets, notes, notebooks,
+  saved compute results and repository references.
+- Course material only when `includeCourseMaterial` is explicitly true; material
+  owned by a different Assignment is not silently included through the Course.
+- Existing canonical relationships, M6 Artifact references, accepted M7 Dossier
+  items, M8 Evidence/source/citation references and M1 requirement sources.
+- Paper→AcademicDocument and Notebook→Note canonical links. No directory scan,
+  title matching, model invocation or automatic source acquisition.
+- Exact existing M1/M8 source-record, document, extraction, chunk and page IDs
+  remain available as provenance pointers. This does not assert that the current
+  PDF bytes reconstruct every historical extraction. Pinned extraction cases
+  explicitly require historical-file identity review.
+
+It preserves all inclusion reasons when an object is reached through multiple
+authorities. Files are deduplicated by their original managed reference; source
+records remain distinct. Shared canonical ownership and Course material are
+disclosed, without inventing a count of affected Assignments from source counts.
+Other Assignment/Course nodes are not traversed into. Missing/foreign canonical
+objects, remote/no-managed-byte sources, unsupported references, OCR and unknown
+notebook output references are reported as issues, not acquired or repaired.
+URL-bearing references are not returned verbatim; inventory data omits source
+bodies, provider URLs, code, vault details and absolute filesystem paths.
+
+Bounds are 500 queued canonical objects, 2,000 relationship/source rows, depth 4
+and 100 displayed issues with an explicit total issue count. Limits report
+truncation. The read-only inventory never claims complete portability:
+`portableReady` is always false. Its scope is `CANONICAL_MANAGED_FILES_ONLY`, not
+an independent copy of the SQLite database, the whole Assignment intellectual
+history, all models, or a runnable application package.
+
+`StudStorageManifestPreview` verifies the selected files asynchronously through
+`StudStorageProfileService.inspectCanonicalFileAsync`. It yields between 256 KiB
+blocks, supports cancellation, checks canonical checksums (including Research
+PDF metadata), managed-reference identity, mapping changes and source changes.
+It recomputes the catalog fingerprint after inspection and rejects stale scope.
+No asset/manifest/Run/event is persisted by preview. Individual missing/tampered
+files have typed status without raw filesystem error text. `checkedAt` describes
+an inspection snapshot, not a guarantee about future filesystem state.
+
+Selected bytes are bounded to 8 GiB. At most one additional bounded file (64 MiB)
+may be inspected to detect that this sum would be exceeded; subsequent files are
+explicitly `NOT_INSPECTED_BYTE_BOUND`. The limit test uses a declared verifier
+double; it is not an 8-GiB physical copy/performance claim. No operation may be
+launched from this preview alone.
+
+### Validation in this checkpoint
+
+- Catalog: 11 checks passed. Includes Course opt-in, cross-Assignment exclusion,
+  shared ownership, note→citation traversal, deterministic/stale fingerprints,
+  no private URL output, missing managed bytes, six discipline-neutral manual
+  Assignment fixtures, restart and honest bounds. The synthetic 620-resource
+  fixture returned the bounded 500-object view in observed runs around
+  100–160 ms; this is a local observation, not a performance guarantee.
+- Preview: 9 checks passed. Includes actual M1/M6/M7/M8 services/records,
+  inspectable Evidence identity, event-loop yielding, cancellation, missing
+  bytes, tamper, mid-inspection canonical changes, explicit byte-bound omissions
+  and restart without fabricated persistent portable state.
+- All five storage suites pass: 62 checks total (12 paths + 18 profiles + 12 copy
+  + 11 catalog + 9 preview).
+- Focused regression passed 14 executable scripts: the five storage suites,
+  M1/M6/M7/M8 domains, canonical dispatch, Electron trust boundary,
+  CodeQL-targeted security, prebuild integrity and release health. The added
+  provenance-pointer check was rerun with both new suites after the final change.
+  No failed or skipped script in that selection. This does not re-label the
+  earlier inherited Map/SAT outcomes or claim a new remote CodeQL scan.
+
+### Remaining gate before durable transfer approval
+
+The next implementation step is the persistent, explicitly approved transfer
+manifest and lifecycle, not another inventory layer. It must validate the
+inspected source set again; handle historical-file/unsupported-output omissions
+without promising full coverage; preserve shared-reference consequences; reject
+stale optimistic versions; and connect actual copying to M6 Runs. Commit the
+mapping switch only after all approved copies verify. Interrupted recovery,
+rollback and cleanup remain required. The renderer contract must paginate/bound
+serialized output rather than blindly exposing the maximum internal catalog.
+Research/Moodle/Notebook read-and-write resolver integration, UI, live visual
+validation and packaged ARM64 acceptance remain pending. No real user academic
+file, real model, app bundle or release was changed by this checkpoint.
