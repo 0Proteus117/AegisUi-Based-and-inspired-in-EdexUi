@@ -14,7 +14,7 @@ function expect(code,work){assert.throws(work,error=>error.code===code);}
 function strip27(dbPath){const db=new DatabaseSync(dbPath);db.exec(`PRAGMA foreign_keys=OFF;
 DROP INDEX stud_storage_document_reference_index; DROP INDEX stud_storage_paper_reference_index;
 DROP INDEX stud_storage_resource_reference_index; DROP INDEX stud_storage_dataset_reference_index;
-DROP TABLE stud_storage_cleanup_records; DROP TABLE stud_storage_copies; DROP TABLE stud_storage_manifest_items;
+DROP TABLE stud_storage_cleanup_records; DROP TABLE stud_storage_copies; DROP TABLE stud_storage_manifest_sources; DROP TABLE stud_storage_manifest_review_issues; DROP TABLE stud_storage_manifest_items;
 DROP TABLE stud_storage_manifests; DROP TABLE stud_storage_assets; DROP TABLE stud_storage_profiles;
 DELETE FROM stud_schema_migrations WHERE version=27;`);db.close();}
 (async()=>{try{
@@ -26,7 +26,7 @@ DELETE FROM stud_schema_migrations WHERE version=27;`);db.close();}
     await check("FRESH_V27_LOCAL_PROFILE_WITHOUT_FABRICATED_ASSIGNMENT_STATE",()=>{
         assert.strictEqual(store.schemaInfo().version,27);
         assert.strictEqual(service.profiles().length,1);
-        for(const table of ["stud_storage_assets","stud_storage_manifests","stud_storage_manifest_items","stud_storage_copies","stud_storage_cleanup_records"])assert.strictEqual(store.db.prepare(`SELECT COUNT(*) count FROM ${table}`).get().count,0);
+        for(const table of ["stud_storage_assets","stud_storage_manifests","stud_storage_manifest_items","stud_storage_manifest_sources","stud_storage_manifest_review_issues","stud_storage_copies","stud_storage_cleanup_records"])assert.strictEqual(store.db.prepare(`SELECT COUNT(*) count FROM ${table}`).get().count,0);
         assert.deepStrictEqual(store.db.prepare("PRAGMA foreign_key_check").all(),[]);
     });
     await check("CANCELLED_PICKER_CREATES_NOTHING",async()=>{assert.deepStrictEqual(await service.chooseExternal({label:"Synthetic external"}),{cancelled:true});assert.strictEqual(service.profiles().length,1);});

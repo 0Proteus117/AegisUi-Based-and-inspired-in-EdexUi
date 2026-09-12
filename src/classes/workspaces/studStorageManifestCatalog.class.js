@@ -123,6 +123,7 @@ class StudStorageManifestCatalog {
         for(const file of files.values()){
             const owners=this.repository.canonicalOwners(file.reference);
             file.canonicalOwnerCount=owners.length;file.ownerCountTruncated=owners.length>Domain.LIMITS.manifestItems;
+            file.ownerIdentityHash=crypto.createHash("sha256").update(JSON.stringify(owners.map(owner=>[owner.objectType,owner.id,owner.checksum]).sort((a,b)=>JSON.stringify(a).localeCompare(JSON.stringify(b))))).digest("hex");
             file.sharedCanonicalReference=owners.some(owner=>!file.sources.some(source=>source.type===owner.objectType&&source.id===owner.id));
             file.sharedCourseMaterial=file.sources.some(source=>source.reason==="SHARED_COURSE_MATERIAL");
             if(file.ownerCountTruncated){truncated=true;issue("SHARED_OWNER_LIMIT");}

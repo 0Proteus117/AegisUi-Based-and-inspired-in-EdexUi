@@ -494,6 +494,27 @@ Portable mode calculates a dependency manifest, displays required size, copies
 only approved artifacts/models to the local profile, verifies hashes and records
 the temporary mapping. Returning artifacts is another explicit verified action.
 
+M14 implementation checkpoint (not yet accepted): `StudStorageTransferService`
+uses the existing SQLite connection through `StudStorageManifestRepository`.
+Preparation freezes selected relative references, canonical source identities,
+source/profile versions, reviewed omission counters/issues and a catalog hash.
+It does not approve or create a Run. Explicit confirmation starts a real M6 Run;
+all selected files must verify before a single transactional mapping switch.
+Original copies remain. Rollback verifies those originals and checks the exact
+applied asset versions, so it cannot overwrite a later relocation. Interrupted
+work is recorded without automatic replay. M6 remains the Run/event authority.
+
+The current bounded manifest scope is **managed academic files**, not a copied
+academic database or complete runtime environment. Canonical SQL stays local;
+the existing Ollama server does not provide owned model-file storage paths.
+Externally managed model files and unsupported/historical file dependencies
+must remain explicit exclusions/review conditions, not portable-success claims.
+Research, Moodle and Notebook now accept a main-only managed-storage adapter
+for both reads and writes, but production IPC/bootstrap does not yet inject it.
+No renderer filesystem API is introduced. See the
+[M14 validation record](STUD_M14_EXTERNAL_STORAGE_PORTABLE_MODE_VALIDATION.md)
+for the remaining integration and packaged-acceptance gates.
+
 ### Final package and human approval
 
 The final package references a specific draft, bibliography, appendices,

@@ -290,3 +290,169 @@ serialized output rather than blindly exposing the maximum internal catalog.
 Research/Moodle/Notebook read-and-write resolver integration, UI, live visual
 validation and packaged ARM64 acceptance remain pending. No real user academic
 file, real model, app bundle or release was changed by this checkpoint.
+
+## Durable transfer / runtime compatibility checkpoint (2026-09-12)
+
+Continues from `6a56333` on the isolated M14 branch. **M14 is still incomplete.**
+The following services are main-only and not registered by Academic IPC or
+exposed to the renderer. Existing application construction still uses the local
+runtime path; the new adapter is exercised by explicit synthetic test injection.
+No user's files, credentials, models or academic database have been relocated.
+
+### Persistent selection and approval
+
+`StudStorageManifestRepository` uses the same canonical SQLite connection.
+The unshipped migration 27 now also records:
+
+- selected source/profile optimistic versions and the asset version produced
+  by the mapping switch;
+- Course-material selection, omitted-file count, total review-issue count,
+  inventory truncation and shared-reference count;
+- normalized selected canonical source identities/version timestamps and the
+  bounded list of review-issue codes/source IDs (maximum 100 displayed issues,
+  with the original total retained);
+- explicit approval timestamp, forward Run and latest rollback Run identity.
+  Every rollback Run also points to its original transfer parent Run, preserving
+  previous failed/cancelled rollback attempts in M6 history.
+
+Migrations 1–26 remain unchanged. Previous isolated schema-27 test databases are
+disposable development fixtures, not supported upgraded user databases. No
+real user database had this unshipped migration applied. Fresh/v26 migration
+tests recreate the current schema and retain old academic records.
+
+Preparation validates a user-selected subset against the current bounded
+Assignment inventory, reads actual bytes asynchronously and persists immutable
+selection facts. Registering a previously unmapped legacy file records its
+verified local identity; it does not move it or modify its canonical source.
+The prepared fingerprint includes those newly registered storage versions.
+Preparation creates no approval, operational Run or navigation event.
+
+Execution requires the current manifest version plus an explicit limited-scope
+acknowledgement; shared references require a separate acknowledgement. These
+confirmations are main-process validated. Scope or storage changes require a
+new preparation/review. No renderer-selected actor, state, SQL, path or persistent
+free-form log payload is accepted.
+
+The historical manifest preserves only source identity/version references and
+bounded review facts, not canonical document content, provider URLs or private
+mount paths. `portableReady` remains false: this is a selected managed-file
+transfer, not a claim that an entire Assignment/runtime/model is portable.
+
+### Transfer, cancellation, recovery and rollback
+
+`StudStorageTransferService` composes the existing byte helper and M6 authority:
+
+1. Start an actual M6 `STORAGE_TRANSFER` Run only on explicit execution.
+2. Copy selected files exclusively, verify SHA-256, retain destination-copy
+   identities, and report real **verified files / selected files** progress.
+3. Re-verify originals and destinations; retain temporary file-identity/stat
+   receipts and synchronously recheck them before committing the mapping switch.
+4. Atomically switch all selected mappings, persist applied asset versions and
+   mark the Run completed. No SQLite transaction spans asynchronous file I/O.
+5. Retain original bytes. Cancellation/failure before commit leaves old mappings
+   authoritative; a transaction failure rolls back every pointer and completion.
+
+There is no pause, ETA, fake percentage or worker scheduler. A Run reaching its
+verified-file count still says that the mapping switch is pending. A stopped
+M6 Run cannot be reported as a successful transfer or apply its mappings.
+
+Rollback is an explicit new Run. It verifies retained originals, then switches
+all mappings transactionally only if the precise applied versions still match.
+A later relocation cannot be silently undone (including an ABA return to the
+same profile). Failed/cancelled rollback leaves the preceding applied mappings
+and preserves its failed/cancelled Run. Target copies are not removed.
+
+The bounded main-bootstrap recovery helper marks unfinished forward transfers
+`INTERRUPTED` and fails their real Run without replaying files. Interrupted
+rollback leaves the prior `APPLIED` mapping plus `STORAGE_INTERRUPTED` and its
+Run history. Recovery must be wired once at main-process startup, not exposed as
+a renderer action or called while another instance owns active work.
+
+### Managed runtime adapter
+
+`StudManagedStorageRuntime` is a main-only injected adapter. Research PDF import,
+OA save and PDF read; Moodle file save/existence checks; and Notebook dataset
+import/read can use the same active mapping. Both read and write paths are
+covered; the encrypted vault, SSO, canonical SQLite and model-server ownership
+remain outside that adapter.
+
+New content remains local until explicitly relocated. Reimporting identical
+bytes reuses their current active profile after hash verification. An offline
+external profile produces a typed error and never falls back to the retained
+local copy or silently recreates the missing mount. A genuinely missing file on
+an available active profile may be restored there by the existing explicit
+import/sync path. Existing conflicting bytes are never overwritten.
+
+Imports use exclusive staging/publication and readback; managed reads are
+bounded, no-follow regular-file reads with exact digest validation. Canonical
+owner checksums and the original filename digest must agree. The adapter cannot
+access SQLite/vault files, arbitrary namespaces or renderer-selected paths.
+
+### Technical audit findings addressed
+
+- **MAJOR, fixed:** registering verified legacy assets changes storage fields
+  inside the inventory hash. Freeze the prepared post-registration fingerprint
+  transactionally, without ignoring later genuine source/mapping changes.
+- **MAJOR, fixed:** verifying a later file yields time in which an earlier
+  verified file could change. Final file receipts detect covered replacements
+  or content changes before the synchronous mapping commit.
+- **MAJOR, fixed:** a late cancellation of the authoritative M6 Run must prevent
+  the final mapping switch even after all bytes have verified.
+- **MAJOR, fixed:** shared canonical owner identity/checksum changes must affect
+  scope freshness, not just owner count. The catalog now hashes bounded exact
+  owner identity/checksum tuples.
+- **MINOR, fixed:** prepared history must remain inspectable after its source
+  changes. Persist normalized selected source identities and bounded review
+  facts instead of reconstructing approval solely from current records.
+- **INFORMATIONAL:** same-user hostile filesystem races are not fully contained
+  by a kernel directory capability. No adversarial-FS sandbox claim is made.
+- **INTEGRATION GATE:** do not enable deletion/cleanup until all production
+  readers and writers use the resolver. Retained originals are still necessary
+  for the unmodified production bootstrap at this checkpoint.
+
+### Validation and remaining work
+
+Final checkpoint results, verified 2026-09-13:
+
+- Transfer lifecycle: **28 checks passed**. Includes real synthetic byte copying,
+  atomic switch, rollback, stale versions, concurrent-operation bounds, explicit
+  shared/limited-scope approval, missing purpose, source/owner drift, late file
+  tamper, cancellation before/during final verification, SQL fault injection,
+  restart/recovery and retained historical review facts. One transfer and one
+  preparation can be active per main-process service; no unbounded copy fan-out.
+- Injected runtime compatibility: **9 checks passed** for Research PDF,
+  Notebook dataset and Moodle managed-file methods; external reads/writes,
+  offline fail-closed behaviour, no local fallback, canonical identity,
+  reimport, tamper, namespace rejection and rollback. No provider/SSO call was
+  performed by these tests. All seven storage suites pass **99 checks** in total.
+- Established regression runner: **96 executable suites passed, 1 failed,
+  1 skipped**. The failure is Map: TomTom HTTP 401 and missing AISSTREAM key.
+  The absent SAT script is the established explicit skip. Map was independently
+  rerun on unchanged integration `89d49b2` and returned the same failures;
+  its script/source have no M14 changes. These are not new storage failures.
+- The 13 additional STUD suites outside the established aggregate runner were
+  run separately: **13 passed, 0 failed, 0 skipped**. Combined: all **72 STUD
+  executable suites passed**; across those two selections, **109 passed,
+  1 inherited Map failure, 1 SAT skip**. Counts refer to scripts, not individual
+  assertions. The updated fresh-database empty-state assertions were separately
+  rerun through the profile suite: 18 checks passed.
+- Electron trust-boundary checks: **17 passed**; prebuild guard: **4 passed**;
+  CodeQL-targeted security checks and release health passed in the aggregate
+  run. Syntax checks passed for 14 changed JavaScript files; diff checks passed.
+  No new full remote CodeQL scan or live renderer acceptance is claimed here.
+- Real disposable macOS volume validation passed again: exclusive copy,
+  disconnect, offline rejection, remount identity and SHA-256 readback. Its
+  mount location did not change. The temporary image was detached/deleted;
+  this is not an Aegis application DMG and no user disk was ejected.
+- M6 regression corpus: 100 Courses, 1,000 Assignments, 300 Workflows, 5,000
+  Artifacts, 500 Runs and 25,000 Events. Observed artifact lookup 1.8 ms, bounded
+  event lookup 8.4 ms and restart hydration 8.4 ms. Fixture construction took
+  165.5 seconds; these are local observations, not a performance guarantee.
+
+No live STUD UI, app DMG or packaged acceptance is implied by these tests.
+
+Next implementation: production service ownership/bootstrap and bounded typed
+preload APIs, explicit verified-copy cleanup, progressive storage/Assignment
+controls, synthetic live visual matrix, full integration audit and final-commit
+ARM64 packaged validation. M14 must not be integrated as complete until those
+gates pass. No public release, M15 or M16 work was started here.

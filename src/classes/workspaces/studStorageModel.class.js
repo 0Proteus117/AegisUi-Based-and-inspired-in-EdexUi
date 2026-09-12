@@ -46,9 +46,16 @@ CREATE TABLE stud_storage_manifests (
     target_profile_id TEXT NOT NULL REFERENCES stud_storage_profiles(id),
     target_profile_version INTEGER NOT NULL CHECK(target_profile_version>0),
     purpose TEXT NOT NULL CHECK(purpose IN ('RELOCATE','PORTABLE','RETURN')),
-    state TEXT NOT NULL CHECK(state IN ('PREPARED','COPYING','VERIFIED','APPLIED','FAILED','CANCELLED','INTERRUPTED','ROLLED_BACK')),
+    state TEXT NOT NULL CHECK(state IN ('PREPARED','COPYING','VERIFIED','APPLIED','FAILED','CANCELLED','INTERRUPTED','ROLLING_BACK','ROLLED_BACK')),
     scope_hash TEXT NOT NULL CHECK(length(scope_hash)=64),
+    include_course_material INTEGER NOT NULL CHECK(include_course_material IN (0,1)),
+    omitted_file_count INTEGER NOT NULL CHECK(omitted_file_count>=0),
+    issue_count INTEGER NOT NULL CHECK(issue_count>=0),
+    inventory_truncated INTEGER NOT NULL CHECK(inventory_truncated IN (0,1)),
+    shared_reference_count INTEGER NOT NULL CHECK(shared_reference_count>=0),
+    approved_at TEXT,
     run_id TEXT REFERENCES stud_operation_runs(id),
+    rollback_run_id TEXT REFERENCES stud_operation_runs(id),
     error_code TEXT, row_version INTEGER NOT NULL DEFAULT 1 CHECK(row_version>0),
     created_at TEXT NOT NULL, updated_at TEXT NOT NULL, finished_at TEXT
 );
@@ -58,6 +65,8 @@ CREATE TABLE stud_storage_manifest_items (
     reference TEXT NOT NULL REFERENCES stud_storage_assets(reference),
     source_profile_id TEXT NOT NULL REFERENCES stud_storage_profiles(id),
     source_asset_version INTEGER NOT NULL CHECK(source_asset_version>0),
+    source_profile_version INTEGER NOT NULL CHECK(source_profile_version>0),
+    applied_asset_version INTEGER CHECK(applied_asset_version>0),
     sha256 TEXT NOT NULL CHECK(length(sha256)=64), byte_size INTEGER NOT NULL CHECK(byte_size>=0),
     state TEXT NOT NULL CHECK(state IN ('PENDING','VERIFIED','APPLIED')),
     PRIMARY KEY(manifest_id,reference)
@@ -69,6 +78,19 @@ CREATE TABLE stud_storage_copies (
     manifest_id TEXT REFERENCES stud_storage_manifests(id), verified_at TEXT NOT NULL,
     state TEXT NOT NULL CHECK(state IN ('RETAINED','REMOVED')),
     PRIMARY KEY(reference,profile_id)
+);
+CREATE TABLE stud_storage_manifest_sources (
+    manifest_id TEXT NOT NULL, reference TEXT NOT NULL,
+    object_type TEXT NOT NULL, object_id TEXT NOT NULL, source_updated_at TEXT,
+    PRIMARY KEY(manifest_id,reference,object_type,object_id),
+    FOREIGN KEY(manifest_id,reference) REFERENCES stud_storage_manifest_items(manifest_id,reference)
+);
+CREATE TABLE stud_storage_manifest_review_issues (
+    manifest_id TEXT NOT NULL REFERENCES stud_storage_manifests(id),
+    ordinal INTEGER NOT NULL CHECK(ordinal>=0 AND ordinal<100),
+    code TEXT NOT NULL CHECK(length(code) BETWEEN 1 AND 64),
+    object_type TEXT, object_id TEXT,
+    PRIMARY KEY(manifest_id,ordinal)
 );
 CREATE TABLE stud_storage_cleanup_records (
     id TEXT PRIMARY KEY, reference TEXT NOT NULL REFERENCES stud_storage_assets(reference),

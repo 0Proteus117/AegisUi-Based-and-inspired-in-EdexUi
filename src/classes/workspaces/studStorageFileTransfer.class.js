@@ -7,6 +7,7 @@ const CHUNK_BYTES=256*1024;
 function cancelled(signal){if(signal?.aborted)Domain.fail("STORAGE_CANCELLED","The transfer was cancelled; active references were not changed.");}
 function sameFile(a,b){return a.dev===b.dev&&a.ino===b.ino;}
 function unchanged(a,b){return sameFile(a,b)&&a.size===b.size&&a.mtimeMs===b.mtimeMs&&a.ctimeMs===b.ctimeMs&&b.nlink===1;}
+function receipt(stat){return {dev:stat.dev,ino:stat.ino,size:stat.size,mtimeMs:stat.mtimeMs,ctimeMs:stat.ctimeMs};}
 function expected(input){
     Domain.digest(input.sha256);
     if(!Number.isSafeInteger(input.byteSize)||input.byteSize<0||input.byteSize>Domain.LIMITS.fileBytes)Domain.fail("STORAGE_FILE_LIMIT","The planned file is outside storage transfer bounds.");
@@ -36,8 +37,15 @@ class StudStorageFileTransfer {
             if(!unchanged(opened.stat,final)||!sameFile(final,named))Domain.fail("STORAGE_SOURCE_CHANGED","The managed file changed during verification.");
             const sha256=hash.digest("hex");
             if(input&&(count!==input.byteSize||sha256!==input.sha256))Domain.fail("STORAGE_HASH_MISMATCH","The file differs from the approved manifest hash.");
-            return {reference,sha256,byteSize:count};
+            return {reference,sha256,byteSize:count,verificationReceipt:receipt(final)};
         }finally{if(opened)fs.closeSync(opened.fd);}
+    }
+    assertVerified(profile,reference,verified){
+        // Main-only, synchronous last check before a multi-file mapping commit.
+        // A subsequent verification must not hide an earlier file replacement.
+        const named=fs.lstatSync(this.paths.file(profile,reference));
+        if(!verified?.verificationReceipt||!named.isFile()||!unchanged(verified.verificationReceipt,named))
+            Domain.fail("STORAGE_SOURCE_CHANGED","A verified file changed before the location switch.");
     }
     async copy({sourceProfile,targetProfile,reference,sha256,byteSize,signal,onProgress=()=>{}}){
         const identity={sha256,byteSize};expected(identity);Domain.managedReference(reference);cancelled(signal);

@@ -94,6 +94,7 @@ class StudLmsRuntime {
         if (!options.store) throw new Error("STUD LMS runtime requires the canonical academic store.");
         this.store = options.store;
         this.root = options.root;
+        this.managedStorage = options.managedStorage || null;
         this.fetch = options.fetch || globalThis.fetch;
         this.shell = options.shell || shell;
         this.app = options.app || electronApp || null;
@@ -271,6 +272,10 @@ class StudLmsRuntime {
         const folder = isPdf ? "documents" : "moodle-files";
         const name = `${isPdf ? "moodle" : "moodle_file"}_${digest.slice(0, 16)}${extension}`;
         const reference = `${folder}/${name}`;
+        if (this.managedStorage) {
+            this.managedStorage.put(reference, bytes);
+            return Object.freeze({reference,sha256:digest,size:bytes.length,mimeType:isPdf?"application/pdf":String(resource.mimeType||"application/octet-stream").slice(0,120),isPdf});
+        }
         const root = path.resolve(this.root);
         const directory = path.resolve(root, folder);
         const destination = path.resolve(directory, name);
@@ -291,6 +296,7 @@ class StudLmsRuntime {
 
     managedReferenceExists(reference) {
         if (!reference || typeof reference !== "string") return false;
+        if (this.managedStorage) return this.managedStorage.exists(reference);
         const root = path.resolve(this.root);
         const absolute = path.resolve(root, reference);
         return absolute.startsWith(`${root}${path.sep}`) && fs.existsSync(absolute) && fs.statSync(absolute).isFile();

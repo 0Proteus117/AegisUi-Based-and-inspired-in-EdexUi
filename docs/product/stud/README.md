@@ -96,7 +96,8 @@ cloud fallback. The exact next product milestone is M14 — External Academic
 Storage and Portable Mode.
 
 M14 is in progress on its isolated implementation branch. The
-[M14 storage-core validation record](STUD_M14_EXTERNAL_STORAGE_PORTABLE_MODE_VALIDATION.md)
-distinguishes the tested profile/migration/copy foundation from the still-pending
-Assignment manifests, transfer orchestration, runtime/preload/UI integration and
-packaged acceptance. This is not a milestone-completion claim.
+[M14 storage validation record](STUD_M14_EXTERNAL_STORAGE_PORTABLE_MODE_VALIDATION.md)
+distinguishes the profile/copy foundation, Assignment inventory, durable reviewed
+transfers and injectable runtime adapters from the still-pending production
+wiring, cleanup controls, preload/UI integration and packaged acceptance.
+This is not a milestone-completion claim.

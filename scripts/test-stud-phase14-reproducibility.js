@@ -24,7 +24,7 @@ const COMPOSITION_TABLES = ["stud_draft_section_versions", "stud_draft_versions"
 const HUMANISATION_TABLES = ["stud_humanisation_integrity_checks", "stud_humanisation_session_sections", "stud_humanisation_sessions", "stud_humanisation_writing_samples", "stud_humanisation_profile_revisions", "stud_humanisation_profiles"];
 const LECTURER_COMMITTEE_TABLES = ["stud_lecturer_synthesis_findings", "stud_lecturer_finding_events", "stud_correction_integrity_checks", "stud_correction_session_sections", "stud_correction_item_findings", "stud_lecturer_formative_estimates", "stud_lecturer_synthesis", "stud_correction_sessions", "stud_correction_items", "stud_correction_plans", "stud_lecturer_review_findings", "stud_lecturer_reviewer_passes", "stud_lecturer_review_sessions"];
 const EXECUTION_TABLES = ["stud_watchdog_incidents", "stud_model_routing_decisions", "stud_model_capability_assessments", "stud_model_inventory", "stud_task_handler_snapshots", "stud_execution_checkpoints", "stud_execution_attempts", "stud_execution_step_dependencies", "stud_execution_steps", "stud_execution_plans", "stud_resource_profiles"];
-const STORAGE_TABLES = ["stud_storage_cleanup_records", "stud_storage_copies", "stud_storage_manifest_items", "stud_storage_manifests", "stud_storage_assets", "stud_storage_profiles"];
+const STORAGE_TABLES = ["stud_storage_cleanup_records", "stud_storage_copies", "stud_storage_manifest_sources", "stud_storage_manifest_review_issues", "stud_storage_manifest_items", "stud_storage_manifests", "stud_storage_assets", "stud_storage_profiles"];
 
 let passed = 0;
 function check(name, fn) {

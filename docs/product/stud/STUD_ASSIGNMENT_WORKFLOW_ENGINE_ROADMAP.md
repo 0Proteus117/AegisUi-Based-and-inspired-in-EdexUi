@@ -424,6 +424,9 @@ outcome is `NO_SUITABLE_MODEL`; no output or capability was fabricated.
 Preflight and implementation are in progress; see the
 [M14 validation record](STUD_M14_EXTERNAL_STORAGE_PORTABLE_MODE_VALIDATION.md).
 This is not a completion or packaged-acceptance claim.
+The isolated implementation now includes approved transfer/rollback contracts
+and injectable read/write adapters. Production wiring, cleanup UI, live visual
+acceptance and the final packaged validation remain required before integration.
 
 - **Objective:** complete external academic storage and portable travel support.
 - **Ordering note:** deliver Storage Profile Core before the first earlier
