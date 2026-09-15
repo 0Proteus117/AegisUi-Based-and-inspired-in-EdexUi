@@ -1,6 +1,11 @@
 # M14 — External academic storage and portable mode
 
 Status: IN PROGRESS — not accepted, not integrated, no release.
+
+Latest checkpoint: production wiring and Assignment storage UI, validated
+2026-09-15. Earlier dated checkpoints below describe their historical state;
+their statements that bootstrap/UI were absent are superseded by the final
+section of this document. Cleanup and final packaged acceptance remain open.
 Base: integration `89d49b2526b4d55bdd7b11d51a60113b0943c168`, including the
 pre-M14 dispatch correction and corrected CI dependency installation.
 Integration schema: 26. Isolated M14 development schema: 27.
@@ -456,3 +461,84 @@ preload APIs, explicit verified-copy cleanup, progressive storage/Assignment
 controls, synthetic live visual matrix, full integration audit and final-commit
 ARM64 packaged validation. M14 must not be integrated as complete until those
 gates pass. No public release, M15 or M16 work was started here.
+
+## Production wiring / Assignment UI checkpoint (2026-09-15)
+
+This supersedes the previous checkpoint's absent-bootstrap status. It is still
+**not complete M14 or packaged acceptance**.
+
+`StudAcademicIpc` now owns a single profile/transfer controller and injects
+`StudManagedStorageRuntime` into the actual Research, Moodle and Notebook
+constructors. Document Intelligence continues to consume Research's bounded PDF
+reader. The canonical database, vault, SSO and provider endpoints did not move.
+
+`StudStorageController` registers ten fixed preload operations: profile list,
+native choose/reconnect, Assignment catalog, transfer prepare/read/execute/
+cancel/rollback and history. No generic path/read/write/log/network operation is
+exposed. Catalog/manifest pages contain at most 50 file items; history remains
+bounded. Profile responses omit UUID, nonce, mount hint and private root.
+The existing exact-local-main-frame IPC wrapper remains authoritative.
+
+Shutdown aborts preparation and transfers before SQLite closure, preventing
+late asynchronous writes. On startup, bounded recovery batches mark unfinished
+transfers interrupted; they do not copy, replay, delete or switch mappings.
+The inspector shows the latest rollback Run even when rollback failed or was
+cancelled, rather than displaying the earlier successful transfer as its result.
+
+`StudStorageWorkspace` is browser-only and reached through Assignment → Files &
+storage. It presents destination, bounded file selection, native location
+options, explicit scope/shared-reference approval, actual Run progress,
+cancellation, retained-original restoration and paginated verification details.
+Opening it makes no transfer/provider/model request. UI selection is transient.
+Assignment-generation guards reject late picker/catalog/cancellation responses;
+out-of-order inspections cannot replace a newer selection. Transfer-active
+controls cannot switch the operation being inspected. Focus and open disclosure
+state survive checkbox rerender; compact mode places the manifest review before
+the bounded-scroll file list. Unknown capacity is not represented as zero.
+
+Validation performed:
+
+- `test-stud-storage-ipc.js`: **9 passed**, including exact sender/subframe
+  rejection, payload/approval rejection, real production PDF handler reading an
+  active external file, typed offline failure, shutdown and actual DB reopen.
+- `test-stud-storage-workspace.js`: **14 passed**, including browser-only load,
+  escaped labels, truthful progress, explicit approval, stale async responses,
+  active history guard and bounded manifest paging.
+- Established aggregate regression: **98 suites passed, 1 failed, 1 skipped**.
+  The sole failure is Map: TomTom flow segment/tile HTTP 401 and absent AIS key;
+  these were independently reproduced on integration `89d49b2` in the preceding
+  checkpoint. SAT script absent/skipped. No new subsystem failure.
+- **13 additional STUD suites passed**, covering scripts outside the aggregate.
+  Thus **74 executable STUD suites passed** across aggregate and extra runs.
+  Additional trust-boundary (17 checks), prebuild-integrity (4 checks), and the
+  final workspace test rerun also passed. Their duplicated workspace invocation
+  is not counted as another independent STUD suite.
+- Live development Electron: fixed storage preload works, schema 27, no
+  renderer `require`, `process` or `Buffer`; existing trust-boundary live script
+  passed after application startup. Terminal connected. This is not a DMG run.
+- `validate-stud-storage-live.js`: **132/132 geometry cases passed**: eleven
+  synthetic states × Dark/Light/System-dark/System-light × 1680×1050@2,
+  1440×900@2 and 1200×780@1. Cases include empty, resting, preparation, determinate
+  and indeterminate copying, failure, applied state, cancelled rollback,
+  disconnected profile, open verification and 50 long source labels.
+  Five sanitized screenshots were captured; dark/light and compact verification
+  were visually inspected. These use the production component/CSS in Electron
+  but **synthetic operational states**, not evidence of real file transfers.
+
+The first dev launch failed because the `--ignore-scripts` dependency setup left
+node-pty's ARM64 spawn-helper without its executable bit. Applying the same
+permission/ad-hoc signature treatment already present in `build/after-pack.js`
+to this ignored dependency allowed startup; no packaging guard was weakened.
+Calendar helper was built from current Swift source. An early live probe before
+UI startup reported missing workspace/terminal; rerun after initialization
+passed. Neither failed attempt is described as successful launch evidence.
+
+Logs/captures remain outside Git under the developer's test-artifact directory:
+`m14-wiring-regression.log`, `m14-wiring-extra-regression.log`,
+`m14-wiring-visual.log`, `m14-wiring-visual/` and `m14-wiring-live.log`.
+Only synthetic STUD surfaces were captured. No real Moodle files/models moved.
+
+Remaining gates: explicit safe-copy cleanup, derived Artifact file availability,
+full operational UI/native-picker acceptance, final integration audit, repeat
+affected regressions and a final-commit ARM64 validation DMG mounted and launched.
+No public release; no M15/M16 implementation.

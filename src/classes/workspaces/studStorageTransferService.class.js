@@ -25,9 +25,11 @@ class StudStorageTransferService {
     }
     history(input={}){Academic.assertAllowedKeys(input,["assignmentId","limit"],"Storage history");return this.repository.list(input.assignmentId,input.limit);}
     async prepare(input={}, {signal}={}){
+        if(this.stopping)Domain.fail("STORAGE_CANCELLED","Storage is shutting down.");
         if(this.preparing)Domain.fail("STORAGE_BUSY","A storage selection is already being verified.");
-        this.preparing=true;
-        try{return await this.prepareSelection(input,{signal});}finally{this.preparing=false;}
+        this.preparing=true;this.preparationController=new AbortController();
+        const abort=()=>this.preparationController?.abort();if(signal?.aborted)abort();else signal?.addEventListener("abort",abort,{once:true});
+        try{return await this.prepareSelection(input,{signal:this.preparationController.signal});}finally{signal?.removeEventListener("abort",abort);this.preparing=false;this.preparationController=null;}
     }
     async prepareSelection(input={}, {signal}={}){
         Academic.assertAllowedKeys(input,["assignmentId","targetProfileId","expectedTargetVersion","purpose","includeCourseMaterial","expectedScopeHash","references"],"Prepare managed-file transfer");
@@ -126,6 +128,7 @@ class StudStorageTransferService {
         this.assertMappings(manifest,true);return this.perform(manifest,true);
     }
     async perform(initial,rollback){
+        if(this.stopping)Domain.fail("STORAGE_CANCELLED","Storage is shutting down.");
         if(this.active.size)Domain.fail("STORAGE_BUSY","Another storage transfer is active. Wait for it to finish or cancel it.");
         const controller=new AbortController();this.active.set(initial.id,controller);let manifest=initial,runId=null;
         try{
@@ -177,7 +180,9 @@ class StudStorageTransferService {
             return this.inspect({assignmentId:manifest.assignmentId,manifestId:manifest.id});
         }catch(error){
             const code=error instanceof Academic.StudError&&/^[A-Z_]{1,64}$/.test(error.code)?error.code:"STORAGE_TRANSFER_FAILED";
-            if(runId)this.repository.transaction(()=>{
+            // App shutdown closes SQLite after aborting this singleton. Leave
+            // its durable unfinished state for startup recovery, not late writes.
+            if(runId&&!this.stopping)this.repository.transaction(()=>{
                 const current=this.scoped({assignmentId:manifest.assignmentId,manifestId:manifest.id});
                 // Successful transactions are never undone by reporting failures.
                 if(["COPYING","ROLLING_BACK"].includes(current.state)){
@@ -211,5 +216,6 @@ class StudStorageTransferService {
         }
         return {inspected:rows.length,moreMayRemain:rows.length===100};
     }
+    dispose(){this.stopping=true;this.preparationController?.abort();for(const controller of this.active.values())controller.abort();}
 }
 module.exports=Object.freeze({StudStorageTransferService});

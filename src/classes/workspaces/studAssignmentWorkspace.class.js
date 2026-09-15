@@ -7,6 +7,7 @@ const FacultyScoutWorkspace = typeof StudFacultyScoutWorkspace !== "undefined" ?
 const CompositionWorkspace = typeof StudCompositionWorkspace !== "undefined" ? StudCompositionWorkspace : require("./studCompositionWorkspace.class.js").StudCompositionWorkspace;
 const HumanisationWorkspace = typeof StudHumanisationWorkspace !== "undefined" ? StudHumanisationWorkspace : require("./studHumanisationWorkspace.class.js").StudHumanisationWorkspace;
 const LecturerCommitteeWorkspace = typeof StudLecturerCommitteeWorkspace !== "undefined" ? StudLecturerCommitteeWorkspace : require("./studLecturerCommitteeWorkspace.class.js").StudLecturerCommitteeWorkspace;
+const StorageWorkspace = typeof StudStorageWorkspace !== "undefined" ? StudStorageWorkspace : require("./studStorageWorkspace.class.js").StudStorageWorkspace;
 
 // M5 is intentionally a composition layer. It owns no academic records: every
 // entry below is a canonical STUD object already related to the active
@@ -84,6 +85,7 @@ class StudAssignmentWorkspace {
         this.composition = new CompositionWorkspace({request: this.request, escape: this.escape, showToast: this.showToast, parent: this});
         this.humanisation = new HumanisationWorkspace({request: this.request, escape: this.escape, showToast: this.showToast, parent: this});
         this.lecturerCommittee = new LecturerCommitteeWorkspace({request: this.request, escape: this.escape, showToast: this.showToast, parent: this});
+        this.storage = new StorageWorkspace({request: this.request, escape: this.escape, parent: this});
     }
 
     setState(context, workingContext, courseContext = null) {
@@ -107,6 +109,7 @@ class StudAssignmentWorkspace {
             this.composition.reset();
             this.humanisation.reset();
             this.lecturerCommittee.reset();
+            this.storage.reset();
         }
         const active = workingContext && workingContext.activeObject;
         if (active && assignment && findWorkspaceObject(this.objectsContext(), active.entityType, active.id)) {
@@ -262,6 +265,7 @@ class StudAssignmentWorkspace {
             <div class="stud-assignment-workspace-identity"><small>${this.escape(course && this.parent.courseLabel(course.id) || "UNASSIGNED / LOCAL")}</small><h2>${this.escape(assignment.title)}</h2><p>${this.escape(classification && classification.label || "ASSESSMENT TYPE UNKNOWN")} · ${this.escape(assignment.status || "STATUS UNKNOWN")}${assignment.weight !== null && assignment.weight !== undefined ? ` · ${this.escape(String(assignment.weight))}%` : ""}${assignment.dueDate ? ` · DUE ${this.escape(this.parent.dateText ? this.parent.dateText(assignment.dueDate) : assignment.dueDate)}` : " · DUE DATE UNKNOWN"}</p></div>
             <div class="stud-assignment-workspace-context"><small>WORKING ON</small><strong>${workflow && node ? this.escape(node.title) : workflow ? "SELECT A STAGE" : "PLAN NOT CREATED"}</strong><span>${workflow && node ? this.escape(this.nodeStatus(node)) : "NO WORK EXECUTES AUTOMATICALLY"}</span></div>
             <div class="stud-assignment-workspace-status${requirement.attention || attention ? " has-attention" : ""}"><small>REQUIREMENTS</small><strong>${this.escape(requirement.label)}</strong><span>${this.escape(requirement.detail)}</span></div>
+            <details class="stud-storage-entry"><summary>Files &amp; storage</summary><button type="button" data-stud-workspace-mode="STORAGE">Manage academic files</button></details>
         </header>`;
     }
 
@@ -385,6 +389,7 @@ class StudAssignmentWorkspace {
             return `<section class="stud-assignment-workspace-empty"><small>WORK / ASSIGNMENT WORKSPACE</small><h2>Choose an Assignment to begin focused work</h2><p>STUD will restore your last valid local Assignment context when one exists. No provider, AI or workflow execution starts here.</p>${candidates.length ? `<div>${candidates.map(item => `<button type="button" data-stud-open-assignment="${this.escape(item.id)}"><strong>${this.escape(item.title)}</strong><small>${this.escape(this.parent.courseLabel(item.courseId))}</small></button>`).join("")}</div>` : `<button type="button" data-stud-dialog="CREATE_ASSIGNMENT">CREATE MANUAL ASSIGNMENT</button>`}</section>`;
         }
         if (this.state.mode === "REQUIREMENTS") return `<section class="stud-assignment-workspace-detail"><header><button type="button" data-stud-workspace-mode="WORK">← WORKSPACE</button><div><small>ASSIGNMENT REQUIREMENTS</small><h2>${this.escape(assignment.title)}</h2></div></header>${this.parent.requirements.render()}</section>`;
+        if (this.state.mode === "STORAGE") return `<section class="stud-assignment-workspace-detail is-storage"><header><button type="button" data-stud-workspace-mode="WORK">← Workspace</button><h2>${this.escape(assignment.title)}</h2></header>${this.storage.render()}</section>`;
         if (this.state.mode === "WORKFLOW") return `<section class="stud-assignment-workspace-detail"><header><button type="button" data-stud-workspace-mode="WORK">← WORKSPACE</button><div><small>ASSIGNMENT WORKFLOW</small><h2>${this.escape(assignment.title)}</h2></div></header>${this.parent.workflow.render()}</section>`;
         if (this.state.mode === "RESEARCH_PLAN") return `<section class="stud-assignment-workspace-detail is-research-plan"><header><button type="button" data-stud-workspace-mode="WORK">← WORKSPACE</button><div><small>RESEARCH PLAN / TOPIC DOSSIERS</small><h2>${this.escape(assignment.title)}</h2></div></header>${this.researchPlan.render()}</section>`;
         if (this.state.mode === "EVIDENCE_MAP") return `<section class="stud-assignment-workspace-detail is-evidence-map"><header><button type="button" data-stud-workspace-mode="WORK">← WORKSPACE</button><div><small>CLAIMS / EVIDENCE / CITATION INTEGRITY</small><h2>${this.escape(assignment.title)}</h2></div></header>${this.evidenceMap.render()}</section>`;
@@ -463,6 +468,7 @@ class StudAssignmentWorkspace {
     }
 
     async handleClick(event) {
+        if (await this.storage.handleClick(event)) return true;
         if (await this.operational.handleClick(event)) return true;
         if (await this.researchPlan.handleClick(event)) return true;
         if (await this.evidenceMap.handleClick(event)) return true;
@@ -495,6 +501,7 @@ class StudAssignmentWorkspace {
             if (this.state.mode === "COMPOSITION") await this.composition.open();
             if (this.state.mode === "HUMANISATION") await this.humanisation.open();
             if (this.state.mode === "LECTURER_REVIEW") await this.lecturerCommittee.open();
+            if (this.state.mode === "STORAGE") await this.storage.open();
             this.parent.render();
         }
         else if (showMaterials) { this.state.materialsOpen = true; this.parent.render(); }
@@ -512,7 +519,7 @@ class StudAssignmentWorkspace {
     }
 
     async handleSubmit(event) { if (await this.evidenceMap.handleSubmit(event)) return true; if (await this.facultyScout.handleSubmit(event)) return true; if (await this.composition.handleSubmit(event)) return true; if (await this.humanisation.handleSubmit(event)) return true; if (await this.lecturerCommittee.handleSubmit(event)) return true; return this.researchPlan.handleSubmit(event); }
-    async handleChange(event) { if(await this.humanisation.handleChange(event))return true;return this.lecturerCommittee.handleChange(event); }
+    async handleChange(event) { if(await this.storage.handleChange(event))return true;if(await this.humanisation.handleChange(event))return true;return this.lecturerCommittee.handleChange(event); }
 }
 
 if (typeof window !== "undefined") window.StudAssignmentWorkspace = StudAssignmentWorkspace;

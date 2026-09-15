@@ -78,6 +78,8 @@ const CHECKS = [
     "scripts/test-stud-storage-manifest-preview.js",
     "scripts/test-stud-storage-transfers.js",
     "scripts/test-stud-storage-runtime-compatibility.js",
+    "scripts/test-stud-storage-ipc.js",
+    "scripts/test-stud-storage-workspace.js",
     "scripts/test-stud-run-coordinator-ipc.js",
     "scripts/test-stud-run-coordinator-ui.js",
     "scripts/test-stud-run-coordinator-integration.js",

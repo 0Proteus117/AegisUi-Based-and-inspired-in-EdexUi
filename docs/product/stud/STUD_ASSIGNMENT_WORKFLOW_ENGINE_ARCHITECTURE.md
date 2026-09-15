@@ -509,9 +509,14 @@ academic database or complete runtime environment. Canonical SQL stays local;
 the existing Ollama server does not provide owned model-file storage paths.
 Externally managed model files and unsupported/historical file dependencies
 must remain explicit exclusions/review conditions, not portable-success claims.
-Research, Moodle and Notebook now accept a main-only managed-storage adapter
-for both reads and writes, but production IPC/bootstrap does not yet inject it.
-No renderer filesystem API is introduced. See the
+Research, Moodle and Notebook receive a main-only managed-storage adapter for
+both reads and writes from production Academic IPC. `StudStorageController`
+exposes ten fixed, validated storage operations with bounded response pages.
+The Assignment storage view holds transient selection only; main remains the
+authority for approval, native selection, byte verification and mapping changes.
+Startup marks unfinished transfers interrupted without replay; shutdown aborts
+before the academic database closes. No renderer filesystem API is introduced.
+Cleanup is not yet exposed. See the
 [M14 validation record](STUD_M14_EXTERNAL_STORAGE_PORTABLE_MODE_VALIDATION.md)
 for the remaining integration and packaged-acceptance gates.
 

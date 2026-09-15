@@ -7963,6 +7963,40 @@ button.eng-thread-row.active {
 .engineering-mode .stud-mission-current dl { display:grid; gap:.35vh; margin:.55vh 0; }
 .engineering-mode .stud-mission-current dl div { display:grid; grid-template-columns:minmax(7rem,.3fr) minmax(0,1fr); gap:.5rem; padding:.35vh 0; border-top:.05vh solid var(--aegis-border-subtle); }
 .engineering-mode .stud-mission-current :is(dt,dd) { margin:0; overflow-wrap:anywhere; }
+/* M14: scoped file management, not permanent Assignment telemetry. */
+.engineering-mode .stud-storage-entry { margin-left:auto; font:12px/1.5 var(--font_main); }
+.engineering-mode .stud-storage-entry summary { cursor:pointer; }
+.engineering-mode .stud-storage-workspace { min-width:0; padding:clamp(12px,1.5vw,24px); color:var(--aegis-text-primary); font:14px/1.55 var(--font_main_light); }
+.engineering-mode .stud-storage-workspace :is(h2,h3,p) { margin:0 0 .7rem; }
+.engineering-mode .stud-storage-workspace h2 { font:22px/1.3 var(--font_main); }
+.engineering-mode .stud-storage-workspace h3 { font:17px/1.4 var(--font_main); }
+.engineering-mode .stud-storage-workspace :is(header,.stud-storage-file-heading,nav) { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:.7rem; }
+.engineering-mode .stud-storage-body { display:grid; grid-template-columns:minmax(0,1.1fr) minmax(0,1fr); gap:clamp(16px,2vw,32px); margin-top:1.4rem; }
+.engineering-mode .stud-storage-body > * { min-width:0; }
+.engineering-mode .stud-storage-inspector { border-left:1px solid var(--aegis-border); padding-left:clamp(16px,2vw,32px); align-self:start; }
+.engineering-mode .stud-storage-workspace :is(label,small,code) { display:block; }
+.engineering-mode .stud-storage-workspace :is(p,label,li,code,button,summary) { overflow-wrap:anywhere; }
+.engineering-mode .stud-storage-workspace label { margin:.7rem 0; }
+.engineering-mode .stud-storage-workspace :is(select,input:not([type=checkbox])) { width:100%; min-width:0; box-sizing:border-box; min-height:38px; padding:.5rem; color:var(--aegis-text-primary); background:var(--aegis-surface-muted); border:1px solid var(--aegis-border); font:inherit; }
+.engineering-mode .stud-storage-workspace input[type=checkbox] { width:18px; height:18px; flex:0 0 18px; vertical-align:middle; margin-right:.5rem; }
+.engineering-mode .stud-storage-workspace button { max-width:100%; min-height:38px; margin:.25rem 0; padding:.5rem .75rem; color:var(--aegis-text-primary); background:transparent; border:1px solid var(--aegis-border); font:inherit; cursor:pointer; }
+.engineering-mode .stud-storage-workspace button:disabled { opacity:.5; cursor:default; }
+.engineering-mode .stud-storage-workspace button + button { margin-left:.5rem; }
+.engineering-mode .stud-storage-workspace :is(button,input,select,summary):focus-visible { outline:2px solid var(--aegis-accent-soft); outline-offset:3px; }
+.engineering-mode .stud-storage-workspace small { color:var(--aegis-text-muted); font-size:12px; }
+.engineering-mode .stud-storage-file-list { padding:0 .35rem; margin:0; list-style:none; max-height:clamp(12rem,40vh,28rem); overflow:auto; }
+.engineering-mode .stud-storage-file-list li { border-bottom:1px solid var(--aegis-border-subtle); padding:.2rem 0; }
+.engineering-mode .stud-storage-file-list label { display:flex; align-items:flex-start; }
+.engineering-mode .stud-storage-workspace details { margin:1rem 0; }
+.engineering-mode .stud-storage-workspace summary { cursor:pointer; padding:.4rem 0; }
+.engineering-mode .stud-storage-workspace progress { display:block; width:100%; height:10px; margin:.5rem 0 1rem; }
+.engineering-mode .stud-storage-notice { border-left:3px solid var(--aegis-warning); padding:.65rem .8rem; background:var(--aegis-surface-muted); }
+.engineering-mode .stud-storage-workspace code { font:11px/1.5 var(--font_mono); }
+@media (max-width:1300px) {
+    .engineering-mode .stud-storage-body { grid-template-columns:minmax(0,1fr); }
+    .engineering-mode .stud-storage-inspector { border-left:0; border-top:1px solid var(--aegis-border); padding:1.2rem 0 0; }
+    .engineering-mode .stud-storage-workspace.has-manifest .stud-storage-inspector { grid-row:1; border-top:0; border-bottom:1px solid var(--aegis-border); padding:0 0 1.2rem; }
+}
 @media (max-width:1200px) {
     .engineering-mode .stud-mission-launch-options { grid-template-columns:minmax(0,1fr); }
     .engineering-mode .stud-execution-stage-rail { grid-auto-columns:minmax(10rem,72vw); }
