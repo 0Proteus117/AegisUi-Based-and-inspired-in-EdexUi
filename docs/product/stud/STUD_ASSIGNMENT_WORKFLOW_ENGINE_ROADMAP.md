@@ -425,8 +425,10 @@ Preflight and implementation are in progress; see the
 [M14 validation record](STUD_M14_EXTERNAL_STORAGE_PORTABLE_MODE_VALIDATION.md).
 This is not a completion or packaged-acceptance claim.
 The isolated implementation now includes approved transfer/rollback contracts,
-production read/write adapters and a typed Assignment storage UI. Its synthetic
-Electron layout matrix passes; cleanup, complete operational acceptance, final
+production read/write adapters, a typed Assignment storage UI, explicitly
+verified retained-copy cleanup and derived Artifact file availability. Native
+import, transfer, restart/read and rollback pass with synthetic material. Its
+synthetic Electron layout matrix passes; complete operational acceptance, final
 integration audit and packaged validation remain required before integration.
 
 - **Objective:** complete external academic storage and portable travel support.

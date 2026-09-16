@@ -98,8 +98,10 @@ Storage and Portable Mode.
 M14 is in progress on its isolated implementation branch. The
 [M14 storage validation record](STUD_M14_EXTERNAL_STORAGE_PORTABLE_MODE_VALIDATION.md)
 distinguishes the profile/copy foundation, Assignment inventory, durable reviewed
-transfers, production runtime adapters and typed preload/Assignment storage UI
-from the still-pending cleanup controls, final integration audit and packaged
-acceptance. Synthetic Electron layout validation is recorded separately from
+transfers, production runtime adapters, typed preload/Assignment storage UI,
+verified retained-copy cleanup and derived Artifact file availability from the
+still-pending final integration audit and packaged acceptance. Native-picker
+import, transfer, restart/read and rollback have also been exercised with a
+synthetic dataset. Synthetic layout states are recorded separately from this
 real transfer/runtime evidence.
 This is not a milestone-completion claim.

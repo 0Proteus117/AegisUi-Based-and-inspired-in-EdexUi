@@ -5,7 +5,7 @@
 class StudStorageWorkspace {
     constructor(options){this.request=options.request;this.escape=options.escape;this.parent=options.parent;this.generation=0;this.reset();}
     reset(){this.generation++;this.inspection=0;clearTimeout(this.timer);this.state={profiles:[],catalog:null,history:[],manifest:null,targetId:"",selected:new Set(),courseMaterial:false,error:"",busy:false,operation:false,offset:0,manifestOffset:0,confirmLimited:false,confirmShared:false};}
-    active(){return this.state.busy||["COPYING","ROLLING_BACK"].includes(this.state.manifest?.state);}
+    active(){return this.state.busy||["COPYING","ROLLING_BACK"].includes(this.state.manifest?.state)||(this.state.manifest?.cleanupHistory||[]).some(item=>["VERIFYING","DELETE_REQUESTED"].includes(item.state));}
     setManifest(value){if(value.id!==this.state.manifest?.id){this.state.confirmLimited=false;this.state.confirmShared=false;this.state.manifestOffset=0;}this.state.manifest=value;}
     assignmentId(){return this.parent.assignment()?.id;}
     redraw(){
@@ -27,7 +27,7 @@ class StudStorageWorkspace {
             this.state.profiles=profiles;this.state.history=history;this.state.targetId=this.state.targetId||profiles.find(profile=>profile.kind==="EXTERNAL")?.id||profiles[0]?.id||"";
             await this.inventory();
             if(id!==this.assignmentId()||generation!==this.generation)return;
-            const unfinished=history.find(item=>["COPYING","ROLLING_BACK"].includes(item.state));if(unfinished)await this.inspect(unfinished.id);
+            const unfinished=history.find(item=>["COPYING","ROLLING_BACK"].includes(item.state)||item.cleanupActive);if(unfinished)await this.inspect(unfinished.id);
         }catch(error){if(generation===this.generation)this.state.error=error.message;}
     }
     async inventory(){
@@ -41,7 +41,7 @@ class StudStorageWorkspace {
     }
     schedule(){
         clearTimeout(this.timer);
-        if(!this.state.manifest||(!this.state.operation&&!["COPYING","ROLLING_BACK"].includes(this.state.manifest.state)))return;
+        if(!this.state.manifest||(!this.state.operation&&!this.active()))return;
         const generation=this.generation,manifestId=this.state.manifest.id;
         this.timer=setTimeout(async()=>{
             if(this.parent.state.mode!=="STORAGE"||generation!==this.generation)return;
@@ -53,12 +53,13 @@ class StudStorageWorkspace {
         const active=["COPYING","ROLLING_BACK"].includes(m.state),run=m.run;
         return `<aside class="stud-storage-inspector"><h3>${this.escape(m.state.replace(/_/g," "))}</h3><p>${m.totalItems} selected files · ${this.size(m.totalBytes)}</p>
             ${run?`<p role="status">${this.escape(run.statusSummary||run.state)}</p>${run.progressMode==="DETERMINATE"?`<label>${run.progressCurrent} / ${run.progressTotal} ${this.escape(run.progressUnit)}<progress value="${run.progressCurrent}" max="${run.progressTotal}"></progress></label>`:""}`:""}
-            <p>Original copies are retained. Notes, citations, chunks and other canonical records stay in the local academic database. Ollama models are not copied.</p>
+            <p>Transfers retain original copies unless you explicitly remove them through cleanup. Check cleanup history before relying on rollback. Notes, citations, chunks and other canonical records stay in the local academic database. Ollama models are not copied.</p>
             ${m.omittedFileCount||m.issueCount||m.inventoryTruncated?`<p class="stud-storage-notice">Limited scope: ${m.omittedFileCount} inventoried files not selected; ${m.issueCount} source issues${m.inventoryTruncated?"; inventory limit reached":""}. This is not a complete portable Assignment package.</p>`:""}
             ${m.errorCode?`<p role="alert">${this.escape(m.errorCode.replace(/_/g," "))}</p>`:""}
             ${m.state==="PREPARED"?`<label><input type="checkbox" data-storage-confirm-limited ${this.state.confirmLimited?"checked":""}> I understand this transfers selected managed files only.</label>${m.sharedReferenceCount?`<label><input type="checkbox" data-storage-confirm-shared ${this.state.confirmShared?"checked":""}> I understand ${m.sharedReferenceCount} shared file references will use this location in other academic contexts too.</label>`:""}<button type="button" data-storage-action="execute" ${this.state.busy?"disabled":""}>Confirm transfer</button><button type="button" data-storage-action="cancel">Discard preparation</button>`:""}
             ${active?`<button type="button" data-storage-action="cancel">Cancel transfer</button>`:""}
-            ${m.state==="APPLIED"?`<details><summary>Restore retained originals</summary><p>Verifies the originals before restoring their locations. Copies at the destination are kept.</p><button type="button" data-storage-action="rollback" ${this.state.busy?"disabled":""}>Verify and restore originals</button></details>`:""}
+            ${m.state==="APPLIED"?`<details><summary>Restore retained originals</summary><p>Verifies every original before restoring its location. A removed or missing original prevents rollback; destination copies are kept.</p><button type="button" data-storage-action="rollback" ${this.state.busy?"disabled":""}>Verify and restore originals</button></details>`:""}
+            ${m.state==="APPLIED"?`<details data-storage-disclosure="cleanup"><summary>Retained copies and cleanup</summary><p>These are not disposable caches. Removing an original loses this transfer's rollback copy. Both files are verified again; only the inactive copy is removed.</p><ul>${(m.retainedCopies||[]).map(copy=>`<li data-storage-copy="${this.escape(copy.reference)}"><span>${this.escape(copy.reference)} · ${this.escape(copy.profileLabel)}</span><small>${this.escape(copy.classification.replace(/_/g," "))}</small>${copy.eligibleForVerification?`<label><input type="checkbox" data-storage-confirm-delete ${this.active()?"disabled":""}> I choose to remove this retained original, keeping the active file.</label><button type="button" data-storage-action="cleanup" data-storage-reference="${this.escape(copy.reference)}" ${this.active()?"disabled":""}>Verify both copies and remove original</button>`:""}</li>`).join("")}</ul>${(m.cleanupHistory||[]).length?`<h3>Cleanup history</h3><ul>${m.cleanupHistory.map(record=>`<li>${this.escape(record.state.replace(/_/g," "))} · ${this.escape(record.createdAt)}${record.errorCode?` · ${this.escape(record.errorCode.replace(/_/g," "))}`:""}</li>`).join("")}</ul>`:""}</details>`:""}
             <details data-storage-disclosure="verification"><summary>Source and verification details</summary><p>${m.sources.length} source references on this page. Approved: ${this.escape(m.approvedAt||"Not approved")}</p><ul>${m.reviewIssues.map(issue=>`<li>${this.escape(issue.code.replace(/_/g," "))}</li>`).join("")}</ul><ol start="${this.state.manifestOffset+1}">${m.items.map(item=>`<li><span>${this.escape(item.reference)}</span><small>${this.size(item.byteSize)}</small><code>${this.escape(item.sha256)}</code></li>`).join("")}</ol><nav aria-label="Verified file pages"><button type="button" data-storage-action="manifest-previous" ${this.state.manifestOffset===0||this.active()?"disabled":""}>Previous files</button><span>${this.state.manifestOffset+1}–${this.state.manifestOffset+m.items.length} of ${m.totalItems}</span><button type="button" data-storage-action="manifest-next" ${m.nextOffset===null||this.active()?"disabled":""}>Next files</button></nav></details>
         </aside>`;
     }
@@ -94,7 +95,7 @@ class StudStorageWorkspace {
         const manifest=this.state.manifest,profile=this.state.profiles.find(item=>item.id===this.state.targetId);
         const mutation=manifest?{assignmentId,manifestId:manifest.id,expectedVersion:manifest.rowVersion}:null;
         this.state.error="";
-        const locked=["prepare","execute","rollback","choose","reconnect","refresh","next","previous"].includes(action);
+        const locked=["prepare","execute","rollback","cleanup","choose","reconnect","refresh","next","previous"].includes(action);
         if(locked)this.state.busy=true;
         try{
             if(button.hasAttribute("data-storage-history"))await this.inspect(button.dataset.storageHistory);
@@ -114,11 +115,17 @@ class StudStorageWorkspace {
                 this.state.busy=true;this.state.operation=true;this.schedule();this.redraw();
                 const result=await this.request(action==="execute"?"stud-storage-transfer-execute":"stud-storage-transfer-rollback",{...mutation,...confirmations});
                 if(current()){this.setManifest(result);this.state.selected.clear();await this.open();}
+            }else if(action==="cleanup"){
+                const reference=button.dataset.storageReference,copy=manifest.retainedCopies.find(item=>item.reference===reference);
+                const confirmDeleteRetainedCopy=!!button.closest("[data-storage-copy]")?.querySelector("[data-storage-confirm-delete]")?.checked;
+                this.state.operation=true;this.schedule();this.redraw();
+                const result=await this.request("stud-storage-copy-remove",{...mutation,reference,expectedAssetVersion:copy.expectedAssetVersion,confirmDeleteRetainedCopy});
+                if(current())this.setManifest(result);
             }else if(action==="cancel"){
                 const latest=await this.request("stud-storage-transfer-read",{assignmentId,manifestId:manifest.id});if(!current())return true;await this.request("stud-storage-transfer-cancel",{assignmentId,manifestId:manifest.id,expectedVersion:latest.rowVersion});if(current())await this.inspect(manifest.id);
             }
-        }catch(error){if(generation===this.generation){this.state.error=error.message;if(manifest&&["execute","rollback"].includes(action))try{await this.inspect(manifest.id);}catch(_error){/* Keep the original typed error. */}}}
-        finally{if(current()){if(locked){this.state.busy=false;if(["execute","rollback"].includes(action))this.state.operation=false;}this.schedule();this.redraw();}}
+        }catch(error){if(generation===this.generation){this.state.error=error.message;if(manifest&&["execute","rollback","cleanup"].includes(action))try{await this.inspect(manifest.id);}catch(_error){/* Keep the original typed error. */}}}
+        finally{if(current()){if(locked){this.state.busy=false;if(["execute","rollback","cleanup"].includes(action))this.state.operation=false;}this.schedule();this.redraw();}}
         return true;
     }
 }

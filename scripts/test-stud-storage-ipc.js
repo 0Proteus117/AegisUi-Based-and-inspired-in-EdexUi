@@ -55,7 +55,9 @@ async function check(name,work){await work();passed++;console.log(`${name}: PASS
     fs.writeFileSync(path.join(local,ref),"poisoned original");const result=await invoke("stud-paper-read-pdf",{paperId:paper.id});assert.strictEqual(result.ok,true);assert.strictEqual(result.data.sha256,hash);fs.writeFileSync(path.join(local,ref),bytes);
  });
  await check("OFFLINE_PROFILE_ERRORS_REMAIN_TYPED_WITH_METADATA_ACCESS",async()=>{
+    const registered=await invoke("stud-artifact-register",{assignmentId:assignment.id,canonicalObjectType:"RESEARCH_PAPER",canonicalObjectId:paper.id});assert.strictEqual(registered.ok,true);
     fs.renameSync(mount,`${mount}-offline`);const result=await invoke("stud-paper-read-pdf",{paperId:paper.id});assert.strictEqual(result.code,"STORAGE_OFFLINE");assert.ok(!JSON.stringify(result).includes(root));
+    const bay=(await invoke("stud-mission-control-state",{assignmentId:assignment.id})).data;assert.strictEqual(bay.artifacts[0].managedFileAvailability.state,"OFFLINE");assert.strictEqual(bay.artifacts[0].availabilityState,"AVAILABLE");
     assert.strictEqual((await invoke("stud-storage-transfer-read",{assignmentId:assignment.id,manifestId:manifest.id})).ok,true);fs.renameSync(`${mount}-offline`,mount);
  });
  await check("PREPARATION_SHUTDOWN_ABORTS_BEFORE_STORE_CLOSE_WRITES",async()=>{
@@ -63,6 +65,15 @@ async function check(name,work){await work();passed++;console.log(`${name}: PASS
     const pending=controller.transfers.prepare({assignmentId:assignment.id,targetProfileId:"stud_storage_local",expectedTargetVersion:1,purpose:"PORTABLE",expectedScopeHash:catalog.scopeHash,references:[ref]});
     controller.dispose();await assert.rejects(pending,error=>error.code==="STORAGE_CANCELLED");
     assert.strictEqual(store.db.prepare("SELECT COUNT(*) count FROM stud_storage_manifests").get().count,1);
+ });
+ await check("CLEANUP_REQUIRES_MAIN_APPROVAL_AND_EXACT_MANIFEST_FILE",async()=>{
+    const current=(await invoke("stud-storage-transfer-read",{assignmentId:assignment.id,manifestId:manifest.id})).data,copy=current.retainedCopies[0];
+    const input={assignmentId:assignment.id,manifestId:current.id,expectedVersion:current.rowVersion,reference:ref,expectedAssetVersion:copy.expectedAssetVersion};
+    assert.strictEqual((await invoke("stud-storage-copy-remove",input)).code,"STORAGE_APPROVAL_REQUIRED");
+    assert.strictEqual((await invoke("stud-storage-copy-remove",{...input,confirmDeleteRetainedCopy:true,path:"/private"})).code,"INVALID_INPUT");
+    const result=await invoke("stud-storage-copy-remove",{...input,confirmDeleteRetainedCopy:true});assert.strictEqual(result.ok,true);
+    assert.strictEqual(result.data.retainedCopies[0].classification,"REMOVED");assert.strictEqual(result.data.cleanupHistory[0].state,"REMOVED");
+    assert.strictEqual(result.data.run.state,"COMPLETED");assert.ok(!fs.existsSync(path.join(local,ref)));assert.strictEqual((await invoke("stud-paper-read-pdf",{paperId:paper.id})).data.sha256,hash);
  });
  await check("TRANSFER_SHUTDOWN_RECOVERS_AFTER_REOPEN_WITHOUT_REPLAY",async()=>{
     const controller=new StudStorageController({store,storage}),catalog=controller.catalog({assignmentId:assignment.id});

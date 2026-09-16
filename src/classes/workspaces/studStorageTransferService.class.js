@@ -26,7 +26,7 @@ class StudStorageTransferService {
     history(input={}){Academic.assertAllowedKeys(input,["assignmentId","limit"],"Storage history");return this.repository.list(input.assignmentId,input.limit);}
     async prepare(input={}, {signal}={}){
         if(this.stopping)Domain.fail("STORAGE_CANCELLED","Storage is shutting down.");
-        if(this.preparing)Domain.fail("STORAGE_BUSY","A storage selection is already being verified.");
+        if(this.preparing||this.cleaning)Domain.fail("STORAGE_BUSY","A storage selection or retained copy is already being verified.");
         this.preparing=true;this.preparationController=new AbortController();
         const abort=()=>this.preparationController?.abort();if(signal?.aborted)abort();else signal?.addEventListener("abort",abort,{once:true});
         try{return await this.prepareSelection(input,{signal:this.preparationController.signal});}finally{signal?.removeEventListener("abort",abort);this.preparing=false;this.preparationController=null;}
@@ -129,7 +129,7 @@ class StudStorageTransferService {
     }
     async perform(initial,rollback){
         if(this.stopping)Domain.fail("STORAGE_CANCELLED","Storage is shutting down.");
-        if(this.active.size)Domain.fail("STORAGE_BUSY","Another storage transfer is active. Wait for it to finish or cancel it.");
+        if(this.active.size||this.cleaning)Domain.fail("STORAGE_BUSY","Another storage operation is active. Wait for it to finish or cancel it.");
         const controller=new AbortController();this.active.set(initial.id,controller);let manifest=initial,runId=null;
         try{
             manifest=this.repository.transaction(()=>{
@@ -190,7 +190,7 @@ class StudStorageTransferService {
                     this.repository.change(current,rollback?"APPLIED":code==="STORAGE_CANCELLED"?"CANCELLED":"FAILED",{errorCode:code});
                 }
             });
-            Domain.fail(code,"The storage operation did not complete. Original files were retained; inspect the manifest before retrying.");
+            Domain.fail(code,"The storage operation could not be confirmed. Inspect the manifest and active locations before retrying; a previously removed original cannot be used for rollback.");
         }finally{this.active.delete(initial.id);}
     }
     cancel(input={}){
@@ -216,6 +216,6 @@ class StudStorageTransferService {
         }
         return {inspected:rows.length,moreMayRemain:rows.length===100};
     }
-    dispose(){this.stopping=true;this.preparationController?.abort();for(const controller of this.active.values())controller.abort();}
+    dispose(){this.stopping=true;this.preparationController?.abort();this.cleanupController?.abort();for(const controller of this.active.values())controller.abort();}
 }
 module.exports=Object.freeze({StudStorageTransferService});

@@ -500,7 +500,7 @@ Preparation freezes selected relative references, canonical source identities,
 source/profile versions, reviewed omission counters/issues and a catalog hash.
 It does not approve or create a Run. Explicit confirmation starts a real M6 Run;
 all selected files must verify before a single transactional mapping switch.
-Original copies remain. Rollback verifies those originals and checks the exact
+Original copies remain until separately confirmed cleanup. Rollback verifies those originals and checks the exact
 applied asset versions, so it cannot overwrite a later relocation. Interrupted
 work is recorded without automatic replay. M6 remains the Run/event authority.
 
@@ -511,12 +511,20 @@ Externally managed model files and unsupported/historical file dependencies
 must remain explicit exclusions/review conditions, not portable-success claims.
 Research, Moodle and Notebook receive a main-only managed-storage adapter for
 both reads and writes from production Academic IPC. `StudStorageController`
-exposes ten fixed, validated storage operations with bounded response pages.
+exposes eleven fixed, validated storage operations with bounded response pages.
 The Assignment storage view holds transient selection only; main remains the
 authority for approval, native selection, byte verification and mapping changes.
 Startup marks unfinished transfers interrupted without replay; shutdown aborts
 before the academic database closes. No renderer filesystem API is introduced.
-Cleanup is not yet exposed. See the
+`StudStorageCleanupService` removes only one explicitly selected inactive copy
+after verifying both copies, canonical ownership and optimistic versions. It
+records durable deletion intent; interrupted intent is never automatically
+replayed or reported as success. A removed original cannot support rollback.
+`StudStorageAvailability` decorates bounded Artifact reads without rewriting
+canonical availability: available metadata can coexist with offline file bytes.
+Presence is not presented as a fresh integrity check. M6 remains the Run/event
+authority; M13's composed Mission Control does not hide real storage Runs behind
+an older Execution Plan. See the
 [M14 validation record](STUD_M14_EXTERNAL_STORAGE_PORTABLE_MODE_VALIDATION.md)
 for the remaining integration and packaged-acceptance gates.
 

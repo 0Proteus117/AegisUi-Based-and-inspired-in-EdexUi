@@ -2,10 +2,11 @@
 const Academic=require("./studAcademicModel.class.js");
 const Domain=require("./studStorageModel.class.js");
 const {StudStorageTransferService}=require("./studStorageTransferService.class.js");
+const {StudStorageCleanupService}=require("./studStorageCleanupService.class.js");
 const CHANNELS=Object.freeze([
     "stud-storage-profiles","stud-storage-profile-choose","stud-storage-profile-reconnect",
     "stud-storage-catalog","stud-storage-transfer-prepare","stud-storage-transfer-read",
-    "stud-storage-transfer-execute","stud-storage-transfer-cancel","stud-storage-transfer-rollback","stud-storage-history"
+    "stud-storage-transfer-execute","stud-storage-transfer-cancel","stud-storage-transfer-rollback","stud-storage-history","stud-storage-copy-remove"
 ]);
 function page(input){
     const offset=input.offset??0,limit=input.limit??50;
@@ -17,13 +18,15 @@ function page(input){
 class StudStorageController {
     constructor({store,storage,artifacts}){
         this.store=store;this.storage=storage;this.transfers=new StudStorageTransferService({store,storage,artifacts});
+        this.cleanup=new StudStorageCleanupService(this.transfers);
         this.recoverBatch();
     }
     recoverBatch(){
         if(this.disposed)return;
         const rows=this.store.db.prepare("SELECT DISTINCT assignment_id FROM stud_storage_manifests WHERE state IN ('COPYING','VERIFIED','ROLLING_BACK') LIMIT 100").all();
         for(const row of rows)this.transfers.recoverInterrupted(row.assignment_id);
-        if(rows.length)this.recoveryTimer=setImmediate(()=>this.recoverBatch());
+        const cleanupCount=this.cleanup.recoverBatch();
+        if(rows.length||cleanupCount)this.recoveryTimer=setImmediate(()=>this.recoverBatch());
     }
     catalog(input){
         Academic.assertAllowedKeys(input,["assignmentId","includeCourseMaterial","offset","limit"],"Storage inventory page");
@@ -42,8 +45,11 @@ class StudStorageController {
         // A failed/cancelled rollback is still the latest real attempt. Do not
         // present the earlier successful forward Run as the last operation.
         const runId=manifest.rollbackRunId||manifest.runId;
-        const run=runId?this.transfers.artifacts.run({assignmentId:manifest.assignmentId,runId}):null;
+        const cleanupHistory=this.cleanup.history(manifest.assignmentId,manifest.id);
+        let run=runId?this.transfers.artifacts.run({assignmentId:manifest.assignmentId,runId}):null;
+        if(cleanupHistory[0]&&(!run||cleanupHistory[0].createdAt>=run.createdAt))run=this.transfers.artifacts.run({assignmentId:manifest.assignmentId,runId:cleanupHistory[0].runId});
         return {...manifest,items,sources:manifest.sources.filter(source=>references.has(source.reference)),totalItems:manifest.items.length,
+            retainedCopies:this.cleanup.candidates(manifest,items),cleanupHistory,
             totalBytes:manifest.items.reduce((sum,item)=>sum+item.byteSize,0),nextOffset:offset+limit<manifest.items.length?offset+limit:null,
             run:run?{id:run.id,state:run.state,progressMode:run.progressMode,progressCurrent:run.progressCurrent,progressTotal:run.progressTotal,progressUnit:run.progressUnit,
                 statusSummary:run.statusSummary,startedAt:run.startedAt,finishedAt:run.finishedAt}:null};
@@ -66,7 +72,10 @@ class StudStorageController {
         add("stud-storage-transfer-rollback",["assignmentId","manifestId","expectedVersion"],async p=>{
             const result=await this.transfers.rollback(p);return this.manifest({assignmentId:result.assignmentId,manifestId:result.id});
         });
-        add("stud-storage-history",["assignmentId","limit"],p=>this.transfers.history(p));
+        add("stud-storage-history",["assignmentId","limit"],p=>this.transfers.history(p).map(manifest=>({...manifest,cleanupActive:!!this.store.db.prepare("SELECT 1 FROM stud_storage_cleanup_records WHERE assignment_id=? AND manifest_id=? AND state IN ('VERIFYING','DELETE_REQUESTED') LIMIT 1").get(manifest.assignmentId,manifest.id)})));
+        add("stud-storage-copy-remove",["assignmentId","manifestId","expectedVersion","reference","expectedAssetVersion","confirmDeleteRetainedCopy"],async p=>{
+            await this.cleanup.remove(p);return this.manifest({assignmentId:p.assignmentId,manifestId:p.manifestId});
+        });
     }
     dispose(){this.disposed=true;clearImmediate(this.recoveryTimer);this.transfers.dispose();}
 }

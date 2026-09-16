@@ -327,7 +327,8 @@ function registerStudAcademicIpc(options = {}) {
     // M6 indexes canonical objects and exposes bounded operational reads. It
     // deliberately exposes no renderer event-append or Run-creation channel:
     // only main-process domain producers may record operational history.
-    const artifactOperations = options.artifactOperationsService || new StudArtifactOperationsService({store, workflowService: workflow, workingContextService: workingContext});
+    const storageAvailability = new (require("./studStorageAvailability.class.js").StudStorageAvailability)({store,storage});
+    const artifactOperations = options.artifactOperationsService || new StudArtifactOperationsService({store, workflowService: workflow, workingContextService: workingContext,storageAvailability:items=>storageAvailability.page(items)});
     const storageController = new StudStorageController({store,storage,artifacts:artifactOperations});
     // M7 structures reviewed Assignment research over exact M1 Contract
     // revisions and existing canonical material. It has no provider/model

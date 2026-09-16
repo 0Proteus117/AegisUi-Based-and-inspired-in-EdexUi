@@ -94,11 +94,20 @@ CREATE TABLE stud_storage_manifest_review_issues (
 );
 CREATE TABLE stud_storage_cleanup_records (
     id TEXT PRIMARY KEY, reference TEXT NOT NULL REFERENCES stud_storage_assets(reference),
+    assignment_id TEXT NOT NULL REFERENCES stud_assignments(id),
+    manifest_id TEXT NOT NULL REFERENCES stud_storage_manifests(id),
     profile_id TEXT NOT NULL REFERENCES stud_storage_profiles(id),
     sha256 TEXT NOT NULL CHECK(length(sha256)=64), byte_size INTEGER NOT NULL CHECK(byte_size>=0),
+    active_asset_version INTEGER NOT NULL CHECK(active_asset_version>0),
+    run_id TEXT NOT NULL REFERENCES stud_operation_runs(id),
+    state TEXT NOT NULL CHECK(state IN ('VERIFYING','DELETE_REQUESTED','REMOVED','FAILED','INTERRUPTED')),
+    error_code TEXT, finished_at TEXT,
     reason TEXT NOT NULL CHECK(reason='VERIFIED_SUPERSEDED_COPY'),
     created_at TEXT NOT NULL
 );
+CREATE INDEX stud_storage_cleanup_assignment_index ON stud_storage_cleanup_records(assignment_id,created_at DESC,id DESC);
+CREATE INDEX stud_storage_cleanup_manifest_index ON stud_storage_cleanup_records(assignment_id,manifest_id,created_at DESC,id DESC);
+CREATE INDEX stud_storage_cleanup_pending_index ON stud_storage_cleanup_records(state,id);
 `;
 
 module.exports = Object.freeze({LOCAL_PROFILE_ID,LIMITS,SCHEMA_SQL,version,digest,managedReference,fail});

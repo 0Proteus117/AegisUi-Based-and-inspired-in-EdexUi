@@ -73,4 +73,16 @@ check("PREVIEW_HANDOFF_REUSES_M5_CANONICAL_OPEN", () => {
     const source = fs.readFileSync(path.join(__dirname, "../src/classes/workspaces/studMissionControlWorkspace.class.js"), "utf8");
     assert.match(source, /parent\.openObject\(artifact\.canonicalObjectType, artifact\.canonicalObjectId/); assert.ok(!/window\.open|fetch\(/.test(source));
 });
+check("M14_FILE_OFFLINE_DOES_NOT_HIDE_CANONICAL_METADATA",()=>{
+    const offline={...artifact,managedFileAvailability:{state:"OFFLINE",integrity:"NOT_RECHECKED"}};
+    view.state.mode="ARTIFACTS";view.state.mission={assignment,activeRuns:[],recentRuns:[],artifacts:[offline],workflow,resting:true};view.state.selectedArtifactId=artifact.id;
+    assert.match(view.render(),/AVAILABLE metadata · FILE OFFLINE/);assert.match(view.render(),/Integrity is rechecked/);assert.ok(!/data-stud-artifact-open="[^"]+" disabled/.test(view.render()));
+});
+check("M14_STORAGE_ACTIVITY_IS_NOT_HIDDEN_BY_OLD_EXECUTION_PLAN",()=>{
+    const storageRun={...determinate,operationType:"STORAGE_TRANSFER",workflowNodeId:null,statusSummary:"Verifying selected managed files"};
+    view.state.mode="MISSION";view.state.mission={assignment,activeRuns:[storageRun],recentRuns:[storageRun],artifacts:[],workflow,resting:false,executionPlan:{state:"COMPLETED",parentRunId:"old"}};view.state.selectedRunId=storageRun.id;
+    assert.match(view.render(),/Verifying selected managed files/);assert.ok(!/Nothing is running/.test(view.render()));
+    assert.match(view.render(),/Files &amp; storage/);assert.ok(!/M6 has no autonomous worker coordinator/.test(view.render()));
+    view.scheduleRefresh();assert.ok(view.refreshTimer);view.reset();
+});
 console.log(`STUD_MISSION_CONTROL_WORKSPACE: PASS (${passed} checks)`);
