@@ -59,3 +59,78 @@ checkpoint. A scoped follow-up must decide/update the reachable GeoIP archive
 dependency and validate that integration without disguising the existing risk as
 an M14-created failure. Avoid turning the storage milestone into an unreviewed
 bulk dependency upgrade. The remaining advisory entries need explicit triage.
+
+## Scoped remediation — 2026-09-17
+
+The preceding sections describe the original `14f3431` image; they are retained
+as evidence, not a description of the updated dependency tree. No advisory was
+suppressed and no `npm audit fix` was used.
+
+### Runtime and Electron
+
+| Dependency | Selected correction | Verification / limitation |
+| --- | --- | --- |
+| GeoLite's `tar` | 7.5.16 → **7.5.22**, scoped override under `geolite2-redist` | Actual GeoLite-resolved ESM build extracts a valid synthetic database; rejects a bounded 4 MiB compressed expansion fixture using the default ratio guard. No production mirror request needed. |
+| `pdfjs-dist` | 6.0.227 → **6.2.108** | Minimum patched release identified by the advisory. Existing real PDF text extraction and Research tests are rerun; this is not a malicious full-viewer exploit test. |
+| Tiptap family | 3.30.0 → **3.30.6** | All coupled core/extension/PM peer versions remain aligned. `mergeAttributes` no longer inherits an attacker-supplied `onclick` via an own `__proto__` property. No new editor integration. |
+| `nanoid` | 3.3.13 → **3.3.19** | Negative/zero non-secure and zero custom-generator inputs terminate; normal ID creation still works. No major-version/ESM migration. |
+| `brace-expansion` | 5.0.6 → **5.0.12** | Explicit runtime override; normal expansion and bounded adversarial sequence/product/empty-brace cases pass. |
+| Electron | 42.4.1 → **42.5.1** | Corrects [GHSA-r4w5-6pfg-jxp5](https://github.com/advisories/GHSA-r4w5-6pfg-jxp5). This also updates the actual build runtime, not merely the optional Electron entry in the application lockfile. Live isolation test verifies absent Node/raw IPC and working STUD/terminal. New packaged validation is required. |
+
+The original 26 moderate entries consist of **25 Tiptap dependent entries**
+whose audit `via` chain reaches the affected core, plus **one Electron entry**.
+They are not 26 independent demonstrated attack paths. All are addressed by the
+explicit corrections above. Aegis' inspected map protocol uses `protocol.handle`
+with `Response`/`net.fetch`, not the older `ProtocolResponse.url` callback;
+nevertheless the Electron binary is updated rather than dismissing its version.
+
+Updating PDF.js also removes the old optional Electron installer peer subtree
+from `src/package-lock.json`. This removal alone would not fix the packaged
+Electron executable; the root manifest/lock and binary were updated separately.
+Citation.js, node-pty, Calendar source, Moodle, SQLite schema and all application
+runtime source remain unchanged in this remediation.
+
+### Build-tool tree
+
+A separate root audit found six affected package entries. These are tooling
+dependencies, not additional STUD runtime modules. Their concrete consumers:
+
+- `tar`: app-builder-lib / node-gyp archive handling.
+- `brace-expansion`: minimatch in ASAR, universal packaging, directory comparison,
+  glob and file lists. Patched within each existing 1.x/2.x/5.x range; no forced
+  cross-major override in build tooling.
+- `@xmldom/xmldom`: plist parsing in the package/native toolchain.
+- `fast-uri`: AJV schema URI processing in the build toolchain.
+- `js-yaml`: builder-util, app-builder-lib and dmg-builder configuration.
+- `undici`: Electron download tooling and node-gyp HTTP client.
+
+Only these six transitive names were updated within their existing declared
+ranges. Resulting versions: tar 7.5.22; brace-expansion 1.1.21 / 2.1.7 / 5.0.12;
+xmldom 0.8.15; fast-uri 3.1.8; js-yaml 4.3.2; undici 6.28.1 / 7.29.1.
+No parent builder/rebuild major upgrade. Root lockfile version differences were
+inspected independently of npm's peer-flag normalization.
+
+### Reproducible checks and residual risk
+
+`scripts/test-runtime-dependency-security.js` adds six checks to the established
+regression runner. Adversarial cases use separate 128 MiB-heap child processes,
+12-second deadlines and at most 4 MiB synthetic archives, never multi-gigabyte
+bombs. It resolves runtime dependencies from `src`, not potentially different
+root build-tool copies. The archive case uses the ESM build GeoLite resolves.
+
+Fresh advisory responses on 2026-09-17:
+
+- Root `npm audit --json`: **0 affected entries**, exit 0.
+- Runtime `npm audit --omit=dev --json`: **0 affected entries**, exit 0.
+
+These are advisory-database results, **not a claim of zero vulnerabilities**.
+Tar's default decompression ratio guard is not an application-specific absolute
+download-size/time limit or independent mirror authenticity guarantee. The
+existing fixed GeoLite mirror/updater remains a supply-chain dependency. No
+new generic networking or renderer archive API is introduced.
+
+External evidence: `m14-build-npm-audit-remediated.json`,
+`m14-runtime-npm-audit-remediated.json`, `m14-pdfjs-update-research.log`,
+`m14-updated-electron-trust-live.log`, `m14-security-remediation-regression.log`.
+The new image identity and final regression result belong in the M14 validation
+document; the old DMG must not be relabelled as containing these corrections.

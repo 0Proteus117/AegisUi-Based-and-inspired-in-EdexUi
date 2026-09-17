@@ -15,6 +15,7 @@ const CHECKS = [
     "scripts/test-boot-splash-integrity.js",
     "scripts/test-packaged-node-pty-helper.js",
     "scripts/test-codeql-security-hardening.js",
+    "scripts/test-runtime-dependency-security.js",
     "scripts/release-health-check.js",
     "scripts/test-assistant-ollama.js",
     "scripts/test-assistant-routing-classifier.js",

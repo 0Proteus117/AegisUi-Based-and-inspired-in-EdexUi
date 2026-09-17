@@ -777,3 +777,36 @@ External evidence: `m14-builder.log`, `m14-packaged-trust.log`,
 `m14-packaged-storage-cycle.log`, `m14-packaged-storage-restart-read.log`,
 `m14-packaged-restart.log`, `m14-runtime-npm-audit.json`,
 `m14-packaged-checkpoint-regression.log`.
+
+## Dependency remediation checkpoint — 2026-09-17
+
+Continues from `1a97584`; no M15 or product storage expansion. The inherited
+dependency gate was investigated and corrected with explicit compatible
+versions, including the real Electron binary (42.5.1), PDF.js (6.2.108), GeoLite's
+tar (7.5.22), Tiptap peers (3.30.6), nanoid and brace-expansion. Six affected
+build-tool dependency families were separately patched within their existing
+parent ranges. See the appended [security audit](../../security/M14_PACKAGED_DEPENDENCY_AUDIT_2026-09-16.md)
+for reachability, exact versions and residual risks. Application version remains
+2.7.1, schema 27; Master PDF and runtime application source unchanged.
+
+- Runtime and build-root npm audits: **0 affected package entries**, exit 0.
+  No suppression, no blind audit-fix command, no zero-vulnerability claim.
+- New installed-runtime security regression: **6/6 passed**, including a bounded
+  compressed-archive rejection through GeoLite's resolved ESM dependency.
+- Full established regression: **101 suite scripts passed, 1 failed, 1 skipped
+  (103 total)**. Failure is Map provider environment; SAT script is absent.
+- Additional checks: Electron isolation **17/17**, prebuild integrity **4/4**,
+  Document Intelligence **19/19**; Research/Writing rerun **22/22**, including real
+  PDF.js text extraction and Citation.js. These overlap the broad suite and must
+  not be added to it as if they were unique suite scripts.
+- Live updated Electron: isolation/typed bridge, schema 27 and terminal passed.
+- `git diff --check` passed. Master PDF SHA-256 unchanged.
+
+Native computer-use selection again timed out even against the exact freshly
+launched development Electron bundle. The app itself reached its connected
+renderer and passed its live boundary probe. This separates control-tool failure
+from application startup; **native visual acceptance is still not passed**.
+
+The dependency changes require a newly built, inspected and mounted validation
+image. The earlier `14f3431` image is historical evidence only. Do not integrate
+M14 or claim its final package complete at this checkpoint.
