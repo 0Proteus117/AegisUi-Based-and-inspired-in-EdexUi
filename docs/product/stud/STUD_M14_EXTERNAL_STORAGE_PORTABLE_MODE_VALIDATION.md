@@ -2,10 +2,10 @@
 
 Status: IN PROGRESS — not accepted, not integrated, no release.
 
-Latest checkpoint: verified cleanup, derived availability and real native-picker
-transfer/rollback acceptance, validated 2026-09-16. Earlier dated checkpoints below describe their historical state;
-their statements that bootstrap/UI were absent are superseded by the final
-section of this document. Complete operational and packaged acceptance remain open.
+Latest checkpoint: mounted ARM64 package, real packaged storage cycle and restart
+validated 2026-09-16. Earlier dated checkpoints below describe their historical state;
+their statements that bootstrap/UI or a DMG were absent are superseded by the
+final section. Native packaged visual acceptance and final integration remain open.
 Base: integration `89d49b2526b4d55bdd7b11d51a60113b0943c168`, including the
 pre-M14 dispatch correction and corrected CI dependency installation.
 Integration schema: 26. Isolated M14 development schema: 27.
@@ -662,3 +662,118 @@ Evidence logs outside Git: `m14-final-focused.log`,
 `m14-cleanup-availability-regression.log`, `m14-cleanup-extra-regression.log`,
 `m14-cleanup-security-health.log`, `m14-cleanup-release-health.log`, and
 `m14-cleanup-visual.log`. No real Moodle/user files were moved or deleted.
+
+## Mounted ARM64 package and operational checkpoint (2026-09-16)
+
+This is validation evidence, not M14 acceptance or a public release. Runtime
+source commit: `14f3431482390ab5ded0f09703f35a184425a0b2`. Documentation and test
+probe commits after it are not claimed as the package's source identity.
+
+### Reproducible identity and integrity
+
+- Artifact: `dist/AegisUi-2.7.1-arm64.dmg`, **155,526,873 bytes**.
+- A byte-identical external test-artifact copy is named
+  `AegisUi-2.7.1-M14-14f3431-arm64-validation.dmg` to distinguish it from a release.
+- SHA-256: `3286e0fbb9a266dbe8bc1f248bf807821ebe277a0848434a78c5dad75f818737`.
+- The normal prebuild recipe built the Calendar helper, regenerated/minified
+  sources and stamped `.aegis-prebuild-manifest.json`; the beforePack guard
+  accepted the same source HEAD. Source digest:
+  `664f80eebef9f3cd3d7eb016c639e175cc801bae67bbbd37ca9c8f314f195eff`.
+  Prebuild digest:
+  `0883f1a0dc2c7d57752f909867a1cbc1688e1cf56b175890a02760f9154db87d`.
+- Physical ASAR bytes matched prebuild for preload, Storage Cleanup,
+  Availability, Controller, Storage Workspace and Mission Control Workspace.
+- `hdiutil verify` and `codesign --verify --deep --strict` passed. Main
+  executable and node-pty binary are ARM64. Signing is **ad hoc**, not Developer
+  ID/notarization. Existing entitlements and `sandbox: false` are unchanged.
+- Mounted read-only and launched the executable from the mounted volume, with
+  a disposable synthetic profile. The installed application was not substituted.
+- Physical minified bootstrap inspection confirmed `nodeIntegration: false`
+  and `contextIsolation: true`; the live renderer lacked require/process/Buffer,
+  raw IPC and generic filesystem/shell exposure. The typed bridge and schema 27
+  were present.
+
+### Packaged runtime verification
+
+`validate-electron-packaged-runtime.js` passed its synthetic canonical-record,
+Requirements, Workflow, Working Context, classification, Citation.js, Moodle
+status, document/compute capability and connected terminal checks. The probe
+explicitly creates synthetic records; it is not described as read-only. The
+terminal used the packaged node-pty. The Calendar helper exists in the package
+and its packaged helper test passed, without requesting personal Calendar data.
+
+`validate-stud-storage-packaged-read.js` passed before and after a full packaged
+process restart. It resolved the actual imported three-row CSV, original SHA-256,
+approved manifest, exact source reference and completed Run. Ollama's explicit
+health check returned **READY**; no model generation, model-file relocation or
+offline model execution was tested by this probe.
+
+`validate-stud-storage-packaged-cycle.js` exercised the **shipped preload/main
+boundary**, not replacement services, against only the known unshared 40-byte
+synthetic Dataset and the previously native-selected synthetic archive:
+
+1. RELOCATE local → external, with measured 1/1 verified-file completion.
+2. Explicit cleanup of the retained local original; active external data still
+   read identically. Missing cleanup confirmation was rejected by main process.
+3. Rollback after cleanup was rejected, preserving the active file rather than
+   claiming that a removed original had been restored.
+4. PORTABLE external → local; explicitly removed the inactive external copy and
+   repeated the failed-rollback/read-preservation check.
+5. RETURN local → external, then verified rollback to the retained local file.
+6. Restarted the mounted app. Canonical Dataset, checksum, approved historical
+   source and final ROLLED_BACK/COMPLETED state remained readable.
+
+Result: **3 transfers, 2 verified inactive-copy removals, 8 unchanged-data
+assertions passed**. The script refuses a different checksum, shared file, extra
+file, other profile label, wrong starting location or missing explicit test flag.
+It does not invoke providers or models. Existing unrelated background services
+are not claimed to have been network-monitored by this test.
+
+This proves the packaged API/file lifecycle. It does **not** prove a human clicked
+the corresponding UI controls. Full portable environment remains explicitly
+false: canonical SQLite stays on this Mac and Ollama storage is externally owned.
+Both test profile roots live on the test volume; no actual SSD speed or physical
+travel/unplug scenario is inferred from this cycle.
+
+On 2026-09-17 the previous test process/volume were no longer present. One retry
+failed at the CDP connection (`fetch failed`) before any test operation. The same
+checksum-verified image was remounted, launched again and the complete cycle and
+final read passed again. This failed setup attempt is not counted as a successful
+run or attributed to a storage mutation. Native window selection still failed.
+
+### Native UI limitation
+
+Computer-use selection of the mounted application returned `cgWindowNotFound`
+and, after a process restart, timed out. Finder selection also timed out. An
+unrelated installed AegisUi instance was left untouched. The runtime/CDP tests
+above succeeded, but this is **not** a substitute for mounted native visual
+acceptance. The earlier 180 layout cases and development native-picker workflow
+remain valid only for their documented scope. Do not mark this gate passed.
+
+### Dependency audit and remaining gates
+
+The clean declared-dependency installation reported **31 npm advisories**:
+26 moderate, 4 high and 1 critical. All four package manifests/lockfiles remain
+unchanged versus integration `89d49b2`; these are not new M14 dependency changes.
+That does not make the advisories harmless or dismissed. See
+[the dependency reachability checkpoint](../../security/M14_PACKAGED_DEPENDENCY_AUDIT_2026-09-16.md).
+In particular, an existing GeoIP download path reaches node-tar in main process;
+it is not correctly classified as build-only. No dependency audit fix or
+suppression was applied automatically.
+
+Remaining: mounted native visual acceptance, final M14 integration/security
+decision including the inherited dependency risk, and clean validated integration.
+No public release, no M15, no whole-environment portable readiness claim.
+
+Checkpoint revalidation: **8 suite scripts passed, 0 failed, 0 skipped** — storage
+cleanup, availability, production IPC, storage workspace, Electron trust boundary,
+CodeQL-targeted security, prebuild guard and release-health. Both new packaged
+probe scripts passed syntax checks; `git diff --check` passed. This narrower rerun
+does not replace or change the earlier full-regression counts. The new probes
+and this documentation change no runtime/dependency/schema code after `14f3431`.
+
+External evidence: `m14-builder.log`, `m14-packaged-trust.log`,
+`m14-packaged-runtime.log`, `m14-packaged-storage-read.log`,
+`m14-packaged-storage-cycle.log`, `m14-packaged-storage-restart-read.log`,
+`m14-packaged-restart.log`, `m14-runtime-npm-audit.json`,
+`m14-packaged-checkpoint-regression.log`.

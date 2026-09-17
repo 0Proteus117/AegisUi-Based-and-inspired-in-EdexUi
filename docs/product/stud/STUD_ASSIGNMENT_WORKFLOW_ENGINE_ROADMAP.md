@@ -428,8 +428,10 @@ The isolated implementation now includes approved transfer/rollback contracts,
 production read/write adapters, a typed Assignment storage UI, explicitly
 verified retained-copy cleanup and derived Artifact file availability. Native
 import, transfer, restart/read and rollback pass with synthetic material. Its
-synthetic Electron layout matrix passes; complete operational acceptance, final
-integration audit and packaged validation remain required before integration.
+synthetic Electron layout matrix passes. The ARM64 validation DMG from `14f3431`
+passed mounted runtime and transfer/cleanup/portable-return/restart API checks.
+Native packaged visual acceptance, the final integration decision and inherited
+dependency-risk disposition remain open. No public release has been made.
 
 - **Objective:** complete external academic storage and portable travel support.
 - **Ordering note:** deliver Storage Profile Core before the first earlier

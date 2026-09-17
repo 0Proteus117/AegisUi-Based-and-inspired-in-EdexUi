@@ -100,8 +100,11 @@ M14 is in progress on its isolated implementation branch. The
 distinguishes the profile/copy foundation, Assignment inventory, durable reviewed
 transfers, production runtime adapters, typed preload/Assignment storage UI,
 verified retained-copy cleanup and derived Artifact file availability from the
-still-pending final integration audit and packaged acceptance. Native-picker
+still-pending final integration and native packaged visual acceptance. Native-picker
 import, transfer, restart/read and rollback have also been exercised with a
 synthetic dataset. Synthetic layout states are recorded separately from this
-real transfer/runtime evidence.
+real transfer/runtime evidence. The ARM64 validation DMG from `14f3431` has now
+passed mounted runtime, transfer/cleanup/portable-return and restart API checks.
+Inherited dependency advisories, including a runtime-reachable GeoIP archive
+dependency, are recorded separately; this is not a security-clearance claim.
 This is not a milestone-completion claim.
