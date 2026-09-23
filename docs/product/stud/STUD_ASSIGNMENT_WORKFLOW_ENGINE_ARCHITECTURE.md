@@ -490,11 +490,14 @@ Introduce a narrow main-process `StudStorageProfileService`:
 - explicit migration copies, hashes, verifies, switches references transactionally
   and retains rollback metadata.
 
-Portable mode calculates a dependency manifest, displays required size, copies
-only approved artifacts/models to the local profile, verifies hashes and records
-the temporary mapping. Returning artifacts is another explicit verified action.
+Portable mode calculates a bounded managed-file dependency manifest, displays
+required size and exclusions, copies only approved canonical managed files to
+the local profile, verifies hashes and records the temporary mapping. Returning
+files is another explicit verified action. The externally owned Ollama server
+does not expose an Aegis-owned model-file location; models are not copied or
+claimed portable by M14.
 
-M14 implementation checkpoint (not yet accepted): `StudStorageTransferService`
+M14 integrated implementation: `StudStorageTransferService`
 uses the existing SQLite connection through `StudStorageManifestRepository`.
 Preparation freezes selected relative references, canonical source identities,
 source/profile versions, reviewed omission counters/issues and a catalog hash.
@@ -526,7 +529,8 @@ Presence is not presented as a fresh integrity check. M6 remains the Run/event
 authority; M13's composed Mission Control does not hide real storage Runs behind
 an older Execution Plan. See the
 [M14 validation record](STUD_M14_EXTERNAL_STORAGE_PORTABLE_MODE_VALIDATION.md)
-for the remaining integration and packaged-acceptance gates.
+for mounted packaged acceptance, inherited environment warnings and explicit
+whole-environment portability limitations.
 
 ### Final package and human approval
 

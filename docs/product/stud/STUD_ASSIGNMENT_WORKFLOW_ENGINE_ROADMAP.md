@@ -510,7 +510,10 @@ dependency-risk disposition remain open. No public release has been made.
 
 ## Exact next milestone
 
-M1, the dedicated Electron Trust-Boundary Hardening intervention, and M2–M13 are
-complete. The exact next product milestone is **M14 — External Academic Storage
-and Portable Mode**. M13 does not include model installation, cloud fallback,
-automatic academic acceptance, grading, submission or a background daemon.
+M1, the dedicated Electron Trust-Boundary Hardening intervention, and M2–M14 are
+complete. M14's validated portable scope is selected canonical managed academic
+files; it explicitly excludes the local SQLite database, application bundle,
+secrets and externally owned Ollama models. The exact next product milestone is
+**M15 — Final Package and Explicit Human Approval**. M14 does not introduce
+model installation, cloud fallback, automatic academic acceptance, grading,
+submission or a background daemon.

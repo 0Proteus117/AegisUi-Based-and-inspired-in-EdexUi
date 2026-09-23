@@ -92,19 +92,15 @@ assessment and explained routing; resource profiles; a real-metric watchdog;
 and Mission Control composed from the existing M3/M4/M6 authorities. The only
 installed 3B model remains unsuitable for academic section drafting, so the
 validated result is honestly `NO_SUITABLE_MODEL` with no gate reduction or
-cloud fallback. The exact next product milestone is M14 — External Academic
-Storage and Portable Mode.
+cloud fallback.
 
-M14 is in progress on its isolated implementation branch. The
+M14 — External Academic Storage and Portable Mode is integrated. The
 [M14 storage validation record](STUD_M14_EXTERNAL_STORAGE_PORTABLE_MODE_VALIDATION.md)
-distinguishes the profile/copy foundation, Assignment inventory, durable reviewed
-transfers, production runtime adapters, typed preload/Assignment storage UI,
-verified retained-copy cleanup and derived Artifact file availability from the
-still-pending final integration and native packaged visual acceptance. Native-picker
-import, transfer, restart/read and rollback have also been exercised with a
-synthetic dataset. Synthetic layout states are recorded separately from this
-real transfer/runtime evidence. The ARM64 validation DMG from `14f3431` has now
-passed mounted runtime, transfer/cleanup/portable-return and restart API checks.
-Inherited dependency advisories, including a runtime-reachable GeoIP archive
-dependency, are recorded separately; this is not a security-clearance claim.
-This is not a milestone-completion claim.
+records the canonical v27 migration, reviewed file manifests, hash-verified
+transfer/rollback, explicit retained-copy cleanup, offline availability,
+native Assignment UI and final mounted ARM64 validation. It distinguishes
+actual synthetic file operations from layout-only fixtures. M14 moves selected
+managed academic files, not the academic database or externally owned Ollama
+models; it does not claim a wholly portable Assignment environment. Its local
+validation DMG was not publicly released. The exact next product milestone is
+M15 — Final Package and Explicit Human Approval.

@@ -1,6 +1,7 @@
 # M14 — External academic storage and portable mode
 
-Status: ACCEPTED ON ISOLATED BRANCH — final integration pending; no public release.
+Status: ACCEPTED AND INTEGRATED into `feature/systems-online-pass` at merge
+`8fd120cd87444987893e7ff5f4b2bbd8e49206db`; no public release.
 
 Latest checkpoint: final isolated-branch ARM64 package, native UI transfer/restore,
 real packaged storage cycle and restart validated 2026-09-23. Earlier dated
@@ -867,8 +868,20 @@ missing `AISSTREAM_API_KEY`); SAT/Celestrak was skipped in this environment.
 No new M14 regression remained. CodeQL and Repo Health succeeded for
 `d716429` (runs `35915443238` and `35915443281`); local CodeQL-security,
 runtime-dependency-security, release-health and prebuild checks are included
-among the passing suites. `git diff --check` passed before this documentation
-update and must pass again before integration.
+among the passing suites. `git diff --check` also passed on the integration
+documentation changes.
+
+After the merge, the integration worktree's previously installed runtime tree
+still contained `tar` 7.5.16. Its first dependency-security rerun therefore
+failed the locked-version assertion. Running `npm ci` from the integrated root
+and `src` lockfiles restored the declared tree (`tar` 7.5.22); both installs
+reported zero audit advisories on 2026-09-23, and the six focused runtime
+dependency-security checks then passed. This was stale local `node_modules`,
+not an M14 source regression or a skipped security check.
+The full 103-suite regression was then rerun on the integrated worktree:
+**101 passed, 1 failed, 1 skipped**, identical to the isolated branch. The
+remaining failure is solely the independently inherited Map provider check
+(TomTom 401 and absent AIS key); SAT/Celestrak remains skipped.
 
 Technical audit: the canonical academic SQLite connection still owns profile,
 mapping, manifest and cleanup state; managed objects retain canonical IDs;
