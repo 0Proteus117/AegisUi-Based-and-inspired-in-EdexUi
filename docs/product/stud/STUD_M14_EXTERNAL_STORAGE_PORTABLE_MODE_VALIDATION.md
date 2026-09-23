@@ -1,9 +1,10 @@
 # M14 — External academic storage and portable mode
 
-Status: IN PROGRESS — not accepted, not integrated, no release.
+Status: ACCEPTED ON ISOLATED BRANCH — final integration pending; no public release.
 
-Latest checkpoint: mounted ARM64 package, real packaged storage cycle and restart
-validated 2026-09-16. Earlier dated checkpoints below describe their historical state;
+Latest checkpoint: final isolated-branch ARM64 package, native UI transfer/restore,
+real packaged storage cycle and restart validated 2026-09-23. Earlier dated
+checkpoints below describe their historical state;
 their statements that bootstrap/UI or a DMG were absent are superseded by the
 final section. Native packaged visual acceptance and final integration remain open.
 Base: integration `89d49b2526b4d55bdd7b11d51a60113b0943c168`, including the
@@ -810,3 +811,79 @@ from application startup; **native visual acceptance is still not passed**.
 The dependency changes require a newly built, inspected and mounted validation
 image. The earlier `14f3431` image is historical evidence only. Do not integrate
 M14 or claim its final package complete at this checkpoint.
+
+## Final isolated-branch acceptance (2026-09-23)
+
+Source commit `d716429a35895235ff304459f8dc435b27d53e1e` passed the
+prebuild-integrity guard with source digest
+`27a450be52c243662358f6519dedfacdac792d4274dc1fb29c899a1ac0aa2c89`.
+The final transfer fix verifies the source *after* the last copied chunk, so a
+same-size edit on a timestamp-coarse external volume cannot be published by a
+late progress callback. A dedicated last-chunk tamper case and the revised
+final-switch tamper case passed (13 file-transfer and 28 transfer-service cases).
+
+The ARM64 validation image is
+`AegisUi-2.7.1-M14-d716429-arm64-validation.dmg`, 154,823,394 bytes,
+SHA-256 `1ab36fdb0feda9375af9367cb0f066f55fd8cdd33193ecdfb526dd74c4ee803b`.
+It is a local test artifact outside Git, not a public release. `hdiutil verify`
+passed; the image mounted at `/Volumes/AegisUi 2.7.1-arm64`. The mounted app
+passed `codesign --verify --deep --strict`. It is ad-hoc signed and **not
+notarized**. Its executable and unpacked `node-pty` bundle are ARM64. Its
+`app.asar` physically contains the final source-verification code and a
+prebuild manifest stamped at `d716429`; Citation.js 0.8.2, PDF.js 6.2.108,
+Tiptap 3.30.6, Nanoid 3.3.19 and tar 7.5.22 were inspected in the package.
+The Calendar helper was verified in the mounted bundle.
+
+The mounted executable was launched with an isolated synthetic user-data
+profile, update checks disabled and offline mode requested. Native computer-use
+interaction opened STUD → the synthetic Course and Assignment → Academic files.
+It selected the 40-byte synthetic CSV, inspected the reviewed manifest,
+explicitly confirmed the transfer, observed `APPLIED`, then verified and
+restored the retained original and observed `ROLLED BACK`. No real Moodle,
+academic, credential or model file was used. After quitting and relaunching
+the same mounted executable, the Academic files history still displayed the
+actual relocation/portable/return records; the read-only packaged probe
+confirmed schema v27, three dataset rows, identical checksum and completed
+Run history. This is native UI evidence distinct from the synthetic layout
+fixture.
+
+Packaged runtime checks passed: renderer Node/raw IPC absent; fixed preload
+bridge; Requirements Contract, Moodle boundary, documents, compute, Citation.js,
+terminal/node-pty and Ollama status. Ollama returned `READY`; this probe did
+**not** perform model generation. A separate local assistant chat check passed
+on both the integration baseline and M14 after one transient timeout. The
+synthetic packaged cycle passed three explicit transfers and two cleanup
+removals of the approved 40-byte fixture, preserving the checksum and ending
+at the local profile. The 180-case renderer layout matrix passed at
+1680×1050 @2×, 1440×900 @2× and 1200×780 @1× in Dark, Light and both System
+resolutions; the matrix is synthetic UI geometry evidence, not disk-operation
+evidence. Representative synthetic images live outside Git. The native app
+screenshot contained the local terminal username and was **not saved to the
+repository or used as a public artifact**.
+
+Final broad regression: **101 passed, 1 failed, 1 skipped (103 suites)**.
+The sole failure was the unchanged external Map check (TomTom HTTP 401 and
+missing `AISSTREAM_API_KEY`); SAT/Celestrak was skipped in this environment.
+No new M14 regression remained. CodeQL and Repo Health succeeded for
+`d716429` (runs `35915443238` and `35915443281`); local CodeQL-security,
+runtime-dependency-security, release-health and prebuild checks are included
+among the passing suites. `git diff --check` passed before this documentation
+update and must pass again before integration.
+
+Technical audit: the canonical academic SQLite connection still owns profile,
+mapping, manifest and cleanup state; managed objects retain canonical IDs;
+M6/M13 remain the real Run/activity authority. Neither a second database nor
+renderer-controlled file, SQL, shell or network access was added. Bounded
+inventory/history queries, source and destination checksums, exact volume
+identity, retained-copy history and fail-closed offline behavior were exercised.
+No BLOCKING or MAJOR M14-caused audit finding remains. The important limitation
+is deliberate and visible: M14 can make **selected managed academic files**
+available on the Mac and return them to an approved external profile, but it
+does not move the canonical SQLite database, secrets, app bundle or externally
+owned Ollama models. `portableReady` remains false for a *whole Assignment
+environment*. This is not a claim of full-machine or model portability.
+An independent process can still mutate a file *after* its last integrity
+check; subsequent managed reads verify the stored hash and fail closed rather
+than consuming changed bytes. M14 does not claim an immutable filesystem.
+
+No public release was created. No M15 work was started.
