@@ -125,9 +125,12 @@ async function check(name,work){const f=fixture();try{await work(f);passed++;con
     f.service.transfer.verify=async(...args)=>{assert.strictEqual(f.store.transactionDepth,0);calls++;return verify(...args);};
     await f.execute(m);assert.ok(calls>=6);
  });
- await check("EARLIER_VERIFIED_FILE_TAMPER_DURING_FINAL_PAGE_REJECTED",async f=>{
-    const m=await f.prepare(),verify=f.service.transfer.verify.bind(f.service.transfer);let count=0;
-    f.service.transfer.verify=async(...args)=>{const result=await verify(...args);if(++count===6)fs.writeFileSync(f.paths.file(f.external,m.items[0].reference),"late tamper");return result;};
+ await check("VERIFIED_FILE_TAMPER_AT_FINAL_SWITCH_REJECTED",async f=>{
+    const m=await f.prepare(),assertVerified=f.service.transfer.assertVerified.bind(f.service.transfer);let tampered=false;
+    f.service.transfer.assertVerified=(...args)=>{
+        if(!tampered){tampered=true;fs.writeFileSync(f.paths.file(f.external,m.items[0].reference),"late tamper");}
+        return assertVerified(...args);
+    };
     await rejection("STORAGE_SOURCE_CHANGED",()=>f.execute(m));assert.ok(f.mappings().every(id=>id===Domain.LOCAL_PROFILE_ID));
  });
  await check("SHARED_OWNER_CHECKSUM_DRIFT_CANNOT_BYPASS_SCOPE_REVIEW",async f=>{
