@@ -65,7 +65,7 @@ function normalizeGitHub(input) {
 }
 
 class StudNotebookRuntime {
-    constructor(options = {}) { this.root = path.resolve(options.root || process.cwd()); this.dialog = options.dialog || null; this.fetch = options.fetch || global.fetch; this.controllers = new Map(); }
+    constructor(options = {}) { this.root = path.resolve(options.root || process.cwd()); this.managedStorage = options.managedStorage || null; this.dialog = options.dialog || null; this.fetch = options.fetch || global.fetch; this.controllers = new Map(); }
     capabilities() { return Object.freeze({notebook: {status: "EDITING_ONLY", execution: "NOT_INSTALLED", reason: "No Python, Jupyter, WASM runtime or shell is bundled in Phase 11."}, data: {status: "AVAILABLE", formats: ["CSV", "TSV"], localOnly: true, limits: LIMITS}, github: {status: "EXPLICIT_PUBLIC_READ_ONLY", provider: "GITHUB", authentication: "NOT_REQUIRED", fixedEndpoint: GITHUB_API}}); }
     cancel(requestId) { const controller = this.controllers.get(String(requestId || "")); if (controller) controller.abort(); return Object.freeze({cancelled: Boolean(controller)}); }
     dispose() { this.controllers.forEach(controller => controller.abort()); this.controllers.clear(); }
@@ -81,13 +81,18 @@ class StudNotebookRuntime {
         const extension = path.extname(absolute).toLowerCase(); const format = extension === ".csv" ? "CSV" : extension === ".tsv" ? "TSV" : null;
         if (!format) fail("UNSUPPORTED_DATASET", "Only CSV and TSV datasets are supported.");
         const bytes = fs.readFileSync(absolute); const inspected = inspectDataset(bytes, format); const digest = sha256(bytes);
-        const folder = path.join(this.root, "datasets"); fs.mkdirSync(folder, {recursive: true, mode: 0o700});
-        const name = `${safeName(path.basename(absolute, extension))}_${digest.slice(0, 16)}${extension}`; const destination = path.join(folder, name);
-        if (!fs.existsSync(destination)) fs.copyFileSync(absolute, destination, fs.constants.COPYFILE_EXCL);
+        const name = `${safeName(path.basename(absolute, extension))}_${digest.slice(0, 16)}${extension}`;
+        if (this.managedStorage) this.managedStorage.put(`datasets/${name}`, bytes);
+        else {
+            const folder = path.join(this.root, "datasets"); fs.mkdirSync(folder, {recursive: true, mode: 0o700});
+            const destination = path.join(folder, name);
+            if (!fs.existsSync(destination)) fs.copyFileSync(absolute, destination, fs.constants.COPYFILE_EXCL);
+        }
         return Object.freeze({cancelled: false, title: path.basename(absolute, extension).slice(0, Model.LIMITS.title), format, reference: `datasets/${name}`, mimeType: format === "CSV" ? "text/csv" : "text/tab-separated-values", size: stat.size, sha256: digest, rowCount: inspected.rowCount, columns: inspected.columns, summary: inspected.summary, preview: inspected.preview});
     }
     readManagedDataset(reference) {
         const value = String(reference || ""); if (!/^datasets\/[a-z0-9._-]+_[a-f0-9]{16}\.(csv|tsv)$/i.test(value)) fail("POLICY_BLOCKED", "Only managed STUD CSV/TSV references can be read.");
+        if (this.managedStorage) return inspectDataset(this.managedStorage.read(value, LIMITS.datasetBytes),value.toLowerCase().endsWith(".tsv")?"TSV":"CSV");
         const absolute = path.resolve(this.root, value); if (!absolute.startsWith(`${this.root}${path.sep}`) || !fs.existsSync(absolute)) fail("DATASET_MISSING", "The managed local dataset is unavailable.");
         const format = path.extname(absolute).toLowerCase() === ".tsv" ? "TSV" : "CSV"; return inspectDataset(fs.readFileSync(absolute), format);
     }

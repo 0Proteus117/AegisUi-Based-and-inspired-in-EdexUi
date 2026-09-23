@@ -40,7 +40,9 @@ class StudArtifactOperationsService {
         this.repository = options.repository || new StudArtifactOperationsRepository(this.store);
         this.workflow = options.workflowService || null;
         this.workingContext = options.workingContextService || null;
+        this.storageAvailability = options.storageAvailability || null;
     }
+    presentArtifacts(artifacts) { return this.storageAvailability ? this.storageAvailability(artifacts) : artifacts; }
 
     assignment(id) { const value = this.store.getEntity("ASSIGNMENT", Academic.safeId(id, "Assignment ID")); if (!value) throw new Academic.StudError("NOT_FOUND", "Assignment does not exist."); return value; }
     scopedArtifact(assignmentId, artifactId) { const assignment = this.assignment(assignmentId); const artifact = this.repository.requireArtifact(artifactId); if (artifact.assignmentId !== assignment.id) throw new Academic.StudError("CROSS_ASSIGNMENT_ARTIFACT", "Artifact does not belong to this Assignment."); return artifact; }
@@ -148,9 +150,9 @@ class StudArtifactOperationsService {
     listArtifacts(input = {}) {
         Academic.assertAllowedKeys(input, ["assignmentId", "artifactType", "origin", "workflowNodeId", "availabilityState", "beforeCreatedAt", "limit"], "Artifact query");
         const assignment = this.assignment(input.assignmentId);
-        return this.repository.listArtifacts({assignmentId: assignment.id, artifactType: input.artifactType ? Academic.enumValue(input.artifactType, Domain.ARTIFACT_TYPES, "Artifact type") : null, origin: input.origin ? Academic.enumValue(input.origin, Domain.ARTIFACT_ORIGINS, "Artifact origin") : null, workflowNodeId: input.workflowNodeId ? Academic.safeId(input.workflowNodeId, "Workflow node ID") : null, availabilityState: input.availabilityState ? Academic.enumValue(input.availabilityState, Domain.ARTIFACT_AVAILABILITY, "Artifact availability") : null, beforeCreatedAt: input.beforeCreatedAt ? Academic.optionalDate(input.beforeCreatedAt, "Artifact cursor") : null, limit: Domain.positiveLimit(input.limit, 50, Domain.LIMITS.list)});
+        return this.presentArtifacts(this.repository.listArtifacts({assignmentId: assignment.id, artifactType: input.artifactType ? Academic.enumValue(input.artifactType, Domain.ARTIFACT_TYPES, "Artifact type") : null, origin: input.origin ? Academic.enumValue(input.origin, Domain.ARTIFACT_ORIGINS, "Artifact origin") : null, workflowNodeId: input.workflowNodeId ? Academic.safeId(input.workflowNodeId, "Workflow node ID") : null, availabilityState: input.availabilityState ? Academic.enumValue(input.availabilityState, Domain.ARTIFACT_AVAILABILITY, "Artifact availability") : null, beforeCreatedAt: input.beforeCreatedAt ? Academic.optionalDate(input.beforeCreatedAt, "Artifact cursor") : null, limit: Domain.positiveLimit(input.limit, 50, Domain.LIMITS.list)}));
     }
-    artifact(input = {}) { Academic.assertAllowedKeys(input, ["assignmentId", "artifactId"], "Artifact read"); return this.scopedArtifact(input.assignmentId, input.artifactId); }
+    artifact(input = {}) { Academic.assertAllowedKeys(input, ["assignmentId", "artifactId"], "Artifact read"); return this.presentArtifacts([this.scopedArtifact(input.assignmentId, input.artifactId)])[0]; }
 
     relateArtifacts(input = {}) {
         Academic.assertAllowedKeys(input, ["assignmentId", "fromArtifactId", "relationshipType", "toArtifactId", "producer", "metadata"], "Artifact relationship");
@@ -228,12 +230,12 @@ class StudArtifactOperationsService {
         const recentRuns = this.repository.listRuns({assignmentId: assignment.id, state: null, beforeCreatedAt: null, limit: Domain.positiveLimit(input.historyLimit, 20, 50)});
         const artifacts = this.repository.listArtifacts({assignmentId: assignment.id, artifactType: null, origin: null, workflowNodeId: null, availabilityState: null, beforeCreatedAt: null, limit: Domain.positiveLimit(input.artifactLimit, 30, 50)});
         const workflowState = this.workflow ? this.workflow.assignmentState({assignmentId: assignment.id, historyLimit: 50}) : null;
-        return Object.freeze({assignment, activeRuns, recentRuns, artifacts, workflow: workflowState && workflowState.current || null, resting: activeRuns.length === 0});
+        return Object.freeze({assignment, activeRuns, recentRuns, artifacts:this.presentArtifacts(artifacts), workflow: workflowState && workflowState.current || null, resting: activeRuns.length === 0});
     }
     run(input = {}) { Academic.assertAllowedKeys(input, ["assignmentId", "runId"], "Operation Run read"); return this.scopedRun(input.assignmentId, input.runId); }
     runs(input = {}) { Academic.assertAllowedKeys(input, ["assignmentId", "state", "beforeCreatedAt", "limit"], "Operation Run query"); const assignment = this.assignment(input.assignmentId); return this.repository.listRuns({assignmentId: assignment.id, state: input.state ? Academic.enumValue(input.state, Domain.RUN_STATES, "Run state") : null, beforeCreatedAt: input.beforeCreatedAt ? Academic.optionalDate(input.beforeCreatedAt, "Run cursor") : null, limit: Domain.positiveLimit(input.limit, 25, 50)}); }
     events(input = {}) { Academic.assertAllowedKeys(input, ["assignmentId", "runId", "beforeSequence", "limit"], "Operation event query"); const assignment = this.assignment(input.assignmentId); let runId = null; if (input.runId) { const run = this.repository.requireRun(input.runId); if (run.assignmentId !== assignment.id) throw new Academic.StudError("INVALID_INPUT", "Run does not belong to this Assignment."); runId = run.id; } const beforeSequence = input.beforeSequence === undefined ? null : Academic.optionalNonNegativeInteger(input.beforeSequence, "Event cursor", 1000000000); return this.repository.listEvents({assignmentId: assignment.id, runId, beforeSequence, limit: Domain.positiveLimit(input.limit, 50, Domain.LIMITS.eventPage)}); }
-    runArtifacts(input = {}) { Academic.assertAllowedKeys(input, ["assignmentId", "runId", "limit"], "Operation Artifact query"); const run = this.scopedRun(input.assignmentId, input.runId); return this.repository.artifactsForRun(run.id, Domain.positiveLimit(input.limit, 50, 100)); }
+    runArtifacts(input = {}) { Academic.assertAllowedKeys(input, ["assignmentId", "runId", "limit"], "Operation Artifact query"); const run = this.scopedRun(input.assignmentId, input.runId); return this.presentArtifacts(this.repository.artifactsForRun(run.id, Domain.positiveLimit(input.limit, 50, 100))); }
 }
 
 module.exports = Object.freeze({StudArtifactOperationsService, DEFAULT_ARTIFACT_TYPE, RUN_TRANSITIONS, assertSafeValue});

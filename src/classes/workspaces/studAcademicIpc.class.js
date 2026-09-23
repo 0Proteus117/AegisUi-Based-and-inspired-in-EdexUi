@@ -23,8 +23,12 @@ const {StudHumanisationService} = require("./studHumanisationService.class.js");
 const {StudLecturerCommitteeRuntime} = require("./studLecturerCommitteeRuntime.class.js");
 const {StudLecturerCommitteeService} = require("./studLecturerCommitteeService.class.js");
 const {StudRunCoordinator} = require("./studRunCoordinator.class.js");
+const {StudStorageProfileService} = require("./studStorageProfileService.class.js");
+const {StudManagedStorageRuntime} = require("./studManagedStorageRuntime.class.js");
+const {StudStorageController, CHANNELS: STORAGE_CHANNELS} = require("./studStorageController.class.js");
 
 const CHANNELS = Object.freeze([
+    ...STORAGE_CHANNELS,
     "stud-core-status",
     "stud-entity-list",
     "stud-entity-read",
@@ -285,14 +289,16 @@ function registerStudAcademicIpc(options = {}) {
     store.initialize();
     let dialog = options.dialog || null;
     if (!dialog) { try { dialog = require("electron").dialog; } catch (error) {} }
-    const runtime = options.researchRuntime || new StudResearchRuntime({root: resolveStorageRoot(options.app, options), dialog, env: options.env || process.env, fetch: options.fetch});
-    const lmsRuntime = options.lmsRuntime || new StudLmsRuntime({store, root: resolveStorageRoot(options.app, options), fetch: options.fetch, safeStorage: options.safeStorage, shell: options.shell, app: options.app, allowLocalDevelopment: options.allowLocalDevelopment === true});
+    const storage = options.storageProfileService || new StudStorageProfileService({store,dialog});
+    const managedStorage = new StudManagedStorageRuntime(storage);
+    const runtime = options.researchRuntime || new StudResearchRuntime({root: resolveStorageRoot(options.app, options), managedStorage, dialog, env: options.env || process.env, fetch: options.fetch});
+    const lmsRuntime = options.lmsRuntime || new StudLmsRuntime({store, root: resolveStorageRoot(options.app, options), managedStorage, fetch: options.fetch, safeStorage: options.safeStorage, shell: options.shell, app: options.app, allowLocalDevelopment: options.allowLocalDevelopment === true});
     // The compute runtime is pure local code. It has no process spawning,
     // filesystem, provider or network capability.
     const computeRuntime = options.computeRuntime || new StudComputeRuntime();
     // Notebook/Data/GitHub is deliberately narrow: no interpreter, shell,
     // generic file bridge, generic HTTP client or renderer-controlled request.
-    const notebookRuntime = options.notebookRuntime || new StudNotebookRuntime({root: resolveStorageRoot(options.app, options), dialog, fetch: options.fetch});
+    const notebookRuntime = options.notebookRuntime || new StudNotebookRuntime({root: resolveStorageRoot(options.app, options), managedStorage, dialog, fetch: options.fetch});
     // Document Intelligence is local-only. It receives managed PDF bytes from
     // the established explicit-selector runtime; it has no own filesystem,
     // shell, environment or network authority.
@@ -321,7 +327,9 @@ function registerStudAcademicIpc(options = {}) {
     // M6 indexes canonical objects and exposes bounded operational reads. It
     // deliberately exposes no renderer event-append or Run-creation channel:
     // only main-process domain producers may record operational history.
-    const artifactOperations = options.artifactOperationsService || new StudArtifactOperationsService({store, workflowService: workflow, workingContextService: workingContext});
+    const storageAvailability = new (require("./studStorageAvailability.class.js").StudStorageAvailability)({store,storage});
+    const artifactOperations = options.artifactOperationsService || new StudArtifactOperationsService({store, workflowService: workflow, workingContextService: workingContext,storageAvailability:items=>storageAvailability.page(items)});
+    const storageController = new StudStorageController({store,storage,artifacts:artifactOperations});
     // M7 structures reviewed Assignment research over exact M1 Contract
     // revisions and existing canonical material. It has no provider/model
     // execution capability and never duplicates Papers, Documents or Artifacts.
@@ -378,6 +386,7 @@ function registerStudAcademicIpc(options = {}) {
     };
 
     add("stud-core-status", [], () => store.schemaInfo());
+    storageController.register(add);
     add("stud-entity-list", ["entityType", "courseId", "assignmentId", "limit", "includeArchived"], payload => store.listEntities(payload.entityType, payload));
     add("stud-entity-read", ["entityType", "entityId", "includeArchived"], payload => store.getEntity(payload.entityType, payload.entityId, payload.includeArchived === true));
     add("stud-entity-create", ["entityType", "value", "provenance"], payload => store.createEntity(payload.entityType, payload.value, {provenance: payload.provenance || null}));
@@ -762,6 +771,7 @@ function registerStudAcademicIpc(options = {}) {
     return Object.freeze({channels: CHANNELS, store, dispose: () => {
         if (typeof ipc.removeHandler === "function") handlers.forEach((_handler, channel) => ipc.removeHandler(channel));
         handlers.clear();
+        storageController.dispose();
         runtime.dispose();
         lmsRuntime.dispose();
         documentRuntime.dispose();

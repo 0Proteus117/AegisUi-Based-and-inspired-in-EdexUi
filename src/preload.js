@@ -4,6 +4,7 @@ const {contextBridge, ipcRenderer, clipboard} = require("electron");
 const crypto = require("crypto");
 
 const STUD_CHANNELS = Object.freeze([
+    "stud-storage-profiles", "stud-storage-profile-choose", "stud-storage-profile-reconnect", "stud-storage-catalog", "stud-storage-transfer-prepare", "stud-storage-transfer-read", "stud-storage-transfer-execute", "stud-storage-transfer-cancel", "stud-storage-transfer-rollback", "stud-storage-history", "stud-storage-copy-remove",
     "stud-academic-ai-cancel", "stud-academic-ai-generate", "stud-academic-ai-revision-accept", "stud-academic-ai-revision-candidates", "stud-academic-ai-save-note", "stud-academic-ai-status",
     "stud-academic-context-build", "stud-academic-context-decide", "stud-academic-context-package-create", "stud-academic-context-package-list", "stud-academic-context-package-read", "stud-academic-context-search",
     "stud-assessment-classification-list", "stud-assessment-classification-set", "stud-assignment-requirements", "stud-citation-render", "stud-command-center", "stud-compute-capabilities", "stud-compute-list", "stud-compute-run", "stud-compute-save-result", "stud-core-status", "stud-course-context", "stud-course-organisation",

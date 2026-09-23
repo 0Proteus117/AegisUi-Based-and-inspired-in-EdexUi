@@ -40,6 +40,7 @@ class StudResearchRuntime {
         this.fetch = options.fetch || global.fetch;
         this.env = options.env || process.env;
         this.root = path.resolve(options.root || process.cwd());
+        this.managedStorage = options.managedStorage || null;
         this.dialog = options.dialog || null;
         this.shell = options.shell || null;
         this.controllers = new Map();
@@ -237,18 +238,25 @@ class StudResearchRuntime {
         const fd = fs.openSync(absolute, "r");
         try { fs.readSync(fd, header, 0, 5, 0); } finally { fs.closeSync(fd); }
         if (header.toString("ascii") !== "%PDF-") throw runtimeError("INVALID_PDF", "Selected file is not a supported PDF.");
-        const documents = path.join(this.root, "documents");
-        fs.mkdirSync(documents, {recursive: true, mode: 0o700});
-        const digest = Research.sha256(fs.readFileSync(absolute));
+        const bytes = fs.readFileSync(absolute), digest = Research.sha256(bytes);
         const safeName = `${paperId && /^[a-z][a-z0-9_]+$/i.test(paperId) ? paperId : "paper"}_${digest.slice(0, 16)}.pdf`;
-        const destination = path.join(documents, safeName);
-        if (!fs.existsSync(destination)) fs.copyFileSync(absolute, destination, fs.constants.COPYFILE_EXCL);
+        if (this.managedStorage) this.managedStorage.put(`documents/${safeName}`, bytes);
+        else {
+            const documents = path.join(this.root, "documents");
+            fs.mkdirSync(documents, {recursive: true, mode: 0o700});
+            const destination = path.join(documents, safeName);
+            if (!fs.existsSync(destination)) fs.copyFileSync(absolute, destination, fs.constants.COPYFILE_EXCL);
+        }
         return Object.freeze({cancelled: false, reference: `documents/${safeName}`, displayName: path.basename(absolute).slice(0, 240), mimeType: "application/pdf", size: stat.size, sha256: digest});
     }
 
     readManagedPdf(reference) {
         const value = String(reference || "");
         if (!/^documents\/[a-z0-9_]+_[a-f0-9]{16}\.pdf$/i.test(value)) throw runtimeError("POLICY_BLOCKED", "Only managed STUD PDF references can be opened.");
+        if (this.managedStorage) {
+            const bytes = this.managedStorage.read(value, MAX_PDF_BYTES);
+            return Object.freeze({reference:value,bytesBase64:bytes.toString("base64"),size:bytes.length,sha256:Research.sha256(bytes)});
+        }
         const absolute = path.resolve(this.root, value);
         const documents = path.resolve(this.root, "documents");
         if (!absolute.startsWith(`${documents}${path.sep}`)) throw runtimeError("POLICY_BLOCKED", "Managed PDF path is outside STUD storage.");
@@ -292,11 +300,14 @@ class StudResearchRuntime {
         const result = await this.fetchOaPdf(input);
         const {candidate, bytes, sha256} = result;
         try {
-            const documents = path.join(this.root, "documents");
-            fs.mkdirSync(documents, {recursive: true, mode: 0o700});
             const safeName = `oa_${sha256.slice(0, 16)}.pdf`;
-            const destination = path.join(documents, safeName);
-            if (!fs.existsSync(destination)) fs.writeFileSync(destination, bytes, {mode: 0o600, flag: "wx"});
+            if (this.managedStorage) this.managedStorage.put(`documents/${safeName}`, bytes);
+            else {
+                const documents = path.join(this.root, "documents");
+                fs.mkdirSync(documents, {recursive: true, mode: 0o700});
+                const destination = path.join(documents, safeName);
+                if (!fs.existsSync(destination)) fs.writeFileSync(destination, bytes, {mode: 0o600, flag: "wx"});
+            }
             return Object.freeze({reference: `documents/${safeName}`, displayName: `${candidate.doi}.pdf`, mimeType: "application/pdf", size: bytes.length, sha256});
         } catch (error) { throw providerError("Managed OA PDF", error); }
     }

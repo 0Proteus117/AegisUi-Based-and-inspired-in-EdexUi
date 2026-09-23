@@ -2120,7 +2120,7 @@ class StudAcademicStore {
             ALTER TABLE stud_draft_versions ADD COLUMN execution_step_id TEXT REFERENCES stud_execution_steps(id);
             ALTER TABLE stud_draft_versions ADD COLUMN execution_attempt_id TEXT REFERENCES stud_execution_attempts(id);
             ALTER TABLE stud_draft_versions ADD COLUMN model_routing_decision_id TEXT REFERENCES stud_model_routing_decisions(id);
-        `}];
+        `}, {version: 27, sql: require("./studStorageModel.class.js").SCHEMA_SQL}];
         for (const migration of migrations) {
             if (applied.has(migration.version)) continue;
             try {

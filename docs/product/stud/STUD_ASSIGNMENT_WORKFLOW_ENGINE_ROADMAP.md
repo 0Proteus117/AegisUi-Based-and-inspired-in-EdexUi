@@ -421,6 +421,18 @@ outcome is `NO_SUITABLE_MODEL`; no output or capability was fabricated.
 
 ## M14 — External academic storage and portable mode
 
+Preflight and implementation are in progress; see the
+[M14 validation record](STUD_M14_EXTERNAL_STORAGE_PORTABLE_MODE_VALIDATION.md).
+This is not a completion or packaged-acceptance claim.
+The isolated implementation now includes approved transfer/rollback contracts,
+production read/write adapters, a typed Assignment storage UI, explicitly
+verified retained-copy cleanup and derived Artifact file availability. Native
+import, transfer, restart/read and rollback pass with synthetic material. Its
+synthetic Electron layout matrix passes. The ARM64 validation DMG from `14f3431`
+passed mounted runtime and transfer/cleanup/portable-return/restart API checks.
+Native packaged visual acceptance, the final integration decision and inherited
+dependency-risk disposition remain open. No public release has been made.
+
 - **Objective:** complete external academic storage and portable travel support.
 - **Ordering note:** deliver Storage Profile Core before the first earlier
   milestone that genuinely requires large local academic model/external model
@@ -429,7 +441,7 @@ outcome is `NO_SUITABLE_MODEL`; no output or capability was fabricated.
   availability/usage, verified move, cache cleanup classes and portable manifests.
 - **Components:** main-process StorageProfileService, store/IPC, file picker,
   Artifact Bay, model/artifact managers and settings UI.
-- **Schema/migration:** expected v26; storage profiles, managed-asset mappings and
+- **Schema/migration:** v26→v27 (M13 already consumed v26); storage profiles, managed-asset mappings and
   portable manifests. Existing references map to local default without moving.
 - **Dependencies:** M6 and M13.
 - **Non-goals:** no hardcoded Seagate path, arbitrary renderer filesystem, silent
@@ -454,7 +466,7 @@ outcome is `NO_SUITABLE_MODEL`; no output or capability was fabricated.
   approval state.
 - **Components:** final-package service, Citation.js, artifacts, workflow, review,
   typed export IPC and Assignment Workspace.
-- **Schema/migration:** expected v27; package metadata/version/approval records;
+- **Schema/migration:** expected v28 after M14; package metadata/version/approval records;
   exported files remain managed artifacts.
 - **Dependencies:** M8, M10, M12–M14 as applicable.
 - **Non-goals:** absolutely no Moodle/LMS/university submission, credential use,
