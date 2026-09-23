@@ -29,6 +29,10 @@ async function reject(code,work){await assert.rejects(work,error=>error.code===c
         assert.ok(!fs.existsSync(destination));assert.deepStrictEqual(fs.readdirSync(path.dirname(destination)),[]);assert.deepStrictEqual(fs.readFileSync(source),bytes);
     });
     await check("SOURCE_TAMPER_REJECTED_WITHOUT_PUBLISHED_COPY",async()=>{let changed=false;await reject("STORAGE_SOURCE_CHANGED",()=>transfer.copy({...input,onProgress:()=>{if(!changed){changed=true;fs.writeFileSync(source,Buffer.alloc(bytes.length,43));}}}));assert.ok(!fs.existsSync(destination));fs.writeFileSync(source,bytes);});
+    await check("SOURCE_TAMPER_AFTER_LAST_CHUNK_REJECTED",async()=>{
+        await reject("STORAGE_SOURCE_CHANGED",()=>transfer.copy({...input,onProgress:progress=>{if(progress.current===bytes.length)fs.writeFileSync(source,Buffer.alloc(bytes.length,44));}}));
+        assert.ok(!fs.existsSync(destination));fs.writeFileSync(source,bytes);
+    });
     await check("INCORRECT_MANIFEST_HASH_REJECTED",async()=>{await reject("STORAGE_HASH_MISMATCH",()=>transfer.copy({...input,sha256:"0".repeat(64)}));assert.ok(!fs.existsSync(destination));});
     await check("TARGET_VOLUME_CHANGE_DURING_COPY_FAILS_CLOSED",async()=>{
         await reject("WRONG_STORAGE_VOLUME",()=>transfer.copy({...input,onProgress:()=>{uuid="22222222-2222-2222-2222-222222222222";}}));assert.ok(!fs.existsSync(destination));

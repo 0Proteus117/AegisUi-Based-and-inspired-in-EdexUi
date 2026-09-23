@@ -83,6 +83,13 @@ class StudStorageFileTransfer {
             const finalSource=fs.fstatSync(source.fd),namedSource=fs.lstatSync(this.paths.file(sourceProfile,reference));
             if(!unchanged(source.stat,finalSource)||!sameFile(finalSource,namedSource))Domain.fail("STORAGE_SOURCE_CHANGED","Source changed while it was copied.");
             if(count!==byteSize||hash.digest("hex")!==sha256)Domain.fail("STORAGE_SOURCE_CHANGED","The managed source changed while it was copied.");
+            // A same-size edit after the final progress callback need not alter
+            // coarse mtime/ctime or the bytes already read above.
+            try{await this.verify(sourceProfile,reference,identity,signal);}
+            catch(error){
+                if(error?.code==="STORAGE_HASH_MISMATCH")Domain.fail("STORAGE_SOURCE_CHANGED","The managed source changed after its last copied chunk.");
+                throw error;
+            }
             this.paths.file(targetProfile,reference); // recheck volume, marker and path before publication
             const staged=fs.lstatSync(temp),descriptor=fs.fstatSync(tempFd);
             if(!sameFile(staged,tempIdentity)||!sameFile(descriptor,tempIdentity)||staged.nlink!==1)Domain.fail("UNSAFE_STORAGE_FILE","The staged copy changed identity.");
