@@ -60,6 +60,12 @@ class StudStorageFileTransfer {
                 return Object.freeze({...identity,reference,reused:true});
             }
             if(capacity.bavail*capacity.bsize<byteSize+1024*1024)Domain.fail("STORAGE_SPACE_REQUIRED","Target storage lacks room for the verified copy and safety margin.");
+            // Establish that the approved hash matched the source before copying.
+            // On filesystems with coarse timestamps, a concurrent same-size edit
+            // can evade stat receipts; a later digest mismatch is then source
+            // drift, not a bad manifest or an unexplained destination failure.
+            await this.verify(sourceProfile,reference,identity,signal);
+            cancelled(signal);
             source=openRegular(sourceFile);
             if(source.stat.size!==byteSize)Domain.fail("STORAGE_SOURCE_CHANGED","Source size changed after the transfer was prepared.");
             temp=path.join(path.dirname(destination),`.aegis-copy-${crypto.randomBytes(16).toString("hex")}.part`);
@@ -76,7 +82,7 @@ class StudStorageFileTransfer {
             cancelled(signal);
             const finalSource=fs.fstatSync(source.fd),namedSource=fs.lstatSync(this.paths.file(sourceProfile,reference));
             if(!unchanged(source.stat,finalSource)||!sameFile(finalSource,namedSource))Domain.fail("STORAGE_SOURCE_CHANGED","Source changed while it was copied.");
-            if(count!==byteSize||hash.digest("hex")!==sha256)Domain.fail("STORAGE_HASH_MISMATCH","Copied bytes differ from the approved source hash.");
+            if(count!==byteSize||hash.digest("hex")!==sha256)Domain.fail("STORAGE_SOURCE_CHANGED","The managed source changed while it was copied.");
             this.paths.file(targetProfile,reference); // recheck volume, marker and path before publication
             const staged=fs.lstatSync(temp),descriptor=fs.fstatSync(tempFd);
             if(!sameFile(staged,tempIdentity)||!sameFile(descriptor,tempIdentity)||staged.nlink!==1)Domain.fail("UNSAFE_STORAGE_FILE","The staged copy changed identity.");
