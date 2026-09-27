@@ -165,7 +165,13 @@ class StudMissionControlWorkspace {
             if (refresh) { await this.load(); this.parent.parent.render(); }
             else if (register) await this.registerCurrent();
             else if (select) await this.selectArtifact(select.dataset.studArtifactSelect);
-            else if (open) { const artifact = this.artifact(open.dataset.studArtifactOpen); if (artifact) await this.parent.openObject(artifact.canonicalObjectType, artifact.canonicalObjectId, {originSurface: "ARTIFACT_BAY"}); }
+            else if (open) {
+                const artifact = this.artifact(open.dataset.studArtifactOpen);
+                if (artifact?.canonicalObjectType === "FINAL_PACKAGE") {
+                    this.parent.state.mode="FINAL_PACKAGE";
+                    await this.parent.finalPackage.act(assignmentId=>this.request("stud-final-package-read",{assignmentId,packageId:artifact.canonicalObjectId}));
+                } else if (artifact) await this.parent.openObject(artifact.canonicalObjectType, artifact.canonicalObjectId, {originSurface: "ARTIFACT_BAY"});
+            }
             else if (filter) { this.state.artifactFilter = filter.dataset.studArtifactFilter; this.parent.parent.render(); }
             else if (newRun) { this.state.selectedPlanId=""; this.state.mission={...this.state.mission,executionPlan:null}; this.parent.parent.render(); }
             else if (executionSelect) { this.state.selectedPlanId=executionSelect.dataset.studExecutionSelect;this.state.mission=await this.request("stud-execution-state",{assignmentId:this.assignment().id,planId:executionSelect.dataset.studExecutionSelect,eventLimit:100,artifactLimit:50}); this.state.events=this.state.mission.events||[]; this.parent.parent.render(); }

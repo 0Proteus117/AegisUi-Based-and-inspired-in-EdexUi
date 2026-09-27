@@ -29,6 +29,7 @@ documents translate that intent into the audited v2.7.0 implementation:
 - [M11 Humanisation with Diff implementation and validation](STUD_M11_HUMANISATION_WITH_DIFF_VALIDATION.md)
 - [M12 Lecturer Committee / Corrections implementation and validation](STUD_M12_LECTURER_COMMITTEE_CORRECTIONS_VALIDATION.md)
 - [M13 Run Coordinator implementation and validation](STUD_M13_RUN_COORDINATOR_VALIDATION.md)
+- [M15 Final Package / Human Approval implementation and validation](STUD_M15_FINAL_PACKAGE_HUMAN_APPROVAL_VALIDATION.md)
 - [M1-M3 integration and final technical audit](STUD_M1_M3_INTEGRATION_AUDIT.md)
 - [Electron trust-boundary hardening](../../security/ELECTRON_TRUST_BOUNDARY_HARDENING_2026-08-24.md)
 
@@ -102,5 +103,12 @@ native Assignment UI and final mounted ARM64 validation. It distinguishes
 actual synthetic file operations from layout-only fixtures. M14 moves selected
 managed academic files, not the academic database or externally owned Ollama
 models; it does not claim a wholly portable Assignment environment. Its local
-validation DMG was not publicly released. The exact next product milestone is
-M15 — Final Package and Explicit Human Approval.
+validation DMG was not publicly released.
+
+M15 — Final Package and Explicit Human Approval implements schema v28,
+immutable packages from exact saved drafts and explicit human approval, with
+local HTML/Markdown export and no university submission. Its validation record
+documents the mounted ARM64 build, restart persistence, synthetic renderer
+acceptance and remaining manual-picker/format limitations. No public release
+was created. The exact next product milestone is **M16 — Private real
+acceptance, hardening and milestone release**; M16 has not started.

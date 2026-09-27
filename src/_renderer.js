@@ -75,6 +75,7 @@ window.applyAegisAppearance = (preference = window.getAegisAppearancePreference(
     // The established boot-splash controller consumes this value before UI
     // construction. It keeps first paint and the subsequent cockpit aligned.
     window.__aegisBootMode = resolved;
+    window.mods?.cpuinfo?.refreshAppearance();
     return {preference: selected, resolved};
 };
 

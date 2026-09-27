@@ -26,9 +26,12 @@ const {StudRunCoordinator} = require("./studRunCoordinator.class.js");
 const {StudStorageProfileService} = require("./studStorageProfileService.class.js");
 const {StudManagedStorageRuntime} = require("./studManagedStorageRuntime.class.js");
 const {StudStorageController, CHANNELS: STORAGE_CHANNELS} = require("./studStorageController.class.js");
+const {StudFinalPackageService} = require("./studFinalPackageService.class.js");
+const {CHANNELS: FINAL_PACKAGE_CHANNELS} = require("./studFinalPackageModel.class.js");
 
 const CHANNELS = Object.freeze([
     ...STORAGE_CHANNELS,
+    ...FINAL_PACKAGE_CHANNELS,
     "stud-core-status",
     "stud-entity-list",
     "stud-entity-read",
@@ -372,6 +375,7 @@ function registerStudAcademicIpc(options = {}) {
     });
     let shell = options.shell || null;
     if (!shell) { try { shell = require("electron").shell; } catch (error) {} }
+    const finalPackages = new StudFinalPackageService({store,composition,claims:claimEvidence,requirements,artifacts:artifactOperations,managedStorage,dialog,shell});
     const handlers = new Map();
     const add = (channel, keys, handler) => {
         if (handlers.has(channel)) throw new Error(`Duplicate STUD IPC channel: ${channel}`);
@@ -387,6 +391,7 @@ function registerStudAcademicIpc(options = {}) {
 
     add("stud-core-status", [], () => store.schemaInfo());
     storageController.register(add);
+    finalPackages.register(add);
     add("stud-entity-list", ["entityType", "courseId", "assignmentId", "limit", "includeArchived"], payload => store.listEntities(payload.entityType, payload));
     add("stud-entity-read", ["entityType", "entityId", "includeArchived"], payload => store.getEntity(payload.entityType, payload.entityId, payload.includeArchived === true));
     add("stud-entity-create", ["entityType", "value", "provenance"], payload => store.createEntity(payload.entityType, payload.value, {provenance: payload.provenance || null}));

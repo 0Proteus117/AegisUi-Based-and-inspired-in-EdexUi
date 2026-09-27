@@ -6,6 +6,10 @@ div#mod_cpuinfo {
     display: flex;
 }
 
+div#mod_cpuinfo canvas {
+    filter: drop-shadow(0 0 1px var(--aegis-cpu-glow));
+}
+
 div#mod_cpuinfo::before {
     content: "";
     border-left: 0.092vh solid rgba(var(--color_r), var(--color_g), var(--color_b), 0.3);

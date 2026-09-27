@@ -539,6 +539,14 @@ requirement/rubric coverage, citation audit, committee report, unresolved blocke
 and run audit. Generation does not imply approval. The student explicitly marks a
 package `APPROVED_FOR_MANUAL_SUBMISSION` after review.
 
+M15 implements this in schema v28 with a bounded service/repository/file layer,
+fixed preload operations and an Assignment Workspace review surface. Exact
+Draft/Plan/Contract references, source hashes, immutable file inventory and a
+separate human approval survive restart. HTML/Markdown and Citation.js outputs
+are supported; free-text citation checking and unsupported format conversion
+remain explicit human tasks. See the [M15 validation record](STUD_M15_FINAL_PACKAGE_HUMAN_APPROVAL_VALIDATION.md)
+for boundaries, gate semantics, tests and delivery evidence.
+
 There will be no `submit`, `upload-to-university` or Moodle-write IPC in this
 programme. Aegis may reveal/export a package; submission remains outside Aegis.
 

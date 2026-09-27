@@ -23,6 +23,8 @@
     --aegis-text-faint: #6f879b;
     --aegis-accent: #3ba7ff;
     --aegis-accent-soft: #7ccbff;
+    --aegis-cpu-line: #7ccbff;
+    --aegis-cpu-glow: rgba(124, 203, 255, .3);
     --aegis-accent-ink: #04111c;
     --aegis-success: #48c98a;
     --aegis-warning: #c9912f;
@@ -31,6 +33,21 @@
     --aegis-shadow: rgba(2, 13, 22, .18);
     --aegis-grid-line: rgba(59, 167, 255, .055);
 }
+
+.stud-final-package-workspace { color: var(--aegis-text); min-width: 0; }
+.stud-final-package-layout { display: grid; grid-template-columns: minmax(200px, 26%) minmax(0, 1fr); gap: 2rem; align-items: start; }
+.stud-final-package-layout > * { min-width: 0; overflow-wrap: anywhere; }
+.stud-final-package-layout aside { border-right: 1px solid var(--aegis-border-subtle); padding-right: 1.2rem; }
+.stud-final-package-layout label { display: block; margin: .8rem 0; }
+.stud-final-package-layout select { display: block; width: 100%; max-width: 100%; color: var(--aegis-text); background: var(--aegis-surface-input); }
+.stud-final-package-layout details { margin: 1rem 0; }
+.stud-final-package-layout button { max-width: 100%; white-space: normal; }
+.stud-final-package-layout li { margin: .5rem 0; }
+.stud-final-package-layout small { display: block; color: var(--aegis-text-muted); }
+.stud-final-package-preview { white-space: pre-wrap; overflow-wrap: anywhere; font: 1rem/1.65 Georgia,serif; color: var(--aegis-text); background: var(--aegis-surface); padding: 1.5rem; max-height: 65vh; overflow: auto; }
+.stud-final-package-approval { border-top: 1px solid var(--aegis-border-subtle); margin-top: 1.5rem; padding: 1rem 0; }
+.stud-final-package-issues { color: var(--aegis-text-muted); }
+@media (max-width: 1300px) { .stud-final-package-layout { grid-template-columns: minmax(0,1fr); gap: 1rem; } .stud-final-package-layout aside { border-right: 0; border-bottom: 1px solid var(--aegis-border-subtle); padding-bottom: 1rem; } }
 
 html[data-aegis-appearance="dark"] {
     color-scheme: dark;
@@ -54,6 +71,8 @@ html[data-aegis-appearance="light"] {
     --aegis-text-faint: #607c90;
     --aegis-accent: #076ea8;
     --aegis-accent-soft: #167eb8;
+    --aegis-cpu-line: #e8bf58;
+    --aegis-cpu-glow: rgba(255, 217, 128, .45);
     --aegis-accent-ink: #f6fbff;
     --aegis-success: #08784e;
     --aegis-warning: #926300;
