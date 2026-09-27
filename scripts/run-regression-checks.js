@@ -11,6 +11,7 @@ const CHECKS = [
     "scripts/test-stud-final-package.js",
     "scripts/test-stud-final-package-boundaries.js",
     "scripts/test-stud-final-package-workspace.js",
+    "scripts/test-cpu-chart-rendering.js",
     "scripts/test-aegisui-branding.js",
     "scripts/test-aegis-theme-integrity.js",
     "scripts/test-calendar-theme-integrity.js",

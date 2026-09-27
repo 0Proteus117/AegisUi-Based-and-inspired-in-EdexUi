@@ -132,3 +132,41 @@ packaging already applies this permission and signing explicitly.
 Final packaged/restart and broad regression outcomes are recorded below when
 completed. Preload changed, therefore an ARM64 validation DMG is required.
 No public release or version bump is authorized/needed for this milestone.
+
+## CPU user-feedback correction (27 September)
+
+The initial Light colour was rejected by the user as dark ochre. It is replaced
+with luminous gold `#e8bf58`, a one-pixel warm halo and 1.2-pixel traces; Dark
+retains light blue. The user visually accepted the revised gold. This acceptance
+does not by itself establish chart correctness.
+
+The misplaced/intermittent plotting report was investigated separately. The
+installed Smoothie responsive implementation does not update its backing store
+or transform on a DPR-only change, and includes border-box dimensions. Each CPU
+chart now owns an independently sized content-area backing store and resets its
+transform without accumulating scale. The fixed 0–100 range does not animate
+through an invalid startup scale. Missing/rejected telemetry cannot permanently
+leave the sampler busy. No CPU load is fabricated.
+
+`test-cpu-chart-rendering.js`: **7 passed**, covering separate group data, DPR,
+fractional sizes, invalid samples and sampling recovery.
+`validate-cpu-canvases-electron.js`: **5 passed**, real invisible Electron pixel
+checks using explicitly synthetic 80%/20% loads. Group one renders near 20% of
+its own plot height and group two near 80%, with non-overlapping plot rectangles.
+The same test against commit `927184e` passes @1x then fails @2x at unchanged
+layout size, reproducing the old DPR defect. The test window is isolated and
+does not modify the user's visible graph or telemetry. A macOS sandbox-extension
+diagnostic appeared for the external test executable; execution/pixel checks
+completed successfully without changing sandbox permissions.
+
+Broad regression after M15 corrections: **104 passed, 1 failed, 1 skipped**
+out of 106 suite scripts. The sole failure is inherited Map provider state:
+TomTom HTTP 401 and missing AISSTREAM_API_KEY. SAT/Celestrak is skipped by the
+existing runner policy. The added CPU suite and theme integrity were then run
+separately and passed. CodeQL-targeted security, Electron boundary tests,
+release-health and prebuild integrity passed; the CodeQL CLI is unavailable,
+so no fresh full CodeQL scan or zero-alert dashboard is claimed.
+
+Initial packaged API cycle and 72-case real-renderer matrix passed on the M15
+implementation build. The final image is rebuilt after the CPU correction;
+its identity and restart results follow in the final delivery record.

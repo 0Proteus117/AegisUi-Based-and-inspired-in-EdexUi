@@ -7,7 +7,7 @@ div#mod_cpuinfo {
 }
 
 div#mod_cpuinfo canvas {
-    filter: drop-shadow(0 0 2px var(--aegis-cpu-glow));
+    filter: drop-shadow(0 0 1px var(--aegis-cpu-glow));
 }
 
 div#mod_cpuinfo::before {

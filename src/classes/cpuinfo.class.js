@@ -56,9 +56,10 @@ class Cpuinfo {
             this.container.append(innercontainer);
 
             for (var i = 0; i < 2; i++) {
-                this.charts.push(new SmoothieChart({
+                const chart = new SmoothieChart({
                     limitFPS: 30,
                     responsive: true,
+                    scaleSmoothing: 1,
                     millisPerPixel: 50,
                     grid:{
                         fillStyle:'transparent',
@@ -72,7 +73,12 @@ class Cpuinfo {
                     yRangeFunction: () => {
                         return {min:0,max:100};
                     }
-                }));
+                });
+                // Smoothie's responsive resize tracks rounded layout dimensions,
+                // not DPR changes. Own the two canvas backing stores explicitly
+                // so a monitor/zoom change cannot leave half-scaled stale pixels.
+                chart.resize = () => this.resizeChart(chart);
+                this.charts.push(chart);
             }
 
             for (var i = 0; i < data.cores; i++) {
@@ -81,7 +87,7 @@ class Cpuinfo {
 
                 let serie = this.series[i];
                 let options = {
-                    lineWidth: 1.7,
+                    lineWidth: 1.2,
                     strokeStyle: this.chartColour()
                 };
 
@@ -123,19 +129,36 @@ class Cpuinfo {
     chartColour() {
         return getComputedStyle(document.documentElement).getPropertyValue("--aegis-cpu-line").trim() || "#7ccbff";
     }
+    resizeChart(chart) {
+        const canvas = chart.canvas;
+        if (!canvas) return;
+        const style = getComputedStyle(canvas), number = value => parseFloat(value) || 0;
+        const borderBox = style.boxSizing === "border-box";
+        const width = Math.max(1, number(style.width) - (borderBox ? number(style.borderLeftWidth) + number(style.borderRightWidth) + number(style.paddingLeft) + number(style.paddingRight) : 0));
+        const height = Math.max(1, number(style.height) - (borderBox ? number(style.borderTopWidth) + number(style.borderBottomWidth) + number(style.paddingTop) + number(style.paddingBottom) : 0));
+        const ratio = window.devicePixelRatio || 1;
+        const pixelsWide = Math.ceil(width * ratio), pixelsHigh = Math.ceil(height * ratio);
+        if (canvas.width !== pixelsWide) canvas.width = pixelsWide;
+        if (canvas.height !== pixelsHigh) canvas.height = pixelsHigh;
+        canvas.getContext("2d").setTransform(ratio, 0, 0, ratio, 0, 0);
+        chart.clientWidth = width;
+        chart.clientHeight = height;
+    }
     refreshAppearance() {
         const colour = this.chartColour();
         this.charts.forEach(chart => chart.seriesSet.forEach(series => { series.options.strokeStyle = colour; }));
     }
-    updateCPUload() {
+    async updateCPUload() {
         if (this.updatingCPUload) return;
         this.updatingCPUload = true;
-        window.si.currentLoad().then(data => {
+        try {
+            const data = await window.si.currentLoad();
             let average = [[], []];
 
-            if (!data.cpus) return; // Prevent memleak in rare case where systeminformation takes extra time to retrieve CPU info (see github issue #216)
+            if (!Array.isArray(data?.cpus)) return;
 
             data.cpus.forEach((e, i) => {
+                if (!this.series[i] || !Number.isFinite(e?.load) || e.load < 0 || e.load > 100) return;
                 this.series[i].append(new Date().getTime(), e.load);
 
                 if (i < this.divide) {
@@ -145,16 +168,17 @@ class Cpuinfo {
                 }
             });
             average.forEach((stats, i) => {
-                average[i] = Math.round(stats.reduce((a, b) => a + b, 0)/stats.length);
+                average[i] = stats.length ? `${Math.round(stats.reduce((a, b) => a + b, 0)/stats.length)}%` : "—";
 
                 try {
-                    document.getElementById(`mod_cpuinfo_usagecounter${i}`).innerText = `Avg. ${average[i]}%`;
+                    document.getElementById(`mod_cpuinfo_usagecounter${i}`).innerText = `Avg. ${average[i]}`;
                 } catch(e) {
                     // Fail silently, DOM element is probably getting refreshed (new theme, etc)
                 }
             });
-            this.updatingCPUload = false;
-        });
+        } catch (_) {
+            // A missing sample is not zero load; permit the next real sample.
+        } finally { this.updatingCPUload = false; }
     }
     updateCPUtemp() {
         window.si.cpuTemperature().then(data => {

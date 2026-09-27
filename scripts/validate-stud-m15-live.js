@@ -44,10 +44,14 @@ async function main(){
     await evaluate(`(async()=>{const cc=window.workspaceManager.studCommandCenter;await cc.selectAssignment(${JSON.stringify(f.assignmentId)});const v=cc.assignmentWorkspace;v.state.mode='FINAL_PACKAGE';await v.finalPackage.open();${f.packageId?`v.finalPackage.state.package=await v.request('stud-final-package-read',{assignmentId:${JSON.stringify(f.assignmentId)},packageId:${JSON.stringify(f.packageId)}});`:""}cc.render();return true;})()`);
     const r=await evaluate(`(()=>{const root=document.querySelector('.stud-final-package-workspace');if(!root)return {missing:true};const b=root.getBoundingClientRect(),controls=[...root.querySelectorAll('button,input,select,summary')].filter(e=>e.checkVisibility());return {overflow:root.scrollWidth>root.clientWidth+2,escaped:controls.filter(e=>{const r=e.getBoundingClientRect();return r.left<b.left-2||r.right>b.right+2;}).map(e=>e.textContent.slice(0,60)),node:typeof require,process:typeof process,buffer:typeof Buffer,appearance:document.documentElement.dataset.aegisAppearance,cpu:window.mods?.cpuinfo?.charts?.flatMap(c=>c.seriesSet.map(s=>s.options.strokeStyle)),error:window.workspaceManager.studCommandCenter.assignmentWorkspace.finalPackage.state.error,clip:{x:Math.max(0,b.x),y:Math.max(0,b.y),width:Math.min(innerWidth-b.x,b.width),height:Math.min(innerHeight-b.y,b.height),scale:1}}})()`);
     assert(!r.missing&&!r.overflow&&!r.escaped.length&&!r.error,JSON.stringify(r));assert.equal(r.node,"undefined");assert.equal(r.process,"undefined");assert.equal(r.buffer,"undefined");assert.equal(r.appearance,theme.endsWith("dark")?"dark":"light");
-    assert(r.cpu?.length&&r.cpu.every(c=>c===(r.appearance==="dark"?"#7ccbff":"#987018")),"CPU colour did not follow actual theme");
+    assert(r.cpu?.length&&r.cpu.every(c=>c===(r.appearance==="dark"?"#7ccbff":"#e8bf58")),"CPU colour did not follow actual theme");
     results.push({width,height,scale,theme,scenario:f.scenario,passed:true});
     if(width===1440&&(theme==="dark"||theme==="light")||width===1200&&theme==="light"&&f.scenario==="review"){
      const png=await call("Page.captureScreenshot",{format:"png",captureBeyondViewport:false,clip:r.clip});fs.writeFileSync(path.join(out,`${width}-${theme}-${f.scenario}.png`),Buffer.from(png.data,"base64"));
+     if(f.scenario==="review"){
+      const clip=await evaluate(`(()=>{const r=document.querySelector('#mod_cpuinfo').getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height,scale:1};})()`);
+      const cpu=await call("Page.captureScreenshot",{format:"png",captureBeyondViewport:false,clip});fs.writeFileSync(path.join(out,`${width}-${theme}-cpu.png`),Buffer.from(cpu.data,"base64"));
+     }
     }
    }
   }

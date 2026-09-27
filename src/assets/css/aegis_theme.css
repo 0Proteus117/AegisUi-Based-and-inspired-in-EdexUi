@@ -71,8 +71,8 @@ html[data-aegis-appearance="light"] {
     --aegis-text-faint: #607c90;
     --aegis-accent: #076ea8;
     --aegis-accent-soft: #167eb8;
-    --aegis-cpu-line: #987018;
-    --aegis-cpu-glow: rgba(211, 161, 51, .48);
+    --aegis-cpu-line: #e8bf58;
+    --aegis-cpu-glow: rgba(255, 217, 128, .45);
     --aegis-accent-ink: #f6fbff;
     --aegis-success: #08784e;
     --aegis-warning: #926300;
