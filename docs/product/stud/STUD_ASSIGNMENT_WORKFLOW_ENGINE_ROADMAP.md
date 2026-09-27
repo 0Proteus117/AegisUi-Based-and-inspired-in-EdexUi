@@ -515,10 +515,13 @@ remain explicit conversion/review tasks. No automatic submission is introduced.
 
 ## Exact next milestone
 
-M1, the dedicated Electron Trust-Boundary Hardening intervention, and M2–M14 are
+M1, the dedicated Electron Trust-Boundary Hardening intervention, and M2–M15 are
 complete. M14's validated portable scope is selected canonical managed academic
 files; it explicitly excludes the local SQLite database, application bundle,
 secrets and externally owned Ollama models. The exact next product milestone is
-**M15 — Final Package and Explicit Human Approval**. M14 does not introduce
-model installation, cloud fallback, automatic academic acceptance, grading,
-submission or a background daemon.
+**M16 — Private real acceptance, hardening and milestone release**. M15's
+validation record separates real packaged API/renderer acceptance from the
+remaining manual native-picker check. Output is HTML/Markdown, not native
+PDF/DOCX. Neither M14 nor M15 introduces model installation, cloud fallback,
+automatic academic acceptance, grading, submission or a background daemon.
+M16 has not started.

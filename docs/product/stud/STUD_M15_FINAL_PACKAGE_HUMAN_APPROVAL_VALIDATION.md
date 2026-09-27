@@ -88,7 +88,7 @@ certificates. There is absolutely no upload/submission operation.
 
 Focused tests: `test-stud-final-package.js` (20),
 `test-stud-final-package-boundaries.js` (13),
-`test-stud-final-package-workspace.js` (8). Covers real SQLite rollback,
+`test-stud-final-package-workspace.js` (9). Covers real SQLite rollback,
 no fabricated state, restart, immutable approval, exact citations, source
 drift/missing bytes, native-picker export contract, malicious HTML/paths,
 foreign senders, explicit M4 gates and stale renderer responses.
@@ -129,8 +129,8 @@ an installed node-pty spawn-helper missing its execute bit; restoring that
 local dependency permission allowed the unchanged terminal to connect. Existing
 packaging already applies this permission and signing explicitly.
 
-Final packaged/restart and broad regression outcomes are recorded below when
-completed. Preload changed, therefore an ARM64 validation DMG is required.
+Final packaged/restart and broad regression outcomes are recorded below.
+Preload changed, therefore an ARM64 validation DMG was required.
 No public release or version bump is authorized/needed for this milestone.
 
 ## CPU user-feedback correction (27 September)
@@ -170,3 +170,67 @@ so no fresh full CodeQL scan or zero-alert dashboard is claimed.
 Initial packaged API cycle and 72-case real-renderer matrix passed on the M15
 implementation build. The final image is rebuilt after the CPU correction;
 its identity and restart results follow in the final delivery record.
+
+## Final delivery validation — 27 September 2026
+
+Runtime implementation: `927184ee4d68ed362db0fc84d01bb5d241b3fb1a`;
+CPU correction and expanded acceptance fixtures:
+`5b0902c27224560352e5e6f21a405f2facba4f0a`. Subsequent closure changes are
+documentation and one renderer test only, not packaged runtime changes.
+
+Validation artifact: `AegisUi-2.7.1-M15-5b0902c-arm64-validation.dmg`.
+Size: 155,043,615 bytes. SHA-256:
+`536bfa5c4828fc8e4fa74a0b7ea77d7c4f532bbf670d2f4d1ece21213684ab63`.
+The image was verified, mounted and launched from its mounted volume, with a
+disposable synthetic profile, offline mode and update checks disabled.
+`codesign --verify --deep --strict` passed. This is an ad-hoc signed local
+validation image, not a notarized public release.
+
+The standard minification step stalled on the large file-icons JSON. The
+validation image instead packages unminified current source, using the same
+prebuild integrity stamp and builder. No security guard was bypassed.
+Packaged `app.asar` verification compared nine affected runtime files byte for
+byte with source, including preload, bootstrap, package domain/UI, CPU and
+theme files. Its recorded source HEAD is `5b0902c27224560352e5e6f21a405f2facba4f0a`
+and source digest is
+`e5de70bc5fc9da8ec1e0892be72ee67d6de7faad0a9caeb45ff34b1fdbff440a`.
+The build emitted a node-gyp path-with-spaces warning but completed; packaged
+terminal connection passed. Calendar helper is physically present as ARM64.
+
+Final packaged API acceptance created a candidate, rejected approval without
+the human-review confirmation, explicitly approved synthetic test content and
+re-read verified immutable bytes. After terminating and relaunching this same
+mounted application, the approval timestamp, manifest hash and verified files
+were retained. No university submission or provider generation was performed.
+
+The final renderer matrix passed **72/72 cases**, then passed again after restart:
+empty, review, blocked, approved, long content and source-changed states across
+Dark, Light, System-to-Dark and System-to-Light at 1680×1050 @2×,
+1440×900 @2× and 1200×780 @1×. Checks cover horizontal overflow, escaped
+controls, live CPU colours and absent renderer Node globals. Captures contain
+synthetic STUD surfaces and the CPU plot only. Compact layout uses vertical
+scrolling; a viewport capture is not evidence that every report fits onscreen.
+
+Packaged runtime checks passed canonical Course/Assignment, Requirements,
+Workflow, Working Context, organisation/classification, Citation.js, Moodle
+boundary loading, document/compute capability access and terminal connection.
+The Assistant/Ollama check establishes the status API is exposed, **not** that
+a model generated output or was ready. Real institutional SSO and Calendar
+account access were not repeated in this synthetic milestone acceptance.
+
+Native UI automation could not attach reliably to the mounted application.
+Therefore no manual native export-picker click-through is claimed. Focused
+tests exercise the native-dialog contract, actual export bytes and receipt;
+packaged creation/approval and renderer validation use the real preload/main
+boundary. Manual picker acceptance remains a disclosed M16 validation item.
+
+Final totals: **42 focused package assertions**, **5 scale assertions**,
+**7 CPU unit assertions**, **5 Electron pixel cases** and **21 theme checks**
+passed. Broad suite outcome remains **104 passed / 1 inherited environment
+failure / 1 skipped**, as detailed above; no new failure was found. Release
+health and `git diff --check` passed. No full CodeQL run is claimed.
+
+M15 implementation and scoped synthetic acceptance are complete with the above
+limitations. No public release, automatic submission or M16 implementation was
+performed. Next product milestone: **M16 — Private real acceptance, hardening
+and milestone release**.

@@ -103,5 +103,12 @@ native Assignment UI and final mounted ARM64 validation. It distinguishes
 actual synthetic file operations from layout-only fixtures. M14 moves selected
 managed academic files, not the academic database or externally owned Ollama
 models; it does not claim a wholly portable Assignment environment. Its local
-validation DMG was not publicly released. The exact next product milestone is
-M15 — Final Package and Explicit Human Approval.
+validation DMG was not publicly released.
+
+M15 — Final Package and Explicit Human Approval implements schema v28,
+immutable packages from exact saved drafts and explicit human approval, with
+local HTML/Markdown export and no university submission. Its validation record
+documents the mounted ARM64 build, restart persistence, synthetic renderer
+acceptance and remaining manual-picker/format limitations. No public release
+was created. The exact next product milestone is **M16 — Private real
+acceptance, hardening and milestone release**; M16 has not started.
