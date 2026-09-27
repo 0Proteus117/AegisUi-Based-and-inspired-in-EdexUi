@@ -8,6 +8,7 @@ const CompositionWorkspace = typeof StudCompositionWorkspace !== "undefined" ? S
 const HumanisationWorkspace = typeof StudHumanisationWorkspace !== "undefined" ? StudHumanisationWorkspace : require("./studHumanisationWorkspace.class.js").StudHumanisationWorkspace;
 const LecturerCommitteeWorkspace = typeof StudLecturerCommitteeWorkspace !== "undefined" ? StudLecturerCommitteeWorkspace : require("./studLecturerCommitteeWorkspace.class.js").StudLecturerCommitteeWorkspace;
 const StorageWorkspace = typeof StudStorageWorkspace !== "undefined" ? StudStorageWorkspace : require("./studStorageWorkspace.class.js").StudStorageWorkspace;
+const FinalPackageWorkspace = typeof StudFinalPackageWorkspace !== "undefined" ? StudFinalPackageWorkspace : require("./studFinalPackageWorkspace.class.js").StudFinalPackageWorkspace;
 
 // M5 is intentionally a composition layer. It owns no academic records: every
 // entry below is a canonical STUD object already related to the active
@@ -86,6 +87,7 @@ class StudAssignmentWorkspace {
         this.humanisation = new HumanisationWorkspace({request: this.request, escape: this.escape, showToast: this.showToast, parent: this});
         this.lecturerCommittee = new LecturerCommitteeWorkspace({request: this.request, escape: this.escape, showToast: this.showToast, parent: this});
         this.storage = new StorageWorkspace({request: this.request, escape: this.escape, parent: this});
+        this.finalPackage = new FinalPackageWorkspace({request:this.request,escape:this.escape,parent:this});
     }
 
     setState(context, workingContext, courseContext = null) {
@@ -110,6 +112,7 @@ class StudAssignmentWorkspace {
             this.humanisation.reset();
             this.lecturerCommittee.reset();
             this.storage.reset();
+            this.finalPackage.reset();
         }
         const active = workingContext && workingContext.activeObject;
         if (active && assignment && findWorkspaceObject(this.objectsContext(), active.entityType, active.id)) {
@@ -266,6 +269,7 @@ class StudAssignmentWorkspace {
             <div class="stud-assignment-workspace-context"><small>WORKING ON</small><strong>${workflow && node ? this.escape(node.title) : workflow ? "SELECT A STAGE" : "PLAN NOT CREATED"}</strong><span>${workflow && node ? this.escape(this.nodeStatus(node)) : "NO WORK EXECUTES AUTOMATICALLY"}</span></div>
             <div class="stud-assignment-workspace-status${requirement.attention || attention ? " has-attention" : ""}"><small>REQUIREMENTS</small><strong>${this.escape(requirement.label)}</strong><span>${this.escape(requirement.detail)}</span></div>
             <details class="stud-storage-entry"><summary>Files &amp; storage</summary><button type="button" data-stud-workspace-mode="STORAGE">Manage academic files</button></details>
+            <button type="button" data-stud-workspace-mode="FINAL_PACKAGE">Final package</button>
         </header>`;
     }
 
@@ -389,6 +393,7 @@ class StudAssignmentWorkspace {
             return `<section class="stud-assignment-workspace-empty"><small>WORK / ASSIGNMENT WORKSPACE</small><h2>Choose an Assignment to begin focused work</h2><p>STUD will restore your last valid local Assignment context when one exists. No provider, AI or workflow execution starts here.</p>${candidates.length ? `<div>${candidates.map(item => `<button type="button" data-stud-open-assignment="${this.escape(item.id)}"><strong>${this.escape(item.title)}</strong><small>${this.escape(this.parent.courseLabel(item.courseId))}</small></button>`).join("")}</div>` : `<button type="button" data-stud-dialog="CREATE_ASSIGNMENT">CREATE MANUAL ASSIGNMENT</button>`}</section>`;
         }
         if (this.state.mode === "REQUIREMENTS") return `<section class="stud-assignment-workspace-detail"><header><button type="button" data-stud-workspace-mode="WORK">← WORKSPACE</button><div><small>ASSIGNMENT REQUIREMENTS</small><h2>${this.escape(assignment.title)}</h2></div></header>${this.parent.requirements.render()}</section>`;
+        if (this.state.mode === "FINAL_PACKAGE") return `<section class="stud-assignment-workspace-detail is-final-package"><header><button type="button" data-stud-workspace-mode="WORK">← Workspace</button><h2>${this.escape(assignment.title)}</h2></header>${this.finalPackage.render()}</section>`;
         if (this.state.mode === "STORAGE") return `<section class="stud-assignment-workspace-detail is-storage"><header><button type="button" data-stud-workspace-mode="WORK">← Workspace</button><h2>${this.escape(assignment.title)}</h2></header>${this.storage.render()}</section>`;
         if (this.state.mode === "WORKFLOW") return `<section class="stud-assignment-workspace-detail"><header><button type="button" data-stud-workspace-mode="WORK">← WORKSPACE</button><div><small>ASSIGNMENT WORKFLOW</small><h2>${this.escape(assignment.title)}</h2></div></header>${this.parent.workflow.render()}</section>`;
         if (this.state.mode === "RESEARCH_PLAN") return `<section class="stud-assignment-workspace-detail is-research-plan"><header><button type="button" data-stud-workspace-mode="WORK">← WORKSPACE</button><div><small>RESEARCH PLAN / TOPIC DOSSIERS</small><h2>${this.escape(assignment.title)}</h2></div></header>${this.researchPlan.render()}</section>`;
@@ -469,6 +474,7 @@ class StudAssignmentWorkspace {
 
     async handleClick(event) {
         if (await this.storage.handleClick(event)) return true;
+        if (await this.finalPackage.handleClick(event)) return true;
         if (await this.operational.handleClick(event)) return true;
         if (await this.researchPlan.handleClick(event)) return true;
         if (await this.evidenceMap.handleClick(event)) return true;
@@ -502,6 +508,7 @@ class StudAssignmentWorkspace {
             if (this.state.mode === "HUMANISATION") await this.humanisation.open();
             if (this.state.mode === "LECTURER_REVIEW") await this.lecturerCommittee.open();
             if (this.state.mode === "STORAGE") await this.storage.open();
+            if (this.state.mode === "FINAL_PACKAGE") await this.finalPackage.open();
             this.parent.render();
         }
         else if (showMaterials) { this.state.materialsOpen = true; this.parent.render(); }
@@ -518,7 +525,7 @@ class StudAssignmentWorkspace {
         return true;
     }
 
-    async handleSubmit(event) { if (await this.evidenceMap.handleSubmit(event)) return true; if (await this.facultyScout.handleSubmit(event)) return true; if (await this.composition.handleSubmit(event)) return true; if (await this.humanisation.handleSubmit(event)) return true; if (await this.lecturerCommittee.handleSubmit(event)) return true; return this.researchPlan.handleSubmit(event); }
+    async handleSubmit(event) { if(await this.finalPackage.handleSubmit(event))return true; if (await this.evidenceMap.handleSubmit(event)) return true; if (await this.facultyScout.handleSubmit(event)) return true; if (await this.composition.handleSubmit(event)) return true; if (await this.humanisation.handleSubmit(event)) return true; if (await this.lecturerCommittee.handleSubmit(event)) return true; return this.researchPlan.handleSubmit(event); }
     async handleChange(event) { if(await this.storage.handleChange(event))return true;if(await this.humanisation.handleChange(event))return true;return this.lecturerCommittee.handleChange(event); }
 }
 

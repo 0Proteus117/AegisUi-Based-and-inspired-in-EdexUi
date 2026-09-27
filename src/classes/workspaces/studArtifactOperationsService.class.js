@@ -48,6 +48,11 @@ class StudArtifactOperationsService {
     scopedArtifact(assignmentId, artifactId) { const assignment = this.assignment(assignmentId); const artifact = this.repository.requireArtifact(artifactId); if (artifact.assignmentId !== assignment.id) throw new Academic.StudError("CROSS_ASSIGNMENT_ARTIFACT", "Artifact does not belong to this Assignment."); return artifact; }
     scopedRun(assignmentId, runId) { const assignment = this.assignment(assignmentId); const run = this.repository.requireRun(runId); if (run.assignmentId !== assignment.id) throw new Academic.StudError("INVALID_INPUT", "Operation Run does not belong to this Assignment."); return run; }
     canonical(type, id) {
+        if (type === "FINAL_PACKAGE") {
+            const row = this.repository.db.prepare("SELECT id,assignment_id,title,manifest_hash,created_at FROM stud_final_packages WHERE id=?").get(Academic.safeId(id,"Package ID"));
+            if (!row) throw new Academic.StudError("NOT_FOUND", "Final package does not exist.");
+            return {id:row.id,assignmentId:row.assignment_id,title:row.title,contentHash:row.manifest_hash,createdAt:row.created_at,entityType:"FINAL_PACKAGE"};
+        }
         if (String(type || "").toUpperCase() === "DRAFT_VERSION") {
             const objectId = Academic.safeId(id, "Draft Version ID");
             const row = this.repository.db.prepare(`SELECT v.id,v.draft_id,v.assignment_id,v.version_number,v.content_hash,v.created_at,d.title
@@ -80,10 +85,10 @@ class StudArtifactOperationsService {
     eventCanonical(assignment, type, id) {
         if (!type && !id) return {canonicalObjectType: null, canonicalObjectId: null};
         if (!type || !id) throw new Academic.StudError("INVALID_INPUT", "Event canonical object type and ID must be supplied together.");
-        if (String(type || "").toUpperCase() === "DRAFT_VERSION") {
-            const object = this.canonical("DRAFT_VERSION", id);
+        if (["DRAFT_VERSION", "FINAL_PACKAGE"].includes(String(type || "").toUpperCase())) {
+            const object = this.canonical(String(type).toUpperCase(), id);
             if (object.assignmentId !== assignment.id) throw new Academic.StudError("CONTEXT_RELATION_REQUIRED", "Event Draft Version belongs to another Assignment.");
-            return {canonicalObjectType: "DRAFT_VERSION", canonicalObjectId: object.id};
+            return {canonicalObjectType: object.entityType, canonicalObjectId: object.id};
         }
         const entityType = Academic.validateEntityType(type);
         const objectId = Academic.safeId(id, "Canonical object ID");
@@ -99,7 +104,7 @@ class StudArtifactOperationsService {
         Academic.assertAllowedKeys(input, ["assignmentId", "canonicalObjectType", "canonicalObjectId", "artifactType", "label", "origin", "producer", "workflowId", "workflowNodeId", "runId", "parentArtifactId", "metadata", "integrityHash", "availabilityState"], "Artifact registration");
         const assignment = this.assignment(input.assignmentId);
         const object = this.canonical(input.canonicalObjectType, input.canonicalObjectId);
-        if (object.entityType === "DRAFT_VERSION") {
+        if (["DRAFT_VERSION", "FINAL_PACKAGE"].includes(object.entityType)) {
             if (object.assignmentId !== assignment.id) throw new Academic.StudError("CONTEXT_RELATION_REQUIRED", "Draft Version Artifact belongs to another Assignment.");
         } else this.scopeObject(assignment, object);
         const workflow = this.workflowScope(assignment.id, input.workflowId || null, input.workflowNodeId || null);

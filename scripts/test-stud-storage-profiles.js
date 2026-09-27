@@ -12,11 +12,12 @@ let store,passed=0;
 async function check(name,work){await work();passed++;console.log(`${name}: PASS`);}
 function expect(code,work){assert.throws(work,error=>error.code===code);}
 function strip27(dbPath){const db=new DatabaseSync(dbPath);db.exec(`PRAGMA foreign_keys=OFF;
+DROP TABLE stud_final_package_approvals; DROP TABLE stud_final_package_files; DROP TABLE stud_final_package_sources; DROP TABLE stud_final_packages;
 DROP INDEX stud_storage_document_reference_index; DROP INDEX stud_storage_paper_reference_index;
 DROP INDEX stud_storage_resource_reference_index; DROP INDEX stud_storage_dataset_reference_index;
 DROP TABLE stud_storage_cleanup_records; DROP TABLE stud_storage_copies; DROP TABLE stud_storage_manifest_sources; DROP TABLE stud_storage_manifest_review_issues; DROP TABLE stud_storage_manifest_items;
 DROP TABLE stud_storage_manifests; DROP TABLE stud_storage_assets; DROP TABLE stud_storage_profiles;
-DELETE FROM stud_schema_migrations WHERE version=27;`);db.close();}
+DELETE FROM stud_schema_migrations WHERE version>=27;`);db.close();}
 (async()=>{try{
     const local=path.join(root,"local"),mount=path.join(root,"Synthetic external disk");fs.mkdirSync(mount);
     store=new StudAcademicStore({root:local}).initialize();
@@ -24,7 +25,7 @@ DELETE FROM stud_schema_migrations WHERE version=27;`);db.close();}
     const paths=new StudStoragePaths({localRoot:local,volumeInfo:()=>({uuid,mountPoint})});
     let service=new StudStorageProfileService({store,paths,dialog:{showOpenDialog:async()=>selection}});
     await check("FRESH_V27_LOCAL_PROFILE_WITHOUT_FABRICATED_ASSIGNMENT_STATE",()=>{
-        assert.strictEqual(store.schemaInfo().version,27);
+        assert.strictEqual(store.schemaInfo().version,28);
         assert.strictEqual(service.profiles().length,1);
         for(const table of ["stud_storage_assets","stud_storage_manifests","stud_storage_manifest_items","stud_storage_manifest_sources","stud_storage_manifest_review_issues","stud_storage_copies","stud_storage_cleanup_records"])assert.strictEqual(store.db.prepare(`SELECT COUNT(*) count FROM ${table}`).get().count,0);
         assert.deepStrictEqual(store.db.prepare("PRAGMA foreign_key_check").all(),[]);
@@ -101,7 +102,7 @@ DELETE FROM stud_schema_migrations WHERE version=27;`);db.close();}
     const old=migration.createEntity("ASSIGNMENT",{title:"Existing academic state"});migration.close();strip27(path.join(migrationRoot,"academic.sqlite"));
     await check("V26_TO_V27_PRESERVES_EXISTING_ASSIGNMENT_WITHOUT_MOVEMENT",()=>{
         const before=new DatabaseSync(path.join(migrationRoot,"academic.sqlite"));assert.strictEqual(before.prepare("SELECT MAX(version) version FROM stud_schema_migrations").get().version,26);before.close();
-        migration=new StudAcademicStore({root:migrationRoot}).initialize();assert.strictEqual(migration.schemaInfo().version,27);assert.ok(migration.getEntity("ASSIGNMENT",old.id));
+        migration=new StudAcademicStore({root:migrationRoot}).initialize();assert.strictEqual(migration.schemaInfo().version,28);assert.ok(migration.getEntity("ASSIGNMENT",old.id));
         assert.strictEqual(migration.db.prepare("SELECT COUNT(*) count FROM stud_storage_assets").get().count,0);assert.deepStrictEqual(migration.db.prepare("PRAGMA foreign_key_check").all(),[]);migration.close();
     });
     const rollbackRoot=path.join(root,"rollback");let rollback=new StudAcademicStore({root:rollbackRoot}).initialize();const retained=rollback.createEntity("ASSIGNMENT",{title:"Rollback retained"});rollback.close();strip27(path.join(rollbackRoot,"academic.sqlite"));

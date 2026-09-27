@@ -29,6 +29,7 @@ documents translate that intent into the audited v2.7.0 implementation:
 - [M11 Humanisation with Diff implementation and validation](STUD_M11_HUMANISATION_WITH_DIFF_VALIDATION.md)
 - [M12 Lecturer Committee / Corrections implementation and validation](STUD_M12_LECTURER_COMMITTEE_CORRECTIONS_VALIDATION.md)
 - [M13 Run Coordinator implementation and validation](STUD_M13_RUN_COORDINATOR_VALIDATION.md)
+- [M15 Final Package / Human Approval implementation and validation](STUD_M15_FINAL_PACKAGE_HUMAN_APPROVAL_VALIDATION.md)
 - [M1-M3 integration and final technical audit](STUD_M1_M3_INTEGRATION_AUDIT.md)
 - [Electron trust-boundary hardening](../../security/ELECTRON_TRUST_BOUNDARY_HARDENING_2026-08-24.md)
 

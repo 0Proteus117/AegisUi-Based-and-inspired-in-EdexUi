@@ -460,6 +460,11 @@ dependency-risk disposition remain open. No public release has been made.
 
 ## M15 — Final package and explicit human approval
 
+Implementation and acceptance evidence: [M15 validation record](STUD_M15_FINAL_PACKAGE_HUMAN_APPROVAL_VALIDATION.md).
+Schema v28 implements exact Draft/Contract packages and immutable human approval.
+Only HTML/Markdown academic output is generated; unsupported submission formats
+remain explicit conversion/review tasks. No automatic submission is introduced.
+
 - **Objective:** assemble a traceable candidate package and stop at student review.
 - **Exact scope:** selected draft/bibliography/appendices, coverage, citation audit,
   committee/blocker reports, run audit, integrity manifest, reveal/export and

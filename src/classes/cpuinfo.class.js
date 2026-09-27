@@ -82,7 +82,7 @@ class Cpuinfo {
                 let serie = this.series[i];
                 let options = {
                     lineWidth: 1.7,
-                    strokeStyle: `rgb(${window.theme.r},${window.theme.g},${window.theme.b})`
+                    strokeStyle: this.chartColour()
                 };
 
                 if (i < divide) {
@@ -119,6 +119,13 @@ class Cpuinfo {
                 this.updateCPUtasks();
             }, 5000);
         });
+    }
+    chartColour() {
+        return getComputedStyle(document.documentElement).getPropertyValue("--aegis-cpu-line").trim() || "#7ccbff";
+    }
+    refreshAppearance() {
+        const colour = this.chartColour();
+        this.charts.forEach(chart => chart.seriesSet.forEach(series => { series.options.strokeStyle = colour; }));
     }
     updateCPUload() {
         if (this.updatingCPUload) return;

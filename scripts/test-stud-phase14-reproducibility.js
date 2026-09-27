@@ -73,6 +73,8 @@ function removeM13Schema(store) {
 }
 
 function removeM14Schema(store) {
+    // Remove later extensions too: the fixture must actually represent v12/v9.
+    removeTables(store, ["stud_final_package_approvals", "stud_final_package_files", "stud_final_package_sources", "stud_final_packages"]);
     removeTables(store, STORAGE_TABLES);
     store.db.exec(`DROP INDEX IF EXISTS stud_storage_document_reference_index;
         DROP INDEX IF EXISTS stud_storage_paper_reference_index;
