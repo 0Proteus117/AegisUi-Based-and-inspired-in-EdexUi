@@ -68,8 +68,10 @@ Observed model: `llama3.2:3b`, digest
 `a80c4f17acd55265feec403c7aef86be0c25983ab279d83f3bcd3abbcb5b8b72`.
 It remains the only installed model. Its drafting and academic-review probes did
 not pass. The router therefore records `NO_SUITABLE_MODEL`; no gate is lowered
-and no Master's-quality capability is claimed. Master Specification section 80
-explicitly permits that drafting acceptance result. The real model was exercised
+and no Master's-quality capability is claimed. Master Specification section 19
+requires honest limited-capability reporting for the weak-model-only scenario;
+this does not establish the separate end-to-end high-quality drafting scenario.
+The real model was exercised
 by the three-trial capability probe, but no model execution attempt, candidate or
 Artifact is claimed because routing failed closed before academic generation.
 The runtime acceptance result is `PASS_WITH_EXPECTED_NO_SUITABLE_MODEL`.

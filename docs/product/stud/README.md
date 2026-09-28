@@ -111,4 +111,8 @@ local HTML/Markdown export and no university submission. Its validation record
 documents the mounted ARM64 build, restart persistence, synthetic renderer
 acceptance and remaining manual-picker/format limitations. No public release
 was created. The exact next product milestone is **M16 — Private real
-acceptance, hardening and milestone release**; M16 has not started.
+acceptance, hardening and milestone release**; M16 is in progress. See
+[M16 acceptance and hardening evidence](STUD_M16_FINAL_ACCEPTANCE_VALIDATION.md)
+for validated corrections, limited private intake and remaining closure gates.
+After M16, the user's next priority is a dedicated STUD usability simplification
+and human validation, before the queued Map programme.

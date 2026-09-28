@@ -62,7 +62,9 @@ async function defaultPdfJsLoader() {
 function standardFontDataUrl() {
     try {
         const font = require.resolve("pdfjs-dist/standard_fonts/FoxitSymbol.pfb");
-        return pathToFileURL(`${path.dirname(font)}${path.sep}`).href;
+        // PDF.js's Node factory passes this string directly to fs.readFile.
+        // A file: URL string is not a filesystem path (notably on spaced volumes).
+        return `${path.dirname(font)}${path.sep}`;
     } catch (_) { return undefined; }
 }
 

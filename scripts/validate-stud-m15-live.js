@@ -15,6 +15,10 @@ async function main(){
  const evaluate=async expression=>{const r=await call("Runtime.evaluate",{expression,awaitPromise:true,returnByValue:true});if(r.exceptionDetails)throw Error(JSON.stringify(r.exceptionDetails));return r.result.value;};
  fs.mkdirSync(out,{recursive:true});const results=[];
  try{
+  // A freshly launched app may still be displaying its boot splash. Wait for
+  // actual renderer readiness before activating a workspace, not a fixed sleep.
+  for(let i=0;i<300;i++){if(await evaluate(`typeof window.workspaceManager?.activate==='function'`))break;await new Promise(r=>setTimeout(r,100));}
+  assert(await evaluate(`typeof window.workspaceManager?.activate==='function'`),"Renderer did not become ready within 30 seconds");
   await evaluate(`(async()=>{await window.workspaceManager.activate('student',false);return true;})()`);
   // STUD bootstrap has asynchronous store loading. Poll its actual ready state.
   for(let i=0;i<100;i++){if(await evaluate(`!!window.workspaceManager.studCommandCenter?.state.schema`))break;await new Promise(r=>setTimeout(r,100));}
@@ -29,7 +33,7 @@ async function main(){
     const restored=await invoke('stud-final-package-read',{assignmentId:a,packageId:p.id});
     if(restored.approval?.manifestHash!==p.manifestHash||restored.preview!==p.preview)throw Error('Approved package changed');
     return {assignmentId:a,packageId:p.id,manifestHash:p.manifestHash,approvedAt:approved.approval.approvedAt,integrity:restored.integrity,syntheticTest:true};})()`);
-   fs.writeFileSync(path.join(out,"cycle-result.json"),JSON.stringify(cycle,null,2));console.log("M15_PACKAGED_API_CYCLE: PASS (synthetic explicit approval; no submission)");
+   fs.writeFileSync(path.join(out,"cycle-result.json"),JSON.stringify(cycle,null,2));console.log("M15_RENDERER_API_CYCLE: PASS (synthetic explicit approval; no submission; build identity recorded separately)");
   }
   if(process.argv.includes("--restart")){
    const prior=JSON.parse(fs.readFileSync(path.join(out,"cycle-result.json")));

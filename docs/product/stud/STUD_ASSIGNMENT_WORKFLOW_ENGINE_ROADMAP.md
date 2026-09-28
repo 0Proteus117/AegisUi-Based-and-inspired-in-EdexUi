@@ -489,6 +489,11 @@ remain explicit conversion/review tasks. No automatic submission is introduced.
 
 ## M16 — Private real acceptance, hardening and milestone release
 
+**Status: IN PROGRESS.** See
+[M16 validation](STUD_M16_FINAL_ACCEPTANCE_VALIDATION.md). Partial private intake
+and synthetic acceptance are not final milestone closure. Follow M16 with the
+user-requested STUD usability simplification/validation before the Map programme.
+
 - **Objective:** prove the complete engine using public synthetic fixtures and the
   private/local EG4020 RESIT case without publishing private content.
 - **Exact scope:** end-to-end run, crash/resume, offline/storage, blocked-team-data
@@ -524,4 +529,4 @@ validation record separates real packaged API/renderer acceptance from the
 remaining manual native-picker check. Output is HTML/Markdown, not native
 PDF/DOCX. Neither M14 nor M15 introduces model installation, cloud fallback,
 automatic academic acceptance, grading, submission or a background daemon.
-M16 has not started.
+M16 is in progress; its remaining gates are recorded in the validation document.

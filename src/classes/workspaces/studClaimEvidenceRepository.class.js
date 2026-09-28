@@ -100,7 +100,7 @@ class StudClaimEvidenceRepository {
     }
 
     updateEvidence(value) {
-        const result = this.db.prepare(`UPDATE stud_evidence_records SET citation_paper_id=?,locator_json=?,excerpt=?,reviewer_note=?,row_version=row_version+1,updated_at=? WHERE id=? AND review_state='UNREVIEWED' AND row_version=?`).run(value.citationPaperId,value.locatorJson,value.excerpt,value.reviewerNote,Academic.now(),value.id,value.expectedVersion);
+        const result = this.db.prepare(`UPDATE stud_evidence_records SET citation_paper_id=?,locator_json=?,excerpt=?,reviewer_note=?,location_type=?,document_id=?,extraction_id=?,chunk_id=?,page_start=?,page_end=?,source_snapshot_hash=?,extraction_method=?,row_version=row_version+1,updated_at=? WHERE id=? AND review_state='UNREVIEWED' AND row_version=?`).run(value.citationPaperId,value.locatorJson,value.excerpt,value.reviewerNote,value.locationType,value.documentId,value.extractionId,value.chunkId,value.pageStart,value.pageEnd,value.sourceSnapshotHash,value.extractionMethod,Academic.now(),value.id,value.expectedVersion);
         if (!result.changes) throw new Academic.StudError("STALE_EVIDENCE_VERSION", "Evidence changed before the update completed, or is no longer unreviewed.");
         return this.evidence(value.id);
     }
