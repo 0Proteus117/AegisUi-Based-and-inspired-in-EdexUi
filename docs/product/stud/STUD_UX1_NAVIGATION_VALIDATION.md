@@ -75,6 +75,55 @@ Local-only evidence: `ux1-navigation/2026-10-06/` in the external test-artifact
 directory. No private university material, actual course titles, original paths,
 credentials or model conversations are committed. Fixtures are synthetic.
 
+## Packaged validation
+
+Validation-only ARM64 build from implementation commit
+`b09021ab2e4603ea62243fe2aaf633b0f2c25c9b`:
+
+- `AegisUi-2.7.1-arm64.dmg`; SHA-256:
+  `8e65c8577a4d67c22d18d25dc5c9d138ac2a7c03e347a753e4718539bb6a27ba`.
+- Staged source digest:
+  `af5a31c773717f44eccbe028789d190a00c215032b62ad0fc181fb53b1f97b7a`.
+  This validation build uses exact, unminified source. The prebuild guard passed;
+  287 staged source/assets files were physically compared with `app.asar` without
+  code differences. Build-only package-lock.json is excluded by electron-builder;
+  package.json differs only by its expected removed keywords field.
+- Electron-builder 26.15.3 / Electron 42.5.1. Initial packaging failed because npm
+  was not on PATH; the existing local npm 10.9.8 installation was then used.
+  No dependency files changed. Runtime dependencies were reused from the M16
+  staging tree with an identical lockfile, not freshly installed; native rebuild
+  was explicitly disabled. This is not a clean-install reproducibility result.
+- DMG checksum verification and mounted-app `codesign --verify --deep --strict`
+  passed. Signature is ad-hoc, not Apple notarization or public distribution.
+- Launched the actual executable on the read-only mounted volume, using only a
+  synthetic profile with offline mode and update checks disabled. No app in
+  Applications or private university profile was substituted.
+- The same 72-state live navigation/geometry matrix passed from the mounted
+  app, with zero renderer exceptions and no renderer require/process/Buffer or
+  raw IPC. Combined with development, this is 144 observations, not 144 distinct
+  product capabilities. Cropped packaged screenshots were inspected.
+- Packaged typed API smoke passed for Course, Assignment, Requirements draft,
+  Workflow, Working Context, organisation/classification, Citation.js,
+  Moodle status, document and compute capabilities. Terminal WebSocket connected
+  through the packaged node-pty runtime. Calendar helper bundle/executable and
+  signature were verified; calendar access was not requested.
+- Packaged PDF.js extraction and bundled fonts, exact evidence, cross-Assignment
+  rejection, immutable reviewed evidence and database-reopen provenance passed.
+  Synthetic PDF bytes were supplied directly; this is not a native file-picker
+  acceptance test.
+- Ollama status bridge responded **DISABLED** in this deliberately isolated
+  profile. No model invocation, model-quality acceptance or live Moodle SSO/sync
+  is claimed for this navigation delivery.
+- After closing and relaunching the mounted app, the exact same stored Assignment
+  remained active and the real Continue control appeared. Renderer Node remained
+  absent and the terminal reconnected. No operation was resumed or created by
+  restoring this context.
+
+This packaging check was justified by the new renderer startup script and
+main-process service dispatch, not by a public release requirement. M16 and the
+complete simplified UX programme remain open. Implementation stays isolated;
+integration is not implied by validation of this slice.
+
 ## Remaining scope / next slice
 
 1. Persist an explicitly chosen current academic year independently of the last
