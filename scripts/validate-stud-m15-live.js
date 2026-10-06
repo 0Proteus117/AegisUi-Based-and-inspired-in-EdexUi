@@ -7,7 +7,13 @@ const port=Number(process.argv[2]||9265),profile=process.argv[3],out=process.arg
 if(!profile||!path.basename(profile).startsWith("m15-synthetic-")||!out)throw Error("Synthetic profile and output directory required");
 const fixture=JSON.parse(fs.readFileSync(path.join(profile,"synthetic-fixture.json")));
 async function main(){
- const pages=await(await fetch(`http://127.0.0.1:${port}/json/list`)).json(),page=pages.find(p=>p.type==="page"&&p.title==="AegisUi");assert(page);
+ // DevTools can answer before the first BrowserWindow exists on cold restart.
+ let page;const deadline=Date.now()+30000;
+ while(Date.now()<deadline){
+  try{const pages=await(await fetch(`http://127.0.0.1:${port}/json/list`,{signal:AbortSignal.timeout(2000)})).json();page=pages.find(p=>p.type==="page"&&p.title==="AegisUi");}catch(_error){/* bounded startup retry */}
+  if(page)break;await new Promise(resolve=>setTimeout(resolve,100));
+ }
+ assert(page,"AegisUi page did not appear within 30 seconds");
  const ws=new WebSocket(page.webSocketDebuggerUrl),pending=new Map();let seq=0;
  await new Promise((resolve,reject)=>{ws.onopen=resolve;ws.onerror=reject;});
  ws.onmessage=({data})=>{const m=JSON.parse(data),p=pending.get(m.id);if(p){pending.delete(m.id);m.error?p.reject(Error(JSON.stringify(m.error))):p.resolve(m.result);}};

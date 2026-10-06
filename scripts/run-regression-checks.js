@@ -10,6 +10,8 @@ const ROOT = path.resolve(__dirname, "..");
 const CHECKS = [
     "scripts/test-stud-m16-evidence-location.js",
     "scripts/test-stud-m16-process-recovery.js",
+    "scripts/test-stud-m16-intake-branches.js",
+    "scripts/test-stud-m16-managed-case.js",
     "scripts/test-stud-document-intelligence.js",
     "scripts/test-stud-research-writing.js",
     "scripts/test-stud-revision-planning.js",
