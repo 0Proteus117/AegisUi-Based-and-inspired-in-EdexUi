@@ -38,6 +38,10 @@ const check = (name, operation) => { operation(); passed += 1; console.log(`${na
         check("CLASSIFICATION_CORRECTION_IS_TYPED", () => assert.ok(override.ok && override.data.userCorrected));
         const organisation = await handlers.get("stud-course-organisation")(trusted, {limit: 20});
         check("ORGANISATION_IS_BOUNDED_LOCAL_READ", () => assert.ok(organisation.ok && organisation.data.years.length === 1));
+        const browser = await handlers.get("stud-course-organisation")(trusted, {browse: "CONTENT", courseId: course.id, kind: "ASSIGNMENT", limit: 1});
+        check("SCOPED_BROWSER_REUSES_TYPED_MAIN_BOUNDARY", () => assert.ok(browser.ok && browser.data.items[0].id === assignment.id && browser.data.total === 1));
+        const invalidBrowser = await handlers.get("stud-course-organisation")(trusted, {browse: "CONTENT", courseId: course.id, kind: "stud_provider_credentials"});
+        check("BROWSER_CANNOT_SELECT_ARBITRARY_TABLES", () => assert.equal(invalidBrowser.code, "INVALID_INPUT"));
         console.log(`STUD_WORKING_CONTEXT_IPC: PASS (${passed} checks)`);
     } finally { registration.dispose(); }
 })().catch(error => { console.error(error && error.stack || error); process.exitCode = 1; }).finally(() => fs.rmSync(root, {recursive: true, force: true}));

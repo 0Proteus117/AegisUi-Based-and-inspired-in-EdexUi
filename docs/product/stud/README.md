@@ -116,3 +116,9 @@ acceptance, hardening and milestone release**; M16 is in progress. See
 for validated corrections, limited private intake and remaining closure gates.
 After M16, the user's next priority is a dedicated STUD usability simplification
 and human validation, before the queued Map programme.
+
+On 6 October the user authorized proceeding with a connected simple navigation
+slice on a separate branch while M16 remains open. See the
+[UX delivery roadmap](STUD_SIMPLIFIED_UX_DELIVERY_ROADMAP.md) and
+[first connected navigation validation](STUD_UX1_NAVIGATION_VALIDATION.md).
+This does not declare the automatic workflow or the complete UX programme done.

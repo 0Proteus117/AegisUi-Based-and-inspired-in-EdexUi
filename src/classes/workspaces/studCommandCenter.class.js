@@ -1,5 +1,7 @@
 "use strict";
 
+const SimpleAcademicNavigation = typeof StudSimpleNavigation !== "undefined" ? StudSimpleNavigation : require("./studSimpleNavigation.class.js").StudSimpleNavigation;
+
 const ACTIVE_VIEWS = Object.freeze(["OVERVIEW", "MODULES", "ASSIGNMENTS", "PROGRESS", "REVISION", "RESEARCH", "DOCUMENTS", "KNOWLEDGE", "AI", "NOTES", "TOOLS", "WORKBENCH", "SERVICES", "MOODLE"]);
 const FUTURE_VIEWS = Object.freeze([]);
 // The internal view surface remains stable for the existing workspaces. The
@@ -58,6 +60,7 @@ class StudCommandCenter {
         this.workingContext = null;
         this.workflow = null;
         this.assignmentWorkspace = null;
+        this.simpleNavigation = new SimpleAcademicNavigation(this);
     }
 
     mount(view) {
@@ -88,8 +91,8 @@ class StudCommandCenter {
         this.assignmentWorkspace = new StudAssignmentWorkspace({request: (channel, payload) => this.request(channel, payload), escape: value => this.escape(value), showToast: (target, message) => this.showToast(target, message), parent: this});
         grid.innerHTML = `
             <section class="stud-command-header workspace-panel">
-                <div><small>STUD / LOCAL ACADEMIC CONTEXT</small><h2>STUDENT COMMAND CENTER</h2><p>Courses, assignments and local work context remain explicit, offline and provenance-aware.</p></div>
-                <div class="stud-command-status"><small>STORE</small><strong data-stud-status>INITIALIZING</strong><span data-stud-schema>SCHEMA —</span></div>
+                <div><h2>STUD</h2></div>
+                <details class="stud-command-status"><summary>Connection &amp; storage</summary><strong data-stud-status>INITIALIZING</strong><span data-stud-schema>SCHEMA —</span></details>
             </section>
             <nav class="stud-command-nav" aria-label="STUD sections" data-stud-nav></nav>
             <section class="stud-command-search workspace-panel"><div class="workspace-panel-content" data-stud-global-search></div></section>
@@ -98,7 +101,7 @@ class StudCommandCenter {
         this.bind();
         // refresh() owns the revision read, so initializing it here too would
         // duplicate the initial local query and briefly risk stale UI state.
-        return Promise.all([this.research.initialize(), this.moodle.initialize(), this.compute.initialize(), this.documents.initialize(), this.knowledge.initialize(), this.academicAssistant.initialize(), this.notebook.initialize(), this.progress.initialize(), this.toolCatalog.initialize(), this.refresh()]).then(() => this.render());
+        return Promise.all([this.research.initialize(), this.moodle.initialize(), this.compute.initialize(), this.documents.initialize(), this.knowledge.initialize(), this.academicAssistant.initialize(), this.notebook.initialize(), this.progress.initialize(), this.toolCatalog.initialize(), this.refresh()]).then(() => this.simpleNavigation.load());
     }
 
     async request(channel, payload = {}) {
@@ -133,8 +136,13 @@ class StudCommandCenter {
             if (!this.state.selectedAssignmentId && workingContext.activeAssignment) this.state.selectedAssignmentId = workingContext.activeAssignment.id;
             if (!this.state.selectedCourseId && workingContext.activeCourse) this.state.selectedCourseId = workingContext.activeCourse.id;
             if (this.revision) await this.revision.refresh();
-            if (this.state.selectedCourseId && !courses.some(item => item.id === this.state.selectedCourseId)) this.state.selectedCourseId = "";
-            if (this.state.selectedAssignmentId && !assignments.some(item => item.id === this.state.selectedAssignmentId)) this.state.selectedAssignmentId = "";
+            // A bounded cache is not proof that an object disappeared.
+            for (const [type, key, items] of [["COURSE", "selectedCourseId", courses], ["ASSIGNMENT", "selectedAssignmentId", assignments]]) {
+                if (this.state[key] && !items.some(item => item.id === this.state[key])) {
+                    const record = await this.request("stud-entity-read", {entityType: type, entityId: this.state[key]});
+                    if (record) items.push(record); else this.state[key] = "";
+                }
+            }
             this.state.error = null;
             await this.refreshContexts();
         } catch (error) {
@@ -152,6 +160,7 @@ class StudCommandCenter {
         await Promise.all(tasks);
         if (this.assignmentWorkspace) this.assignmentWorkspace.setState(this.state.assignmentContext, this.state.workingContext, this.state.courseContext);
         this.render();
+        if (this.simpleNavigation.page && !this.simpleNavigation.busy && ["OVERVIEW", "MODULES"].includes(this.state.activeView)) await this.simpleNavigation.load();
     }
 
     async loadAssignmentContext(id) {
@@ -185,21 +194,24 @@ class StudCommandCenter {
     }
 
     async selectCourse(id, view = "MODULES") {
-        const course = this.state.courses.find(item => item.id === id);
+        const course = this.state.courses.find(item => item.id === id) || await this.request("stud-entity-read", {entityType: "COURSE", entityId: id});
         if (!course) throw new Error("The selected course is no longer available.");
+        if (!this.state.courses.some(item => item.id === id)) this.state.courses.push(course);
         this.state.selectedCourseId = id;
         this.state.selectedAssignmentId = "";
         this.state.activeView = view;
         this.state.workingContext = await this.workingContext.update({courseId: id, originSurface: "COURSES", userPinned: false});
         this.applyWorkingContext();
         await this.refreshContexts();
+        if (view === "MODULES") await this.simpleNavigation.load({browse: "CONTENT", academicYear: course.academicYear || null, courseId: id, kind: "ASSIGNMENT"});
     }
 
     async selectAssignment(id, view = "ASSIGNMENTS") {
-        const assignment = this.state.assignments.find(item => item.id === id);
+        const assignment = this.state.assignments.find(item => item.id === id) || await this.request("stud-entity-read", {entityType: "ASSIGNMENT", entityId: id});
         if (!assignment) throw new Error("The selected assignment is no longer available.");
+        if (!this.state.assignments.some(item => item.id === id)) this.state.assignments.push(assignment);
         this.state.selectedAssignmentId = id;
-        if (assignment && assignment.courseId) this.state.selectedCourseId = assignment.courseId;
+        this.state.selectedCourseId = assignment.courseId || "";
         this.state.activeView = view;
         this.state.workingContext = await this.workingContext.update({courseId: assignment.courseId || undefined, assignmentId: id, originSurface: "ASSIGNMENT", userPinned: false});
         this.applyWorkingContext();
@@ -238,10 +250,10 @@ class StudCommandCenter {
         this.renderSearch();
         const main = this.view.querySelector("[data-stud-main]");
         if (!main) return;
-        if (this.state.error) main.innerHTML = `<section class="workspace-panel stud-empty-state"><header><h2>STUD LOCAL STORE</h2><span>ERROR</span></header><div class="workspace-panel-content"><strong>LOCAL ACADEMIC CONTEXT UNAVAILABLE</strong><p>${this.escape(this.state.error)}</p></div></section>`;
+        this.view.classList.toggle("stud-simple-active", ["OVERVIEW", "MODULES"].includes(this.state.activeView));
+        if (this.state.error) { main.innerHTML = `<section class="workspace-panel stud-empty-state"><header><h2>STUD LOCAL STORE</h2><span>ERROR</span></header><div class="workspace-panel-content"><strong>LOCAL ACADEMIC CONTEXT UNAVAILABLE</strong><p>${this.escape(this.state.error)}</p></div></section>`; return; }
         const contextStrip = this.renderWorkingContext();
-        if (this.state.activeView === "OVERVIEW") main.innerHTML = `${contextStrip}${this.renderOverview()}`;
-        else if (this.state.activeView === "MODULES") main.innerHTML = `${contextStrip}${this.renderModules()}`;
+        if (["OVERVIEW", "MODULES"].includes(this.state.activeView)) main.innerHTML = this.simpleNavigation.render();
         else if (this.state.activeView === "ASSIGNMENTS") main.innerHTML = `${contextStrip}${this.renderAssignments()}`;
         else if (this.state.activeView === "REVISION") main.innerHTML = `${contextStrip}${this.revision.render()}`;
         else if (this.state.activeView === "RESEARCH") main.innerHTML = `${contextStrip}${this.research.renderResearch()}`;
@@ -266,6 +278,10 @@ class StudCommandCenter {
         const nav = this.view.querySelector("[data-stud-nav]");
         if (!nav) return;
         const current = NAVIGATION_GROUPS.find(item => item.id === this.state.navGroup) || NAVIGATION_GROUPS[0];
+        if (["OVERVIEW", "MODULES"].includes(this.state.activeView)) {
+            nav.innerHTML = `<div class="stud-simple-topbar"><button type="button" data-stud-nav-view="MODULES">My studies</button><button type="button" data-stud-nav-view="MOODLE">Moodle</button><details><summary>Tools</summary><div>${NAVIGATION_GROUPS.filter(group => !["HOME", "COURSES"].includes(group.id)).map(group => `<button type="button" data-stud-nav-group="${group.id}">${group.label}</button>`).join("")}<button type="button" data-stud-dialog="CREATE_MODULE">Create course</button><button type="button" data-stud-dialog="CREATE_ASSIGNMENT">Create assignment</button><button type="button" data-stud-search-toggle>Search all records</button></div></details></div>`;
+            return;
+        }
         nav.innerHTML = `<div class="stud-nav-primary" role="tablist" aria-label="STUD work areas">${NAVIGATION_GROUPS.map(group => `<button type="button" data-stud-nav-group="${group.id}"${group.id === current.id ? " aria-current=\"page\" class=\"active\"" : ""}>${group.label}</button>`).join("")}<button type="button" class="stud-nav-search" data-stud-search-toggle aria-expanded="${this.state.searchExpanded ? "true" : "false"}">SEARCH</button></div>${current.views.length > 1 ? `<div class="stud-nav-context" aria-label="${this.escape(current.label)} sections">${current.views.map(view => `<button type="button" data-stud-nav-view="${view}"${this.state.activeView === view ? " aria-current=\"page\" class=\"active\"" : ""}>${view}</button>`).join("")}</div>` : ""}${FUTURE_VIEWS.map(([view, description, phase]) => `<span class="stud-nav-deferred" title="${this.escape(description)}"><strong>${view}</strong><small>${phase}</small></span>`).join("")}`;
     }
 
@@ -458,6 +474,7 @@ class StudCommandCenter {
         if (this.view.dataset.studPhase2Bound) return;
         this.view.dataset.studPhase2Bound = "true";
         this.view.addEventListener("click", async event => {
+            if (await this.simpleNavigation.click(event)) return;
             if (await this.workflow.handleClick(event)) return;
             if (await this.assignmentWorkspace.handleClick(event)) return;
             if (await this.requirements.handleClick(event)) return;
@@ -498,6 +515,7 @@ class StudCommandCenter {
             else if (event.target.closest("[data-stud-close-dialog]")) this.closeDialog();
         });
         this.view.addEventListener("submit", async event => { if (await this.requirements.handleSubmit(event)) return; if (await this.workflow.handleSubmit(event)) return; if (await this.assignmentWorkspace.handleSubmit(event)) return; if (await this.research.handleSubmit(event)) return; if (await this.moodle.handleSubmit(event)) return; if (await this.revision.handleSubmit(event)) return; if (await this.compute.handleSubmit(event)) return; if (await this.documents.handleSubmit(event)) return; if (await this.knowledge.handleSubmit(event)) return; if (await this.academicAssistant.handleSubmit(event)) return; if (await this.notebook.handleSubmit(event)) return; if (await this.progress.handleSubmit(event)) return; if (await this.toolCatalog.handleSubmit(event)) return; this.handleForm(event); });
+        this.view.addEventListener("submit", event => { this.simpleNavigation.submit(event).catch(error => this.showToast(this.view, error.message)); });
         this.view.addEventListener("change", event => { this.assignmentWorkspace.handleChange(event).catch(() => {}); this.compute.handleChange(event).catch(() => {}); this.documents.handleChange(event).catch(() => {}); this.knowledge.handleChange(event).catch(() => {}); this.academicAssistant.handleChange(event).catch(() => {}); });
         const dialog = this.view.querySelector("[data-stud-dialog-element]");
         dialog.addEventListener("close", () => { const target = this.state.dialogReturnFocus; this.state.dialogReturnFocus = null; if (target && document.contains(target)) target.focus(); });

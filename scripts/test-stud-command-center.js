@@ -75,7 +75,8 @@ try {
     });
     check("COMMAND_CENTER_RENDERER_BOUNDARY", () => {
         assert.ok(manager.includes("new StudCommandCenter"));
-        assert.ok(commandCenter.includes("STUDENT COMMAND CENTER"));
+        assert.ok(commandCenter.includes("<h2>STUD</h2>"));
+        assert.ok(commandCenter.includes("SimpleAcademicNavigation"));
         assert.ok(commandCenter.includes('"RESEARCH", "DOCUMENTS", "KNOWLEDGE", "AI", "NOTES", "TOOLS", "WORKBENCH", "SERVICES", "MOODLE"'));
         assert.ok(commandCenter.includes("StudComputeWorkspace"));
         assert.ok(commandCenter.includes("StudDocumentWorkspace"));

@@ -89,6 +89,10 @@ class StudWorkingContextService {
     }
 
     courseOrganisation(options = {}) {
+        if (Object.hasOwn(options, "browse")) {
+            const {StudCourseBrowser} = require("./studCourseBrowser.class.js");
+            return new StudCourseBrowser(this.store).read(options);
+        }
         Model.assertAllowedKeys(options, ["limit"], "Academic organisation options");
         const limit = Math.max(1, Math.min(Number(options.limit) || 300, 500));
         const courses = this.store.listEntities("COURSE", {limit});
