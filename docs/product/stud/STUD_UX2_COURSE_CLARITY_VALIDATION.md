@@ -94,3 +94,43 @@ Workbench simplification and true streaming execution preview remain next.
 M16 acceptance, integration and user usability acceptance remain separate gates.
 No public release. Packaged validation is required because fixed preload APIs
 changed; existing profiles/dependencies and clean-install claims are not conflated.
+
+## Packaged validation — final implementation
+
+Runtime commit: `f21c54004f6a3523e7fed1cf2cc0f2cb3a1972da`.
+ARM64 validation artifact: `AegisUi-2.7.1-arm64.dmg` (154,980,542 bytes).
+SHA-256: `a112cbed534549cf86248fcc699a2f8a9e640cdb51da2bb152d969b0aba64660`.
+
+- Prebuild/source digest:
+  `d7888bbfd86610a22abce72ee3d31b7717e6ce9eccd32a9a9ad142911ce59fa1`.
+  Guard passed; 289 source/assets files compared physically to app.asar. Only
+  build-only lockfile and dependencies were excluded from this source comparison;
+  package.json's expected keywords removal was checked separately. Staging uses
+  exact unminified source. Runtime dependencies reused from UX1 with unchanged
+  lockfile; native rebuild disabled. This is not a fresh dependency installation.
+- DMG integrity verification and strict/deep mounted-app signature verification
+  passed. Ad-hoc signed, not Apple notarized. Mounted read-only and launched from
+  that volume, never from Applications. Synthetic profile only, offline mode;
+  user Moodle accounts/data were not opened or altered.
+- **132/132** packaged visual/state observations passed with zero exceptions;
+  the new typed year/name APIs were exercised through actual UI controls.
+  Renderer require/process/Buffer and raw IPC remained absent.
+- Mounted executable loaded the old source to create a real v28 synthetic DB,
+  then the packaged store migrated it to v29: canonical Assignment preserved,
+  zero fabricated preference/label records and valid foreign keys.
+- Packaged smoke passed: canonical Course/Assignment, M1 draft, Workflow,
+  Working Context, organisation/classification, Citation.js rendering, Moodle
+  status and document/compute capabilities. Terminal/node-pty connected.
+  Calendar helper presence and signature passed; no calendar access was requested.
+- Ollama status was **DISABLED** in the isolated profile. No generation, live
+  institutional SSO/sync or model-quality verification is claimed here.
+- Closing/relaunching the mounted application preserved the exact chosen year,
+  original titles, display labels and their optimistic versions. The current-year
+  button remained visible and Continue did not foreground the unrelated historical
+  Assignment selected by the smoke test. No renderer Node access after restart.
+
+Local evidence: `ux2-course-clarity/2026-10-07/` in the external test-artifact
+directory; no screenshots, profiles or debug logs are committed.
+
+No public release or integration. M16 remains open. The next product slice is
+the simplified Workbench and real execution/preview connection, not Map.
