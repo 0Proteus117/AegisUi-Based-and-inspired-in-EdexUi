@@ -32,10 +32,22 @@ async function main(){
    await run(`window.applyAegisAppearance(${JSON.stringify(theme.startsWith("system")?"system":theme)})`);
    await run(`${cc}.setActiveView('MODULES');${nav}.load({browse:'YEARS'})`);await inspect("years");
    const yearIndex=await run(`${nav}.page.items.findIndex(y=>y.academicYear==='2026/27')`);
-   await click(`[data-stud-simple="year"][data-value="${yearIndex}"]`);
+   if(await run(`${nav}.page.preference?.available && ${nav}.page.preference.academicYear==='2026/27'`))await click('[data-stud-simple="current-year"]');
+   else await click(`[data-stud-simple="year"][data-value="${yearIndex}"]`);
    assert.equal(await run(`${nav}.page.total`),4);await inspect("subjects");
+   if(process.argv.includes("--clarity")){
+    if(await run(`!!document.querySelector('[data-stud-simple="set-year"]')`))await click('[data-stud-simple="set-year"]');
+    assert.equal(await run(`${nav}.page.preference.academicYear`),"2026/27");
+    await click('[data-stud-simple="years"]');await inspect("current-year");
+    await click('[data-stud-simple="current-year"]');
+   }
    await click(`[data-stud-simple="course"][data-value="${fixture.courses[0].id}"]`);await inspect("course");
    await click('[data-stud-simple="kind"][data-value="RESOURCE"]');await inspect("materials");
+   if(process.argv.includes("--clarity")){
+    await run(`(()=>{const d=document.querySelector('.stud-simple-list .stud-simple-name');d.querySelector('summary').click();const f=d.querySelector('form');f.querySelector('input').value='My assessment guide';f.requestSubmit(f.querySelector('button'));})()`);
+    await wait(`!${nav}.busy && ${nav}.page.items.some(i=>i.presentation.label==='My assessment guide')`);
+    await run(`document.querySelector('.stud-simple-list .stud-simple-name summary').click()`);await inspect("corrected-name");
+   }
    await click('[data-stud-simple="kind"][data-value="ASSIGNMENT"]');
    await run(`document.querySelector('[data-stud-simple="assignment"]').click()`);await wait(`${nav}.assignment && !${nav}.busy`);await inspect("assignment");
    await run(`document.querySelector('[data-stud-simple="requirements"]').click()`);
@@ -46,6 +58,31 @@ async function main(){
     results.push({scenario,width,height,scale,theme,passed:!r.overflow&&!r.escaped&&r.text.length>5});
     if(width===1440&&["light","dark"].includes(theme)&&["years","subjects","assignment"].includes(scenario)){
      const s=await call("Page.captureScreenshot",{format:"png",captureBeyondViewport:false,clip:r.clip});fs.writeFileSync(path.join(out,`${scenario}-${theme}.png`),Buffer.from(s.data,"base64"));
+    }
+   }
+  }
+  if(process.argv.includes("--clarity")){
+   const invoke=(channel,payload)=>run(`(async()=>{const r=await window.aegis.stud[${JSON.stringify(channel)}](${JSON.stringify(payload)});if(!r.ok)throw Error(r.code+': '+r.message);return r.data})()`);
+   let draft=await invoke('stud-requirements-create-draft',{assignmentId:fixture.assignmentId});
+   if(draft.lifecycle!=='DRAFT')throw Error('Expected synthetic draft');
+   draft=await invoke('stud-requirements-add-manual',{contractId:draft.id,expectedVersion:draft.rowVersion,requirement:{type:'DEPENDENCY',label:'Team measurements',displayValue:'Await measured team data; no values may be invented.',resolutionState:'UNRESOLVED'}});
+   await matrixBrief('draft-summary');
+   for(const candidate of draft.candidates.filter(c=>c.disposition==='PENDING'))draft=await invoke('stud-requirements-review-candidate',{contractId:draft.id,candidateId:candidate.id,expectedVersion:draft.rowVersion,disposition:'INCLUDED'});
+   draft=await invoke('stud-requirements-approve',{contractId:draft.id,expectedVersion:draft.rowVersion,approveAsIncomplete:true});
+   await matrixBrief('reviewed-incomplete');
+   await invoke('stud-entity-update',{entityType:'ASSIGNMENT',entityId:fixture.assignmentId,value:{description:'Changed synthetic brief: a presentation and updated report are required.'}});
+   await matrixBrief('changed-source');
+   async function matrixBrief(scenario){
+    for(const [width,height,scale]of [[1680,1050,2],[1440,900,2],[1200,780,1]])for(const theme of ['dark','light','system-dark','system-light']){
+     await call('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:scale,mobile:false});
+     await call('Emulation.setEmulatedMedia',{features:[{name:'prefers-color-scheme',value:theme.endsWith('dark')?'dark':'light'}]});
+     await run(`window.applyAegisAppearance(${JSON.stringify(theme.startsWith('system')?'system':theme)});${cc}.setActiveView('MODULES');`);
+     await run(`${nav}.click({target:{closest:()=>({dataset:{studSimple:'continue',value:${JSON.stringify(fixture.assignmentId)}}})}})`);
+     await wait(`${nav}.assignment&&!${nav}.busy`);
+     const r=await run(`(()=>{const root=document.querySelector('[data-stud-main]'),b=root.getBoundingClientRect();return{overflow:root.scrollWidth>root.clientWidth+2,text:root.innerText,escaped:[...root.querySelectorAll('button,input,summary')].filter(e=>e.checkVisibility()).some(e=>{const r=e.getBoundingClientRect();return r.left<b.left-2||r.right>b.right+2}),clip:{x:b.x,y:b.y,width:b.width,height:Math.min(innerHeight-b.y,b.height),scale:1}}})()`);
+     const state=scenario==='draft-summary'?r.text.includes('not yet approved'):scenario==='changed-source'?r.text.includes('Source material changed'):r.text.includes('reviewed requirements');
+     results.push({scenario,width,height,scale,theme,passed:state&&!r.overflow&&!r.escaped});
+     if(width===1440&&theme==='light'){const s=await call('Page.captureScreenshot',{format:'png',captureBeyondViewport:false,clip:r.clip});fs.writeFileSync(path.join(out,scenario+'.png'),Buffer.from(s.data,'base64'));}
     }
    }
   }

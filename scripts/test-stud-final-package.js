@@ -52,7 +52,7 @@ async function main(){
     const root=fs.mkdtempSync(path.join(os.tmpdir(),"stud-m15-")),exportRoot=fs.mkdtempSync(path.join(os.tmpdir(),"stud-m15-export-"));let e;
     try{
         e=open(root,{showOpenDialog:async()=>({canceled:false,filePaths:[exportRoot]})});
-        check("schema v28 no fabricated packages",()=>{assert.equal(e.store.schemaInfo().version,28);assert.equal(e.store.db.prepare("SELECT count(*) n FROM stud_final_packages").get().n,0);});
+        check("schema v28 no fabricated packages",()=>{assert.equal(e.store.schemaInfo().version,29);assert.equal(e.store.db.prepare("SELECT count(*) n FROM stud_final_packages").get().n,0);});
         const f=fixture(e);let p=e.packages.create({assignmentId:f.assignment.id,draftVersionId:f.version.id,artifactIds:[],citationStyle:"harvard1"});
         check("immutable candidate with verified inventory",()=>{assert.equal(p.integrity,"VERIFIED");assert.equal(p.freshness,"CURRENT");assert.equal(p.state,"AWAITING_HUMAN_REVIEW");assert.equal(p.files.length,9);assert.equal(p.snapshot.draft.hash,f.version.contentHash);});
         check("truthful limitations without fabricated run",()=>{assert(p.snapshot.issues.some(i=>i.code==="NO_BIBLIOGRAPHY"));assert(p.snapshot.issues.some(i=>i.code==="COMMITTEE_INCOMPLETE"));assert.equal(e.store.db.prepare("SELECT count(*) n FROM stud_operation_runs").get().n,0);});

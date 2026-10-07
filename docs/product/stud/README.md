@@ -16,6 +16,7 @@ documents translate that intent into the audited v2.7.0 implementation:
 - [v2.7.0 gap analysis](STUD_ASSIGNMENT_WORKFLOW_ENGINE_GAP_ANALYSIS.md)
 - [target architecture](STUD_ASSIGNMENT_WORKFLOW_ENGINE_ARCHITECTURE.md)
 - [implementation roadmap](STUD_ASSIGNMENT_WORKFLOW_ENGINE_ROADMAP.md)
+- [Explicit academic year, display names and assignment summary](STUD_UX2_COURSE_CLARITY_VALIDATION.md)
 - [M1 Requirements Contract implementation and validation](STUD_M1_REQUIREMENTS_CONTRACT_VALIDATION.md)
 - [M2 Academic Organisation / Working Context implementation and validation](STUD_M2_ACADEMIC_ORGANISATION_WORKING_CONTEXT_VALIDATION.md)
 - [M3 Workflow Templates / Persistent DAG implementation and validation](STUD_M3_WORKFLOW_TEMPLATES_PERSISTENT_DAG_VALIDATION.md)

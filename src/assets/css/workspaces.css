@@ -8038,3 +8038,11 @@ button.eng-thread-row.active {
 .engineering-mode .stud-command-status:not([open]) > :not(summary) { display: none; }
 .engineering-mode .stud-command-status summary { cursor: pointer; font: 12px/1.5 var(--font_main_light); }
 @media (max-width: 1200px) { .engineering-mode .stud-simple-navigation { padding: 14px; } }
+.engineering-mode .stud-simple-navigation h2:focus { outline: none; }
+.engineering-mode .stud-simple-list > div > button { width: 100%; }
+.engineering-mode .stud-simple-list .stud-simple-name { margin: 0 0 14px; }
+.engineering-mode .stud-simple-navigation form { flex-wrap: wrap; }
+.engineering-mode .stud-simple-navigation form label { flex: 1 1 240px; }
+.engineering-mode .stud-simple-navigation form input { width: 100%; }
+.engineering-mode .stud-simple-brief li { font: 16px/1.6 var(--font_main_light); margin: 8px 0; overflow-wrap: anywhere; }
+.engineering-mode .stud-simple-brief details p { white-space: pre-wrap; }

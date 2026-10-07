@@ -12,6 +12,12 @@ pendientes. No se afirma que UX-1 completo ni el flujo IA estén terminados.
 
 ## 1. Autoridad, alcance y prioridad
 
+**Actualización 7 octubre:** `codex/stud-ux2-course-clarity`, desde `47f0960`,
+añade año actual explícito, nombres de presentación corregibles y resumen del
+trabajo basado en M1. Véase `STUD_UX2_COURSE_CLARITY_VALIDATION.md`. No equivale
+al análisis semántico completo de UX-2 ni al flujo IA; M16 y la integración siguen
+abiertos. La autorización actual de continuar permite esta entrega aislada.
+
 Este documento registra la dirección UX expresada por el usuario: navegar por
 años, asignaturas y trabajos; entender el material; elegir trabajo humano o IA.
 No autoriza comenzar la implementación, sustituir el Master PDF, marcar M16

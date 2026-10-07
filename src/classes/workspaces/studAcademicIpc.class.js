@@ -165,6 +165,7 @@ const CHANNELS = Object.freeze([
     "stud-working-context-update",
     "stud-working-context-clear",
     "stud-course-organisation",
+    "stud-navigation-year-set", "stud-display-label-read", "stud-display-label-set",
     "stud-workflow-templates",
     "stud-workflow-assignment-state",
     "stud-workflow-read",
@@ -412,6 +413,10 @@ function registerStudAcademicIpc(options = {}) {
     add("stud-assessment-classification-list", ["limit"], payload => workingContext.listClassifications(payload));
     add("stud-assessment-classification-set", ["assignmentId", "classification", "reason"], payload => workingContext.setClassification(payload));
     add("stud-course-organisation", ["limit", "browse", "academicYear", "courseId", "kind", "offset", "query"], payload => workingContext.courseOrganisation(payload));
+    const presentation = new (require("./studPresentationService.class.js").StudPresentationService)(store);
+    add("stud-navigation-year-set", ["academicYear", "expectedVersion"], payload => presentation.chooseYear(payload));
+    add("stud-display-label-read", ["entityType", "entityId"], payload => presentation.label(payload));
+    add("stud-display-label-set", ["entityType", "entityId", "label", "expectedVersion"], payload => presentation.setLabel(payload));
     add("stud-working-context-read", [], () => workingContext.read());
     add("stud-working-context-update", ["courseId", "assignmentId", "objectType", "objectId", "workflowId", "workflowNodeId", "researchPlanId", "researchTopicId", "claimId", "evidenceId", "compositionPlanId", "compositionSectionId", "draftDocumentId", "draftVersionId", "humanisationProfileId", "humanisationSessionId", "originSurface", "userPinned"], payload => workingContext.update(payload));
     add("stud-working-context-clear", [], () => workingContext.clear());

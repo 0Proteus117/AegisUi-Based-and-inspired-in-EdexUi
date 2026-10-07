@@ -56,7 +56,7 @@ async function main(){try{
     check("meaningful assignment selection survives restart",()=>assert.equal(context.read().activeAssignment.id,assignment.id));
     store.archiveEntity("COURSE",hostile.id);
     check("archived courses are not browsable",()=>assert.throws(()=>read({browse:"CONTENT",courseId:hostile.id,kind:"ASSIGNMENT"})));
-    check("foreign keys and schema are unchanged",()=>{assert.deepEqual(store.db.prepare("PRAGMA foreign_key_check").all(),[]);assert.equal(store.schemaInfo().version,28);});
+    check("foreign keys and schema are unchanged",()=>{assert.deepEqual(store.db.prepare("PRAGMA foreign_key_check").all(),[]);assert.equal(store.schemaInfo().version,29);});
     console.log(`RESULT ${passed} passed / 0 failed / 0 skipped`);
 }finally{store.close();fs.rmSync(root,{recursive:true,force:true});}}
 main().catch(error=>{console.error(error);process.exitCode=1;});
