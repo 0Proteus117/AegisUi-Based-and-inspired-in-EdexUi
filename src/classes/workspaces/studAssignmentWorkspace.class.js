@@ -9,6 +9,7 @@ const HumanisationWorkspace = typeof StudHumanisationWorkspace !== "undefined" ?
 const LecturerCommitteeWorkspace = typeof StudLecturerCommitteeWorkspace !== "undefined" ? StudLecturerCommitteeWorkspace : require("./studLecturerCommitteeWorkspace.class.js").StudLecturerCommitteeWorkspace;
 const StorageWorkspace = typeof StudStorageWorkspace !== "undefined" ? StudStorageWorkspace : require("./studStorageWorkspace.class.js").StudStorageWorkspace;
 const FinalPackageWorkspace = typeof StudFinalPackageWorkspace !== "undefined" ? StudFinalPackageWorkspace : require("./studFinalPackageWorkspace.class.js").StudFinalPackageWorkspace;
+const ManualWorkbench = typeof StudManualWorkbench !== "undefined" ? StudManualWorkbench : require("./studManualWorkbench.class.js").StudManualWorkbench;
 
 // M5 is intentionally a composition layer. It owns no academic records: every
 // entry below is a canonical STUD object already related to the active
@@ -88,6 +89,7 @@ class StudAssignmentWorkspace {
         this.lecturerCommittee = new LecturerCommitteeWorkspace({request: this.request, escape: this.escape, showToast: this.showToast, parent: this});
         this.storage = new StorageWorkspace({request: this.request, escape: this.escape, parent: this});
         this.finalPackage = new FinalPackageWorkspace({request:this.request,escape:this.escape,parent:this});
+        this.workbench = new ManualWorkbench(this);
     }
 
     setState(context, workingContext, courseContext = null) {
@@ -113,6 +115,7 @@ class StudAssignmentWorkspace {
             this.lecturerCommittee.reset();
             this.storage.reset();
             this.finalPackage.reset();
+            this.workbench.reset();
         }
         const active = workingContext && workingContext.activeObject;
         if (active && assignment && findWorkspaceObject(this.objectsContext(), active.entityType, active.id)) {
@@ -193,6 +196,10 @@ class StudAssignmentWorkspace {
             assignmentId: assignment.id,
             objectType: type,
             objectId: id,
+            compositionPlanId: this.workbench.state.manual ? this.workbench.plan()?.id : undefined,
+            compositionSectionId: this.workbench.state.manual ? this.workbench.section()?.id : undefined,
+            draftDocumentId: this.workbench.state.manual ? this.workbench.state.draft?.id : undefined,
+            draftVersionId: this.workbench.state.manual ? this.workbench.state.draft?.currentVersion?.id : undefined,
             workflowId: workflow && workflow.id || undefined,
             workflowNodeId: node && node.id || undefined,
             researchPlanId: this.researchPlan.plan() && this.researchPlan.plan().id || undefined,
@@ -209,6 +216,9 @@ class StudAssignmentWorkspace {
             await this.setCurrentObject(type, id, options.originSurface || "ASSIGNMENT_WORKSPACE");
             if (type === "NOTE") { this.state.selectedNoteId = id; this.state.noteComposer = true; }
             this.state.mode = "WORK";
+            this.workbench.state.manual = true;
+            this.workbench.state.panel = type === "NOTE" ? "notes" : "sources";
+            this.state.materialsOpen = false;
             this.state.previewPage = Math.max(1, Number(options.page) || 1);
             await this.loadPreview(type, id, this.state.previewPage);
             this.parent.render();
@@ -298,9 +308,10 @@ class StudAssignmentWorkspace {
         return objects.length ? objects.map(object => `<button type="button" class="${active && active.entityType === object.type && active.id === object.id ? "is-current" : ""}" data-stud-workspace-object-type="${this.escape(object.type)}" data-stud-workspace-object-id="${this.escape(object.id)}"><strong>${this.escape(objectTitle(object.item))}</strong><small>${this.escape(objectTypeLabel(object.type))}${object.item.extractionStatus ? ` · ${this.escape(object.item.extractionStatus)}` : ""}</small></button>`).join("") : `<p>NO RELATED ${this.escape(RESOURCE_GROUPS.find(item => item.id === group).label)}.</p>`;
     }
 
-    renderMaterials() {
+    renderMaterials({compact = false} = {}) {
         const objects = workspaceObjects(this.objectsContext());
         const count = objects.length;
+        if (compact) return `<details class="stud-workbench-material-list"${!this.activeObject() || this.state.materialsOpen ? " open" : ""}><summary>${this.activeObject() ? "Change source" : "Choose material"} · ${count}</summary>${count ? objects.slice(0, 60).map(object => `<button type="button" data-stud-workspace-object-type="${this.escape(object.type)}" data-stud-workspace-object-id="${this.escape(object.id)}">${this.escape(objectTitle(object.item))}</button>`).join("") : "<p>No related material is saved for this assignment or course.</p>"}${count > 60 ? "<p>Showing the first 60 related objects. Use the advanced workspace for other groups.</p>" : ""}</details>`;
         return `<details class="stud-assignment-workspace-materials"${this.state.materialsOpen ? " open" : ""}><summary>RELATED MATERIAL · ${count}</summary><p>Shown because it is canonically linked to this Assignment or its Course. Nothing is attached from title similarity.</p><div>${RESOURCE_GROUPS.map(group => `<section><header><strong>${this.escape(group.label)}</strong><span>${objects.filter(item => item.group === group.id).length}</span></header>${this.objectRows(group.id)}</section>`).join("")}</div></details>`;
     }
 
@@ -403,7 +414,9 @@ class StudAssignmentWorkspace {
         if (this.state.mode === "HUMANISATION") return `<section class="stud-assignment-workspace-detail is-humanisation"><header><button type="button" data-stud-workspace-mode="COMPOSITION">← COMPOSITION</button><div><small>HUMANISATION / EDITORIAL DIFF</small><h2>${this.escape(assignment.title)}</h2></div></header>${this.humanisation.render()}</section>`;
         if (this.state.mode === "LECTURER_REVIEW") return `<section class="stud-assignment-workspace-detail is-lecturer-review"><header><button type="button" data-stud-workspace-mode="COMPOSITION">← COMPOSITION</button><div><small>LECTURER COMMITTEE / CORRECTIONS</small><h2>${this.escape(assignment.title)}</h2></div></header>${this.lecturerCommittee.render()}</section>`;
         if (["ARTIFACTS", "MISSION"].includes(this.state.mode)) return `<section class="stud-assignment-workspace-detail is-operational"><header><button type="button" data-stud-workspace-mode="WORK">← WORKSPACE</button><div><small>${this.state.mode === "MISSION" ? "MISSION CONTROL" : "ARTIFACT BAY"}</small><h2>${this.escape(assignment.title)}</h2></div><nav><button type="button" data-stud-workspace-mode="ARTIFACTS" class="${this.state.mode === "ARTIFACTS" ? "is-current" : ""}">ARTIFACTS</button><button type="button" data-stud-workspace-mode="MISSION" class="${this.state.mode === "MISSION" ? "is-current" : ""}">ACTIVITY</button></nav></header>${this.operational.render()}</section>`;
+        if (this.state.mode !== "DETAILS") return this.workbench.render();
         return `<section class="stud-assignment-workspace">
+            <button type="button" data-stud-workspace-mode="WORK">Back to writing</button>
             ${this.renderHeader()}
             ${this.renderWorkflowRail()}
             ${this.renderStageAttention()}
@@ -430,6 +443,7 @@ class StudAssignmentWorkspace {
     async onNoteSaved(note) {
         const context = this.state.context;
         if (!note || !context || !context.assignment || note.assignmentId !== context.assignment.id) return;
+        this.workbench.noteDirty = false;
         const notes = [...(context.notes || []).filter(item => item.id !== note.id), note];
         this.state.context = {...context, notes};
         this.parent.state.assignmentContext = this.state.context;
@@ -473,6 +487,7 @@ class StudAssignmentWorkspace {
     }
 
     async handleClick(event) {
+        if (await this.workbench.click(event)) return true;
         if (await this.storage.handleClick(event)) return true;
         if (await this.finalPackage.handleClick(event)) return true;
         if (await this.operational.handleClick(event)) return true;
@@ -509,6 +524,7 @@ class StudAssignmentWorkspace {
             if (this.state.mode === "LECTURER_REVIEW") await this.lecturerCommittee.open();
             if (this.state.mode === "STORAGE") await this.storage.open();
             if (this.state.mode === "FINAL_PACKAGE") await this.finalPackage.open();
+            if (this.state.mode === "WORK" && this.workbench.state.manual) await this.workbench.load();
             this.parent.render();
         }
         else if (showMaterials) { this.state.materialsOpen = true; this.parent.render(); }
@@ -525,8 +541,8 @@ class StudAssignmentWorkspace {
         return true;
     }
 
-    async handleSubmit(event) { if(await this.finalPackage.handleSubmit(event))return true; if (await this.evidenceMap.handleSubmit(event)) return true; if (await this.facultyScout.handleSubmit(event)) return true; if (await this.composition.handleSubmit(event)) return true; if (await this.humanisation.handleSubmit(event)) return true; if (await this.lecturerCommittee.handleSubmit(event)) return true; return this.researchPlan.handleSubmit(event); }
-    async handleChange(event) { if(await this.storage.handleChange(event))return true;if(await this.humanisation.handleChange(event))return true;return this.lecturerCommittee.handleChange(event); }
+    async handleSubmit(event) { if(await this.workbench.submit(event))return true; if(await this.finalPackage.handleSubmit(event))return true; if (await this.evidenceMap.handleSubmit(event)) return true; if (await this.facultyScout.handleSubmit(event)) return true; if (await this.composition.handleSubmit(event)) return true; if (await this.humanisation.handleSubmit(event)) return true; if (await this.lecturerCommittee.handleSubmit(event)) return true; return this.researchPlan.handleSubmit(event); }
+    async handleChange(event) { if(await this.workbench.change(event))return true; if(await this.storage.handleChange(event))return true;if(await this.humanisation.handleChange(event))return true;return this.lecturerCommittee.handleChange(event); }
 }
 
 if (typeof window !== "undefined") window.StudAssignmentWorkspace = StudAssignmentWorkspace;

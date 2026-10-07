@@ -18,6 +18,12 @@ trabajo basado en M1. Véase `STUD_UX2_COURSE_CLARITY_VALIDATION.md`. No equival
 al análisis semántico completo de UX-2 ni al flujo IA; M16 y la integración siguen
 abiertos. La autorización actual de continuar permite esta entrega aislada.
 
+**Entrega manual 7 octubre:** desde `672318b`, `codex/stud-ux3-workbench` conecta
+el banco de trabajo con escritura/versiones M10, fuentes/notas M5 y revisión del
+paquete M15. Véase `STUD_UX3_MANUAL_WORKBENCH_VALIDATION.md`. No inicia el flujo
+automático, no afirma que su preview esté implementada y no cierra UX-3 sin la
+revisión humana del recorrido. La integración y M16 siguen abiertos.
+
 Este documento registra la dirección UX expresada por el usuario: navegar por
 años, asignaturas y trabajos; entender el material; elegir trabajo humano o IA.
 No autoriza comenzar la implementación, sustituir el Master PDF, marcar M16

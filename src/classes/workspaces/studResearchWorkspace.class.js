@@ -320,7 +320,13 @@ class StudResearchWorkspace {
             else if (kind === "SAVE") await this.saveResult(form.dataset.studResultToken, values);
             else if (kind === "CITATION") await this.generateCitation(form);
             else if (kind === "NOTE") await this.saveNote(form, values);
-        } catch (error) { this.state.error = error.message || "STUD research operation failed."; this.parent.render(); }
+        } catch (error) {
+            this.state.error = error.message || "STUD research operation failed.";
+            // The new contextual writing surface must not replace a failed,
+            // unsaved note form with its last saved canonical contents.
+            if (kind === "NOTE" && this.parent.assignmentWorkspace?.workbench?.noteDirty) this.toast(this.parent.view, this.state.error);
+            else this.parent.render();
+        }
         return true;
     }
 

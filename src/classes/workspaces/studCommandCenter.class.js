@@ -250,11 +250,11 @@ class StudCommandCenter {
         this.renderSearch();
         const main = this.view.querySelector("[data-stud-main]");
         if (!main) return;
-        this.view.classList.toggle("stud-simple-active", ["OVERVIEW", "MODULES"].includes(this.state.activeView));
+        this.view.classList.toggle("stud-simple-active", ["OVERVIEW", "MODULES", "ASSIGNMENTS"].includes(this.state.activeView));
         if (this.state.error) { main.innerHTML = `<section class="workspace-panel stud-empty-state"><header><h2>STUD LOCAL STORE</h2><span>ERROR</span></header><div class="workspace-panel-content"><strong>LOCAL ACADEMIC CONTEXT UNAVAILABLE</strong><p>${this.escape(this.state.error)}</p></div></section>`; return; }
         const contextStrip = this.renderWorkingContext();
         if (["OVERVIEW", "MODULES"].includes(this.state.activeView)) main.innerHTML = this.simpleNavigation.render();
-        else if (this.state.activeView === "ASSIGNMENTS") main.innerHTML = `${contextStrip}${this.renderAssignments()}`;
+        else if (this.state.activeView === "ASSIGNMENTS") main.innerHTML = this.renderAssignments();
         else if (this.state.activeView === "REVISION") main.innerHTML = `${contextStrip}${this.revision.render()}`;
         else if (this.state.activeView === "RESEARCH") main.innerHTML = `${contextStrip}${this.research.renderResearch()}`;
         else if (this.state.activeView === "DOCUMENTS") main.innerHTML = `${contextStrip}${this.documents.render()}`;
@@ -278,7 +278,7 @@ class StudCommandCenter {
         const nav = this.view.querySelector("[data-stud-nav]");
         if (!nav) return;
         const current = NAVIGATION_GROUPS.find(item => item.id === this.state.navGroup) || NAVIGATION_GROUPS[0];
-        if (["OVERVIEW", "MODULES"].includes(this.state.activeView)) {
+        if (["OVERVIEW", "MODULES", "ASSIGNMENTS"].includes(this.state.activeView)) {
             nav.innerHTML = `<div class="stud-simple-topbar"><button type="button" data-stud-nav-view="MODULES">My studies</button><button type="button" data-stud-nav-view="MOODLE">Moodle</button><details><summary>Tools</summary><div>${NAVIGATION_GROUPS.filter(group => !["HOME", "COURSES"].includes(group.id)).map(group => `<button type="button" data-stud-nav-group="${group.id}">${group.label}</button>`).join("")}<button type="button" data-stud-dialog="CREATE_MODULE">Create course</button><button type="button" data-stud-dialog="CREATE_ASSIGNMENT">Create assignment</button><button type="button" data-stud-search-toggle>Search all records</button></div></details></div>`;
             return;
         }
@@ -516,6 +516,8 @@ class StudCommandCenter {
         });
         this.view.addEventListener("submit", async event => { if (await this.requirements.handleSubmit(event)) return; if (await this.workflow.handleSubmit(event)) return; if (await this.assignmentWorkspace.handleSubmit(event)) return; if (await this.research.handleSubmit(event)) return; if (await this.moodle.handleSubmit(event)) return; if (await this.revision.handleSubmit(event)) return; if (await this.compute.handleSubmit(event)) return; if (await this.documents.handleSubmit(event)) return; if (await this.knowledge.handleSubmit(event)) return; if (await this.academicAssistant.handleSubmit(event)) return; if (await this.notebook.handleSubmit(event)) return; if (await this.progress.handleSubmit(event)) return; if (await this.toolCatalog.handleSubmit(event)) return; this.handleForm(event); });
         this.view.addEventListener("submit", event => { this.simpleNavigation.submit(event).catch(error => this.showToast(this.view, error.message)); });
+        this.view.addEventListener("input", event => this.assignmentWorkspace.workbench.input(event));
+        this.view.addEventListener("click", event => this.assignmentWorkspace.workbench.guardNoteNavigation(event), true);
         this.view.addEventListener("change", event => { this.assignmentWorkspace.handleChange(event).catch(() => {}); this.compute.handleChange(event).catch(() => {}); this.documents.handleChange(event).catch(() => {}); this.knowledge.handleChange(event).catch(() => {}); this.academicAssistant.handleChange(event).catch(() => {}); });
         const dialog = this.view.querySelector("[data-stud-dialog-element]");
         dialog.addEventListener("close", () => { const target = this.state.dialogReturnFocus; this.state.dialogReturnFocus = null; if (target && document.contains(target)) target.focus(); });

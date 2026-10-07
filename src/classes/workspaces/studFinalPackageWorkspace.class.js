@@ -4,16 +4,16 @@ class StudFinalPackageWorkspace {
     reset(){this.generation++;this.state={options:null,history:[],historyBefore:null,package:null,error:"",notice:"",busy:false};}
     assignmentId(){return this.parent.assignment()?.id;}
     redraw(){this.parent.parent.render();}
-    async open(){
+    async open({draftVersionId=null}={}){
         const id=this.assignmentId(),generation=this.generation;
-        try{const [options,history]=await Promise.all([this.request("stud-final-package-options",{assignmentId:id}),this.request("stud-final-package-list",{assignmentId:id,beforeRevision:this.state.historyBefore})]);if(id===this.assignmentId()&&generation===this.generation)Object.assign(this.state,{options,history,error:""});}
+        try{const [options,history]=await Promise.all([this.request("stud-final-package-options",{assignmentId:id}),this.request("stud-final-package-list",{assignmentId:id,beforeRevision:this.state.historyBefore})]);if(id===this.assignmentId()&&generation===this.generation)Object.assign(this.state,{options,history,preferredVersionId:draftVersionId,error:draftVersionId&&!options.drafts.some(d=>d.id===draftVersionId)?"The selected version is outside the recent export choices. Choose a saved version explicitly.":""});}
         catch(error){if(generation===this.generation)this.state.error=error.message;}
     }
     render(){
         const e=this.escape,s=this.state,p=s.package,o=s.options,artifacts=Array.isArray(o?.artifacts)?o.artifacts:o?.artifacts?.items||[];
         return `<section class="stud-final-package-workspace"><header><div><h2>Final package</h2><p>Choose a saved Draft, inspect the candidate and its remaining questions, then record your approval.</p></div></header>
         ${s.error?`<p role="alert">${e(s.error)}</p>`:""}${s.notice?`<p role="status">${e(s.notice)}</p>`:""}${s.busy?`<p role="status">Checking package…</p>`:""}
-        <div class="stud-final-package-layout"><aside><form data-final-package-form><h3>Create a review copy</h3><label>Saved Draft version<select name="version" required>${(o?.drafts||[]).map(d=>`<option value="${e(d.id)}">${e(d.title)} · V${d.versionNumber}</option>`).join("")}</select></label>
+        <div class="stud-final-package-layout"><aside><form data-final-package-form><h3>Create a review copy</h3><label>Saved Draft version<select name="version" required>${s.preferredVersionId&&!o?.drafts?.some(d=>d.id===s.preferredVersionId)?'<option value="" selected>Choose a saved version</option>':""}${(o?.drafts||[]).map(d=>`<option value="${e(d.id)}" ${d.id===s.preferredVersionId?"selected":""}>${e(d.title)} · V${d.versionNumber}</option>`).join("")}</select></label>
         <label>Reference style<select name="style">${(o?.styles||[]).map(style=>`<option value="${e(style)}" ${style==="harvard1"?"selected":""}>${e(style)}</option>`).join("")}</select></label>
         <details><summary>Choose appendices</summary><p>Managed files are copied. Other objects are included as references. Up to 20 selections. This selector shows the latest 50 Draft versions and up to 100 Artifacts.</p>${artifacts.filter(a=>a.canonicalObjectType!=="FINAL_PACKAGE").map(a=>`<label class="stud-final-package-choice"><input type="checkbox" name="appendix" value="${e(a.id)}">${e(a.label)}</label>`).join("")||"<p>No registered Artifacts.</p>"}</details>
         <button type="submit" ${s.busy||!o?.drafts?.length?"disabled":""}>Build review package</button>${!o?.drafts?.length?"<p>Save a Draft Version in Composition to begin.</p>":""}</form>
